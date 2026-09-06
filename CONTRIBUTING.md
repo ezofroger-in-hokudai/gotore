@@ -88,8 +88,8 @@ git switch -c feat/123-workout-record
 make check
 ```
 
-これはbackendのlint・テストとfrontendのlint・buildを実行します。frontendの動作テストやE2Eはまだ導入されていません。
-最初に対応する機能を作る際に、対象の振る舞いを検証するテスト基盤もIssueの範囲に含めます。
+これはbackendのlint・テストとfrontendのlint・単体テスト・buildを実行します。
+DB統合テストは `TEST_DATABASE_URL` に専用DBを設定して実行します。記録・共有フローの変更では `make test-e2e` も実行します。準備方法はREADMEを参照してください。
 文書・テンプレートだけの変更では、リンク・記載したコマンド・テンプレート構造・`git diff --check`を確認し、不要なアプリテストは追加しません。
 テストを先に書けない場合は理由を `progress.md` に記録します。
 

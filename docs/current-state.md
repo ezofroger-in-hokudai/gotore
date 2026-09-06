@@ -1,48 +1,37 @@
 # 現在のシステム
 
-確認日: 2026-09-07。アプリ実装の基準コミット: `1008c1f`（Initial commit）。
-開発文書・テンプレートの整備は `progress.md` に記録します。
-以後のIssueでは、ここだけで判断せず、最新の `main` と対象コードを確認してください。
+更新日: 2026-09-07。実装Issue: [#1](https://github.com/ezofroger-in-hokudai/gotore/issues/1)。
+初版の完成ラインはユーザー指定の「グループ作成・記録・記録共有」です。
+仕様とMOCK資料からの変更点は [standard-v0.1-scope.md](standard-v0.1-scope.md)、検証結果は [progress.md](../progress.md) を参照してください。
 
-## 実装済み
+## 実装した機能
 
-| 対象 | 現状 | 根拠 |
+| 機能 | 動作 | 主な配置先 |
 | --- | --- | --- |
-| Web | 初期トップページ、サーバー側からのAPI疎通表示 | `frontend/src/app/page.tsx` |
-| API | `GET /`、`GET /api/health`、Swagger UI、OpenAPI | `backend/app/main.py`、`backend/app/api/` |
-| 設定 | APIの環境変数、Webの接続先設定 | `backend/app/core/config.py`、各 `.env.example` |
-| テスト | healthの200応答と `status: ok` を確認する1件 | `backend/tests/test_health.py` |
-| DB基盤 | Supabase設定、空のmigration配置先、コメントのみのseed | `supabase/` |
-| 開発基盤 | Compose、uv、Bun、Ruff、Biome、CI | ルート `Makefile`、各依存定義、`.github/workflows/ci.yml` |
+| アカウント | Supabase Authで登録・ログイン・ログアウト。APIがトークンを検証 | frontend/src/features/training/auth-panel.tsx、backend/app/api/dependencies.py |
+| グループ | 作成・招待コードによる参加・所属グループ一覧・メンバー表示 | group-panel.tsx、backend/app/services/training.py |
+| 記録 | 日付・種目・重量・回数・セットをDB保存。下書きを同じブラウザで復元 | workout-form.tsx、backend/app/domain/workout.py |
+| 共有 | 保存時に選んだグループだけへ共有。メンバー限定の一覧 | backend/app/infrastructure/training_repository.py、record-list.tsx |
+| 自分の記録 | 過去の実データを日付順に閲覧。再ログイン後も保持 | frontend/src/features/training/training-app.tsx |
+| ホーム画面起動 | Web manifest、standalone設定、PNGアイコン、安全領域。オンライン利用が前提 | frontend/src/app/manifest.ts、apple-icon.tsx、layout.tsx |
+| DB・設定 | migration、RLS、外部キー・一意制約、ローカル設定の生成 | supabase/migrations/、scripts/configure_local.py |
 
-## 未実装
+公開APIは `/api`。WebのリクエストをNext.jsからFastAPIへ転送します。
+業務データはFastAPI経由で操作し、ブラウザからのDB直接アクセスはRLSで拒否します。
+ローカルSupabaseのプロジェクトIDは `gotore`、ポートは59320番台です。
 
-参加・認証、仲間の活動表示、ワークアウト記録、採点、グループ共有、リアクション、過去履歴、AI、ランキング、初回ガイド、リセットは未実装です。
-DB接続・アプリ固有のテーブル、frontendの動作テスト・E2E、デプロイ、Android／iOSアプリもまだありません。
-これらをすべて初版へ入れるという意味ではなく、採用範囲と順序をIssueで決めます。
+## 検証
 
-## 初版の前に決めること
+- backend: 入力制約・認証・グループ参加・共有範囲・再送・DB直接アクセス拒否の23テスト。
+- frontend: 下書き復元・入力制約・ホーム画面設定の単体テスト。
+- E2E: 別ブラウザでの登録・グループ作成・参加・記録共有、通信再試行、下書き復元、再ログイン。
+- ホーム画面: manifest・メタ情報・PNG配信をブラウザで検証。HTTPS公開とiPhone／Android実機での追加・再起動確認は未実施。
+- CI: backend／frontend／database。PostgreSQL統合テスト、Supabase migration、ブラウザテストを含む。
+- 最新の実施結果と未実施項目は `progress.md` に記録する。
 
-ユーザーへ確認中です。以下は仕様の採用判断を伴うため、今回の環境整備では変更していません。
+## 後続で扱うもの
 
-| 論点 | 現行基盤 | 発表用MOCK仕様 | 着手前に決めること |
-| --- | --- | --- | --- |
-| 対象 | アプリ機能なし | 数分で体験する発表用MOCK（p.1–3） | 継続利用する初版か、MOCK準拠か |
-| 保存 | DB接続なし、Supabaseの土台あり | Neon、最新記録1件、過去は固定（p.5・12・16・20） | DBと記録の保持範囲 |
-| API | `/api` | `/svc/api`（p.17） | 公開APIのパスと接続経路 |
-| 参加 | 未実装 | 名前と編集用トークン（p.6・17） | 参加方式と共有範囲 |
-| UI基盤 | `frontend/src/app`、通常のCSS | Tailwind等を使用する構成例（p.18） | 現行配置の利用と必要な依存 |
-| 採点・AI | 未実装 | DEMO SCORE・固定回答（p.13・19） | 初版で提供する評価と根拠 |
+SCORE、AI、ランキング、スタンプ、コメント、Push通知、詳細な履歴分析、記録の編集・削除、グループの退出・招待管理、アカウント管理、公開環境へのデプロイ、Android／iOSアプリ。
 
-MOCK仕様を採用する場合も、採点の少数セット時の扱い・e1RMの計算式など、資料に詳細がない条件は、対応するIssueで確認してから実装します。
-
-## 初回週次計画で扱う候補
-
-以下はIssue化の候補で、今週の実装予定や承認済みの機能範囲ではありません。
-
-- 初版の用途・保存範囲・参加方式・DB／API方針を確定し、採用仕様を `docs/` に記録する。
-- 採用仕様に沿って「参加 → 記録 → 共有」を試せる作業単位へ分割し、受け入れ条件と依存関係を決める。
-- 最初のWeb機能に合わせてfrontendの動作テストを導入し、複数利用者の共有を確認するE2Eを計画する。
-- DB方針に合わせてCLIのバージョンをローカルとCIで統一する。
-
-GitHub上のIssue・週次計画は今回作成していません。テンプレートを用いて、チームで優先順位と担当を決めて登録します。
+今週追加するものは、初版を使って確認した結果からIssueにします。
+GitHubのmain保護・レビュー必須設定は、管理者が設定状況を確認してください。
