@@ -8,7 +8,7 @@
 
 | 機能 | 動作 | 主な配置先 |
 | --- | --- | --- |
-| アカウント | Supabase Authで登録・ログイン・ログアウト。APIがトークンを検証 | frontend/src/features/training/auth-panel.tsx、backend/app/api/dependencies.py |
+| アカウント | 管理者がSupabase Authで発行。画面はログイン・ログアウトのみ。APIがトークンを検証 | frontend/src/features/training/auth-panel.tsx、backend/app/api/dependencies.py |
 | グループ | 作成・招待コードによる参加・所属グループ一覧・メンバー表示 | group-panel.tsx、backend/app/services/training.py |
 | 記録 | 日付・種目・重量・回数・セットをDB保存。下書きを同じブラウザで復元 | workout-form.tsx、backend/app/domain/workout.py |
 | 共有 | 保存時に選んだグループだけへ共有。メンバー限定の一覧 | backend/app/infrastructure/training_repository.py、record-list.tsx |
@@ -17,7 +17,7 @@
 | DB・設定 | migration、RLS、外部キー・一意制約、ローカル設定の生成 | supabase/migrations/、scripts/configure_local.py |
 
 公開APIは `/api`。ローカルではNext.jsからFastAPIへ転送します。
-Vercel Servicesでは1プロジェクトの共通ルートから各サービスへ振り分けます。設定と公開前の残作業は [vercel-supabase.md](vercel-supabase.md) を参照してください。クラウドへのデプロイは未実施です。
+Vercel Servicesでは1プロジェクトの共通ルートから各サービスへ振り分けます。設定は [vercel-supabase.md](vercel-supabase.md) を参照してください。ユーザーが公開サイトをデプロイし、migration適用を報告済みです。公開Authの登録制限・手動発行・URL設定は [管理者登録ガイド](admin-managed-accounts.md) に従って管理者が反映します。今回のログイン専用変更の公開反映は未実施です。
 業務データはFastAPI経由で操作し、ブラウザからのDB直接アクセスはRLSで拒否します。
 ローカルSupabaseのプロジェクトIDは `gotore`、ポートは59320番台です。
 
@@ -25,8 +25,8 @@ Vercel Servicesでは1プロジェクトの共通ルートから各サービス�
 
 - backend: 入力制約・認証・グループ参加・共有範囲・再送・DB直接アクセス拒否・接続プール設定のテスト。
 - frontend: 下書き復元・入力制約・ホーム画面設定の単体テスト。
-- E2E: 別ブラウザでの登録・グループ作成・参加・記録共有、通信再試行、下書き復元、再ログイン。
-- ホーム画面: manifest・メタ情報・PNG配信をブラウザで検証。HTTPS公開とiPhone／Android実機での追加・再起動確認は未実施。
+- E2E: 一般登録拒否、ログイン専用UI、管理者作成アカウントでのログイン・グループ作成・参加・記録共有、通信再試行、下書き復元、再ログイン。
+- ホーム画面: manifest・メタ情報・PNG配信をブラウザで検証。ユーザーがHTTPS公開済みだが、iPhone／Android実機での追加・再起動確認は未実施。
 - CI: backend／frontend／database。PostgreSQL統合テスト、Supabase migration、ブラウザテストを含む。
 - 最新の実施結果と未実施項目は `progress.md` に記録する。
 

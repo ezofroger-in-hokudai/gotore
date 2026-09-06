@@ -110,3 +110,34 @@
 - 確認結果: 既存PRなし。mainのブランチ保護と適用rulesetなし。ローカル検証結果は前項までに記載済み。
 - 未解決事項: PRのGitHub CIを確認予定。実装者以外のGitHubレビューは未実施であり、今回はユーザーの明示した統合依頼に従う。クラウド公開の未実施項目は継続する。
 - 次のアクション: PRを作成し、CI成功と競合なしを確認したうえで通常のマージを実行する。結果はPR上で追跡する。
+
+## 2026-09-07 03:53 JST
+
+- 変更内容: ユーザーの承認により、テスト運用を管理者による確認済みアカウント発行・ログイン専用へ変更する。新規登録UIを削除し、ローカルAuthの一般登録を禁止、E2Eを管理者作成ユーザーのログインへ変更した。公開Authの登録禁止・Site URL・手動発行手順を追加した。
+- 目的: 公開テストで報告された登録429・localhostへのメール遷移から切り離し、少人数で記録共有を試す。DB直接INSERTや一般ユーザーのメール確認解除は採用しない。
+- 影響範囲: 認証画面、ローカルAuth設定、E2E、関連仕様・手順。既存認証・記録・認可・migrationは維持する。クラウド設定変更・実アカウント作成は実施しない。
+- 関連ファイル: frontend/src/features/training/auth-panel.tsx、frontend/tests/e2e/、supabase/config.toml、docs/admin-managed-accounts.md、README.md、docs/standard-v0.1-scope.md、docs/current-state.md、docs/vercel-supabase.md、docs/README.md、task.md。ブランチ: fix/admin-managed-accounts。今回は会話上で範囲合意し、新規GitHub Issue投稿は未実施。
+- テスト方針: 新規登録ボタンが残ることで先行E2Eが失敗することを確認後、画面を変更した。一般Auth APIの登録拒否、エラー時の再試行、管理者発行の2人による共有を追加・更新した。秘密の管理キーはローカルCLIからテスト内だけで取得する。
+- 未解決事項: make check・E2Eをこれから実行する。公開サイトのURL・公開キーの有効性、API healthの200・未認証groupsの401は前段の診断で確認済みだが、実ユーザーの登録・ログインは実行していない。
+- 次のアクション: データを保持してローカルAuthを再起動し検証する。公開Supabaseの設定とアカウント発行・変更の公開反映は管理者へ引き継ぐ。自己登録再開とSMTPは後続Issue化が必要。
+
+## 2026-09-07 04:02 JST
+
+- 変更内容: ログイン専用化の回帰検証を完了した。CLIのauth.email.enable_signupはメールログイン自体の有効化にも使われるためtrueを維持し、auth.enable_signup=falseで一般登録だけを禁止した。メール確認は有効のまま、管理者発行時に対象者だけを確認済みにする。
+- 目的: 一般登録を拒否しつつ、管理者発行アカウントで既存の記録共有を利用できる状態を確認する。
+- 影響範囲: ローカルSupabaseのAuth設定・検証と文書。stop/startはデータ保持で行い、DB reset・既存アカウント削除・本番操作は行っていない。
+- 関連ファイル: supabase/config.toml、frontend/tests/e2e/、docs/admin-managed-accounts.md、task.md、progress.md。
+- 確認結果: 最終make check成功（backend24件、frontend単体7件、Ruff・Biome、本番build）。E2E全5件成功（ホーム画面配信、登録UIなし、一般登録APIのsignup_disabled、失敗時の管理者案内・ボタン再有効化、管理者発行の2人でログイン・参加・共有・下書き・再送・再ログイン）。文書リンク34件とgit diff --checkを確認した。
+- 検証上の補足: 標準E2Eが未起動8100番の接続確認で待ち続けたため中断し、今回専用の8100／3100番を明示起動した。起動を検出した再試行はalready usedで終了したため、既存のPLAYWRIGHT_REUSE_SERVER=1付きmake test-e2eで検証した。追加ヘルパーのimport.metaがCommonJS読込に非対応だったため__dirnameへ修正し、Next.jsの通知領域も拾うalertセレクターをmain内に限定した。期待する認証・共有動作は緩めていない。
+- 未解決事項: 今回変更のpush・PR・クラウド反映は未実施。公開Supabaseの登録禁止・Site URL変更・管理者による実アカウント発行、実機確認は管理者対応として残る。自己登録再開・SMTPの後続Issue投稿は未実施。
+- 次のアクション: 検証用8100／3100番を終了して通常Web3000番を再開する。ユーザーには管理者登録ガイドとクラウド側の必要設定を案内し、レビュー・公開反映は別途依頼を受けて行う。元からのnext-env.d.ts生成差分・未追跡PDFと画像はコミットしない。
+
+## 2026-09-07 04:05 JST
+
+- 変更内容: ユーザーのpush・PR作成依頼を受け、最新origin/mainとの差分と既存PRなしを確認した。ログイン専用化コミット5294e76をfix/admin-managed-accountsから共有する。
+- 目的: 管理者登録によるテスト運用の変更をレビュー可能にする。
+- 影響範囲: GitHubへのブランチpush・main向けPR作成のみ。今回マージや公開Supabaseの設定変更は行わない。
+- 関連ファイル: progress.md、fix/admin-managed-accountsブランチ。
+- 確認結果: アプリの検証結果は前項の通り。今回は記録追記のみのため新しいテストは追加せず、git diff --checkで確認する。検証用プロセスは終了済みで、通常Web3000番の200応答を確認した。
+- 未解決事項: PRのリモートCI・レビュー、公開Auth設定と変更の公開反映。元からの生成差分・PDF・画像はpushに含めない。
+- 次のアクション: ブランチをpushしてPRを作成し、URLとCI状況を案内する。PRの作成結果とチェックはGitHub上で追跡する。
