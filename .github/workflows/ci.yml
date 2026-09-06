@@ -24,13 +24,13 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --locked --extra dev
 
       - name: Lint
-        run: uv run ruff check .
+        run: uv run --locked ruff check .
 
       - name: Test
-        run: uv run pytest
+        run: uv run --locked pytest
 
   frontend:
     runs-on: ubuntu-latest

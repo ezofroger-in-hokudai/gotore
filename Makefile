@@ -1,30 +1,34 @@
-.PHONY: frontend backend install-frontend install-backend test-backend build-frontend lint-backend lint-frontend lint db-start db-stop db-reset db-lint db-new
+.PHONY: frontend backend install install-frontend install-backend check test-backend build-frontend lint-backend lint-frontend lint db-start db-stop db-reset db-lint db-new
 
 frontend:
 	cd frontend && bun run dev
 
 backend:
-	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	cd backend && uv run --locked uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+install: install-backend install-frontend
 
 install-frontend:
-	cd frontend && bun install
+	cd frontend && bun install --frozen-lockfile
 
 install-backend:
-	cd backend && uv sync --extra dev
+	cd backend && uv sync --locked --extra dev
 
 test-backend:
-	cd backend && uv sync --extra dev && uv run pytest
+	cd backend && uv sync --locked --extra dev && uv run --locked pytest
 
 build-frontend:
 	cd frontend && bun run build
 
 lint-backend:
-	cd backend && uv sync --extra dev && uv run ruff check .
+	cd backend && uv sync --locked --extra dev && uv run --locked ruff check .
 
 lint-frontend:
 	cd frontend && bun run lint
 
 lint: lint-backend lint-frontend
+
+check: lint test-backend build-frontend
 
 db-start:
 	bunx supabase start
