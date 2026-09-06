@@ -1,12 +1,12 @@
 import { type Page, expect, test } from "@playwright/test";
+import { createTestUser, testPassword } from "./local-auth";
 
-async function signup(page: Page, name: string, email: string) {
+async function login(page: Page, name: string, email: string) {
+  await createTestUser(name, email);
   await page.goto("/");
-  await page.getByRole("button", { name: "新規登録", exact: true }).click();
-  await page.getByLabel("表示名", { exact: true }).fill(name);
   await page.getByLabel("メールアドレス", { exact: true }).fill(email);
-  await page.getByLabel("パスワード", { exact: true }).fill("Gotore-test-2026!");
-  await page.getByRole("button", { name: "アカウントを作成", exact: true }).click();
+  await page.getByLabel("パスワード", { exact: true }).fill(testPassword);
+  await page.getByRole("button", { name: "ログインする →", exact: true }).click();
   await expect(page.getByRole("navigation")).toBeVisible();
 }
 
@@ -21,7 +21,7 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
   pageB.on("pageerror", (error) => errors.push(error.message));
   const emailA = `gotore-${run}-a@example.test`;
   try {
-    await signup(pageA, "共有テストA", emailA);
+    await login(pageA, "共有テストA", emailA);
     await pageA
       .getByRole("navigation")
       .getByRole("button", { name: "グループ", exact: true })
@@ -32,7 +32,7 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await expect(code).toBeVisible();
     const invite = await code.innerText();
 
-    await signup(pageB, "共有テストB", `gotore-${run}-b@example.test`);
+    await login(pageB, "共有テストB", `gotore-${run}-b@example.test`);
     await pageB
       .getByRole("navigation")
       .getByRole("button", { name: "グループ", exact: true })
@@ -86,7 +86,7 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await pageA.getByRole("button", { name: "ログアウト", exact: true }).click();
     await expect(pageA.getByRole("button", { name: "ログインする →", exact: true })).toBeVisible();
     await pageA.getByLabel("メールアドレス", { exact: true }).fill(emailA);
-    await pageA.getByLabel("パスワード", { exact: true }).fill("Gotore-test-2026!");
+    await pageA.getByLabel("パスワード", { exact: true }).fill(testPassword);
     await pageA.getByRole("button", { name: "ログインする →", exact: true }).click();
     await pageA
       .getByRole("navigation")
