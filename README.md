@@ -29,6 +29,16 @@
 - 依存の詳細は [frontend/package.json](frontend/package.json) と [backend/pyproject.toml](backend/pyproject.toml)、各lockfileを基準にします。
 - Supabase CLIはローカル・CIとも2.107.0に固定しています。MakefileからBun経由で呼び出します。
 
+## Vercel・Supabaseへ公開する場合
+
+ルートの [vercel.json](vercel.json) で、Next.jsとFastAPIをVercel Services（Beta）の1プロジェクトにまとめています。
+VercelのRoot Directoryはリポジトリのルート（`.`）です。`frontend` や `backend` を個別に選びません。
+各サービスのFramework・buildは設定ファイルで指定し、`/api/*` をFastAPI、それ以外をNext.jsへ送ります。
+
+設定する値は [.env.vercel.example](.env.vercel.example)、具体的な手順・注意点は [公開準備ガイド](docs/vercel-supabase.md) を参照してください。
+クラウドの環境変数・DB migration・Auth設定は別途必要で、まだデプロイしていません。
+通常のローカル起動は、以下の手順のまま使えます。
+
 ## 初回セットアップ
 
 clone後、リポジトリのルートで実行します。Dockerを起動しておいてください。

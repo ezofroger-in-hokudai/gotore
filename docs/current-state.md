@@ -16,13 +16,14 @@
 | ホーム画面起動 | Web manifest、standalone設定、PNGアイコン、安全領域。オンライン利用が前提 | frontend/src/app/manifest.ts、apple-icon.tsx、layout.tsx |
 | DB・設定 | migration、RLS、外部キー・一意制約、ローカル設定の生成 | supabase/migrations/、scripts/configure_local.py |
 
-公開APIは `/api`。WebのリクエストをNext.jsからFastAPIへ転送します。
+公開APIは `/api`。ローカルではNext.jsからFastAPIへ転送します。
+Vercel Servicesでは1プロジェクトの共通ルートから各サービスへ振り分けます。設定と公開前の残作業は [vercel-supabase.md](vercel-supabase.md) を参照してください。クラウドへのデプロイは未実施です。
 業務データはFastAPI経由で操作し、ブラウザからのDB直接アクセスはRLSで拒否します。
 ローカルSupabaseのプロジェクトIDは `gotore`、ポートは59320番台です。
 
 ## 検証
 
-- backend: 入力制約・認証・グループ参加・共有範囲・再送・DB直接アクセス拒否の23テスト。
+- backend: 入力制約・認証・グループ参加・共有範囲・再送・DB直接アクセス拒否・接続プール設定のテスト。
 - frontend: 下書き復元・入力制約・ホーム画面設定の単体テスト。
 - E2E: 別ブラウザでの登録・グループ作成・参加・記録共有、通信再試行、下書き復元、再ログイン。
 - ホーム画面: manifest・メタ情報・PNG配信をブラウザで検証。HTTPS公開とiPhone／Android実機での追加・再起動確認は未実施。

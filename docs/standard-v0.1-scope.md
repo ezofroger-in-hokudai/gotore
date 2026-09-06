@@ -41,8 +41,8 @@ SCORE、ランキング、AI、スタンプ、コメント、Push通知、分析
 - 現行のNext.js／TypeScript、FastAPI、Supabase PostgreSQL／Authを利用する。
 - WebはSupabase Authでログインし、APIへBearerトークンを送る。APIはAuthサーバーで検証したユーザーIDを利用する。
 - WebからDBを直接操作しない。業務ルールとアクセス制御はFastAPI側へ置き、DBの公開テーブルではRLSを有効にして直接アクセスを拒否する。
-- ブラウザのAPIは同一オリジンの `/api` を使い、Next.jsからFastAPIへ転送する。APIはWeb専用Cookieに依存しない。
-- DB接続先とサーバー用認証設定はbackendの環境変数に置く。frontendには公開可能なSupabase URL・キーのみを置く。
+- ブラウザのAPIは同一オリジンの `/api` を使う。ローカルではNext.jsが転送し、Vercel Servicesでは共通ルートがFastAPIへ振り分ける。APIはWeb専用Cookieに依存しない。公開準備の追加仕様は [vercel-supabase.md](vercel-supabase.md) を参照。
+- DB接続先とサーバー用認証設定はサーバーの環境変数に置く。ブラウザに公開するのは公開可能なSupabase URL・キーのみ。Servicesではプロジェクト内で環境変数を共有するが、秘密値を `NEXT_PUBLIC_` に含めない。
 - ローカルSupabaseは `gotore` 専用のプロジェクト名とポートを使い、同じマシンの別プロジェクトから分離する。
 - 画面は参考画像の日本語・ライトテーマ・赤を基調とし、スマートフォンで操作できるようにする。
 

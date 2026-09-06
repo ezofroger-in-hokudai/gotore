@@ -77,3 +77,26 @@
 - 確認結果: Web画面、APIのhealth、Web経由のhealthが正常応答した。機能の変更はないためテスト追加・全テスト再実行はしていない。
 - 未解決事項: スマートフォン実機からの利用には別途到達可能なHTTPS・Auth設定が必要。
 - 次のアクション: http://localhost:3000 で新規登録し、グループ作成・記録共有を試す。
+
+## 2026-09-07 02:48 JST
+
+- 変更内容: ユーザーの追加依頼を受け、Vercel Servicesの1プロジェクト構成を設定した。ルートvercel.jsonでfrontend／backendを定義し、/api/*をFastAPIへ振り分ける。VercelではNext.jsのAPI転送を止め、通常のローカル転送は維持した。Transaction Pooler向けにPsycopgの自動prepared statementを無効にした。
+- 目的: 既存のNext.js・FastAPI・Supabase構成を維持し、同じドメインで公開できる準備を行う。
+- 影響範囲: デプロイ設定、環境変数サンプル、DB接続オプション、回帰テスト、仕様・公開手順。クラウドの作成・設定変更・migration・デプロイは行っていない。
+- 関連ファイル: vercel.json、.env.vercel.example、frontend/next.config.mjs、backend/app/api/dependencies.py、frontend/tests/unit/deployment.test.mjs、backend/tests/test_database_connection.py、README.md、docs/vercel-supabase.md、docs/standard-v0.1-scope.md、docs/current-state.md、docs/README.md、task.md。ブランチ: chore/vercel-services。
+- テスト方針: 設定ファイル不在・Vercelでの不要な転送・接続オプション不足による失敗を先に確認してから実装した。
+- 確認結果: make check成功（backend24件、frontend単体7件、lint、本番build）。VERCEL=1でのbuildも成功し、生成されたNext.jsのrewritesが空であることを確認した。文書のローカルリンク28件を検証した。
+- 検証上の補足: 公式JSONスキーマ全体のメタ検査は未使用のqueue定義の互換性で失敗したため、公式スキーマに対する今回の設定値の直接検証を実施し成功した。検証用jsonschemaはアプリ依存へ追加していない。
+- 未解決事項: ローカル共有E2Eを最終確認中。ServicesはBetaで、実クラウドのbuild・経路・DB接続、公開環境・実機確認は未実施。
+- 次のアクション: E2E結果を記録してコミットする。レビュー後、公開先と環境変数を用意し、別作業として実デプロイを確認する。
+
+## 2026-09-07 02:56 JST
+
+- 変更内容: Services公開準備の最終検証を完了し、公開手順に通常開発サーバーとE2Eの起動ロックの注意を追加した。
+- 目的: 新しい公開経路と既存のローカル操作を区別して検証し、未実施のクラウド確認を明確にする。
+- 影響範囲: 検証・文書・タスク状態。ローカルWebを同じ3000番で再起動し、API・Supabase・既存記録は保持した。
+- 関連ファイル: docs/vercel-supabase.md、task.md、progress.md。検証用設定とHTTPゲートウェイは/tmp配下だけに作成し、アプリには追加していない。
+- 確認結果: VERCEL=1の本番ビルドを3100番で起動し、/api/*を既存APIへ振り分ける一時3200番ゲートウェイ経由でE2E2件が成功。通常のlocalhost:3000でも同じE2E2件が成功した。登録・作成・参加・共有・下書き・再送・再ログイン・アイコン配信を確認した。検証専用3100／3200番プロセスは停止済み。
+- 検証上の補足: 通常のmake test-e2eは起動済み3000番のNext.js開発サーバーとのロック競合で起動失敗した。起動中の画面を使う一時設定へ切り替え、127.0.0.1:3000ではHMRのWebSocket失敗と初期表示停止が発生したが、ユーザー向けURLのlocalhost:3000では成功した。これらをServices本番での障害とは判定していない。既存テストの期待値や共有処理を緩める変更はしていない。
+- 未解決事項: Vercel Servicesの実デプロイ、クラウドSupabaseの接続・migration・メール設定、Previewの分離と実機操作確認は未実施。公式スキーマのメタ検査に関する補足は前項の通り。起動時のnext-env.d.tsの生成差分と、元から未追跡のPDF・画像はコミットしない。
+- 次のアクション: 変更をレビューして共有後、Vercelでリポジトリルートと環境変数を設定し、クラウド側の受け入れ確認を行う。

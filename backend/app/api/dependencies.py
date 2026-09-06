@@ -52,7 +52,12 @@ def database():
         raise HTTPException(503, "データベースが設定されていません")
     try:
         with psycopg.connect(
-            settings.database_url, autocommit=True, row_factory=dict_row, connect_timeout=5
+            settings.database_url,
+            autocommit=True,
+            row_factory=dict_row,
+            connect_timeout=5,
+            # Transaction Poolerでは接続をまたぐprepared statementを使用しない。
+            prepare_threshold=None,
         ) as connection:
             yield connection
     except psycopg.Error:
