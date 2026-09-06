@@ -1,0 +1,55 @@
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Query
+
+from app.api.dependencies import current_user, training_service
+from app.domain.identity import User
+from app.domain.workout import WorkoutInput
+from app.schemas.training import GroupCreate, GroupDetail, GroupJoin, GroupResponse, WorkoutResponse
+from app.services.training import TrainingService
+
+router = APIRouter(tags=["training"])
+Service = Annotated[TrainingService, Depends(training_service)]
+Limit = Annotated[int, Query(ge=1, le=50)]
+Offset = Annotated[int, Query(ge=0)]
+
+
+@router.get("/me", response_model=User)
+def me(user: Annotated[User, Depends(current_user)]):
+    return user
+
+
+@router.get("/groups", response_model=list[GroupResponse])
+def groups(service: Service):
+    return service.groups()
+
+
+@router.post("/groups", response_model=GroupResponse, status_code=201)
+def create_group(data: GroupCreate, service: Service):
+    return service.create_group(data.name)
+
+
+@router.post("/groups/join", response_model=GroupResponse)
+def join_group(data: GroupJoin, service: Service):
+    return service.join_group(data.invite_code)
+
+
+@router.get("/groups/{group_id}", response_model=GroupDetail)
+def group(group_id: UUID, service: Service):
+    return service.group(group_id)
+
+
+@router.get("/groups/{group_id}/workouts", response_model=list[WorkoutResponse])
+def group_workouts(group_id: UUID, service: Service, limit: Limit = 50, offset: Offset = 0):
+    return service.workouts(group_id, limit, offset)
+
+
+@router.get("/workouts", response_model=list[WorkoutResponse])
+def workouts(service: Service, limit: Limit = 50, offset: Offset = 0):
+    return service.workouts(None, limit, offset)
+
+
+@router.post("/workouts", response_model=WorkoutResponse, status_code=201)
+def save_workout(data: WorkoutInput, service: Service):
+    return service.save_workout(data)
