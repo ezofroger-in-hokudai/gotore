@@ -9,6 +9,21 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: gotore_test
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/gotore_test
     defaults:
       run:
         working-directory: backend
@@ -24,13 +39,13 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --locked --extra dev
 
       - name: Lint
-        run: uv run ruff check .
+        run: uv run --locked ruff check . ../scripts
 
       - name: Test
-        run: uv run pytest
+        run: uv run --locked pytest
 
   frontend:
     runs-on: ubuntu-latest
@@ -54,6 +69,9 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Test
+        run: bun run test
+
   database:
     runs-on: ubuntu-latest
     steps:
@@ -67,7 +85,15 @@ jobs:
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.107.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/.python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Start local Supabase
         run: supabase start
@@ -77,3 +103,16 @@ jobs:
 
       - name: Lint database schema
         run: supabase db lint --local --fail-on error
+
+      - name: Configure local application
+        run: python3 scripts/configure_local.py --cli supabase
+
+      - name: Install application dependencies
+        run: make install
+
+      - name: Install browser
+        working-directory: frontend
+        run: bunx playwright install --with-deps chromium
+
+      - name: Test record sharing across browsers
+        run: make test-e2e

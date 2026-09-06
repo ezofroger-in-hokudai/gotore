@@ -1,434 +1,194 @@
-# web-app-standard
+# GO TORE
 
-`FastAPI` + `Next.js` を前提にした、Web アプリ開発用の基盤リポジトリである。  
-`backend` と `frontend` を分けたモノレポ構成を採用し、最小限の API、画面、Docker 起動構成を含んでいる。
+離れていても仲間と合トレしている感覚を目指す、トレーニングアプリです。
+初版は「グループを作る → 記録する → 仲間に共有する」までを実装しています。
+日付・種目・重量・回数・セットを保存し、自分の記録とグループの記録を閲覧できます。
+利用形態は、Webページをスマートフォンのホーム画面に追加するオンラインのWebアプリです。
 
-## 最初にやること
+必要な機能を小さく完成させ、実際に使って毎週改善します。将来のAndroid／iOS移植に向けて、業務処理をAPI側に分離しています。
 
-最初の確認は Docker で行うのが分かりやすい。
+## 最初に読むもの
 
-1. `docker compose up --build` を実行する
-2. `http://localhost:3000` を開いてフロントエンドが表示されることを確認する
-3. `http://localhost:8000/docs` を開いて FastAPI の Swagger UI が表示されることを確認する
-4. 必要なら `http://localhost:8000/api/health` を開いてヘルスチェックを確認する
+| 資料 | 内容 |
+| --- | --- |
+| [初版の仕様](docs/standard-v0.1-scope.md) | 今回の範囲、保存・共有のルール、API、完了条件 |
+| [資料一覧](docs/README.md) | PDF・参考画面と仕様の適用範囲 |
+| [現状](docs/current-state.md) | 実装済み・残作業 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Issue・週次計画・PR・レビューの進め方 |
+| [AGENTS.md](AGENTS.md) | エージェントの作業規約 |
+| [開発方針](docs/development-policy.md) | 責務の配置とモバイル移植の方針 |
+| [task.md](task.md) / [progress.md](progress.md) | 大きなタスク / 変更・検証の記録 |
 
-まずはこの状態を作れれば、基盤としては正常に動いていると判断できる。
+実装Issue: [#1 グループ作成・記録・共有](https://github.com/ezofroger-in-hokudai/gotore/issues/1)
 
-## 全体構成
+## 開発環境
 
-このリポジトリは、アプリケーション開発を始めるための共通土台として使うものである。  
-構成の中心は次の 4 つである。
+- Git、GNU Make、Python 3.12系、uv、Bun 1.3.9、Docker／Docker Compose。
+- WindowsではWSL2内からの実行を想定。
+- WebはNext.js／TypeScript、APIはFastAPI、認証とDBはローカルSupabase。
+- 依存の詳細は [frontend/package.json](frontend/package.json) と [backend/pyproject.toml](backend/pyproject.toml)、各lockfileを基準にします。
+- Supabase CLIはローカル・CIとも2.107.0に固定しています。MakefileからBun経由で呼び出します。
 
-- `frontend`
-  Next.js によるフロントエンドである。画面表示と API 呼び出しを担当する。
-- `backend`
-  FastAPI によるバックエンドである。API 提供と業務ロジックの配置先である。
-- `supabase`
-  Supabase CLI を前提としたデータベース migration 基盤である。ローカル DB 設定、migration、seed を管理する。
-- `.github/workflows`
-  GitHub Actions による最小 CI を置く。backend の lint / test、frontend の lint / build、migration 整合性確認を担う。
+## Vercel・Supabaseへ公開する場合
 
-技術前提は以下である。
+ルートの [vercel.json](vercel.json) で、Next.jsとFastAPIをVercel Services（Beta）の1プロジェクトにまとめています。
+VercelのRoot Directoryはリポジトリのルート（`.`）です。`frontend` や `backend` を個別に選びません。
+各サービスのFramework・buildは設定ファイルで指定し、`/api/*` をFastAPI、それ以外をNext.jsへ送ります。
 
-- バックエンドは `FastAPI`
-- フロントエンドは `Next.js`
-- Python の環境管理は `uv`
-- JavaScript の環境管理は `bun`
-- データベース基盤は `Supabase`
-- 全体起動は `Docker Compose`
+設定する値は [.env.vercel.example](.env.vercel.example)、具体的な手順・注意点は [公開準備ガイド](docs/vercel-supabase.md) を参照してください。
+クラウドの環境変数・DB migration・Auth設定は別途必要で、まだデプロイしていません。
+通常のローカル起動は、以下の手順のまま使えます。
 
-最小構成として、以下を含んでいる。
+## 初回セットアップ
 
-- FastAPI の最小 API
-- `/api/health` のヘルスチェック
-- Next.js の最小トップページ
-- フロントエンドからバックエンドの疎通を確認する表示
-- GitHub Actions による最小 CI
-- PR テンプレート
-- `ruff` と `biome` による lint
-- Supabase を前提にした最小のデータベース基盤
+clone後、リポジトリのルートで実行します。Dockerを起動しておいてください。
 
-## 役割
+```bash
+make install
+make db-start
+make env-local
+```
 
-### `frontend`
+`db-start` はGO TORE専用のSupabase（プロジェクトID: `gotore`）を起動し、初回はmigrationを適用します。
+DB・認証の基本動作をローカルで試すために、クラウドサービスのアカウントは不要です。
 
-- 画面表示を担う
-- `backend` の API を呼び出す
-- `frontend/src/app` を起点にページを構成する
-- `frontend/src/features` に画面ごとの機能を追加していく
+`env-local` は起動済みのローカルSupabaseから接続情報を読み、`backend/.env` と `frontend/.env.local` を作成します。
+秘密の値は表示せず、既存ファイルは上書きしません。既存のサンプルをコピー済みの場合は、各 `.env.example` と `bunx supabase@2.107.0 status` を参照して手動で設定してください。
 
-### `backend`
+別々のターミナルで起動します。
 
-- API を提供する
-- 業務ロジックを保持する
-- `backend/app/api` にエンドポイントを置く
-- `backend/app/domain` と `backend/app/services` に業務知識を追加していく
+```bash
+# ターミナル1
+make backend
+```
 
-### `supabase`
+```bash
+# ターミナル2
+make frontend
+```
 
-- ローカル Supabase の設定を持つ
-- migration と seed を管理する
-- アプリケーション固有の DB 変更を SQL として積み上げる
+| 確認先 | 用途 |
+| --- | --- |
+| http://localhost:3000 | GO TOREの登録・ログイン画面 |
+| http://localhost:8000/docs | API仕様・Swagger UI |
+| http://localhost:8000/openapi.json | API定義 |
+| http://localhost:8000/api/health | ヘルスチェック |
+| http://localhost:59323 | Supabase Studio（通常のdb-start時） |
+| http://localhost:59324 | ローカルの確認メール |
 
-### `.github/workflows`
+ローカル設定はメール確認なしで登録できます。公開環境ではメール確認・メール送信・公開URLを別途設定します。
 
-- 基盤として最低限必要な CI を持つ
-- 開発初期段階で build / test / migration の破綻を早期に検知する
+## 最初に試す操作
 
-## 起動方法
+1. アカウントAを登録し、「グループ」からグループを作成する。
+2. 招待コードをコピーし、別ブラウザでアカウントBを登録してコードで参加する。
+3. Aで「トレーニングを記録」を開き、共有先・種目・重量・回数を入力する。
+4. 「記録を確定して共有」で保存する。
+5. BのホームでAの記録を確認する。表示中は5秒ごとに更新する。
+6. Aの「自分の記録」で保存内容を確認する。再ログインしても履歴は残る。
 
-### Docker で起動する
+同じブラウザの別タブはログイン状態を共有するため、2人分の確認には別ブラウザか別プロファイルを使ってください。
+共有先を「自分だけの記録」にすると、仲間には公開されません。
 
-前提:
+## スマートフォンのホーム画面から使う
 
-- Docker
-- Docker Compose
+ホーム画面用の名前・アイコンと、ブラウザの枠を外して起動する `standalone` 設定を用意しています。
+公開後、端末からアクセスできるHTTPSのURLで追加してください。ストアへの配布は今回行いません。
 
-リポジトリのルートで以下を実行する。
+- iPhone: SafariでURLを開く → 共有 →「ホーム画面に追加」→「Webアプリとして開く」をオンにして追加。[Appleの手順](https://support.apple.com/ja-jp/guide/iphone/iphea86e5236/ios)
+- Android: ChromeでURLを開く → メニュー →「ホーム画面に追加」→「インストール」。表示名は端末・ブラウザによって異なります。[Googleの手順](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=ja)
+
+追加したアイコンから起動し、ログインして使います。通常ブラウザとホーム画面のアプリでログインや下書きが共有されるとは限りません。
+保存・共有・再起動にはオンライン接続が必要です。下書きは同じブラウザ／ホーム画面アプリ内の補助保存で、オフライン同期やバックアップではありません。
+
+PCの `localhost` はスマートフォンから使うための公開URLではありません。
+実機利用にはWebとAuthが端末から到達できるHTTPS環境、frontendの `NEXT_PUBLIC_SUPABASE_URL`、Authの許可URL・メール設定が必要です。
+ローカルSupabaseの既定キーや管理画面をそのままインターネットへ公開しないでください。
+公開環境の準備後、iPhone／Androidそれぞれで「追加 → 起動 → ログイン → 記録・共有 → 閉じて再起動」と、キーボード・画面端の表示を確認します。実機での追加操作は自動テストの対象外です。
+
+## 検証
+
+backendのDB統合テストには専用の `gotore_test` DBを使います。初回だけ作成してください。
+
+```bash
+docker exec supabase_db_gotore createdb -U postgres gotore_test
+```
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:59322/gotore_test make check
+```
+
+`check` はbackendのlint・テスト、frontendのlint・単体テスト・buildを実行します。
+`TEST_DATABASE_URL` が未指定ならDB統合テストはskipになります。CIでは専用PostgreSQLを必ず用意して実行します。
+統合テストは名前が `_test` で終わるDBだけを使い、業務テーブルをトランザクション内で作成して終了時にロールバックします。
+
+ブラウザでの結合確認:
+
+```bash
+cd frontend
+bunx playwright install chromium
+cd ..
+make test-e2e
+```
+
+E2EはローカルSupabaseと設定済みの環境ファイルを使い、APIを8100番・Webを3100番で一時起動します。
+中断後に自分が起動した同じテスト用サーバーが残っている場合だけ、`PLAYWRIGHT_REUSE_SERVER=1 make test-e2e` で再利用できます。別のアプリや通常開発用サーバーには使わないでください。CIでは再利用しません。
+別ブラウザの登録・参加・共有、下書き復元、通信失敗後の再送、再ログインを確認します。
+ホーム画面用のmanifest・メタ情報・各サイズのPNGアイコン配信も確認します。
+ローカルDBに `gotore-…@example.test` のテストアカウントとその記録を作成します。既存ユーザーのデータは削除しません。
+結果・失敗時の画像はGit対象外の `frontend/test-results/` に出力します。
+失敗時のtraceにはテスト用の認証情報も含まれるため、生成物はコミットせず、lintの対象からも除外しています。
+
+| コマンド | 内容 |
+| --- | --- |
+| `make install` | lockfileに従って開発依存を準備 |
+| `make env-local` | 未作成のローカル環境ファイルを準備 |
+| `make lint` | Ruff・Biome |
+| `make test-backend` | pytest（DB統合はTEST_DATABASE_URLが必要） |
+| `make test-frontend` | 入力・下書きの単体テスト |
+| `make test-e2e` | 実ブラウザ2人分の結合テスト |
+| `make build-frontend` | Next.jsのビルド |
+| `make check` | lint・backendテスト・frontend単体テスト・build |
+| `make db-lint` | ローカルDBのschema検査 |
+
+GitHub Actionsではbackend、frontend、databaseの3ジョブで、DB統合テスト・migration適用・E2Eを含む確認を行います。
+
+## DockerでWeb・APIを動かす場合
+
+上の `make db-start` と `make env-local` を先に済ませてから実行します。
 
 ```bash
 docker compose up --build
 ```
 
-起動後の確認先:
+Webは3000番、APIは8000番です。Supabaseは別起動で、コンテナのAPIからは `host.docker.internal:59321` と `59322` へ接続します。
+ソースのボリュームマウントはないため、変更時は再ビルドしてください。日常の編集はローカル個別起動を使えます。
 
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8000`
-- Swagger UI: `http://localhost:8000/docs`
-- Health Check: `http://localhost:8000/api/health`
-
-停止:
-
-```bash
-docker compose down
-```
-
-Dockerfile や依存関係を変更した場合は、再度 `docker compose up --build` を実行する。
-
-補足:
-
-- `docker compose up --build` で起動するのは `frontend` と `backend` である
-- `Supabase` のローカル DB は別に `make db-start` で起動する
-
-この分離にしている理由は、Supabase CLI 自体が内部で Docker を使って複数のサービスを管理するためである。  
-`docker-compose.yml` に無理に同居させることも可能ではあるが、CLI 前提の migration 運用とぶつかりやすいため、この基盤では分けている。
-
-### ローカルで個別起動する
-
-Docker を使わずに個別起動したい場合は、ルートの [Makefile](/home/takagi/web-app-standard/Makefile) を使う。  
-`make frontend` と `make backend` はどちらもフォアグラウンドで起動するため、ログをそのまま確認しやすい構成である。
-
-前提:
-
-- `uv`
-- `bun`
-
-初回セットアップ:
-
-```bash
-make install-backend
-make install-frontend
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
-```
-
-起動:
-
-```bash
-make backend
-make frontend
-```
-
-`make backend` と `make frontend` は別ターミナルで実行する。  
-どちらもフォアグラウンドで起動するため、1つ目のコマンドを実行した端末はそのまま占有される。
-
-利用できる主なコマンド:
-
-- `make backend`
-  FastAPI をローカル起動する
-- `make frontend`
-  Next.js をローカル起動する
-- `make install-backend`
-  `uv sync --extra dev` でバックエンド依存を同期する
-- `make install-frontend`
-  `bun install` でフロントエンド依存をインストールする
-- `make test-backend`
-  バックエンドテストを実行する
-- `make build-frontend`
-  フロントエンドをビルドする
-- `make lint-backend`
-  `ruff` でバックエンドを lint する
-- `make lint-frontend`
-  `biome` でフロントエンドを lint する
-- `make lint`
-  backend / frontend の lint をまとめて実行する
-- `make db-start`
-  Supabase のローカルスタックを起動する
-- `make db-stop`
-  Supabase のローカルスタックを停止する
-- `make db-reset`
-  migration と seed をローカル DB に再適用する
-- `make db-lint`
-  ローカル DB の schema を lint する
-- `make db-new name=...`
-  新しい migration ファイルを作成する
-
-`make db-*` は Supabase CLI を内部で呼び出し、Docker を使ってローカル DB 環境を扱う。  
-初回はイメージ取得のため時間がかかることがある。
-
-## このリポジトリの使い方
-
-このリポジトリは、個別のアプリケーションを作るための出発点として、Template Repository として使う想定である。
-
-新しいアプリケーションごとに独立した履歴で始めたい場合は、GitHub の Template Repository として使うのが適している。
-
-流れ:
-
-1. このリポジトリを GitHub で Template Repository に設定する
-2. `Use this template` から新しいリポジトリを作成する
-3. 作成された新しいリポジトリ側で、要件に応じた実装を追加する
-
-向いているケース:
-
-- アプリケーションごとに履歴を完全に分けたい
-- この基盤リポジトリ自体にはアプリ固有の変更を混ぜたくない
-- 毎回クリーンな初期状態から始めたい
-
-## CI と PR テンプレート
-
-GitHub 用の最小構成として、以下を含んでいる。
-
-- `.github/workflows/ci.yml`
-  `backend` の lint / test、`frontend` の lint / build、Supabase migration の整合性確認を実行する
-- `.github/pull_request_template.md`
-  PR 作成時の記入項目を揃える
-
-このため、Template Repository として利用した場合でも、新しく作成したリポジトリには最初から CI と PR テンプレートが入る。
-
-## Docker 構成
-
-全体の起動定義は [docker-compose.yml](/home/takagi/web-app-standard/docker-compose.yml) にある。
-
-### `frontend`
-
-- `frontend/Dockerfile` から作成されるコンテナ
-- `bun` を使って Next.js アプリを起動する
-- ホストの `3000` 番ポートで公開する
-
-役割:
-
-- 画面表示
-- バックエンド API の呼び出し
-
-### `backend`
-
-- `backend/Dockerfile` から作成されるコンテナ
-- `uv` を使って FastAPI アプリを起動する
-- ホストの `8000` 番ポートで公開する
-
-役割:
-
-- API 提供
-- 業務ロジックの配置先
-- 今後の DB や外部サービス連携の中心
-
-### サービス間通信
-
-- ブラウザからは `http://localhost:3000` と `http://localhost:8000` を利用する
-- `frontend` コンテナから `backend` へは `http://backend:8000` で接続する
-
-つまり、ブラウザから見る URL と、コンテナ同士で通信する URL は異なる。
-
-## データベース構成
-
-データベース基盤として `Supabase` を前提にしている。  
-ただし、このリポジトリにはアプリケーション固有のテーブル設計は含めず、あくまで migration とローカル開発の型だけを置く方針である。
-
-ローカル DB 運用の基本:
-
-- `supabase/config.toml`
-  ローカル Supabase の設定
-- `supabase/migrations/`
-  マイグレーション SQL の配置先
-- `supabase/seed.sql`
-  ローカル用 seed データの配置先
-
-基本的な流れ:
-
-1. `make db-start` で Supabase ローカル環境を起動する
-2. `make db-new name=...` で migration を作成する
-3. `make db-reset` で migration を適用し直す
-4. `make db-lint` で schema の lint を確認する
-
-`db-start` `db-stop` `db-reset` `db-lint` は、内部的には Supabase CLI と Docker を利用する。
-
-## ローカルから本番へ反映する流れ
-
-Supabase の DB 変更は、基本的には次の流れで扱う。
-
-1. ローカルで `make db-start` を実行する
-2. `supabase/migrations/` に migration を追加する
-3. `make db-reset` と `make db-lint` でローカル検証する
-4. 変更を GitHub に push する
-5. CI で migration 整合性を確認する
-6. 本番反映時は、対象の Supabase プロジェクトに対して `supabase db push` を実行する
-
-ローカルからリモート Supabase へ反映する前提コマンドは以下である。
-
-```bash
-supabase login
-supabase link --project-ref <PROJECT_ID>
-supabase db push
-```
-
-`PROJECT_ID` は Supabase ダッシュボードの URL から確認できる。  
-本番環境への反映は、ローカル端末から手動で実行するより、GitHub Actions などの CI/CD パイプラインから実行する方が安全である。
-
-## ディレクトリ構成
-
-```text
-.
-├── backend/
-│   ├── .python-version
-│   ├── Dockerfile
-│   ├── app/
-│   │   ├── api/
-│   │   ├── core/
-│   │   ├── domain/
-│   │   ├── infrastructure/
-│   │   ├── schemas/
-│   │   └── services/
-│   ├── pyproject.toml
-│   ├── uv.lock
-│   └── tests/
-├── .github/
-│   └── workflows/
-├── docs/
-├── supabase/
-│   ├── config.toml
-│   ├── migrations/
-│   ├── seed.sql
-│   └── README.md
-├── frontend/
-│   ├── Dockerfile
-│   ├── .env.example
-│   ├── biome.json
-│   ├── bun.lock
-│   ├── package.json
-│   ├── public/
-│   ├── src/
-│   │   ├── app/
-│   │   ├── components/
-│   │   ├── features/
-│   │   ├── lib/
-│   │   └── styles/
-│   └── tests/
-├── docker-compose.yml
-├── Makefile
-├── .editorconfig
-├── progress.md
-├── task.md
-└── README.md
-```
+停止は `docker compose down`、Supabaseの停止は `make db-stop` です。
+`make db-reset` はローカルDBのデータを削除してmigration・seedから再作成します。既存データを残したい場合は実行しないでください。
 
 ## 主な配置先
 
-### `backend/`
+| 場所 | 役割 |
+| --- | --- |
+| `frontend/src/features/training/` | ログイン・グループ・記録・共有画面 |
+| `frontend/src/lib/` | APIクライアント、Supabase Authクライアント |
+| `backend/app/api/` | HTTP、認証済みユーザーの取得 |
+| `backend/app/domain/` | 入力・業務制約 |
+| `backend/app/services/` | 本人の操作を組み立てる処理 |
+| `backend/app/infrastructure/` | DB操作・トランザクション |
+| `backend/app/schemas/` | APIの入出力 |
+| `supabase/migrations/` | schemaとDB制約 |
+| `backend/tests/` / `frontend/tests/` | テスト |
+| `scripts/configure_local.py` | ローカル環境ファイルの準備 |
 
-FastAPI 側の実装を配置する。
+## 起動できない場合
 
-- `backend/app/main.py`
-  FastAPI アプリのエントリーポイント
-- `backend/app/api`
-  ルーター、エンドポイント
-- `backend/app/core`
-  設定、共通処理
-- `backend/app/domain`
-  ドメイン知識、業務ルール
-- `backend/app/services`
-  ユースケース、アプリケーションサービス
-- `backend/app/infrastructure`
-  DB、外部サービス連携
-- `backend/app/schemas`
-  リクエスト、レスポンスの型
-- `backend/tests`
-  バックエンドテスト
-- `backend/.python-version`
-  利用する Python 系統の基準
-- `backend/uv.lock`
-  `uv` 用のロックファイル
+- ログインの準備ができていない: `make db-start` と `make env-local` を確認し、Webを再起動します。
+- APIが503になる: backendのDB接続先・Supabase URL・anon keyを確認します。
+- ポートが競合する: Webの3000、APIの8000、Supabaseの59320番台が他で使われていないか確認します。
+- lockfile不整合: 依存定義とlockfileを同じコミットに合わせます。通常のセットアップでlockfileを削除しません。
+- 共有記録が見えない: 同じグループに参加しているか、保存時にそのグループを選んだか確認します。
 
-### `frontend/`
-
-Next.js 側の実装を配置する。
-
-- `frontend/src/app`
-  ページ、レイアウト、ルーティング
-- `frontend/src/components`
-  再利用 UI
-- `frontend/src/features`
-  機能単位の UI とロジック
-- `frontend/src/lib`
-  共通関数、API クライアント
-- `frontend/src/styles`
-  スタイル定義
-- `frontend/public`
-  静的ファイル
-- `frontend/tests`
-  フロントエンドテスト
-- `frontend/.env.example`
-  フロントエンド用の環境変数サンプル
-- `frontend/biome.json`
-  `biome` の設定
-- `frontend/bun.lock`
-  `bun` 用のロックファイル
-
-### `docs/`
-
-作成したいアプリケーションの仕様書や補足資料を置く場所である。  
-この基盤リポジトリでは最小限の構成だけを用意し、詳細な中身は派生先で追加する想定である。
-
-### `supabase/`
-
-Supabase CLI と migration を配置する。
-
-- `supabase/config.toml`
-  ローカル Supabase の設定
-- `supabase/migrations`
-  migration SQL の配置先
-- `supabase/seed.sql`
-  ローカル seed データ
-
-### ルート
-
-- `.github/workflows/ci.yml`
-  GitHub Actions の CI 定義
-- `.github/pull_request_template.md`
-  PR テンプレート
-- `.editorconfig`
-  エディタ共通設定
-- `Makefile`
-  ローカル実行と補助コマンド
-
-## 開発の進め方
-
-一般的には次の順で進める想定である。
-
-1. `docker compose up --build` で起動確認する
-2. `make lint` で lint が通る状態を保つ
-3. `backend/app/domain` と `backend/app/services` に業務ロジックを追加する
-4. `frontend/src/features` に画面ごとの機能を追加する
-5. `docs/` に仕様や設計判断を残す
-
-Docker を使わずに進めたい場合は、`make backend` と `make frontend` を別ターミナルで実行する。
-
-## この基盤に含めていないもの
-
-以下はアプリケーションごとに変わるため、このリポジトリでは固定していない。
-
-- 認証
-- リモート Supabase プロジェクト設定
-- ORM
-- UI ライブラリ
-- deploy 設定
-- lint / formatter の詳細ルール設計
+SCORE・AI・ランキング・スタンプ・編集削除・グループ管理・公開環境・ネイティブモバイルアプリは後続です。
+今週の追加・改善は [週次計画テンプレート](.github/ISSUE_TEMPLATE/weekly.md) で選びます。
