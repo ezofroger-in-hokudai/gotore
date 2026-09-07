@@ -76,6 +76,16 @@ class TrainingRepository:
             )
         return group
 
+    def rename_group(self, user_id: UUID, group_id: UUID, name: str):
+        group = self.connection.execute(
+            """UPDATE public.gotore_groups SET name = %s
+            WHERE id = %s AND owner_id = %s RETURNING *""",
+            (name, group_id, user_id),
+        ).fetchone()
+        if group is None:
+            raise NotFound("グループが見つからないか、変更する権限がありません")
+        return group
+
     def save_workout(self, user_id: UUID, workout: WorkoutInput):
         exercises = workout.model_dump(mode="json")["exercises"]
         with self.connection.transaction():

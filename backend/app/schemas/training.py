@@ -12,6 +12,10 @@ class GroupCreate(BaseModel):
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40)]
 
 
+class GroupRename(GroupCreate):
+    pass
+
+
 class GroupJoin(BaseModel):
     model_config = ConfigDict(extra="forbid")
     invite_code: Annotated[

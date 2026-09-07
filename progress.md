@@ -1,5 +1,69 @@
 # progress.md
 
+## 2026-09-07 14:19 JST
+
+- 変更内容: ユーザーのPR作成依頼を受け、feat/4-7-name-settingsの既存PRなしを確認した。main向けPRに#24・#5・#4・#7の対応範囲、検証結果、実Supabase共有E2Eの未完了を記載する。
+- 目的: 認証設定対策・入力改善・名称設定をレビュー可能にする。
+- 影響範囲: PR作成と関連する状態記録のみ。マージ・クラウド設定変更・手動デプロイは行わない。
+- 関連ファイル: progress.md、docs/current-state.md、docs/daily-improvements.md。
+- 確認結果: コードの検証結果は前項を参照。今回は文書のみのためテストは追加せず、git diff --checkで確認する。元からの生成差分と未追跡資料は含めない。
+- 未解決事項: リモートCI・レビュー、Docker停止により未完了の実Supabase共有E2E。#4・#7は一部対応のため、自動クローズ指定を付けない。
+- 次のアクション: 記録をpushしてPRを作成し、URLと初期チェック状態を案内する。以後のレビュー・CI結果はPR上で追跡する。
+
+## 2026-09-07 14:16 JST
+
+- 変更内容: ユーザーのcommit・push依頼を受け、最新origin/mainとの差分とpush先ブランチが未作成であることを確認した。実装済み4コミットと本記録をfeat/4-7-name-settingsから共有する。
+- 目的: #24・#5・#4・#7の対応をリモートで確認できるようにする。
+- 影響範囲: 作業ブランチのpushのみ。PR作成・mainへのマージ・手動デプロイは行わない。
+- 関連ファイル: progress.md、feat/4-7-name-settingsブランチ。
+- 確認結果: アプリの検証結果は前項の通り。今回は記録のみのためテスト追加・全体再実行はせず、git diff --checkで確認する。next-env.d.ts生成差分・未追跡のPDF2点・画像は含めない。
+- 未解決事項: Docker停止に伴う実Supabase共有E2E、リモートCI、レビューは未完了。pushを検証完了や本番反映と扱わない。
+- 次のアクション: 通常のpushを実行し、リモートの先頭コミットとの一致を確認して結果を案内する。
+
+## 2026-09-07 14:11 JST
+
+- 変更内容: 名称設定を7e857d6へコミットし、#24・#5・#4・#7にローカル実装の範囲・検証・残作業をコメントした。Issueは閉じず、push・PR・マージ・デプロイは行っていない。
+- 目的: 未反映のローカル変更と、未完了の実Auth共有検証を追跡可能にして引き継ぐ。
+- 影響範囲: Issueコメント・進捗記録・ローカル検証プロセスの片付け。
+- 関連ファイル: progress.md。ブランチfeat/4-7-name-settings。先行コミットf24aa99（#24）、fcc59a5（#5）。
+- 確認結果: 文書リンク38件・git diff --check成功。検証専用8100／3100番と一時PostgreSQLを停止し、通常Web3000番・API8000番の200応答を確認した。一時DBファイルは保持。元からのnext-env.d.ts生成差分・未追跡PDF2点・画像はコミット対象外。
+- 未解決事項: Dockerは停止したままで、実Supabase Authを含む共有E2Eは未完了。ユーザーによるDocker起動が必要。残りの機能Issueはdocs/daily-improvements.mdに記載の採否・仕様・計測条件・実機確認が必要。
+- 次のアクション: Docker起動後にGO TORE専用Supabaseをデータ保持で再開し、更新後の全共有E2Eを実行する。以後の機能は残条件を合意してから着手する。記録追記のみのためテスト追加はせず、上記の最終検証結果を維持する。
+
+## 2026-09-07 14:08 JST
+
+- 変更内容: ユーザー承認済みの#4・#7から名称設定を実装。設定画面でAuthの表示名を更新し、POST /api/me/profileで検証済み本人情報だけを同期する。Auth更新後の同期失敗は部分成功として再試行する。オーナーだけがPATCH /api/groups/{id}でグループ名を変更できる。名前以外のID・招待・メンバー・記録は維持。
+- 目的: 日常の名称変更を管理者への依頼なしで行えるようにする。未決のメール／パスワード変更やメンバー除外は混ぜない。
+- 影響範囲: 名称設定UI・API・テスト・仕様。DB migrationや依存追加はない。グループ名を他端末にも反映するため一覧も5秒更新し、同じ一覧の再取得では共有先を消さない。別一覧には前のデータを返さず、ユーザー切替では画面状態を破棄する。
+- 関連ファイル: frontend/src/features/settings/、group-name-form.tsx、group-panel.tsx、training-app.tsx、use-resource.ts、backend/app/api/routes/training.py、schemas/training.py、services/training.py、infrastructure/training_repository.py、backend/tests/、frontend/tests/、README.md、docs/current-state.md、docs/standard-v0.1-scope.md、docs/daily-improvements.md、task.md。
+- テスト方針: 表示名オーケストレーションは先行単体テストの失敗を確認後に実装。グループAPIは先にテストを追加したがDocker停止により先行DB検証はできず、代替DBで実装後に検証した。共有先が消える不具合は旧挙動で期待値が空文字になる失敗を確認して修正。セレクターの初回失敗は不具合の再現と区別し、comboboxのアクセシブル名で検証した。
+- 確認結果: 一時PostgreSQL 16の専用gotore_testでmake check成功（backend48件、frontend単体11件、Ruff・Biome、本番build）。通常メンバー・非所属・未認証拒否、空白／文字数制約、なりすまし本文を使わない同期、既存記録保持を確認。通信を模擬したUIテストでAuth失敗・部分成功・同期再試行・名称変更再試行・非オーナーUIを確認した。
+- 検証上の補足: Docker停止で元のTEST_DATABASE_URLは接続タイムアウト。sudo起動は管理者パスワードが必要でユーザーへ起動依頼済み。既存PostgreSQLを使い/tmp/gotore-issue-tests.xECCKWへテストDBを新規作成し、TCP無効・所有者のみアクセス可能なUNIXソケットで実行した。既存Supabaseのデータは削除・変更していない。入力単独E2Eは実Authを必要としない模擬通信へ分離し、実Authと2人の共有を確認するsharing.spec.tsは強化したまま保持する。
+- 未解決事項: 更新後の実Supabase Auth・共有E2E、Supabase環境／リモートCI、実機確認、レビュー・push・PR・デプロイは未実施。#4・#7は一部対応で閉じない。#11の本番性能計測・目標は未確定であり、一覧保持を性能Issue全体の完了としない。
+- 次のアクション: 最終UIとmake checkを再確認して名称設定をコミットする。Docker復旧後に全E2Eを再実行し、レビューする。残るIssueの着手条件はdocs/daily-improvements.mdに整理済み。名称設定は同じ画面・共有E2Eを変更するため、今回は#4・#7の合意済み部分を同じブランチで扱う。
+- 最終確認: 同じ専用DBで再度make check成功（backend48件、frontend単体11件、lint、本番build）。ホーム画面・設定・名称変更・一覧切替・入力操作のブラウザ7件成功。390px幅の設定・グループ・入力画面を画像で確認した。実Authを含む共有E2Eの代替完了とはしていない。
+
+## 2026-09-07 13:56 JST
+
+- 変更内容: #5の入力をコンパクトにし、Enterで重量→回数→次セットへ移動する処理と上限・IME・長押し対策を追加した。ユーザーの追加指定により、新セットは空欄とし、空欄の重量でEnterを押したときだけ前セットの値を採用する。保存時は補完しない。
+- 目的: 入力値を消す操作を減らし、Enterによる意図しない保存を防ぐ。
+- 影響範囲: 記録フォーム・CSS・ブラウザテスト。保存API・数値制約・下書き形式は維持。
+- 関連ファイル: frontend/src/features/training/workout-form.tsx、frontend/src/app/globals.css、frontend/tests/e2e/workout-input.spec.ts、docs/daily-improvements.md、docs/README.md。Issue #5。
+- 確認結果: 元実装でEnterが保存を実行してしまい先行E2Eが失敗することを確認。空欄・候補・Enter採用・直接入力・30セット上限・IME・長押し・下書き復元のE2E1件成功。変更後のlint・単体テスト・本番buildも成功。
+- 未解決事項: 中断後にDockerが停止し全E2Eの再確認ができていない。起動にはユーザーの管理者操作が必要で依頼済み。成功済みの個別E2Eと、未完了の全体共有検証を区別する。実機キーボードは#23に残る。
+- 次のアクション: #4・#7と合わせ、ローカルAuthの復旧後に共有E2Eを再実行する。Issueは検証・レビュー完了前に閉じない。
+
+## 2026-09-07 13:25 JST
+
+- 変更内容: #24の不正URL・空／非ASCII／改行／引用符付きキーを認証リクエスト時に検出する。設定不備は503、壊れたBearer値は401として転送しない。診断には変数名だけを残し、healthは維持する。VercelのConfig／Secret・対象環境・再デプロイ手順を補足した。
+- 目的: 公開環境で発生したUnicodeEncodeErrorによる未処理500の再発を防ぐ。
+- 影響範囲: API認証の入力境界と運用文書。クラウド設定・DB・認証方式は変更しない。
+- 関連ファイル: backend/app/core/config.py、backend/app/api/dependencies.py、backend/tests/test_auth.py、docs/vercel-supabase.md、task.md。Issue #24。
+- テスト方針・確認結果: 先行テスト17件の失敗を確認後、認証23件とRuffが成功。値・トークンが応答とログに含まれないこと、Publishable／anon形式をそのまま送ることを確認した。サンドボックス内の初回実行は停止待ちとなり、許可された実行環境で検証した。
+- 未解決事項: クラウド再デプロイ・リモートCIは未実施。
+- 次のアクション: 全体検証後に目的単位でコミットし、ユーザー承認済みの#5入力改善・#4表示名・#7グループ名変更へ進む。メール・パスワード・削除系は保留する。
+- 最終確認: make check成功（backend43件、frontend単体7件、Ruff・Biome、本番build）。
+
 ## 2026-09-07 00:47 JST
 
 - 変更内容: docs内のPDF2点・画面参考画像、既存実装、既存テスト、task.mdを確認した。READMEをGO TORE向けに再構成し、CONTRIBUTING.md、資料一覧、現状整理、段階的実装・モバイル移植の開発方針、機能追加・不具合・週次計画のIssueテンプレートを追加した。AGENTS.mdとPRテンプレートをチーム開発の運用に合わせて更新した。

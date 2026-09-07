@@ -1,7 +1,7 @@
 "use client";
 
 import { type Group, type Workout, api } from "@/lib/api";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   type Draft,
   newDraft,
@@ -30,6 +30,14 @@ export function WorkoutForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [storageWarning, setStorageWarning] = useState(false);
+  const inputs = useRef(new Map<string, HTMLInputElement>());
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!focusKey) return;
+    inputs.current.get(focusKey)?.focus();
+    setFocusKey(null);
+  }, [focusKey]);
 
   useEffect(() => {
     try {
@@ -53,6 +61,73 @@ export function WorkoutForm({
     setError("");
     // 内容を変えた保存は別の送信として扱い、同じ内容の再試行だけIDを維持する。
     setDraft((current) => (current ? { ...update(current), id: crypto.randomUUID() } : current));
+  }
+
+  function addSet(exerciseKey: string) {
+    const next = newSet();
+    change((d) => ({
+      ...d,
+      exercises: d.exercises.map((item) =>
+        item.key === exerciseKey && item.sets.length < 30
+          ? { ...item, sets: [...item.sets, next] }
+          : item,
+      ),
+    }));
+    setFocusKey(`${next.key}:weight`);
+  }
+
+  function advance(
+    event: KeyboardEvent<HTMLInputElement>,
+    exerciseIndex: number,
+    setIndex: number,
+    field: "weight" | "reps",
+  ) {
+    if (event.key !== "Enter") return;
+    // IME確定・長押しもフォームの暗黙送信には使わない。
+    event.preventDefault();
+    if (event.nativeEvent.isComposing || event.keyCode === 229 || event.repeat || busy || !draft)
+      return;
+    const exercise = draft.exercises[exerciseIndex];
+    const set = exercise.sets[setIndex];
+    if (
+      field === "weight" &&
+      event.currentTarget.value === "" &&
+      !event.currentTarget.validity.badInput
+    ) {
+      const previous = exercise.sets[setIndex - 1];
+      const previousInput = previous && inputs.current.get(`${previous.key}:weight`);
+      if (previousInput?.checkValidity()) {
+        change((d) => ({
+          ...d,
+          exercises: d.exercises.map((item) =>
+            item.key === exercise.key
+              ? {
+                  ...item,
+                  sets: item.sets.map((s) =>
+                    s.key === set.key ? { ...s, weight: previous.weight } : s,
+                  ),
+                }
+              : item,
+          ),
+        }));
+        setFocusKey(`${set.key}:reps`);
+        return;
+      }
+    }
+    if (!event.currentTarget.reportValidity()) return;
+    if (field === "weight") {
+      inputs.current.get(`${set.key}:reps`)?.focus();
+      return;
+    }
+    const weight = inputs.current.get(`${set.key}:weight`);
+    if (weight && !weight.reportValidity()) {
+      weight.focus();
+      return;
+    }
+    const next = exercise.sets[setIndex + 1];
+    if (next) inputs.current.get(`${next.key}:weight`)?.focus();
+    else if (exercise.sets.length < 30) addSet(exercise.key);
+    else setError("1種目は30セットまでです。保存は下の確定ボタンから行ってください。");
   }
 
   async function submit(event: FormEvent) {
@@ -90,7 +165,15 @@ export function WorkoutForm({
       <p className="eyebrow">WORKOUT</p>
       <h1>今日のトレーニング</h1>
       <p className="muted">ひとつずつ、その頑張りを記録しよう。</p>
-      <form onSubmit={submit}>
+      <p className="muted">Enterで次の入力へ。最後の回数欄ではセットを追加します。</p>
+      <p className="muted">重量の薄い数字は前セットの値です。空欄でEnterを押すと採用します。</p>
+      <form
+        onSubmit={submit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && event.target instanceof HTMLInputElement)
+            event.preventDefault();
+        }}
+      >
         <fieldset disabled={busy}>
           <div className="panel form-grid">
             <label>
@@ -169,13 +252,19 @@ export function WorkoutForm({
                   <span className="set-index">{setIndex + 1}</span>
                   <input
                     aria-label={`種目${index + 1} セット${setIndex + 1} 重量`}
+                    ref={(element) => {
+                      if (element) inputs.current.set(`${set.key}:weight`, element);
+                      else inputs.current.delete(`${set.key}:weight`);
+                    }}
+                    enterKeyHint="next"
+                    onKeyDown={(event) => advance(event, index, setIndex, "weight")}
                     type="number"
                     inputMode="decimal"
                     min={0}
                     max={1000}
                     step="0.1"
                     required
-                    placeholder="0"
+                    placeholder={exercise.sets[setIndex - 1]?.weight || "0"}
                     value={set.weight}
                     onChange={(e) =>
                       change((d) => ({
@@ -195,6 +284,12 @@ export function WorkoutForm({
                   />
                   <input
                     aria-label={`種目${index + 1} セット${setIndex + 1} 回数`}
+                    ref={(element) => {
+                      if (element) inputs.current.set(`${set.key}:reps`, element);
+                      else inputs.current.delete(`${set.key}:reps`);
+                    }}
+                    enterKeyHint="next"
+                    onKeyDown={(event) => advance(event, index, setIndex, "reps")}
                     type="number"
                     inputMode="numeric"
                     min={1}
@@ -243,16 +338,7 @@ export function WorkoutForm({
                 type="button"
                 className="secondary full"
                 disabled={exercise.sets.length >= 30}
-                onClick={() =>
-                  change((d) => ({
-                    ...d,
-                    exercises: d.exercises.map((item) =>
-                      item.key === exercise.key
-                        ? { ...item, sets: [...item.sets, newSet()] }
-                        : item,
-                    ),
-                  }))
-                }
+                onClick={() => addSet(exercise.key)}
               >
                 ＋ セットを追加
               </button>

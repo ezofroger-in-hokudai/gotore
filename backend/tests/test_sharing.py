@@ -121,6 +121,65 @@ def test_unknown_invite_does_not_join_any_group(client):
     assert client.get("/api/groups").json() == []
 
 
+def test_profile_sync_uses_verified_identity_and_updates_existing_shared_records(client):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    client.post("/api/workouts", json=payload(group_id=group["id"]))
+    app.dependency_overrides[current_user] = lambda: User(
+        id=USERS["A"], display_name="新しい本人名"
+    )
+    response = client.post(
+        "/api/me/profile", json={"id": str(USERS["B"]), "display_name": "なりすまし"}
+    )
+    assert response.status_code == 200
+    assert response.json() == {"id": str(USERS["A"]), "display_name": "新しい本人名"}
+    members = client.get(f"/api/groups/{group['id']}").json()["members"]
+    assert {m["id"]: m["display_name"] for m in members} == {
+        str(USERS["A"]): "新しい本人名",
+        str(USERS["B"]): "B",
+    }
+    assert (
+        client.get(f"/api/groups/{group['id']}/workouts").json()[0]["display_name"]
+        == "新しい本人名"
+    )
+
+
+def test_only_owner_can_rename_group_without_changing_members_or_records(client):
+    group = create_group(client)
+    path = f"/api/groups/{group['id']}"
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    record = payload(group_id=group["id"])
+    client.post("/api/workouts", json=record)
+    for user in ["B", "C"]:
+        assert (
+            client.patch(path, json={"name": "不正変更"}, headers={"X-Test-User": user}).status_code
+            == 404
+        )
+    for _ in range(2):
+        result = client.patch(path, json={"name": "  夜トレ部  "})
+        assert result.status_code == 200
+        assert result.json() == {**group, "name": "夜トレ部"}
+    detail = client.get(path, headers={"X-Test-User": "B"}).json()
+    assert detail["name"] == "夜トレ部"
+    assert {member["id"] for member in detail["members"]} == {str(USERS["A"]), str(USERS["B"])}
+    assert client.get("/api/groups", headers={"X-Test-User": "B"}).json()[0]["name"] == "夜トレ部"
+    assert client.get(f"{path}/workouts").json()[0]["id"] == record["id"]
+    assert client.patch(f"/api/groups/{USERS['C']}", json={"name": "不明"}).status_code == 404
+
+
+@pytest.mark.parametrize(
+    "data", [{"name": " "}, {"name": "長" * 41}, {"name": "変更", "owner_id": str(USERS["B"])}]
+)
+def test_rename_rejects_invalid_name_and_owner_changes(client, data):
+    group = create_group(client)
+    assert client.patch(f"/api/groups/{group['id']}", json=data).status_code == 422
+    assert client.get(f"/api/groups/{group['id']}").json()["name"] == group["name"]
+
+
 def test_public_database_role_cannot_read_or_write_training_data(client, connection):
     group = create_group(client)
     assert client.post("/api/workouts", json=payload(group_id=group["id"])).status_code == 201

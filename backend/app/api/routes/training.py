@@ -6,7 +6,14 @@ from fastapi import APIRouter, Depends, Query
 from app.api.dependencies import current_user, training_service
 from app.domain.identity import User
 from app.domain.workout import WorkoutInput
-from app.schemas.training import GroupCreate, GroupDetail, GroupJoin, GroupResponse, WorkoutResponse
+from app.schemas.training import (
+    GroupCreate,
+    GroupDetail,
+    GroupJoin,
+    GroupRename,
+    GroupResponse,
+    WorkoutResponse,
+)
 from app.services.training import TrainingService
 
 router = APIRouter(tags=["training"])
@@ -18,6 +25,11 @@ Offset = Annotated[int, Query(ge=0)]
 @router.get("/me", response_model=User)
 def me(user: Annotated[User, Depends(current_user)]):
     return user
+
+
+@router.post("/me/profile", response_model=User)
+def sync_profile(service: Service):
+    return service.user
 
 
 @router.get("/groups", response_model=list[GroupResponse])
@@ -38,6 +50,11 @@ def join_group(data: GroupJoin, service: Service):
 @router.get("/groups/{group_id}", response_model=GroupDetail)
 def group(group_id: UUID, service: Service):
     return service.group(group_id)
+
+
+@router.patch("/groups/{group_id}", response_model=GroupResponse)
+def rename_group(group_id: UUID, data: GroupRename, service: Service):
+    return service.rename_group(group_id, data.name)
 
 
 @router.get("/groups/{group_id}/workouts", response_model=list[WorkoutResponse])

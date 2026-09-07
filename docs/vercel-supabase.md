@@ -39,7 +39,18 @@
 Supabaseが案内する `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` という名前をそのまま登録しても、現在のコードは読み取らない。その値を `NEXT_PUBLIC_SUPABASE_ANON_KEY` に設定する。
 秘密キー（Secret Key／service_role）やDBパスワードを `NEXT_PUBLIC_` 変数へ入れない。今回service_roleは使用しない。
 値はVercelの環境変数画面で設定し、チャット・Git・ビルドログに貼らない。公開用とPreview用は対象環境を分け、Previewを実データのある本番DBへ無条件につながない。
-`NEXT_PUBLIC_` の変更後は再デプロイする。ローカルの `.env` と `.env.local` は上書きしない。
+環境変数の変更は既存デプロイに反映されないため、サーバー用の変数も含めて変更後は対象環境へ再デプロイする。ローカルの `.env` と `.env.local` は上書きしない。
+
+### 設定エラーの切り分け（#24）
+
+- `NEXT_PUBLIC_` 変数は公開用なのでConfig（`visibility: config`）を選ぶ。Secretでは登録できない。`DATABASE_URL` はSecretとし、公開prefixを付けない。サーバー用のURL・公開キーも秘密キーではないためConfigでよい。
+- Vercelへ値を貼る際は、値だけを入力する。変数名・説明文・引用符・改行・前後空白・全角文字を含めない。URLは `http://` または `https://` で始まるProject URL（本番はHTTPS）、キーは同じプロジェクトのPublishable／anonの実値を使う。
+- Production／Previewの対象と、現在開いているデプロイを確認する。修正した環境へ再デプロイし、古いデプロイURLで確認しない。
+- APIは認証リクエスト時にURLとキーの形式を検証する。不正な場合は接続せず503となり、ログには `SUPABASE_URL` または `SUPABASE_ANON_KEY` の変数名だけを記録する。値・Bearerトークン・例外の生データは出さない。設定値を勝手に補正しない。
+- `/api/health` の200はプロセスの生存確認であり、認証・DB接続の成功を保証しない。未認証は401のまま。正しい形式でも間違ったプロジェクトのキーなどは外部認証の応答で失敗するため、形式検証だけで設定の正当性が確定するわけではない。
+- 診断のためにキー・パスワード・DB接続文字列をIssueやログへ貼らない。503の安全なメッセージと変数名、対象環境、再デプロイ済みかを共有する。
+
+Config／Secretと反映タイミングは [Vercel環境変数](https://vercel.com/docs/environment-variables) を参照（2026-09-07確認）。
 
 ## Supabaseの準備
 
