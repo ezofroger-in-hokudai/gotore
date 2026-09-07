@@ -1,15 +1,14 @@
 from uuid import UUID
 
-from app.domain.identity import User
+from app.domain.identity import AuthenticatedUser
 from app.domain.workout import WorkoutInput
 from app.infrastructure.training_repository import TrainingRepository
 
 
 class TrainingService:
-    def __init__(self, repository: TrainingRepository, user: User):
+    def __init__(self, repository: TrainingRepository, user: AuthenticatedUser):
         self.repository = repository
-        self.user = user
-        repository.profile(user)
+        self.user = repository.profile(user)
 
     def groups(self):
         return self.repository.groups(self.user.id)

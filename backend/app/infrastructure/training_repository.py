@@ -5,7 +5,7 @@ from psycopg import Connection
 from psycopg.types.json import Jsonb
 
 from app.domain.errors import Conflict, NotFound
-from app.domain.identity import User
+from app.domain.identity import AuthenticatedUser, User
 from app.domain.workout import WorkoutInput
 
 
@@ -13,13 +13,22 @@ class TrainingRepository:
     def __init__(self, connection: Connection):
         self.connection = connection
 
-    def profile(self, user: User):
-        self.connection.execute(
-            """INSERT INTO public.gotore_profiles (id, display_name) VALUES (%s, %s)
+    def profile(self, user: AuthenticatedUser) -> User:
+        # 既定値は新規作成時だけ補い、Auth未設定なら保存済みの名前に触れない。
+        result = self.connection.execute(
+            """INSERT INTO public.gotore_profiles (id, display_name)
+            VALUES (%s, COALESCE(%s, 'トレーニー'))
             ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name
-            WHERE gotore_profiles.display_name != EXCLUDED.display_name""",
-            (user.id, user.display_name),
-        )
+            WHERE %s::text IS NOT NULL
+              AND gotore_profiles.display_name != EXCLUDED.display_name
+            RETURNING id, display_name""",
+            (user.id, user.display_name, user.display_name),
+        ).fetchone()
+        if result is None:
+            result = self.connection.execute(
+                "SELECT id, display_name FROM public.gotore_profiles WHERE id = %s", (user.id,)
+            ).fetchone()
+        return User.model_validate(result)
 
     def groups(self, user_id: UUID):
         return self.connection.execute(
