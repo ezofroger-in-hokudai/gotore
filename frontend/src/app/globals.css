@@ -591,7 +591,7 @@ fieldset {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 22px;
+  margin-bottom: 14px;
 }
 .number {
   color: #b1a79e;
@@ -601,7 +601,7 @@ fieldset {
 .set-head,
 .set-row {
   display: grid;
-  grid-template-columns: 25px 1fr 1fr 30px;
+  grid-template-columns: 25px minmax(0, 1fr) minmax(0, 1fr) 44px;
   align-items: center;
   gap: 8px;
 }
@@ -612,11 +612,12 @@ fieldset {
   text-align: center;
 }
 .set-row {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 .set-row input {
   text-align: center;
-  padding: 10px 4px;
+  padding: 8px 4px;
+  min-height: 44px;
   font-size: 16px;
   font-weight: 700;
 }
