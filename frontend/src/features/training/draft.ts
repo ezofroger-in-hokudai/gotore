@@ -102,7 +102,7 @@ export function workoutPayload(draft: Draft) {
   };
 }
 
-export function reuseDraft(record: Workout): Draft {
+export function reuseDraft(record: Pick<Workout, "exercises">): Draft {
   return {
     id: crypto.randomUUID(),
     performed_on: today(),
