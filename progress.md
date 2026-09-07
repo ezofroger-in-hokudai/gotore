@@ -1,5 +1,16 @@
 # progress.md
 
+## 2026-09-07 13:25 JST
+
+- 変更内容: #24の不正URL・空／非ASCII／改行／引用符付きキーを認証リクエスト時に検出する。設定不備は503、壊れたBearer値は401として転送しない。診断には変数名だけを残し、healthは維持する。VercelのConfig／Secret・対象環境・再デプロイ手順を補足した。
+- 目的: 公開環境で発生したUnicodeEncodeErrorによる未処理500の再発を防ぐ。
+- 影響範囲: API認証の入力境界と運用文書。クラウド設定・DB・認証方式は変更しない。
+- 関連ファイル: backend/app/core/config.py、backend/app/api/dependencies.py、backend/tests/test_auth.py、docs/vercel-supabase.md、task.md。Issue #24。
+- テスト方針・確認結果: 先行テスト17件の失敗を確認後、認証23件とRuffが成功。値・トークンが応答とログに含まれないこと、Publishable／anon形式をそのまま送ることを確認した。サンドボックス内の初回実行は停止待ちとなり、許可された実行環境で検証した。
+- 未解決事項: クラウド再デプロイ・リモートCIは未実施。
+- 次のアクション: 全体検証後に目的単位でコミットし、ユーザー承認済みの#5入力改善・#4表示名・#7グループ名変更へ進む。メール・パスワード・削除系は保留する。
+- 最終確認: make check成功（backend43件、frontend単体7件、Ruff・Biome、本番build）。
+
 ## 2026-09-07 00:47 JST
 
 - 変更内容: docs内のPDF2点・画面参考画像、既存実装、既存テスト、task.mdを確認した。READMEをGO TORE向けに再構成し、CONTRIBUTING.md、資料一覧、現状整理、段階的実装・モバイル移植の開発方針、機能追加・不具合・週次計画のIssueテンプレートを追加した。AGENTS.mdとPRテンプレートをチーム開発の運用に合わせて更新した。

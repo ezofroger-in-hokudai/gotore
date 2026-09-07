@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -7,12 +8,13 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from psycopg.rows import dict_row
 
-from app.core.config import settings
+from app.core.config import is_header_token, settings
 from app.domain.identity import User
 from app.infrastructure.training_repository import TrainingRepository
 from app.services.training import TrainingService
 
 bearer = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 def current_user(
@@ -20,8 +22,11 @@ def current_user(
 ) -> User:
     if credentials is None:
         raise HTTPException(401, "ログインしてください", headers={"WWW-Authenticate": "Bearer"})
-    if not settings.supabase_url or not settings.supabase_anon_key:
-        raise HTTPException(503, "認証サービスが設定されていません")
+    if not is_header_token(credentials.credentials):
+        raise HTTPException(401, "ログインし直してください")
+    if invalid_field := settings.auth_configuration_error():
+        logger.error("認証設定が不正です: %s を確認してください", invalid_field)
+        raise HTTPException(503, "認証サービスの設定を確認してください。管理者に連絡してください")
     try:
         response = httpx.get(
             f"{settings.supabase_url.rstrip('/')}/auth/v1/user",

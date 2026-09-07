@@ -1,4 +1,10 @@
+from urllib.parse import urlsplit
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def is_header_token(value: str) -> bool:
+    return bool(value) and all(33 <= ord(char) <= 126 and char not in "\"'" for char in value)
 
 
 class Settings(BaseSettings):
@@ -16,6 +22,29 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
     )
+
+    def auth_configuration_error(self) -> str | None:
+        # 起動自体は止めず、認証が必要なリクエストだけを拒否する。値は診断に含めない。
+        if not is_header_token(self.supabase_url):
+            return "SUPABASE_URL"
+        try:
+            url = urlsplit(self.supabase_url)
+            if (
+                url.scheme not in ("http", "https")
+                or not url.hostname
+                or url.username is not None
+                or url.password is not None
+                or url.query
+                or url.fragment
+                or url.port == 0
+                or "\\" in self.supabase_url
+            ):
+                return "SUPABASE_URL"
+        except ValueError:
+            return "SUPABASE_URL"
+        if not is_header_token(self.supabase_anon_key):
+            return "SUPABASE_ANON_KEY"
+        return None
 
 
 settings = Settings()
