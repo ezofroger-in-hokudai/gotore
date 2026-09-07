@@ -1,12 +1,33 @@
 import { api } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import { type FormEvent, useState } from "react";
+import { useResource } from "../training/use-resource";
 import { saveDisplayName } from "./profile";
 
-export function SettingsPanel({
-  displayName,
-  onSaved,
-}: { displayName: string; onSaved: () => void }) {
+export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
+  const profile = useResource<{ id: string; display_name: string }>("/me");
+  if (profile.data) {
+    return <DisplayNameForm displayName={profile.data.display_name} onSaved={onSaved} />;
+  }
+  return (
+    <section>
+      <p className="eyebrow">SETTINGS</p>
+      <h1>設定</h1>
+      {profile.error ? (
+        <div className="error" role="alert">
+          {profile.error}
+          <button className="secondary full" type="button" onClick={profile.retry}>
+            表示名の読み込みを再試行
+          </button>
+        </div>
+      ) : (
+        <output className="loading">表示名を読み込んでいます…</output>
+      )}
+    </section>
+  );
+}
+
+function DisplayNameForm({ displayName, onSaved }: { displayName: string; onSaved: () => void }) {
   const [name, setName] = useState(displayName);
   const [busy, setBusy] = useState(false);
   const [needsSync, setNeedsSync] = useState(false);

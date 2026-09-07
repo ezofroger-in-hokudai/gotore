@@ -17,7 +17,7 @@ SCORE、ランキング、AI、スタンプ、コメント、Push通知、分析
 
 ## 基本ルール
 
-- アカウントは管理者がAuthのユーザー作成機能で発行する。auth.usersへの直接INSERTや、ブラウザへの管理キー配布は行わない。表示名はuser_metadata.display_name（1〜20文字）に設定する。未設定の既存ユーザーは従来どおり「トレーニー」と表示する。
+- アカウントは管理者がAuthのユーザー作成機能で発行する。auth.usersへの直接INSERTや、ブラウザへの管理キー配布は行わない。表示名はuser_metadata.display_name（1〜20文字）に設定する。#29の追加合意により、Auth未設定ならDBの既存名を保持し、プロフィールがない初回のみ「トレーニー」で作成する。詳細は [daily-improvements.md](daily-improvements.md) を参照。
 - メール確認の全体設定を緩めず、管理者が本人を確認したテストアカウントだけを確認済みにする。既存ユーザー・記録は削除しない。運用手順は [管理者登録ガイド](admin-managed-accounts.md) を参照。
 
 - グループは作成者もメンバーになる。複数のグループへ参加できる。
@@ -55,7 +55,7 @@ SCORE、ランキング、AI、スタンプ、コメント、Push通知、分析
 
 | メソッド・パス | 内容 |
 | --- | --- |
-| GET /api/me | 本人の表示名・ID |
+| GET /api/me | Auth検証とプロフィール同期後の本人表示名・ID（DBの既存名保持を含む） |
 | POST /api/me/profile | Authで検証した本人の表示名をDBへ同期（後続#4） |
 | GET /api/groups | 自分の所属グループ |
 | POST /api/groups | グループ作成・作成者の参加 |

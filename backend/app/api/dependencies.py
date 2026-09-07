@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from psycopg.rows import dict_row
 
 from app.core.config import is_header_token, settings
-from app.domain.identity import User
+from app.domain.identity import AuthenticatedUser
 from app.infrastructure.training_repository import TrainingRepository
 from app.services.training import TrainingService
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
-) -> User:
+) -> AuthenticatedUser:
     if credentials is None:
         raise HTTPException(401, "ログインしてください", headers={"WWW-Authenticate": "Bearer"})
     if not is_header_token(credentials.credentials):
@@ -47,7 +47,7 @@ def current_user(
         metadata = data.get("user_metadata") or {}
         name = metadata.get("display_name")
         name = name.strip()[:20] if isinstance(name, str) else ""
-        return User(id=UUID(data["id"]), display_name=name or "トレーニー")
+        return AuthenticatedUser(id=UUID(data["id"]), display_name=name or None)
     except (ValueError, KeyError, TypeError, AttributeError):
         raise HTTPException(401, "ユーザー情報を確認できません") from None
 
@@ -72,6 +72,6 @@ def database():
 
 
 def training_service(
-    user: Annotated[User, Depends(current_user)], connection=Depends(database)
+    user: Annotated[AuthenticatedUser, Depends(current_user)], connection=Depends(database)
 ) -> TrainingService:
     return TrainingService(TrainingRepository(connection), user)
