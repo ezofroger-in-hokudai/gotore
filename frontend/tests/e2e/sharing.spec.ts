@@ -117,12 +117,12 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await pageB.getByRole("button", { name: "招待コードで参加", exact: true }).click();
     await pageB.getByLabel("招待コード", { exact: true }).fill(invite);
     await pageB.getByRole("button", { name: "グループに参加 →", exact: true }).click();
-    await expect(pageB.getByRole("alert")).toContainText(
+    await expect(pageB.getByRole("main").getByRole("alert")).toContainText(
       "招待コードに対応するグループが見つかりません",
     );
     await pageB.getByLabel("招待コード", { exact: true }).fill(renewedInvite);
     await pageB.getByRole("button", { name: "グループに参加 →", exact: true }).click();
-    await expect(pageB.getByRole("alert")).toHaveCount(0);
+    await expect(pageB.getByRole("main").getByRole("alert")).toHaveCount(0);
     await expect(pageB.getByTestId("invite-code")).toHaveText(renewedInvite);
     await pageB
       .getByRole("navigation")
