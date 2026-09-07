@@ -10,12 +10,14 @@ from app.main import app
 
 def test_training_api_requires_login():
     with TestClient(app) as client:
-        for path in ["/api/me", "/api/groups", "/api/workouts"]:
+        for path in ["/api/me", "/api/groups", "/api/workouts", "/api/exercise-options"]:
             response = client.get(path)
             assert response.status_code == 401
             assert response.headers["cache-control"] == "no-store"
         assert client.patch(f"/api/groups/{uuid4()}", json={"name": "拒否"}).status_code == 401
         assert client.post("/api/me/profile").status_code == 401
+        assert client.post("/api/exercise-options", json={"name": "拒否"}).status_code == 401
+        assert client.delete(f"/api/exercise-options/{uuid4()}").status_code == 401
 
 
 def test_rejects_invalid_token_without_using_client_supplied_identity(monkeypatch):

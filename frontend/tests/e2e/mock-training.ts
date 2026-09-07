@@ -23,6 +23,12 @@ export async function mockTraining(page: Page, owner = true) {
     failAuth: false,
     failSync: false,
     failRename: false,
+    options: [
+      { id: "option-bench", name: "ベンチプレス" },
+      { id: "option-squat", name: "スクワット" },
+    ],
+    failOptions: false,
+    failOptionWrite: false,
     authUpdates: 0,
     syncs: 0,
   };
@@ -49,6 +55,25 @@ export async function mockTraining(page: Page, owner = true) {
   });
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
+    if (path === "/api/exercise-options") {
+      if (route.request().method() === "POST") {
+        if (state.failOptionWrite) return route.abort();
+        const name = route.request().postDataJSON().name.trim();
+        const option = state.options.find((item) => item.name === name) ?? {
+          id: crypto.randomUUID(),
+          name,
+        };
+        if (!state.options.includes(option)) state.options.push(option);
+        return route.fulfill({ status: 201, json: option });
+      }
+      if (state.failOptions) return route.abort();
+      return route.fulfill({ json: state.options });
+    }
+    if (path.startsWith("/api/exercise-options/")) {
+      if (state.failOptionWrite) return route.abort();
+      state.options = state.options.filter((item) => item.id !== path.split("/").at(-1));
+      return route.fulfill({ status: 204 });
+    }
     if (path === "/api/me/profile") {
       state.syncs++;
       if (state.failSync) return route.abort();

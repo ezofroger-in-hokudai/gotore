@@ -206,3 +206,94 @@ def test_public_database_role_cannot_read_or_write_training_data(client, connect
                 "INSERT INTO public.gotore_profiles (id, display_name) VALUES (%s, 'fake')",
                 (USERS["C"],),
             )
+
+
+def test_exercise_options_are_private_persistent_and_idempotent(client):
+    path = "/api/exercise-options"
+    initial = client.get(path)
+    assert initial.status_code == 200
+    assert len(initial.json()) == 8
+    assert initial.headers["cache-control"] == "no-store"
+    assert client.get(path).json() == initial.json()
+    first = client.post(path, json={"name": "  自分の種目  "})
+    assert first.status_code == 201
+    assert first.json()["name"] == "自分の種目"
+    assert client.post(path, json={"name": "自分の種目"}).json() == first.json()
+    assert len(client.get(path).json()) == 9
+    others = client.get(path, headers={"X-Test-User": "B"}).json()
+    assert len(others) == 8
+    assert not any(item["name"] == "自分の種目" for item in others)
+    assert (
+        client.delete(f"{path}/{first.json()['id']}", headers={"X-Test-User": "B"}).status_code
+        == 404
+    )
+    assert len(client.get(path).json()) == 9
+    for item in client.get(path).json():
+        assert client.delete(f"{path}/{item['id']}").status_code == 204
+    assert client.get(path).json() == []
+    assert client.get(path).json() == []
+    assert len(client.get(path, headers={"X-Test-User": "B"}).json()) == 8
+    assert client.post(path, json={"name": "再追加"}).status_code == 201
+    assert len(client.get(path).json()) == 1
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"name": " "},
+        {"name": "長" * 61},
+        {"name": 123},
+        {"name": "偽装", "user_id": str(USERS["B"])},
+        {},
+    ],
+)
+def test_exercise_options_reject_invalid_names_and_owner_override(client, data):
+    assert client.post("/api/exercise-options", json=data).status_code == 422
+
+
+def test_deleting_exercise_option_preserves_saved_and_shared_workouts(client):
+    path = "/api/exercise-options"
+    option = client.post(path, json={"name": "長" * 60}).json()
+    assert len(option["name"]) == 60
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    record = payload(group_id=group["id"])
+    record["exercises"][0]["name"] = option["name"]
+    assert client.post("/api/workouts", json=record).status_code == 201
+    assert client.delete(f"{path}/{option['id']}").status_code == 204
+    assert client.delete(f"{path}/{option['id']}").status_code == 404
+    assert client.get("/api/workouts").json()[0]["exercises"][0]["name"] == option["name"]
+    shared = client.get(f"/api/groups/{group['id']}/workouts", headers={"X-Test-User": "B"})
+    assert shared.json()[0]["exercises"][0]["name"] == option["name"]
+    assert client.post("/api/workouts", json=record).status_code == 201
+
+
+def test_exercise_catalog_has_database_constraints_and_rls(client, connection):
+    client.get("/api/exercise-options")
+    for invalid in ["", " ", "長" * 61]:
+        with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+            connection.execute(
+                "INSERT INTO public.gotore_exercise_options (user_id, name) VALUES (%s, %s)",
+                (USERS["A"], invalid),
+            )
+    with pytest.raises(psycopg.errors.UniqueViolation), connection.transaction():
+        connection.execute(
+            "INSERT INTO public.gotore_exercise_options (user_id, name) VALUES (%s, %s)",
+            (USERS["A"], "ベンチプレス"),
+        )
+    with connection.transaction(force_rollback=True):
+        connection.execute("CREATE ROLE gotore_options_test NOLOGIN")
+        connection.execute("GRANT USAGE ON SCHEMA public TO gotore_options_test")
+        connection.execute("""GRANT SELECT, INSERT, DELETE ON public.gotore_exercise_options,
+            public.gotore_exercise_catalogs TO gotore_options_test""")
+        connection.execute("SET LOCAL ROLE gotore_options_test")
+        for table in ["gotore_exercise_options", "gotore_exercise_catalogs"]:
+            assert connection.execute(f"SELECT * FROM public.{table}").fetchall() == []
+            assert connection.execute(f"DELETE FROM public.{table}").rowcount == 0
+        with pytest.raises(psycopg.errors.InsufficientPrivilege), connection.transaction():
+            connection.execute(
+                "INSERT INTO public.gotore_exercise_options (user_id, name) VALUES (%s, '偽装')",
+                (USERS["A"],),
+            )
