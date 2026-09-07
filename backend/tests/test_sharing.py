@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from uuid import UUID
 
+import httpx
 import psycopg
 import pytest
 from fastapi import Header
@@ -9,7 +10,8 @@ from fastapi.testclient import TestClient
 from psycopg.rows import dict_row
 
 from app.api.dependencies import current_user, database
-from app.domain.identity import User
+from app.core.config import settings
+from app.domain.identity import AuthenticatedUser
 from app.main import app
 from tests.test_workout import payload
 
@@ -39,7 +41,7 @@ def connection():
 @pytest.fixture
 def client(connection):
     def identity(x_test_user: str = Header(default="A")):
-        return User(id=USERS[x_test_user], display_name=x_test_user)
+        return AuthenticatedUser(id=USERS[x_test_user], display_name=x_test_user)
 
     app.dependency_overrides[current_user] = identity
     app.dependency_overrides[database] = lambda: connection
@@ -52,6 +54,89 @@ def create_group(client):
     response = client.post("/api/groups", json={"name": "朝トレ部"})
     assert response.status_code == 201, response.text
     return response.json()
+
+
+@pytest.mark.parametrize(
+    "metadata", [{}, None, {"display_name": None}, {"display_name": "  "}, {"display_name": 123}]
+)
+@pytest.mark.parametrize("existing_name", ["DBで設定した名前", None])
+def test_missing_auth_name_preserves_profile_on_every_access(
+    client, connection, monkeypatch, metadata, existing_name
+):
+    group = create_group(client)
+    client.post("/api/workouts", json=payload(group_id=group["id"]))
+    if existing_name:
+        connection.execute(
+            "UPDATE public.gotore_profiles SET display_name = %s WHERE id = %s",
+            (existing_name, USERS["A"]),
+        )
+    # 初回プロフィール作成は、まだアクセスしていない別ユーザーで確認する。
+    user_id = USERS["A"] if existing_name else USERS["B"]
+    expected = existing_name or "トレーニー"
+    app.dependency_overrides.pop(current_user)
+    monkeypatch.setattr(settings, "supabase_url", "http://auth.test")
+    monkeypatch.setattr(settings, "supabase_anon_key", "test-key")
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda *args, **kwargs: httpx.Response(
+            200, json={"id": str(user_id), "user_metadata": metadata}
+        ),
+    )
+    headers = {"Authorization": "Bearer verified"}
+    for _ in range(2):
+        assert client.get("/api/groups", headers=headers).status_code == 200
+        for response in [
+            client.get("/api/me", headers=headers),
+            client.post(
+                "/api/me/profile",
+                headers=headers,
+                json={"id": str(USERS["C"]), "display_name": "偽装"},
+            ),
+        ]:
+            assert response.status_code == 200, response.text
+            assert response.json() == {"id": str(user_id), "display_name": expected}
+            assert response.headers["cache-control"] == "no-store"
+    stored = connection.execute(
+        "SELECT display_name FROM public.gotore_profiles WHERE id = %s", (user_id,)
+    ).fetchone()
+    assert stored["display_name"] == expected
+    if existing_name:
+        assert (
+            client.get(f"/api/groups/{group['id']}", headers=headers).json()["members"][0][
+                "display_name"
+            ]
+            == expected
+        )
+        assert (
+            client.get(f"/api/groups/{group['id']}/workouts", headers=headers).json()[0][
+                "display_name"
+            ]
+            == expected
+        )
+
+
+@pytest.mark.parametrize("name", ["新しいAuth名", "トレーニー"])
+def test_explicit_auth_name_overrides_existing_profile(client, connection, monkeypatch, name):
+    create_group(client)
+    app.dependency_overrides.pop(current_user)
+    monkeypatch.setattr(settings, "supabase_url", "http://auth.test")
+    monkeypatch.setattr(settings, "supabase_anon_key", "test-key")
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda *args, **kwargs: httpx.Response(
+            200, json={"id": str(USERS["A"]), "user_metadata": {"display_name": f" {name} "}}
+        ),
+    )
+    response = client.get("/api/me", headers={"Authorization": "Bearer verified"})
+    assert response.json() == {"id": str(USERS["A"]), "display_name": name}
+    assert (
+        connection.execute(
+            "SELECT display_name FROM public.gotore_profiles WHERE id = %s", (USERS["A"],)
+        ).fetchone()["display_name"]
+        == name
+    )
 
 
 def test_group_creator_joins_and_other_user_can_join_once(client):
@@ -127,7 +212,7 @@ def test_profile_sync_uses_verified_identity_and_updates_existing_shared_records
         "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
     )
     client.post("/api/workouts", json=payload(group_id=group["id"]))
-    app.dependency_overrides[current_user] = lambda: User(
+    app.dependency_overrides[current_user] = lambda: AuthenticatedUser(
         id=USERS["A"], display_name="新しい本人名"
     )
     response = client.post(

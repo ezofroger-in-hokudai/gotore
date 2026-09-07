@@ -74,6 +74,11 @@ export async function mockTraining(page: Page, owner = true) {
       state.options = state.options.filter((item) => item.id !== path.split("/").at(-1));
       return route.fulfill({ status: 204 });
     }
+    if (path === "/api/me") {
+      return route.fulfill({
+        json: { id: user.id, display_name: user.user_metadata.display_name },
+      });
+    }
     if (path === "/api/me/profile") {
       state.syncs++;
       if (state.failSync) return route.abort();

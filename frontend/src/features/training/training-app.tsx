@@ -105,14 +105,7 @@ function Workspace({ session }: { session: Session }) {
             onBack={() => navigate("home")}
           />
         ) : view === "settings" ? (
-          <SettingsPanel
-            displayName={
-              typeof session.user.user_metadata.display_name === "string"
-                ? session.user.user_metadata.display_name
-                : "トレーニー"
-            }
-            onSaved={() => setRefreshKey((value) => value + 1)}
-          />
+          <SettingsPanel onSaved={() => setRefreshKey((value) => value + 1)} />
         ) : (
           <>
             {view === "groups" ? (

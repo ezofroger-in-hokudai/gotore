@@ -2,8 +2,10 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
 
+from app.api.dependencies import current_user
 from app.core.config import settings
 from app.main import app
 
@@ -46,9 +48,8 @@ def test_identity_comes_from_auth_server_and_does_not_expose_email(monkeypatch):
         )
 
     monkeypatch.setattr(httpx, "get", verified)
-    with TestClient(app) as client:
-        result = client.get("/api/me", headers={"Authorization": "Bearer verified"})
-        assert result.json() == {"id": user_id, "display_name": "本人"}
+    result = current_user(HTTPAuthorizationCredentials(scheme="Bearer", credentials="verified"))
+    assert result.model_dump(mode="json") == {"id": user_id, "display_name": "本人"}
 
 
 def test_auth_service_failure_does_not_grant_access(monkeypatch):
@@ -61,6 +62,24 @@ def test_auth_service_failure_does_not_grant_access(monkeypatch):
     monkeypatch.setattr(httpx, "get", unavailable)
     with TestClient(app) as client:
         assert client.get("/api/me", headers={"Authorization": "Bearer token"}).status_code == 503
+
+
+def test_profile_read_requires_database_and_returns_safe_error(monkeypatch):
+    monkeypatch.setattr(settings, "supabase_url", "http://auth.test")
+    monkeypatch.setattr(settings, "supabase_anon_key", "test-key")
+    monkeypatch.setattr(settings, "database_url", "")
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda *args, **kwargs: httpx.Response(
+            200, json={"id": str(uuid4()), "user_metadata": {"display_name": "本人"}}
+        ),
+    )
+    with TestClient(app) as client:
+        response = client.get("/api/me", headers={"Authorization": "Bearer token"})
+        assert response.status_code == 503
+        assert response.headers["cache-control"] == "no-store"
+        assert "display_name" not in response.json()
 
 
 @pytest.mark.parametrize(
@@ -128,5 +147,5 @@ def test_supported_public_key_formats_are_passed_unchanged(monkeypatch, key):
         return httpx.Response(200, json={"id": str(uuid4())})
 
     monkeypatch.setattr(httpx, "get", verify)
-    with TestClient(app) as client:
-        assert client.get("/api/me", headers={"Authorization": "Bearer token"}).status_code == 200
+    result = current_user(HTTPAuthorizationCredentials(scheme="Bearer", credentials="token"))
+    assert result.display_name is None

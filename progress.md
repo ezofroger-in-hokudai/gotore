@@ -1,5 +1,53 @@
 # progress.md
 
+## 2026-09-07 15:22 JST
+
+- 変更内容: ユーザーのPR作成依頼を受け、#29作業ブランチのpush完了と既存PRなしを確認。main向けPRにCloses #29、合意した名前保持ルール、検証結果と未完了項目を記載する。
+- 目的: 表示名保持修正をレビュー可能にし、mainへのマージ時に#29を自動クローズする。
+- 影響範囲・関連ファイル: progress.mdとPR作成。アプリコード・本番データは変更しない。マージ・手動デプロイ・他Issueのクローズは行わない。
+- 確認結果: アプリの検証は14:55の結果を維持。記録のみの変更のためテスト追加・再実行はせず、git diff --checkを確認する。元からの生成差分・未追跡資料は含めない。
+- 未解決事項: リモートCI・レビュー、Docker停止で実行できなかった実Supabase依存E2E2件、本番反映。
+- 次のアクション: 記録をpushしてPRを作成し、URLと初期チェック状況を案内する。マージ前にCIとレビュー結果を確認する。
+
+## 2026-09-07 15:20 JST
+
+- 変更内容: ユーザーのpush依頼を受け、fix/29-preserve-display-nameの修正コミット237ab10と送信先を確認。リモートに同名ブランチがないことを確認し、本記録とともに通常のpushで共有する。
+- 目的: #29の表示名保持修正をリモートで確認できるようにする。
+- 影響範囲・関連ファイル: progress.mdと作業ブランチの共有。未コミットのnext-env.d.ts・未追跡資料は含めない。PR作成・マージ・Issueクローズ・手動デプロイは行わない。
+- 確認結果: アプリの検証結果は14:55の記録を維持。今回は文書追記のみのため新規テストは追加せず、git diff --checkを確認する。
+- 未解決事項: Docker停止による実Supabase依存E2E2件の未完了、リモートCI・レビュー・本番反映。
+- 次のアクション: 記録をコミットしてpushし、リモートのコミット一致を確認する。PRを作る際は検証結果とCloses #29を記載する。
+
+## 2026-09-07 14:55 JST
+
+- 変更内容: #29の修正と回帰テストを最終確認。認証成功の単体テストはDB不要の認証境界で検証し、GET /api/meの応答は実DB統合テストへ移した。DB未設定時の503・no-storeも追加確認した。
+- 目的: 名前保持・通常の名称更新・設定画面の読み込みを検証し、実施済みと環境起因の未完了を区別して引き継ぐ。
+- 影響範囲・関連ファイル: 前項の#29関連ファイルとテスト・仕様・task.md。開始前からの未追跡PDF2点・画像1点、生成されたnext-env.d.tsはコミット対象外。
+- 確認結果: 専用の一時PostgreSQL 16でmake check成功（backend61件、frontend単体11件、Ruff・Biome、Next.js本番build）。make test-e2eは13件中11件成功。APIの保存名表示・再アクセス時の再取得・取得中/失敗時の保存防止・再試行・既存の部分成功/同期再試行・入力操作等を確認し、390pxの設定画面画像も確認した。git diff --check成功。
+- 未解決事項: 実Supabaseが必要な一般登録拒否・2人の共有E2Eの2件は、Docker停止に伴う「ローカルSupabaseを起動してください」で失敗。全E2E成功とはしない。本番データ・Authの変更や消失名の復元、リモートCI・レビュー・push・PRは未実施。Issueは閉じていない。
+- 次のアクション: 今回の差分だけをコミットする。テスト用サーバーと一時DBを停止し、通常のfrontend:3000を再開する。Docker復旧後に全E2Eを再実行するか、PRのCIで検証する。PR作成時は完了条件確認後Closes #29を指定し、部分対応の#4・#7とは分ける。
+
+## 2026-09-07 14:52 JST
+
+- 変更内容: #29のAuth未設定時にDBの既存名を保持する方針をユーザー承認。認証済み情報と表示用Userを分け、未設定をNoneのまま同期へ渡す。プロフィール新規作成時のみ既定名を補い、既存行はAuthに明示名がある場合だけ更新する。GET /api/meも保存済みプロフィールを返す。設定画面はAPI取得後に編集欄を開き、取得エラー時は再試行を案内する。
+- 目的: DBだけで設定した名前がアクセスで消える不具合と、設定画面が古いセッションの名前を表示する問題を防ぐ。
+- 影響範囲: 認証後のプロフィール同期・本人情報取得・設定画面と仕様。GET /api/meもDB未設定・障害時には503となる。DB migration・環境変数・依存追加はない。通常のAuth優先と共有権限は維持する。
+- 関連ファイル: backend/app/domain/identity.py、api/dependencies.py、api/routes/training.py、services/training.py、infrastructure/training_repository.py、backend/tests/test_auth.py・test_sharing.py、frontend/src/features/settings/settings-panel.tsx・training/training-app.tsx、frontend/tests/e2e/settings-ui.spec.ts・mock-training.ts、docs/admin-managed-accounts.md・daily-improvements.md・standard-v0.1-scope.md・current-state.md、task.md。
+- テスト方針・途中結果: 先行DB回帰テストで保存名がトレーニーに戻る失敗を確認後に修正。未設定・null・空白・非文字列、初回、反復アクセス、明示的なトレーニーへの変更、共有記録・本人情報の一致を検証し、backend60件成功。UI回帰テストは先に追加し、ブラウザ実行は修正後に行う。追加のDB障害テスト・全体検証は進行中。
+- 未解決事項: Docker停止を再確認。専用の一時PostgreSQLをUNIXソケット限定で再開して検証しており、実Supabase Authを含む全共有E2Eは別途確認が必要。既に失われた本番の名前は本人による再保存が必要。元からのnext-env.d.ts差分・未追跡資料は変更対象外。
+- 次のアクション: make check・ブラウザ検証と差分確認後にコミットする。push・PR・本番反映は未実施。今回の承認は#29の修正方針に対するもので、#5・#24は手動クローズしない。
+
+## 2026-09-07 14:36 JST
+
+- 変更内容: #29の依頼により最新main（eeed08e）からfix/29-preserve-display-nameを作成。Authにdisplay_nameがない場合、current_userが「トレーニー」を補い、TrainingServiceのプロフィール同期がDBの既存名を上書きする経路を確認した。ユーザーからDB直接編集だった可能性の説明を受けた。
+- 目的: 表示名が戻る原因を特定し、既存仕様との変更点を明確にしてから修正する。
+- 影響範囲: 調査と記録のみ。アプリ・本番Auth・本番DBは変更していない。
+- 関連ファイル: backend/app/api/dependencies.py、backend/app/infrastructure/training_repository.py、frontend/src/features/settings/settings-panel.tsx、docs/admin-managed-accounts.md、task.md、progress.md。再現スクリプトは/tmp/gotore-reproduce-29.pyのみ。
+- 確認結果: 一時PostgreSQLの専用_test DBでAuth応答だけを模擬し、保存済みのテスト名が一覧アクセスで「トレーニー」へ上書きされることを確認。テストデータはロールバック。設定画面はセッションのAuthメタデータを参照し、DBの既存名を取得していない。
+- Issue運用の確認: PR #27はRefsのみのため自動クローズされなかった。mainへマージ済みでbackend・frontend・database（全共有E2Eを含む）・Vercelチェック成功を確認した。#4・#7は部分対応のため維持し、#5・#24の手動クローズはユーザーへ確認中。外部のIssue状態は変更していない。
+- 未解決事項: 現行文書はAuth未設定でも既定値を同期するルールを明記している。Authに有効名があれば優先し、未設定ならDBの既存名を残す修正を提案して確認中。既に本番で上書きされた名前の元の値は取得しておらず、自動復元可能とはしていない。Dockerは引き続き停止中。
+- 次のアクション: 名前保持ルールを確認後、先行回帰テストと同期・画面の修正を行う。完了IssueにはCloses、部分対応にはRefsを使い分ける。今回は原因再現が目的のためアプリテスト追加はまだ行っていない。
+
 ## 2026-09-07 14:19 JST
 
 - 変更内容: ユーザーのPR作成依頼を受け、feat/4-7-name-settingsの既存PRなしを確認した。main向けPRに#24・#5・#4・#7の対応範囲、検証結果、実Supabase共有E2Eの未完了を記載する。
@@ -234,3 +282,11 @@
 - 確認結果: push先とPR先頭23ec7b4が一致し、mainと競合なし。backend・frontend・Vercelのチェック成功、databaseジョブは実Supabaseの準備中。文書追記のみのため新しいテストは追加せず、git diff --checkで確認する。最終CI結果はPRで追跡する。
 - 未解決事項: PRの全共有E2E・人によるレビュー、公開DBへのmigration適用。#14の集計範囲は確認待ち、#10の移植条件と#17のメニュープリセットは別途。マージ・公開DB操作は行っていない。
 - 次のアクション: 本記録をpushしてCI完了を確認する。実装者以外のレビュー後に、管理者が公開前migrationと統合を行う。
+
+## 2026-09-08 03:02 JST
+- 変更内容: PR #34のmain競合を解消するため、fff26d4を取り込んだ。UIモックで種目候補APIと最新プロフィール取得APIの両方を保持した。
+- 目的: mainへ統合済みの名前保持修正を維持しながら、種目リストPRをレビュー・統合できるようにする。
+- 影響範囲・関連ファイル: main取り込みとfrontend/tests/e2e/mock-training.ts、progress.md。ユーザーの元作業領域は変更しない。
+- 検証結果: make check成功（backend69件・frontend11件・lint・本番build）。git diff --checkを確認。新機能は追加していないため先行テストは新設せず、既存の回帰で確認した。
+- 未解決事項: ローカルDockerは停止中のため実Supabase共有E2EはCIのmake test-e2eで再確認する。
+- 次のアクション: 解消をpushしPR #34の最新CIを確認する。mainへのマージと本番操作は行わない。

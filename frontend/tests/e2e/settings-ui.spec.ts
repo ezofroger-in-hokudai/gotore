@@ -1,6 +1,58 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining } from "./mock-training";
 
+test("設定は古いセッション名ではなくAPIの保存名を表示し、再アクセスで取り直す", async ({
+  page,
+}) => {
+  const state = await mockTraining(page);
+  let savedName = "DBで設定した名前";
+  await page.route("**/api/me", (route) =>
+    route.fulfill({ json: { id: state.user.id, display_name: savedName } }),
+  );
+  const navigation = page.getByRole("navigation");
+  await navigation.getByRole("button", { name: "設定", exact: true }).click();
+  await expect(page.getByLabel("表示名", { exact: true })).toHaveValue(savedName);
+  await navigation.getByRole("button", { name: "ホーム", exact: true }).click();
+  savedName = "別端末で変更した名前";
+  await navigation.getByRole("button", { name: "設定", exact: true }).click();
+  await expect(page.getByLabel("表示名", { exact: true })).toHaveValue(savedName);
+  expect(state.authUpdates).toBe(0);
+  expect(state.syncs).toBe(0);
+});
+
+test("プロフィール取得中・失敗時は名前を保存できず、再試行で復帰する", async ({ page }) => {
+  const state = await mockTraining(page);
+  let release = () => {};
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let fail = true;
+  await page.route("**/api/me", async (route) => {
+    if (fail) {
+      await pending;
+      return route.fulfill({ status: 503, json: { detail: "プロフィールを取得できません" } });
+    }
+    return route.fulfill({ json: { id: state.user.id, display_name: "保存済みの名前" } });
+  });
+  await page.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
+  try {
+    await expect(
+      page.getByRole("status").filter({ hasText: "表示名を読み込んでいます" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "表示名を変更", exact: true })).toHaveCount(0);
+  } finally {
+    release();
+  }
+  await expect(
+    page.getByRole("alert").filter({ hasText: "プロフィールを取得できません" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "表示名を変更", exact: true })).toHaveCount(0);
+  fail = false;
+  await page.getByRole("button", { name: "表示名の読み込みを再試行", exact: true }).click();
+  await expect(page.getByLabel("表示名", { exact: true })).toHaveValue("保存済みの名前");
+  expect(state.authUpdates).toBe(0);
+});
+
 test("表示名の失敗・部分成功・同期再試行を区別する", async ({ page }) => {
   const state = await mockTraining(page);
   await page.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
