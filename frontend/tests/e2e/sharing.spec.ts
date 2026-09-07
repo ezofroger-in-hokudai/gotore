@@ -126,6 +126,20 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await expect(pageA.getByRole("article")).toContainText("ベンチプレス");
     await pageA.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
     await expect(pageA.getByLabel("表示名", { exact: true })).toHaveValue("変更後のA");
+    await pageA
+      .getByRole("navigation")
+      .getByRole("button", { name: "自分の記録", exact: true })
+      .click();
+    await pageA.getByRole("button", { name: "この内容でもう一度", exact: true }).click();
+    await pageA.getByRole("button", { name: "コピーして入力する", exact: true }).click();
+    await expect(pageA.getByLabel("種目1 セット1 重量", { exact: true })).toHaveValue("82.5");
+    await expect(pageA.getByRole("combobox", { name: "共有先", exact: true })).toHaveValue("");
+    await pageA.getByRole("button", { name: "記録を保存 →", exact: true }).click();
+    await expect(pageA.getByRole("article")).toHaveCount(2);
+    await expect(pageA.getByRole("article").filter({ hasText: "自分だけの記録" })).toHaveCount(1);
+    await pageB.bringToFront();
+    await pageB.reload();
+    await expect(pageB.getByRole("article")).toHaveCount(1);
     expect(errors).toEqual([]);
   } finally {
     await Promise.allSettled([a.close(), b.close()]);

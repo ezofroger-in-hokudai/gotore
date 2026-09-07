@@ -14,6 +14,7 @@ import { WorkoutForm } from "./workout-form";
 type View = "home" | "records" | "groups" | "workout" | "settings";
 
 function Workspace({ session }: { session: Session }) {
+  const [source, setSource] = useState<Workout | null>(null);
   const [view, setView] = useState<View>("home");
   const [groupId, setGroupId] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -41,6 +42,7 @@ function Workspace({ session }: { session: Session }) {
   const records = useResource<Workout[]>(path, refreshKey, view === "home");
 
   function navigate(next: View) {
+    setSource(null);
     setView(next);
     setPage(0);
     setNotice("");
@@ -50,6 +52,7 @@ function Workspace({ session }: { session: Session }) {
     setPage(0);
   }
   function saved(workout: Workout) {
+    setSource(null);
     setRefreshKey((value) => value + 1);
     setPage(0);
     if (workout.group_id) {
@@ -98,6 +101,7 @@ function Workspace({ session }: { session: Session }) {
         )}
         {view === "workout" ? (
           <WorkoutForm
+            source={source}
             groups={groups}
             selectedGroup={activeId}
             userId={session.user.id}
@@ -177,6 +181,15 @@ function Workspace({ session }: { session: Session }) {
                 )}
                 {records.data && (
                   <RecordList
+                    onReuse={
+                      view === "records"
+                        ? (record) => {
+                            setSource(record);
+                            setNotice("");
+                            setView("workout");
+                          }
+                        : undefined
+                    }
                     records={records.data}
                     userId={session.user.id}
                     empty={

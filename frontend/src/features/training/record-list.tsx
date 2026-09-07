@@ -1,10 +1,12 @@
 import type { Workout } from "@/lib/api";
+import { ReuseWorkout } from "./reuse-workout";
 
 export function RecordList({
   records,
   userId,
   empty,
-}: { records: Workout[]; userId: string; empty: string }) {
+  onReuse,
+}: { records: Workout[]; userId: string; empty: string; onReuse?: (record: Workout) => void }) {
   if (!records.length)
     return (
       <div className="empty">
@@ -65,6 +67,9 @@ export function RecordList({
               保存
             </time>
           </div>
+          {record.user_id === userId && onReuse && (
+            <ReuseWorkout record={record} onReuse={onReuse} />
+          )}
         </article>
       ))}
     </div>

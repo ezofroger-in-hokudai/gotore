@@ -8,6 +8,7 @@ import {
   newExercise,
   newSet,
   readDraft,
+  reuseDraft,
   today,
   workoutPayload,
 } from "./draft";
@@ -18,7 +19,9 @@ export function WorkoutForm({
   userId,
   onSaved,
   onBack,
+  source,
 }: {
+  source?: Workout | null;
   groups: Group[];
   selectedGroup: string;
   userId: string;
@@ -40,13 +43,17 @@ export function WorkoutForm({
   }, [focusKey]);
 
   useEffect(() => {
+    if (source) {
+      setDraft(reuseDraft(source));
+      return;
+    }
     try {
       setDraft(readDraft(localStorage.getItem(storageKey)) ?? newDraft(selectedGroup));
     } catch {
       setDraft(newDraft(selectedGroup));
       setStorageWarning(true);
     }
-  }, [storageKey, selectedGroup]);
+  }, [storageKey, selectedGroup, source]);
 
   useEffect(() => {
     if (!draft) return;
@@ -164,7 +171,14 @@ export function WorkoutForm({
       </button>
       <p className="eyebrow">WORKOUT</p>
       <h1>今日のトレーニング</h1>
-      <p className="muted">ひとつずつ、その頑張りを記録しよう。</p>
+      {source ? (
+        <p className="notice">
+          {source.performed_on}
+          の記録からコピーしました。今日の実績に合わせて修正し、共有先を確認して保存してください。
+        </p>
+      ) : (
+        <p className="muted">ひとつずつ、その頑張りを記録しよう。</p>
+      )}
       <p className="muted">Enterで次の入力へ。最後の回数欄ではセットを追加します。</p>
       <p className="muted">重量の薄い数字は前セットの値です。空欄でEnterを押すと採用します。</p>
       <form
