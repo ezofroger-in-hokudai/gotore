@@ -93,7 +93,7 @@ DB統合テストは `TEST_DATABASE_URL` に専用DBを設定して実行しま�
 文書・テンプレートだけの変更では、リンク・記載したコマンド・テンプレート構造・`git diff --check`を確認し、不要なアプリテストは追加しません。
 テストを先に書けない場合は理由を `progress.md` に記録します。
 
-DB変更時はローカルのSupabaseを起動し、migrationとseedの適用、schemaのlintを検証します。
+DB変更時はローカルのSupabaseを起動し、`make db-migrations` → `make db-migrate` で既存データへの追加適用、失ってよい環境で全migrationとseedの再構築、`make db-lint` でschemaを検証します。作成・履歴・共有DBへの反映は [migration手順](supabase/README.md) に従います。
 `make db-reset` はローカルDBのデータを削除して再作成するため、失ってよい開発データで実施してください。
 共有環境・本番への反映は別の作業として、対象と担当を確認して行います。
 
