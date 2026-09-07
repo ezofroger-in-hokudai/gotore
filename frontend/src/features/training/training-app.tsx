@@ -4,6 +4,7 @@ import type { Group, GroupDetail, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
+import { OnboardingGuide } from "../onboarding/onboarding-guide";
 import { SettingsPanel } from "../settings/settings-panel";
 import { AuthPanel } from "./auth-panel";
 import { GroupPanel } from "./group-panel";
@@ -14,6 +15,7 @@ import { WorkoutForm } from "./workout-form";
 type View = "home" | "records" | "groups" | "workout" | "settings";
 
 function Workspace({ session }: { session: Session }) {
+  const [guideReplay, setGuideReplay] = useState(0);
   const [view, setView] = useState<View>("home");
   const [groupId, setGroupId] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -74,7 +76,9 @@ function Workspace({ session }: { session: Session }) {
           onClick={async () => {
             setSigningOut(true);
             try {
-              const result = await getSupabase()?.auth.signOut({ scope: "local" });
+              const result = await getSupabase()?.auth.signOut({
+                scope: "local",
+              });
               if (result?.error) setNotice("ログアウトできませんでした。再試行してください。");
             } catch {
               setNotice("ログアウトできませんでした。接続を確認してください。");
@@ -87,6 +91,7 @@ function Workspace({ session }: { session: Session }) {
         </button>
       </header>
       <main className="main-content">
+        <OnboardingGuide userId={session.user.id} replay={guideReplay} />
         {notice && <output className="notice">{notice}</output>}
         {groupList.error && (
           <div className="error" role="alert">
@@ -105,7 +110,20 @@ function Workspace({ session }: { session: Session }) {
             onBack={() => navigate("home")}
           />
         ) : view === "settings" ? (
-          <SettingsPanel onSaved={() => setRefreshKey((value) => value + 1)} />
+          <>
+            <SettingsPanel onSaved={() => setRefreshKey((value) => value + 1)} />
+            <section className="panel">
+              <h2>GO TOREの使い方</h2>
+              <p className="muted">グループへの参加、記録、共有範囲を確認できます。</p>
+              <button
+                className="secondary full"
+                type="button"
+                onClick={() => setGuideReplay((value) => value + 1)}
+              >
+                使い方ガイドを開く
+              </button>
+            </section>
+          </>
         ) : (
           <>
             {view === "groups" ? (
