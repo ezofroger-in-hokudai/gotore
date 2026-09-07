@@ -1,4 +1,5 @@
 import secrets
+from datetime import datetime
 from uuid import UUID
 
 from psycopg import Connection
@@ -38,11 +39,13 @@ class TrainingRepository:
             (user_id,),
         ).fetchall()
 
-    def group(self, user_id: UUID, group_id: UUID):
+    def group(self, user_id: UUID, group_id: UUID, *, lock_membership: bool = False):
+        lock = " FOR SHARE OF m" if lock_membership else ""
         result = self.connection.execute(
             """SELECT g.* FROM public.gotore_groups g
             JOIN public.gotore_group_members m ON m.group_id = g.id
-            WHERE m.user_id = %s AND g.id = %s""",
+            WHERE m.user_id = %s AND g.id = %s"""
+            + lock,
             (user_id, group_id),
         ).fetchone()
         if result is None:
@@ -51,7 +54,7 @@ class TrainingRepository:
 
     def members(self, group_id: UUID):
         return self.connection.execute(
-            """SELECT p.id, p.display_name FROM public.gotore_profiles p
+            """SELECT p.id, p.display_name, m.joined_at FROM public.gotore_profiles p
             JOIN public.gotore_group_members m ON m.user_id = p.id
             WHERE m.group_id = %s ORDER BY m.joined_at, p.id""",
             (group_id,),
@@ -74,13 +77,14 @@ class TrainingRepository:
     def join_group(self, user_id: UUID, invite_code: str):
         with self.connection.transaction():
             group = self.connection.execute(
-                "SELECT * FROM public.gotore_groups WHERE invite_code = %s", (invite_code,)
+                "SELECT * FROM public.gotore_groups WHERE invite_code = %s FOR NO KEY UPDATE",
+                (invite_code,),
             ).fetchone()
             if group is None:
                 raise NotFound("招待コードに対応するグループが見つかりません")
             self.connection.execute(
-                """INSERT INTO public.gotore_group_members (group_id, user_id) VALUES (%s, %s)
-                ON CONFLICT (group_id, user_id) DO NOTHING""",
+                """INSERT INTO public.gotore_group_members (group_id, user_id, joined_at)
+                VALUES (%s, %s, clock_timestamp()) ON CONFLICT (group_id, user_id) DO NOTHING""",
                 (group["id"], user_id),
             )
         return group
@@ -99,7 +103,7 @@ class TrainingRepository:
         exercises = workout.model_dump(mode="json")["exercises"]
         with self.connection.transaction():
             if workout.group_id is not None:
-                self.group(user_id, workout.group_id)
+                self.group(user_id, workout.group_id, lock_membership=True)
             self.connection.execute(
                 """INSERT INTO public.gotore_workouts
                 (id, user_id, group_id, performed_on, exercises) VALUES (%s, %s, %s, %s, %s)
@@ -135,3 +139,41 @@ class TrainingRepository:
             WHERE {where} ORDER BY {order} LIMIT %s OFFSET %s""",
             (value, limit, offset),
         ).fetchall()
+
+    def end_membership(
+        self,
+        actor_id: UUID,
+        group_id: UUID,
+        member_id: UUID,
+        expected_joined_at: datetime,
+        *,
+        owner_action: bool,
+    ):
+        with self.connection.transaction():
+            # 外部キーの参照を妨げず、参加・退出・除外の順序を揃える。
+            group = self.connection.execute(
+                "SELECT * FROM public.gotore_groups WHERE id = %s FOR NO KEY UPDATE", (group_id,)
+            ).fetchone()
+            if group is None or (owner_action and group["owner_id"] != actor_id):
+                raise NotFound("グループが見つからないか、操作する権限がありません")
+            if group["owner_id"] == member_id:
+                raise Conflict("オーナーは退出・除外できません")
+            membership = self.connection.execute(
+                """SELECT joined_at FROM public.gotore_group_members
+                WHERE group_id = %s AND user_id = %s FOR UPDATE""",
+                (group_id, member_id),
+            ).fetchone()
+            if membership is None:
+                return
+            if membership["joined_at"] != expected_joined_at:
+                raise Conflict("参加状況が変わっています。グループを開き直して確認してください")
+            # 本人の履歴を保持して共有を解除してから、所属の外部キーを外す。
+            self.connection.execute(
+                """UPDATE public.gotore_workouts SET group_id = NULL
+                WHERE group_id = %s AND user_id = %s""",
+                (group_id, member_id),
+            )
+            self.connection.execute(
+                "DELETE FROM public.gotore_group_members WHERE group_id = %s AND user_id = %s",
+                (group_id, member_id),
+            )

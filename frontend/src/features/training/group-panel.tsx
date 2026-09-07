@@ -1,6 +1,7 @@
 import { type Group, type GroupDetail, api } from "@/lib/api";
 import { type FormEvent, useState } from "react";
 import { GroupNameForm } from "./group-name-form";
+import { MembershipPanel } from "./membership-panel";
 
 export function GroupPanel({
   groups,
@@ -8,7 +9,9 @@ export function GroupPanel({
   onGroup,
   onSelect,
   userId,
+  onMembershipChanged,
 }: {
+  onMembershipChanged: (left: boolean) => void;
   groups: Group[];
   detail: GroupDetail | null;
   onGroup: (group: Group) => void;
@@ -98,13 +101,12 @@ export function GroupPanel({
           <h3>
             メンバー <span className="muted">{detail.members.length}人</span>
           </h3>
-          <div className="members">
-            {detail.members.map((member) => (
-              <span className="member" key={member.id}>
-                {member.display_name}
-              </span>
-            ))}
-          </div>
+          <MembershipPanel
+            key={`members:${detail.id}`}
+            group={detail}
+            userId={userId}
+            onChanged={onMembershipChanged}
+          />
           {detail.owner_id === userId && (
             <GroupNameForm
               key={detail.id}

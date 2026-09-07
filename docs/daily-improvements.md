@@ -52,3 +52,7 @@
 | #23 | iPhone／Android実機と公開環境へのアクセス、端末での操作確認 |
 
 名称設定・入力改善はPR #27でmainへ統合済みで、同PRのCIは実Supabase共有E2Eを含め成功した。#29の名前保持修正はローカルで実装・検証済みだが、Docker停止により今回の実Supabase共有E2Eは未完了。push・PR・本番反映は別途行う。最新の結果はPRとprogress.mdで追跡する。
+
+## 2026-09-08の追加範囲
+
+ユーザーの自律実装指示により、#7・#19の退出・除外は[group-membership.md](group-membership.md)の範囲を採用する。上記の合意待ちからこの範囲を除く。

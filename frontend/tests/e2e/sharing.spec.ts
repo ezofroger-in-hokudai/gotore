@@ -126,6 +126,59 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await expect(pageA.getByRole("article")).toContainText("ベンチプレス");
     await pageA.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
     await expect(pageA.getByLabel("表示名", { exact: true })).toHaveValue("変更後のA");
+    await pageB.bringToFront();
+    await pageB.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
+    await pageB.getByLabel("種目名", { exact: true }).fill("退出テストのスクワット");
+    await pageB.getByLabel("種目1 セット1 重量", { exact: true }).fill("60");
+    await pageB.getByLabel("種目1 セット1 回数", { exact: true }).fill("8");
+    await pageB.getByRole("button", { name: "記録を確定して共有 →", exact: true }).click();
+    await expect(pageB.getByRole("status").filter({ hasText: "共有しました" })).toBeVisible();
+    await pageB
+      .getByRole("navigation")
+      .getByRole("button", { name: "グループ", exact: true })
+      .click();
+    await pageB.getByRole("button", { name: "グループから退出", exact: true }).click();
+    await pageB.getByRole("button", { name: "退出する", exact: true }).click();
+    await expect(
+      pageB.getByRole("status").filter({ hasText: "グループを退出しました" }),
+    ).toBeVisible();
+    await pageB
+      .getByRole("navigation")
+      .getByRole("button", { name: "自分の記録", exact: true })
+      .click();
+    await expect(pageB.getByRole("article")).toContainText("退出テストのスクワット");
+    await expect(pageB.getByRole("article")).toContainText("自分だけの記録");
+    await pageB
+      .getByRole("navigation")
+      .getByRole("button", { name: "グループ", exact: true })
+      .click();
+    await pageB.getByRole("button", { name: "招待コードで参加", exact: true }).click();
+    await pageB.getByLabel("招待コード", { exact: true }).fill(invite);
+    await pageB.getByRole("button", { name: "グループに参加 →", exact: true }).click();
+    await expect(pageB.getByTestId("invite-code")).toHaveText(invite);
+    await pageA.bringToFront();
+    await pageA
+      .getByRole("navigation")
+      .getByRole("button", { name: "グループ", exact: true })
+      .click();
+    await pageA.getByRole("button", { name: "共有テストBを除外", exact: true }).click();
+    await pageA.getByRole("button", { name: "除外する", exact: true }).click();
+    await expect(
+      pageA.getByRole("status").filter({ hasText: "メンバーを除外しました" }),
+    ).toBeVisible();
+    await pageB.bringToFront();
+    await pageB
+      .getByRole("navigation")
+      .getByRole("button", { name: "ホーム", exact: true })
+      .click();
+    await expect(pageB.getByRole("article")).toHaveCount(0);
+    await pageA.bringToFront();
+    await pageA
+      .getByRole("navigation")
+      .getByRole("button", { name: "ホーム", exact: true })
+      .click();
+    await expect(pageA.getByRole("article")).toHaveCount(1);
+    await expect(pageA.getByRole("article")).toContainText("ベンチプレス");
     expect(errors).toEqual([]);
   } finally {
     await Promise.allSettled([a.close(), b.close()]);

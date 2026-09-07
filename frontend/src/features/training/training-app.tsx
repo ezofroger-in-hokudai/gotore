@@ -26,7 +26,7 @@ function Workspace({ session }: { session: Session }) {
     view === "home" || view === "groups",
   );
   const groups = groupList.data ?? [];
-  const activeId = groupId || groups[0]?.id || "";
+  const activeId = groups.some((group) => group.id === groupId) ? groupId : groups[0]?.id || "";
   const detail = useResource<GroupDetail>(
     activeId && view === "groups" ? `/groups/${activeId}` : null,
     refreshKey,
@@ -110,6 +110,15 @@ function Workspace({ session }: { session: Session }) {
           <>
             {view === "groups" ? (
               <GroupPanel
+                onMembershipChanged={(left) => {
+                  setRefreshKey((value) => value + 1);
+                  if (left) {
+                    setGroupId("");
+                    setPage(0);
+                    setView("home");
+                    setNotice("グループを退出しました。本人の記録は残っています。");
+                  }
+                }}
                 userId={session.user.id}
                 groups={groups}
                 detail={detail.data}

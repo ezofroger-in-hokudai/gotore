@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from app.domain.identity import AuthenticatedUser
@@ -31,3 +32,13 @@ class TrainingService:
 
     def workouts(self, group_id: UUID | None, limit: int, offset: int):
         return self.repository.workouts(self.user.id, group_id, limit, offset)
+
+    def leave_group(self, group_id: UUID, expected_joined_at: datetime):
+        return self.repository.end_membership(
+            self.user.id, group_id, self.user.id, expected_joined_at, owner_action=False
+        )
+
+    def remove_member(self, group_id: UUID, member_id: UUID, expected_joined_at: datetime):
+        return self.repository.end_membership(
+            self.user.id, group_id, member_id, expected_joined_at, owner_action=True
+        )

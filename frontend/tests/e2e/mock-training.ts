@@ -71,7 +71,13 @@ export async function mockTraining(page: Page, owner = true) {
       return route.fulfill({
         json: {
           ...group,
-          members: [{ id: user.id, display_name: user.user_metadata.display_name }],
+          members: [
+            {
+              id: user.id,
+              display_name: user.user_metadata.display_name,
+              joined_at: "2026-01-01T00:00:00Z",
+            },
+          ],
         },
       });
     }
