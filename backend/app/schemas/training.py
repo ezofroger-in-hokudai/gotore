@@ -23,6 +23,13 @@ class GroupJoin(BaseModel):
     ]
 
 
+class InviteCodeRenew(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_invite_code: Annotated[
+        str, StringConstraints(strip_whitespace=True, to_upper=True, pattern=r"^[A-Fa-f0-9]{12}$")
+    ]
+
+
 class GroupResponse(BaseModel):
     id: UUID
     name: str

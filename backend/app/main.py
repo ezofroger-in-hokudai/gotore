@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
 from app.core.config import settings
-from app.domain.errors import Conflict, NotFound
+from app.domain.errors import Conflict, NotFound, ServiceUnavailable
 
 app = FastAPI(
     title=settings.app_name,
@@ -29,6 +29,11 @@ async def not_found(request: Request, error: NotFound):
 @app.exception_handler(Conflict)
 async def conflict(request: Request, error: Conflict):
     return JSONResponse(status_code=409, content={"detail": str(error)})
+
+
+@app.exception_handler(ServiceUnavailable)
+async def service_unavailable(request: Request, error: ServiceUnavailable):
+    return JSONResponse(status_code=503, content={"detail": str(error)})
 
 
 @app.get("/", tags=["root"])

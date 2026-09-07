@@ -693,3 +693,21 @@ fieldset {
     letter-spacing: .04em;
   }
 }
+
+.invite-confirm {
+  padding: 16px;
+  margin-top: 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.invite-confirm h3 {
+  margin-top: 0;
+}
+.invite-actions {
+  display: flex;
+  gap: 12px;
+}
+.invite-actions button {
+  flex: 1;
+}

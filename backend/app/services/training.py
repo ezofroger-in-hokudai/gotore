@@ -26,6 +26,9 @@ class TrainingService:
     def rename_group(self, group_id: UUID, name: str):
         return self.repository.rename_group(self.user.id, group_id, name)
 
+    def renew_invite_code(self, group_id: UUID, expected_invite_code: str):
+        return self.repository.renew_invite_code(self.user.id, group_id, expected_invite_code)
+
     def save_workout(self, workout: WorkoutInput):
         return self.repository.save_workout(self.user.id, workout)
 
