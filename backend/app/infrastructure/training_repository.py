@@ -1,4 +1,5 @@
 import secrets
+from datetime import date
 from uuid import UUID
 
 from psycopg import Connection
@@ -112,7 +113,25 @@ class TrainingRepository:
                 raise Conflict("同じ保存IDで異なる記録が送信されました。記録一覧を確認してください")
         return row
 
-    def workouts(self, user_id: UUID, group_id: UUID | None, limit: int, offset: int):
+    def activity(self, user_id: UUID, start: date, end: date):
+        return self.connection.execute(
+            """SELECT w.performed_on AS date, COUNT(*) AS workout_count,
+                SUM((SELECT SUM(jsonb_array_length(e->'sets'))
+                     FROM jsonb_array_elements(w.exercises) e)) AS set_count
+            FROM public.gotore_workouts w
+            WHERE w.user_id = %s AND w.performed_on >= %s AND w.performed_on < %s
+            GROUP BY w.performed_on ORDER BY w.performed_on""",
+            (user_id, start, end),
+        ).fetchall()
+
+    def workouts(
+        self,
+        user_id: UUID,
+        group_id: UUID | None,
+        limit: int,
+        offset: int,
+        performed_on: date | None = None,
+    ):
         if group_id is not None:
             self.group(user_id, group_id)
             where, value = "w.group_id = %s", group_id
@@ -120,9 +139,13 @@ class TrainingRepository:
         else:
             where, value = "w.user_id = %s", user_id
             order = "w.performed_on DESC, w.created_at DESC, w.id"
+        values = [value]
+        if performed_on is not None:
+            where += " AND w.performed_on = %s"
+            values.append(performed_on)
         return self.connection.execute(
             f"""SELECT w.*, p.display_name FROM public.gotore_workouts w
             JOIN public.gotore_profiles p ON p.id = w.user_id
             WHERE {where} ORDER BY {order} LIMIT %s OFFSET %s""",
-            (value, limit, offset),
+            (*values, limit, offset),
         ).fetchall()

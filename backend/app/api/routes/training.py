@@ -1,11 +1,13 @@
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.dependencies import current_user, training_service
 from app.domain.identity import User
 from app.domain.workout import WorkoutInput
+from app.schemas.activity import MonthlyActivity
 from app.schemas.training import (
     GroupCreate,
     GroupDetail,
@@ -63,8 +65,26 @@ def group_workouts(group_id: UUID, service: Service, limit: Limit = 50, offset: 
 
 
 @router.get("/workouts", response_model=list[WorkoutResponse])
-def workouts(service: Service, limit: Limit = 50, offset: Offset = 0):
-    return service.workouts(None, limit, offset)
+def workouts(
+    service: Service,
+    limit: Limit = 50,
+    offset: Offset = 0,
+    performed_on: date | None = None,
+):
+    try:
+        return service.workouts(None, limit, offset, performed_on)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+
+
+@router.get("/workouts/activity", response_model=MonthlyActivity)
+def activity(month: str, service: Service):
+    try:
+        return service.activity(month)
+    except ValueError:
+        raise HTTPException(
+            422, "月は2000年1月から当月までをYYYY-MM形式で指定してください"
+        ) from None
 
 
 @router.post("/workouts", response_model=WorkoutResponse, status_code=201)

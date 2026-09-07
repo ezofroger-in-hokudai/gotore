@@ -70,6 +70,17 @@ export async function mockTraining(page: Page, owner = true) {
         },
       });
     }
+    if (path === "/api/workouts/activity")
+      return route.fulfill({
+        json: {
+          month: new URL(route.request().url()).searchParams.get("month"),
+          metric: "sets",
+          total_sets: 0,
+          workout_count: 0,
+          active_days: 0,
+          days: [],
+        },
+      });
     if (path.endsWith("/workouts")) return route.fulfill({ json: [] });
     return route.fulfill({ status: 404, json: { detail: "UIテスト対象外" } });
   });

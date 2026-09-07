@@ -206,3 +206,97 @@ def test_public_database_role_cannot_read_or_write_training_data(client, connect
                 "INSERT INTO public.gotore_profiles (id, display_name) VALUES (%s, 'fake')",
                 (USERS["C"],),
             )
+
+
+def test_activity_uses_all_own_sets_with_month_boundaries_and_daily_pages(client):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+
+    def save(day, counts, user="A", shared=False):
+        record = payload(group_id=group["id"] if shared else None)
+        record["performed_on"] = day
+        record["exercises"] = [
+            {"name": f"種目{index}", "sets": [{"weight": 0, "reps": 10}] * count}
+            for index, count in enumerate(counts)
+        ]
+        response = client.post("/api/workouts", json=record, headers={"X-Test-User": user})
+        assert response.status_code == 201
+        return record["id"]
+
+    save("2024-02-01", [1, 2])
+    save("2024-02-01", [2], shared=True)
+    save("2024-02-01", [6], user="B", shared=True)
+    save("2024-02-29", [9], user="B")
+    save("2024-01-31", [10])
+    save("2024-03-01", [10])
+    ids = {save("2024-02-29", [1]) for _ in range(51)}
+    response = client.get("/api/workouts/activity?month=2024-02")
+    assert response.status_code == 200, response.text
+    assert response.headers["cache-control"] == "no-store"
+    assert response.json() == {
+        "month": "2024-02",
+        "metric": "sets",
+        "total_sets": 56,
+        "workout_count": 53,
+        "active_days": 2,
+        "days": [
+            {"date": "2024-02-01", "set_count": 5, "workout_count": 2},
+            {"date": "2024-02-29", "set_count": 51, "workout_count": 51},
+        ],
+    }
+    first = client.get("/api/workouts?performed_on=2024-02-29").json()
+    second = client.get("/api/workouts?performed_on=2024-02-29&offset=50").json()
+    assert len(first) == 50 and len(second) == 1
+    assert {r["id"] for r in first + second} == ids
+    assert {r["performed_on"] for r in first + second} == {"2024-02-29"}
+    assert client.get("/api/workouts?performed_on=2024-02-02").json() == []
+    assert len(client.get("/api/workouts?limit=50&offset=50").json()) == 5
+    other = client.get("/api/workouts/activity?month=2024-02", headers={"X-Test-User": "B"}).json()
+    assert other["total_sets"] == 15
+    assert other["workout_count"] == 2
+    assert (
+        len(
+            client.get("/api/workouts?performed_on=2024-02-29", headers={"X-Test-User": "B"}).json()
+        )
+        == 1
+    )
+
+
+def test_activity_empty_month_and_refresh_after_record_changes(client, connection):
+    path = "/api/workouts/activity?month=2024-12"
+    empty = {
+        "month": "2024-12",
+        "metric": "sets",
+        "total_sets": 0,
+        "workout_count": 0,
+        "active_days": 0,
+        "days": [],
+    }
+    assert client.get(path).json() == empty
+    record = payload()
+    record["performed_on"] = "2024-12-31"
+    assert client.post("/api/workouts", json=record).status_code == 201
+    assert client.get(path).json()["total_sets"] == 1
+    assert client.get("/api/workouts/activity?month=2025-01").json()["total_sets"] == 0
+    connection.execute(
+        "UPDATE public.gotore_workouts SET performed_on = '2025-01-01' WHERE id = %s",
+        (record["id"],),
+    )
+    assert client.get(path).json() == empty
+    assert client.get("/api/workouts/activity?month=2025-01").json()["total_sets"] == 1
+    connection.execute("DELETE FROM public.gotore_workouts WHERE id = %s", (record["id"],))
+    assert client.get("/api/workouts/activity?month=2025-01").json()["total_sets"] == 0
+
+
+@pytest.mark.parametrize(
+    "month", ["2024-00", "2024-13", "2024-2", "1999-12", "9999-01", "not-month", "2024-02-01"]
+)
+def test_activity_rejects_invalid_or_out_of_range_months(client, month):
+    assert client.get("/api/workouts/activity", params={"month": month}).status_code == 422
+
+
+@pytest.mark.parametrize("day", ["2023-02-29", "1999-12-31", "9999-01-01", "bad"])
+def test_daily_records_reject_invalid_dates(client, day):
+    assert client.get("/api/workouts", params={"performed_on": day}).status_code == 422

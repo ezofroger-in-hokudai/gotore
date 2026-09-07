@@ -693,3 +693,118 @@ fieldset {
     letter-spacing: .04em;
   }
 }
+
+.activity-calendar {
+  padding: 14px;
+}
+.activity-calendar h2 {
+  font-size: 17px;
+}
+.activity-month {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.activity-month button {
+  padding: 10px;
+  min-width: 40px;
+}
+.activity-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 20px 0;
+  text-align: center;
+}
+.activity-totals dt {
+  font-size: 10px;
+  color: var(--muted);
+}
+.activity-totals dd {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.activity-totals small {
+  display: block;
+  font-size: 10px;
+}
+.activity-grid,
+.activity-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.activity-weekdays {
+  font-size: 11px;
+  text-align: center;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+.activity-day {
+  border: 1px solid transparent;
+  border-radius: 7px;
+  min-height: 52px;
+  padding: 4px 0;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.activity-day small {
+  display: block;
+  font-size: 9px;
+}
+.activity-day[aria-pressed="true"] {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+.activity-day[aria-current="date"] > span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.activity-day:disabled {
+  opacity: 0.4;
+}
+.activity-calendar [data-level="0"] {
+  background: #f1eeeb;
+  color: #504943;
+}
+.activity-calendar [data-level="1"] {
+  background: #f3d5d7;
+  color: #702127;
+}
+.activity-calendar [data-level="2"] {
+  background: #e8a5aa;
+  color: #571218;
+}
+.activity-calendar [data-level="3"] {
+  background: #ba4c56;
+  color: #fff;
+}
+.activity-calendar [data-level="4"] {
+  background: #941b22;
+  color: #fff;
+}
+.activity-legend {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 16px 0;
+  font-size: 9px;
+}
+.activity-legend > span {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.activity-legend .heat-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.daily-record-heading h2 {
+  font-size: 16px;
+  margin-bottom: 0;
+}
