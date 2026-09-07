@@ -1,11 +1,11 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.dependencies import training_service
 from app.domain.identity import User
-from app.domain.workout import WorkoutInput
+from app.domain.workout import WorkoutInput, WorkoutUpdate
 from app.schemas.training import (
     GroupCreate,
     GroupDetail,
@@ -70,3 +70,16 @@ def workouts(service: Service, limit: Limit = 50, offset: Offset = 0):
 @router.post("/workouts", response_model=WorkoutResponse, status_code=201)
 def save_workout(data: WorkoutInput, service: Service):
     return service.save_workout(data)
+
+
+@router.patch("/workouts/{workout_id}", response_model=WorkoutResponse)
+def update_workout(workout_id: UUID, data: WorkoutUpdate, service: Service):
+    return service.update_workout(workout_id, data)
+
+
+@router.delete("/workouts/{workout_id}", status_code=204)
+def delete_workout(
+    workout_id: UUID, service: Service, expected_revision: Annotated[int, Query(ge=1)]
+):
+    service.delete_workout(workout_id, expected_revision)
+    return Response(status_code=204)

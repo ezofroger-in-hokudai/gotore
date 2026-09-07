@@ -693,3 +693,15 @@ fieldset {
     letter-spacing: .04em;
   }
 }
+
+.workout-actions {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}

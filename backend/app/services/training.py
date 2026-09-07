@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from app.domain.identity import AuthenticatedUser
-from app.domain.workout import WorkoutInput
+from app.domain.workout import WorkoutInput, WorkoutUpdate
 from app.infrastructure.training_repository import TrainingRepository
 
 
@@ -31,3 +31,9 @@ class TrainingService:
 
     def workouts(self, group_id: UUID | None, limit: int, offset: int):
         return self.repository.workouts(self.user.id, group_id, limit, offset)
+
+    def update_workout(self, workout_id: UUID, workout: WorkoutUpdate):
+        return self.repository.update_workout(self.user.id, workout_id, workout)
+
+    def delete_workout(self, workout_id: UUID, expected_revision: int):
+        return self.repository.delete_workout(self.user.id, workout_id, expected_revision)

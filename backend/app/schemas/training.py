@@ -41,6 +41,7 @@ class GroupDetail(GroupResponse):
 
 
 class WorkoutResponse(BaseModel):
+    revision: int
     id: UUID
     user_id: UUID
     display_name: str

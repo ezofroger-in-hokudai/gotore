@@ -39,3 +39,26 @@ test("送信IDと共有先を保持し、重量と回数の制約を検証する
     assert.throws(() => workoutPayload(draft));
   }
 });
+
+test("編集入力を作っても保存済み記録を変更せず、行キーを作り直す", async () => {
+  const { editDraft } = await import("../../src/features/training/draft");
+  const record = {
+    id: "record-id",
+    user_id: "user-id",
+    display_name: "本人",
+    group_id: "group-id",
+    performed_on: "2026-01-01",
+    created_at: "2026-01-01T00:00:00Z",
+    revision: 2,
+    exercises: [{ name: "スクワット", sets: [{ weight: 90, reps: 5 }] }],
+  };
+  const first = editDraft(record);
+  const second = editDraft(record);
+  assert.equal(first.id, record.id);
+  assert.equal(first.performed_on, record.performed_on);
+  assert.equal(first.group_id, record.group_id);
+  assert.equal(first.exercises[0].sets[0].weight, "90");
+  assert.notEqual(first.exercises[0].key, second.exercises[0].key);
+  first.exercises[0].sets[0].weight = "100";
+  assert.equal(record.exercises[0].sets[0].weight, 90);
+});

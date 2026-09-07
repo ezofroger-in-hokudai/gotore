@@ -14,6 +14,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 ## 開発用の文書
 
+- [workout-management.md](workout-management.md): 本人の記録訂正・削除、競合と再送。
+
 - [daily-improvements.md](daily-improvements.md): 入力操作・表示名・グループ名変更の合意範囲。
 
 - [admin-managed-accounts.md](admin-managed-accounts.md): テスト用アカウントの管理者発行、一般登録禁止、公開Authの設定。
