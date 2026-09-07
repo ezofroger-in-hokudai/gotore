@@ -2,6 +2,7 @@ from uuid import UUID
 
 from app.domain.identity import AuthenticatedUser
 from app.domain.workout import WorkoutInput
+from app.domain.workout_memo import WorkoutMemoInput
 from app.infrastructure.training_repository import TrainingRepository
 
 
@@ -31,3 +32,9 @@ class TrainingService:
 
     def workouts(self, group_id: UUID | None, limit: int, offset: int):
         return self.repository.workouts(self.user.id, group_id, limit, offset)
+
+    def workout_memo(self, workout_id: UUID):
+        return self.repository.workout_memo(self.user.id, workout_id)
+
+    def save_workout_memo(self, workout_id: UUID, memo: WorkoutMemoInput):
+        return self.repository.save_workout_memo(self.user.id, workout_id, memo)

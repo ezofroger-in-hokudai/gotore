@@ -1,10 +1,12 @@
 import type { Workout } from "@/lib/api";
+import { WorkoutMemo } from "./workout-memo";
 
 export function RecordList({
   records,
   userId,
   empty,
-}: { records: Workout[]; userId: string; empty: string }) {
+  personal = false,
+}: { records: Workout[]; userId: string; empty: string; personal?: boolean }) {
   if (!records.length)
     return (
       <div className="empty">
@@ -65,6 +67,7 @@ export function RecordList({
               保存
             </time>
           </div>
+          {personal && record.user_id === userId && <WorkoutMemo workoutId={record.id} />}
         </article>
       ))}
     </div>

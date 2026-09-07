@@ -18,6 +18,13 @@ def test_training_api_requires_login():
             assert response.headers["cache-control"] == "no-store"
         assert client.patch(f"/api/groups/{uuid4()}", json={"name": "拒否"}).status_code == 401
         assert client.post("/api/me/profile").status_code == 401
+        assert client.get(f"/api/workouts/{uuid4()}/memo").status_code == 401
+        assert (
+            client.put(
+                f"/api/workouts/{uuid4()}/memo", json={"content": "秘密", "expected_revision": 0}
+            ).status_code
+            == 401
+        )
 
 
 def test_rejects_invalid_token_without_using_client_supplied_identity(monkeypatch):

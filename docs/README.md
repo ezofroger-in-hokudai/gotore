@@ -31,3 +31,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 4. `progress.md` に判断の経緯を残し、実装・テスト・PRを紐付ける。
 
 元のPDFを暗黙に読み替えません。新しい文書の追加・適用範囲の確定に合わせて、この一覧も更新します。
+
+- [private-workout-memo.md](private-workout-memo.md): 本人だけの記録メモと非共有API。

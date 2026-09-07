@@ -126,6 +126,28 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await expect(pageA.getByRole("article")).toContainText("ベンチプレス");
     await pageA.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
     await expect(pageA.getByLabel("表示名", { exact: true })).toHaveValue("変更後のA");
+    await pageA
+      .getByRole("navigation")
+      .getByRole("button", { name: "自分の記録", exact: true })
+      .click();
+    await pageA.getByRole("button", { name: "自分用メモ", exact: true }).click();
+    await pageA
+      .getByLabel("メモ（1000文字まで）", { exact: true })
+      .fill("本人だけの振り返りテスト");
+    await pageA.getByRole("button", { name: "メモを保存", exact: true }).click();
+    await expect(
+      pageA.getByRole("status").filter({ hasText: "自分用メモを保存しました" }),
+    ).toBeVisible();
+    await pageA.getByRole("button", { name: "閉じる", exact: true }).click();
+    await pageA.getByRole("button", { name: "自分用メモ", exact: true }).click();
+    await expect(pageA.getByLabel("メモ（1000文字まで）", { exact: true })).toHaveValue(
+      "本人だけの振り返りテスト",
+    );
+    await pageB.bringToFront();
+    await pageB.reload();
+    await expect(pageB.getByRole("article")).toHaveCount(1);
+    await expect(pageB.getByText("本人だけの振り返りテスト")).toHaveCount(0);
+    await expect(pageB.getByRole("button", { name: "自分用メモ", exact: true })).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {
     await Promise.allSettled([a.close(), b.close()]);

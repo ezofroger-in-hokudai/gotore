@@ -177,6 +177,7 @@ function Workspace({ session }: { session: Session }) {
                 )}
                 {records.data && (
                   <RecordList
+                    personal={view === "records"}
                     records={records.data}
                     userId={session.user.id}
                     empty={

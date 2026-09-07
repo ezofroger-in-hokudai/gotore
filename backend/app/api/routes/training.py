@@ -6,12 +6,14 @@ from fastapi import APIRouter, Depends, Query
 from app.api.dependencies import training_service
 from app.domain.identity import User
 from app.domain.workout import WorkoutInput
+from app.domain.workout_memo import WorkoutMemoInput
 from app.schemas.training import (
     GroupCreate,
     GroupDetail,
     GroupJoin,
     GroupRename,
     GroupResponse,
+    WorkoutMemoResponse,
     WorkoutResponse,
 )
 from app.services.training import TrainingService
@@ -70,3 +72,13 @@ def workouts(service: Service, limit: Limit = 50, offset: Offset = 0):
 @router.post("/workouts", response_model=WorkoutResponse, status_code=201)
 def save_workout(data: WorkoutInput, service: Service):
     return service.save_workout(data)
+
+
+@router.get("/workouts/{workout_id}/memo", response_model=WorkoutMemoResponse)
+def workout_memo(workout_id: UUID, service: Service):
+    return service.workout_memo(workout_id)
+
+
+@router.put("/workouts/{workout_id}/memo", response_model=WorkoutMemoResponse)
+def save_workout_memo(workout_id: UUID, data: WorkoutMemoInput, service: Service):
+    return service.save_workout_memo(workout_id, data)

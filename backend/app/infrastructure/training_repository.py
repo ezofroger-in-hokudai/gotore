@@ -7,6 +7,7 @@ from psycopg.types.json import Jsonb
 from app.domain.errors import Conflict, NotFound
 from app.domain.identity import AuthenticatedUser, User
 from app.domain.workout import WorkoutInput
+from app.domain.workout_memo import WorkoutMemoInput
 
 
 class TrainingRepository:
@@ -135,3 +136,42 @@ class TrainingRepository:
             WHERE {where} ORDER BY {order} LIMIT %s OFFSET %s""",
             (value, limit, offset),
         ).fetchall()
+
+    def workout_memo(self, user_id: UUID, workout_id: UUID):
+        record = self.connection.execute(
+            """SELECT COALESCE(m.content, '') AS content, COALESCE(m.revision, 0) AS revision
+            FROM public.gotore_workouts w
+            LEFT JOIN public.gotore_workout_memos m ON m.workout_id = w.id
+            WHERE w.id = %s AND w.user_id = %s""",
+            (workout_id, user_id),
+        ).fetchone()
+        if record is None:
+            raise NotFound("記録が見つからないか、操作する権限がありません")
+        return record
+
+    def save_workout_memo(self, user_id: UUID, workout_id: UUID, memo: WorkoutMemoInput):
+        with self.connection.transaction():
+            # 未作成メモも元記録で直列化し、記録削除との競合を防ぐ。
+            record = self.connection.execute(
+                "SELECT id FROM public.gotore_workouts WHERE id = %s AND user_id = %s FOR UPDATE",
+                (workout_id, user_id),
+            ).fetchone()
+            if record is None:
+                raise NotFound("記録が見つからないか、操作する権限がありません")
+            current = self.workout_memo(user_id, workout_id)
+            unchanged = current["content"] == memo.content
+            if current["revision"] != memo.expected_revision:
+                if current["revision"] == memo.expected_revision + 1 and unchanged:
+                    return current
+                raise Conflict(
+                    "メモは別の操作で変更されています。保存済みの内容を読み直してください"
+                )
+            if unchanged:
+                return current
+            return self.connection.execute(
+                """INSERT INTO public.gotore_workout_memos (workout_id, content, revision)
+                VALUES (%s, %s, %s) ON CONFLICT (workout_id) DO UPDATE
+                SET content = EXCLUDED.content, revision = EXCLUDED.revision
+                RETURNING content, revision""",
+                (workout_id, memo.content, current["revision"] + 1),
+            ).fetchone()

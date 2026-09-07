@@ -52,3 +52,7 @@
 | #23 | iPhone／Android実機と公開環境へのアクセス、端末での操作確認 |
 
 名称設定・入力改善はPR #27でmainへ統合済みで、同PRのCIは実Supabase共有E2Eを含め成功した。#29の名前保持修正はローカルで実装・検証済みだが、Docker停止により今回の実Supabase共有E2Eは未完了。push・PR・本番反映は別途行う。最新の結果はPRとprogress.mdで追跡する。
+
+## 本人メモの追加範囲
+
+2026-09-08のユーザー指示により、#22の本人メモを#43と[private-workout-memo.md](private-workout-memo.md)へ分割して採用する。他人コメント・自己採点・通知は後続。
