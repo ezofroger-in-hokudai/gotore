@@ -19,7 +19,7 @@
 公開APIは `/api`。ローカルではNext.jsからFastAPIへ転送します。
 Vercel Servicesでは1プロジェクトの共通ルートから各サービスへ振り分けます。設定は [vercel-supabase.md](vercel-supabase.md) を参照してください。ユーザーが公開サイトをデプロイし、migration適用を報告済みです。公開Authの登録制限・手動発行・URL設定は [管理者登録ガイド](admin-managed-accounts.md) に従って管理者が反映します。今回のログイン専用変更の公開反映は未実施です。
 業務データはFastAPI経由で操作し、ブラウザからのDB直接アクセスはRLSで拒否します。
-追加の名称設定・入力操作の仕様は [daily-improvements.md](daily-improvements.md)。#4・#7は一部実装で、メール／パスワード変更・メンバー除外を含みません。現在のローカル変更は未push・未デプロイです。
+追加の名称設定・入力操作の仕様は [daily-improvements.md](daily-improvements.md)。#4・#7は一部実装で、メール／パスワード変更・メンバー除外を含みません。変更は作業ブランチへpush済みで、mainへの統合・本番反映は未実施です。最新のレビュー・検証状況はPRとprogress.mdで追跡します。
 ローカルSupabaseのプロジェクトIDは `gotore`、ポートは59320番台です。
 
 ## 検証
