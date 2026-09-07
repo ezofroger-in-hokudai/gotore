@@ -4,13 +4,14 @@ import type { Group, GroupDetail, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
+import { SettingsPanel } from "../settings/settings-panel";
 import { AuthPanel } from "./auth-panel";
 import { GroupPanel } from "./group-panel";
 import { RecordList } from "./record-list";
 import { useResource } from "./use-resource";
 import { WorkoutForm } from "./workout-form";
 
-type View = "home" | "records" | "groups" | "workout";
+type View = "home" | "records" | "groups" | "workout" | "settings";
 
 function Workspace({ session }: { session: Session }) {
   const [view, setView] = useState<View>("home");
@@ -19,11 +20,15 @@ function Workspace({ session }: { session: Session }) {
   const [page, setPage] = useState(0);
   const [notice, setNotice] = useState("");
   const [signingOut, setSigningOut] = useState(false);
-  const groupList = useResource<Group[]>("/groups", refreshKey);
+  const groupList = useResource<Group[]>(
+    "/groups",
+    refreshKey,
+    view === "home" || view === "groups",
+  );
   const groups = groupList.data ?? [];
   const activeId = groupId || groups[0]?.id || "";
   const detail = useResource<GroupDetail>(
-    activeId ? `/groups/${activeId}` : null,
+    activeId && view === "groups" ? `/groups/${activeId}` : null,
     refreshKey,
     view === "groups",
   );
@@ -99,10 +104,20 @@ function Workspace({ session }: { session: Session }) {
             onSaved={saved}
             onBack={() => navigate("home")}
           />
+        ) : view === "settings" ? (
+          <SettingsPanel
+            displayName={
+              typeof session.user.user_metadata.display_name === "string"
+                ? session.user.user_metadata.display_name
+                : "トレーニー"
+            }
+            onSaved={() => setRefreshKey((value) => value + 1)}
+          />
         ) : (
           <>
             {view === "groups" ? (
               <GroupPanel
+                userId={session.user.id}
                 groups={groups}
                 detail={detail.data}
                 onSelect={select}
@@ -226,6 +241,7 @@ function Workspace({ session }: { session: Session }) {
               ["home", "⌂", "ホーム"],
               ["records", "▤", "自分の記録"],
               ["groups", "♧", "グループ"],
+              ["settings", "⚙", "設定"],
             ] as const
           ).map(([next, symbol, label]) => (
             <button

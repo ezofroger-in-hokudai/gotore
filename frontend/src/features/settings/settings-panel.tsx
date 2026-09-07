@@ -1,0 +1,113 @@
+import { api } from "@/lib/api";
+import { getSupabase } from "@/lib/supabase";
+import { type FormEvent, useState } from "react";
+import { saveDisplayName } from "./profile";
+
+export function SettingsPanel({
+  displayName,
+  onSaved,
+}: { displayName: string; onSaved: () => void }) {
+  const [name, setName] = useState(displayName);
+  const [busy, setBusy] = useState(false);
+  const [needsSync, setNeedsSync] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function syncProfile() {
+    await api("/me/profile", { method: "POST" });
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await saveDisplayName(name, {
+        updateAuth: async (value) => {
+          const client = getSupabase();
+          if (!client) throw new Error("認証が必要です");
+          const { error } = await client.auth.updateUser({ data: { display_name: value } });
+          if (error) throw error;
+        },
+        syncProfile,
+      });
+      setName(result.name);
+      setNeedsSync(!result.synced);
+      if (result.synced) {
+        setMessage("表示名を変更しました。");
+        onSaved();
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "変更できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section>
+      <p className="eyebrow">SETTINGS</p>
+      <h1>設定</h1>
+      <form className="panel" onSubmit={submit}>
+        <fieldset disabled={busy}>
+          <label>
+            表示名
+            <input
+              required
+              maxLength={20}
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                setError("");
+                setMessage("");
+              }}
+            />
+          </label>
+          <p className="muted">
+            所属グループのメンバー一覧と、過去の共有記録にも新しい表示名が表示されます。
+          </p>
+          <button className="primary" type="submit">
+            {busy ? "変更しています…" : "表示名を変更"}
+          </button>
+        </fieldset>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        {message && <output className="notice">{message}</output>}
+        {needsSync && (
+          <div className="error" role="alert">
+            表示名は更新済みですが、共有記録への反映を確認できませんでした。
+            <button
+              className="secondary full"
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                try {
+                  await syncProfile();
+                  setNeedsSync(false);
+                  setMessage("共有記録への反映を確認しました。");
+                  onSaved();
+                } catch {
+                  setError("反映を確認できませんでした。時間をおいて再試行してください。");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              共有記録への反映を再試行
+            </button>
+          </div>
+        )}
+      </form>
+      <p className="muted">
+        メールアドレス・パスワードの変更は、テスト運用の管理者にお問い合わせください。
+      </p>
+    </section>
+  );
+}

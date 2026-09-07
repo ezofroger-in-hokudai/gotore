@@ -1,16 +1,19 @@
 import { type Group, type GroupDetail, api } from "@/lib/api";
 import { type FormEvent, useState } from "react";
+import { GroupNameForm } from "./group-name-form";
 
 export function GroupPanel({
   groups,
   detail,
   onGroup,
   onSelect,
+  userId,
 }: {
   groups: Group[];
   detail: GroupDetail | null;
   onGroup: (group: Group) => void;
   onSelect: (id: string) => void;
+  userId: string;
 }) {
   const [mode, setMode] = useState<"create" | "join">("create");
   const [busy, setBusy] = useState(false);
@@ -102,6 +105,16 @@ export function GroupPanel({
               </span>
             ))}
           </div>
+          {detail.owner_id === userId && (
+            <GroupNameForm
+              key={detail.id}
+              group={detail}
+              onSaved={(group) => {
+                onGroup(group);
+                setMessage("グループ名を変更しました。");
+              }}
+            />
+          )}
         </div>
       )}
       <div className="panel">

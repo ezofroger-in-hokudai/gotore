@@ -1,5 +1,18 @@
 # progress.md
 
+## 2026-09-07 14:08 JST
+
+- 変更内容: ユーザー承認済みの#4・#7から名称設定を実装。設定画面でAuthの表示名を更新し、POST /api/me/profileで検証済み本人情報だけを同期する。Auth更新後の同期失敗は部分成功として再試行する。オーナーだけがPATCH /api/groups/{id}でグループ名を変更できる。名前以外のID・招待・メンバー・記録は維持。
+- 目的: 日常の名称変更を管理者への依頼なしで行えるようにする。未決のメール／パスワード変更やメンバー除外は混ぜない。
+- 影響範囲: 名称設定UI・API・テスト・仕様。DB migrationや依存追加はない。グループ名を他端末にも反映するため一覧も5秒更新し、同じ一覧の再取得では共有先を消さない。別一覧には前のデータを返さず、ユーザー切替では画面状態を破棄する。
+- 関連ファイル: frontend/src/features/settings/、group-name-form.tsx、group-panel.tsx、training-app.tsx、use-resource.ts、backend/app/api/routes/training.py、schemas/training.py、services/training.py、infrastructure/training_repository.py、backend/tests/、frontend/tests/、README.md、docs/current-state.md、docs/standard-v0.1-scope.md、docs/daily-improvements.md、task.md。
+- テスト方針: 表示名オーケストレーションは先行単体テストの失敗を確認後に実装。グループAPIは先にテストを追加したがDocker停止により先行DB検証はできず、代替DBで実装後に検証した。共有先が消える不具合は旧挙動で期待値が空文字になる失敗を確認して修正。セレクターの初回失敗は不具合の再現と区別し、comboboxのアクセシブル名で検証した。
+- 確認結果: 一時PostgreSQL 16の専用gotore_testでmake check成功（backend48件、frontend単体11件、Ruff・Biome、本番build）。通常メンバー・非所属・未認証拒否、空白／文字数制約、なりすまし本文を使わない同期、既存記録保持を確認。通信を模擬したUIテストでAuth失敗・部分成功・同期再試行・名称変更再試行・非オーナーUIを確認した。
+- 検証上の補足: Docker停止で元のTEST_DATABASE_URLは接続タイムアウト。sudo起動は管理者パスワードが必要でユーザーへ起動依頼済み。既存PostgreSQLを使い/tmp/gotore-issue-tests.xECCKWへテストDBを新規作成し、TCP無効・所有者のみアクセス可能なUNIXソケットで実行した。既存Supabaseのデータは削除・変更していない。入力単独E2Eは実Authを必要としない模擬通信へ分離し、実Authと2人の共有を確認するsharing.spec.tsは強化したまま保持する。
+- 未解決事項: 更新後の実Supabase Auth・共有E2E、Supabase環境／リモートCI、実機確認、レビュー・push・PR・デプロイは未実施。#4・#7は一部対応で閉じない。#11の本番性能計測・目標は未確定であり、一覧保持を性能Issue全体の完了としない。
+- 次のアクション: 最終UIとmake checkを再確認して名称設定をコミットする。Docker復旧後に全E2Eを再実行し、レビューする。残るIssueの着手条件はdocs/daily-improvements.mdに整理済み。名称設定は同じ画面・共有E2Eを変更するため、今回は#4・#7の合意済み部分を同じブランチで扱う。
+- 最終確認: 同じ専用DBで再度make check成功（backend48件、frontend単体11件、lint、本番build）。ホーム画面・設定・名称変更・一覧切替・入力操作のブラウザ7件成功。390px幅の設定・グループ・入力画面を画像で確認した。実Authを含む共有E2Eの代替完了とはしていない。
+
 ## 2026-09-07 13:56 JST
 
 - 変更内容: #5の入力をコンパクトにし、Enterで重量→回数→次セットへ移動する処理と上限・IME・長押し対策を追加した。ユーザーの追加指定により、新セットは空欄とし、空欄の重量でEnterを押したときだけ前セットの値を採用する。保存時は補完しない。

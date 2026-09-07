@@ -41,11 +41,27 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await pageB.getByLabel("招待コード", { exact: true }).fill(invite);
     await pageB.getByRole("button", { name: "グループに参加 →", exact: true }).click();
     await expect(pageB.getByTestId("invite-code")).toHaveText(invite);
+    await expect(pageB.getByLabel("新しいグループ名", { exact: true })).toHaveCount(0);
+    await pageA.getByLabel("新しいグループ名", { exact: true }).fill("夜の合トレ部");
+    await pageA.route("**/api/groups/*", (route) => {
+      if (route.request().method() === "PATCH") return route.abort();
+      return route.continue();
+    });
+    await pageA.getByRole("button", { name: "グループ名を変更", exact: true }).click();
+    await expect(pageA.getByRole("alert").filter({ hasText: "通信できません" })).toBeVisible();
+    await expect(pageA.getByLabel("新しいグループ名", { exact: true })).toHaveValue("夜の合トレ部");
+    await pageA.unroute("**/api/groups/*");
+    await pageA.getByRole("button", { name: "グループ名を変更", exact: true }).click();
+    await expect(pageA.getByRole("heading", { name: "夜の合トレ部", exact: true })).toBeVisible();
+    await expect(pageA.getByTestId("invite-code")).toHaveText(invite);
+    await pageB.bringToFront();
+    await expect(pageB.getByRole("heading", { name: "夜の合トレ部", exact: true })).toBeVisible();
     await pageB
       .getByRole("navigation")
       .getByRole("button", { name: "ホーム", exact: true })
       .click();
 
+    await pageA.bringToFront();
     await pageA.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
     await pageA.getByLabel("種目名", { exact: true }).fill("ベンチプレス");
     await pageA.getByLabel("種目1 セット1 重量", { exact: true }).fill("82.5");
@@ -57,7 +73,7 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await pageA.reload();
     await pageA.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
     await expect(pageA.getByLabel("種目1 セット1 重量", { exact: true })).toHaveValue("82.5");
-    await expect(pageA.getByText("確定すると「朝の合トレ部」", { exact: false })).toBeVisible();
+    await expect(pageA.getByText("確定すると「夜の合トレ部」", { exact: false })).toBeVisible();
 
     // 一度だけ通信を失敗させ、入力を失わず同じ記録を再送できることを確認する。
     await pageA.route("**/api/workouts", (route) => route.abort(), { times: 1 });
@@ -83,6 +99,20 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     ).toBe(true);
     await pageB.screenshot({ path: "test-results/group-feed-mobile.png", fullPage: true });
 
+    await pageA.bringToFront();
+    await pageA.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
+    await expect(pageA.getByLabel("表示名", { exact: true })).toHaveValue("共有テストA");
+    await pageA.getByLabel("表示名", { exact: true }).fill("変更後のA");
+    await pageA.route("**/api/me/profile", (route) => route.abort());
+    await pageA.getByRole("button", { name: "表示名を変更", exact: true }).click();
+    await expect(pageA.getByRole("alert").filter({ hasText: "表示名は更新済み" })).toBeVisible();
+    await pageA.unroute("**/api/me/profile");
+    await pageA.getByRole("button", { name: "共有記録への反映を再試行", exact: true }).click();
+    await expect(pageA.getByRole("status").filter({ hasText: "反映を確認しました" })).toBeVisible();
+    await pageB.bringToFront();
+    await expect(card).toContainText("変更後のA");
+
+    await pageA.bringToFront();
     await pageA.getByRole("button", { name: "ログアウト", exact: true }).click();
     await expect(pageA.getByRole("button", { name: "ログインする →", exact: true })).toBeVisible();
     await pageA.getByLabel("メールアドレス", { exact: true }).fill(emailA);
@@ -94,6 +124,8 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
       .click();
     await expect(pageA.getByRole("article")).toHaveCount(1);
     await expect(pageA.getByRole("article")).toContainText("ベンチプレス");
+    await pageA.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
+    await expect(pageA.getByLabel("表示名", { exact: true })).toHaveValue("変更後のA");
     expect(errors).toEqual([]);
   } finally {
     await Promise.allSettled([a.close(), b.close()]);

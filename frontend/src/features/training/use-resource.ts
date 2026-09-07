@@ -2,13 +2,14 @@ import { api } from "@/lib/api";
 import { useEffect, useState } from "react";
 
 export function useResource<T>(path: string | null, refreshKey = 0, poll = false) {
-  const [data, setData] = useState<T | null>(null);
+  const [result, setResult] = useState<{ path: string; data: T } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存後・再試行の操作でも再取得する。
   useEffect(() => {
-    setData(null);
+    // 同じ一覧の再取得では選択状態を保持し、別の共有先のデータは返さない。
+    setResult((current) => (current?.path === path ? current : null));
     setError("");
     if (!path) {
       setLoading(false);
@@ -23,7 +24,7 @@ export function useResource<T>(path: string | null, refreshKey = 0, poll = false
       try {
         const value = await api<T>(path, { signal: controller.signal });
         if (!controller.signal.aborted) {
-          setData(value);
+          setResult({ path, data: value });
           setError("");
         }
       } catch (reason) {
@@ -46,5 +47,10 @@ export function useResource<T>(path: string | null, refreshKey = 0, poll = false
       document.removeEventListener("visibilitychange", visible);
     };
   }, [path, refreshKey, retryKey, poll]);
-  return { data, error, loading, retry: () => setRetryKey((value) => value + 1) };
+  return {
+    data: result?.path === path ? result.data : null,
+    error,
+    loading,
+    retry: () => setRetryKey((value) => value + 1),
+  };
 }

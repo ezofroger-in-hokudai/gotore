@@ -4,6 +4,8 @@
 
 ## 今回の範囲
 
+初版後の名称設定・入力改善は [daily-improvements.md](daily-improvements.md) の合意範囲を追加適用する。初版からの変更点と未実装範囲は同書で区別する。
+
 - グループ名を入力して作成し、招待コードを仲間に渡す。仲間はコードで参加する。
 - 日付・種目名・重量・回数・セットを入力し、トレーニング記録として保存する。
 - 保存時に選んだ所属グループへ記録を共有し、メンバーが新着順で閲覧する。
@@ -54,10 +56,12 @@ SCORE、ランキング、AI、スタンプ、コメント、Push通知、分析
 | メソッド・パス | 内容 |
 | --- | --- |
 | GET /api/me | 本人の表示名・ID |
+| POST /api/me/profile | Authで検証した本人の表示名をDBへ同期（後続#4） |
 | GET /api/groups | 自分の所属グループ |
 | POST /api/groups | グループ作成・作成者の参加 |
 | POST /api/groups/join | 招待コードで参加 |
 | GET /api/groups/{id} | グループ情報とメンバー |
+| PATCH /api/groups/{id} | オーナーがグループ名だけ変更（後続#7） |
 | GET /api/groups/{id}/workouts | メンバー向け共有記録一覧 |
 | GET /api/workouts | 自分の記録一覧 |
 | POST /api/workouts | 記録保存と選択したグループへの共有 |

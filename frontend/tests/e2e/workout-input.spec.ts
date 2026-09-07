@@ -1,18 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { createTestUser, testPassword } from "./local-auth";
+import { mockTraining } from "./mock-training";
 
 test("Enterで入力を進め、未確定の記録を送信せず下書きを保持する", async ({ page }) => {
-  const email = `input-${crypto.randomUUID()}@example.test`;
-  await createTestUser("入力テスト", email);
-  await page.goto("/");
-  await page.getByLabel("メールアドレス", { exact: true }).fill(email);
-  await page.getByLabel("パスワード", { exact: true }).fill(testPassword);
-  await page.getByRole("button", { name: "ログインする →", exact: true }).click();
+  await mockTraining(page);
   await page.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
   let submissions = 0;
   await page.route("**/api/workouts", (route) => {
     if (route.request().method() === "POST") submissions++;
-    return route.continue();
+    return route.fulfill({ status: 500, json: { detail: "入力テストでは保存しない" } });
   });
   await page.getByLabel("種目名", { exact: true }).fill("スクワット");
   const weight = page.getByLabel("種目1 セット1 重量", { exact: true });
@@ -45,6 +40,7 @@ test("Enterで入力を進め、未確定の記録を送信せず下書きを保
   await page.reload();
   await page.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
   await expect(nextWeight).toHaveValue("60");
+  await page.screenshot({ path: "test-results/workout-input-mobile.png", fullPage: true });
   for (let count = 2; count < 30; count++) {
     await page.getByRole("button", { name: "＋ セットを追加", exact: true }).click();
   }
