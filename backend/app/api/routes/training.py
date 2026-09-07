@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.dependencies import current_user, training_service
+from app.api.dependencies import training_service
 from app.domain.identity import User
 from app.domain.workout import WorkoutInput
 from app.schemas.activity import MonthlyActivity
@@ -25,8 +25,8 @@ Offset = Annotated[int, Query(ge=0)]
 
 
 @router.get("/me", response_model=User)
-def me(user: Annotated[User, Depends(current_user)]):
-    return user
+def me(service: Service):
+    return service.user
 
 
 @router.post("/me/profile", response_model=User)

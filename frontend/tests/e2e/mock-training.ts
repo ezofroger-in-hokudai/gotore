@@ -49,6 +49,11 @@ export async function mockTraining(page: Page, owner = true) {
   });
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
+    if (path === "/api/me") {
+      return route.fulfill({
+        json: { id: user.id, display_name: user.user_metadata.display_name },
+      });
+    }
     if (path === "/api/me/profile") {
       state.syncs++;
       if (state.failSync) return route.abort();
