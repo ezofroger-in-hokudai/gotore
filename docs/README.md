@@ -51,3 +51,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [workout-reuse.md](workout-reuse.md): 本人の過去記録を新規下書きへコピー。
 
 - [private-workout-memo.md](private-workout-memo.md): 本人だけの記録メモと非共有API。
+
+- [ios-options.md](ios-options.md): iOS移植の方式比較・認証／下書きの境界・公式資料と実機検証案。
