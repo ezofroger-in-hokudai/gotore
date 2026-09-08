@@ -621,3 +621,11 @@
 - 検証: make check成功（backend113件・frontend単体20件・lint・build）。その後追加したAPIテストを含む7件が成功。ブラウザでmanifest1件、v2記録操作2件が成功、320/390/430pxの記録画像を確認。UI余白を調整後、全E2Eを実行中。
 - 未解決事項: Docker停止・sudo非対話権限なし。実Supabaseの2ブラウザ共有・一般登録禁止はローカルで実行できないため、CIまたはDocker稼働環境での確認が必要。make check後の追加変更は再検証する。
 - 次のアクション: 画面テストの残る失敗を修正し、最新版のmake checkと画像確認、コミットを実施する。
+
+## 2026-09-09 04:06 JST
+- 変更内容: 継続セッションAPI、全所属グループへの共有、LIVE/TODAY、種目の前回・最高値・継続メモ、招待プレビューを追加。共有先の複合外部キー・RLS・期待revisionによる整合性を実装。
+- 目的: 画面を閉じても記録を保持し、所属と公開範囲・再送・編集を一貫させる。
+- 影響範囲・関連ファイル: backend/app/{api,domain,infrastructure,schemas}/、backend/tests/test_sessions.py、supabase/migrations/20260909040000_sessions.sql。
+- 検証結果: 専用gotore_v2_test DBでバックエンド118件、フロントエンド単体20件を含むmake check成功。稼働を再確認できたローカルSupabaseにmake db-migrateで追加migration4件を適用（データリセットなし）、db lint --local --fail-on error成功。一般ユーザーの新規登録拒否も実Authで成功。
+- 未解決事項: 全画面テストは33/35成功。カード切替直後の選択復元と、実共有テストで意図したグループを退出する指定を修正済みで再検証中。これまでのDocker停止の制約は解消した。本番DB・デプロイは操作していない。
+- 次のアクション: v2画面の全E2Eと最終画像を確認し、UIのコミットへまとめる。

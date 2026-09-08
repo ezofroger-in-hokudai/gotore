@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.domain.workout import Exercise
 
@@ -49,6 +49,9 @@ class GroupDetail(GroupResponse):
 
 
 class WorkoutResponse(BaseModel):
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+    shared_group_ids: list[UUID] = Field(default_factory=list)
     revision: int
     id: UUID
     user_id: UUID

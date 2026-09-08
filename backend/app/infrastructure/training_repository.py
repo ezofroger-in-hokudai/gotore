@@ -174,6 +174,7 @@ class TrainingRepository:
                      FROM jsonb_array_elements(w.exercises) e)) AS set_count
             FROM public.gotore_workouts w
             WHERE w.user_id = %s AND w.performed_on >= %s AND w.performed_on < %s
+              AND jsonb_array_length(w.exercises) > 0
             GROUP BY w.performed_on ORDER BY w.performed_on""",
             (user_id, start, end),
         ).fetchall()
@@ -188,20 +189,27 @@ class TrainingRepository:
     ):
         if group_id is not None:
             self.group(user_id, group_id)
-            where, value = "w.group_id = %s", group_id
+            where, value = """(w.group_id = %s OR EXISTS(
+                SELECT 1 FROM public.gotore_workout_shares s
+                WHERE s.workout_id = w.id AND s.group_id = %s))""", group_id
             order = "w.created_at DESC, w.id"
         else:
             where, value = "w.user_id = %s", user_id
             order = "w.performed_on DESC, w.created_at DESC, w.id"
-        values = [value]
+        values = [value, value] if group_id is not None else [value]
+        where += " AND jsonb_array_length(w.exercises) > 0"
         if performed_on is not None:
             where += " AND w.performed_on = %s"
             values.append(performed_on)
         return self.connection.execute(
-            f"""SELECT w.*, p.display_name FROM public.gotore_workouts w
+            f"""SELECT w.*, p.display_name,
+            ARRAY(SELECT s.group_id FROM public.gotore_workout_shares s
+                  WHERE s.workout_id = w.id AND (w.user_id = %s OR s.group_id = %s)
+                  ORDER BY s.group_id) AS shared_group_ids
+            FROM public.gotore_workouts w
             JOIN public.gotore_profiles p ON p.id = w.user_id
             WHERE {where} ORDER BY {order} LIMIT %s OFFSET %s""",
-            (*values, limit, offset),
+            (user_id, group_id, *values, limit, offset),
         ).fetchall()
 
     def lock_workout(self, workout_id: UUID):
@@ -212,7 +220,10 @@ class TrainingRepository:
 
     def owned_workout(self, user_id: UUID, workout_id: UUID):
         return self.connection.execute(
-            """SELECT w.*, p.display_name FROM public.gotore_workouts w
+            """SELECT w.*, p.display_name,
+            ARRAY(SELECT s.group_id FROM public.gotore_workout_shares s
+              WHERE s.workout_id = w.id ORDER BY s.group_id) AS shared_group_ids
+            FROM public.gotore_workouts w
             JOIN public.gotore_profiles p ON p.id = w.user_id
             WHERE w.id = %s AND w.user_id = %s FOR UPDATE OF w""",
             (workout_id, user_id),
@@ -225,6 +236,8 @@ class TrainingRepository:
             record = self.owned_workout(user_id, workout_id)
             if record is None:
                 raise NotFound("記録を操作できません")
+            if record["started_at"] is not None and record["ended_at"] is None:
+                raise Conflict("進行中のトレーニングは記録画面で編集してください")
             unchanged = (
                 record["performed_on"] == workout.performed_on and record["exercises"] == exercises
             )
@@ -236,7 +249,8 @@ class TrainingRepository:
                 return record
             self.connection.execute(
                 """UPDATE public.gotore_workouts SET performed_on = %s, exercises = %s,
-                revision = revision + 1 WHERE id = %s""",
+                revision = revision + 1, updated_at = clock_timestamp(),
+                feed_exercise = NULL, feed_set = NULL, feed_best = false WHERE id = %s""",
                 (workout.performed_on, Jsonb(exercises), workout_id),
             )
             return self.owned_workout(user_id, workout_id)
