@@ -15,10 +15,10 @@ test("未保存入力と保存済みセットをタブ切替・再起動後も�
   await expect(weight).toHaveValue("60.5");
   state.failSave = true;
   await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
-  await expect(page.locator(".v2-app").getByRole("alert").first()).toContainText("通信できません");
+  await expect(page.locator(".sync-status")).toContainText("未送信");
   await expect(weight).toHaveValue("60.5");
   state.failSave = false;
-  await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
+  await page.getByRole("button", { name: "再送", exact: true }).click();
   await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
   expect(state.session?.exercises[0].sets).toEqual([{ weight: 60.5, reps: 8 }]);
   await navigate(page, "ホーム");
@@ -56,7 +56,7 @@ test("ホイール・直接入力・行編集・取消を区別し、BESTとRM�
   expect(state.session?.exercises[0].sets).toHaveLength(1);
   await page.getByRole("button", { name: "直前の保存を取り消す", exact: true }).click();
   await expect(page.getByText("直前の保存を取り消しました", { exact: true })).toBeVisible();
-  expect(state.session?.exercises[0].sets[0].weight).toBe(82.5);
+  await expect.poll(() => state.session?.exercises[0].sets[0].weight).toBe(82.5);
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -86,10 +86,10 @@ test("保存応答を失ったまま再起動しても二重追加せず、古�
     { times: 1 },
   );
   await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
-  await expect(page.locator(".v2-app").getByRole("alert").first()).toContainText("通信できません");
+  await expect(page.locator(".sync-status")).toContainText("未送信");
   await page.reload();
   await navigate(page, "記録");
-  await expect(page.getByText("前回の保存を確認しました", { exact: true })).toBeVisible();
+  await expect(page.locator(".sync-status")).toContainText("同期済み");
   expect(state.session?.exercises[0].sets).toHaveLength(1);
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("82.5");

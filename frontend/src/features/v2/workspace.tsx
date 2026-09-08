@@ -25,7 +25,7 @@ export function Workspace({ session }: { session: Session }) {
   const [signingOut, setSigningOut] = useState(false);
   const [notice, setNotice] = useState("");
   const changed = () => setRefreshKey((key) => key + 1);
-  const training = useSession(changed);
+  const training = useSession(session.user.id, changed);
   const preferences = usePreferences(session.user.id);
   const groupList = useResource<Group[]>(
     "/groups",
@@ -65,7 +65,7 @@ export function Workspace({ session }: { session: Session }) {
     }
   }
   return (
-    <div className="app-shell v2-app">
+    <div className={`app-shell v2-app${view === "record" ? " recording-view" : ""}`}>
       <header className="app-header">
         <button className="wordmark" type="button" onClick={() => navigate("home")}>
           GO <span>TORE</span>
@@ -125,7 +125,7 @@ export function Workspace({ session }: { session: Session }) {
             <div className="home-training">
               <p>
                 {training.session
-                  ? `${training.session.exercises.at(-1)?.name || "種目を選択"} · ${training.session.exercises.reduce((count, exercise) => count + exercise.sets.length, 0)}セット保存済み`
+                  ? `${training.session.exercises.at(-1)?.name || "種目を選択"} · ${training.session.exercises.reduce((count, exercise) => count + exercise.sets.length, 0)}セット${training.pending ? "・同期中" : "保存済み"}`
                   : "今日も、自分のペースで。"}
               </p>
               <button

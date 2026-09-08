@@ -823,3 +823,234 @@
     padding-right: 16px;
   }
 }
+
+/* 記録中は操作に面積を使い、セット数が増えてもページを伸ばさない。 */
+.recording-view .app-header {
+  display: none;
+}
+.v2-app.recording-view .main-content {
+  padding: calc(8px + env(safe-area-inset-top)) 16px calc(66px + env(safe-area-inset-bottom));
+}
+.recording-view .session-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.recording-view .session-screen > .section-heading {
+  margin: 0;
+  min-height: 30px;
+}
+.recording-view .session-screen h1 {
+  font-size: 18px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.recording-view .session-screen .text-button {
+  padding: 4px 6px;
+  min-height: 28px;
+}
+.recording-view .session-screen .finish-training {
+  margin: 0;
+  color: var(--text);
+}
+.recording-view .personal-bests {
+  padding: 5px 12px;
+  margin: 0;
+}
+.recording-view .personal-bests > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.recording-view .personal-bests > div + div {
+  padding-left: 10px;
+}
+.recording-view .personal-bests strong {
+  font-size: 20px;
+}
+.recording-view .personal-bests span {
+  font-size: 10px;
+}
+.recording-view .personal-bests small {
+  font-size: 10px;
+}
+.inline-memo {
+  min-width: 0;
+  margin: 0;
+}
+.inline-memo-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+}
+.inline-memo-heading label {
+  font-size: 11px;
+  color: var(--muted);
+  flex: 1;
+}
+.inline-memo-heading span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.recording-view .inline-memo textarea {
+  display: block;
+  padding: 5px 8px;
+  height: 36px;
+  min-height: 36px;
+  resize: vertical;
+  font-size: 16px;
+  line-height: 24px;
+}
+.session-notes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.session-notes > p {
+  font-size: 11px;
+  align-self: center;
+  margin: 0;
+}
+.recording-view .comparison-heading {
+  margin: 0;
+}
+.recording-view .comparison-heading h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+.recording-view .comparison-heading small {
+  font-size: 9px;
+}
+.recording-view .comparison-table {
+  margin: 0;
+}
+.recording-view .comparison-labels {
+  padding: 0;
+  font-size: 9px;
+}
+.recording-view .comparison-row {
+  min-height: 39px;
+}
+.recording-view .comparison-row button {
+  min-height: 39px;
+  padding: 2px 0;
+}
+.comparison-pages {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: var(--muted);
+}
+.recording-view .comparison-pages .text-button {
+  min-width: 44px;
+  font-size: 20px;
+  line-height: 20px;
+  padding: 0;
+}
+.recording-view .set-entry {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+.recording-view .set-entry .section-heading {
+  margin: 0;
+  min-height: 24px;
+}
+.recording-view .set-entry h2 {
+  font-size: 13px;
+}
+.recording-view .wheels {
+  gap: 12px;
+  margin: 0;
+}
+.recording-view .number-wheel {
+  touch-action: none;
+  user-select: none;
+  gap: 0;
+}
+.recording-view .number-wheel label {
+  margin: 0;
+  font-size: 10px;
+  line-height: 16px;
+}
+.recording-view .number-wheel input {
+  height: 36px;
+  min-height: 36px;
+  font-size: 30px;
+  padding: 0;
+  line-height: 36px;
+  transition: none;
+  will-change: transform;
+}
+.recording-view .wheel-neighbor {
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+.recording-view .rm-estimate {
+  margin: 2px 0;
+  font-size: 10px;
+}
+.recording-view .save-feedback {
+  min-height: 18px;
+  font-size: 11px;
+  margin: 0;
+}
+.recording-view .set-entry .primary {
+  min-height: 40px;
+  padding: 8px;
+}
+.recording-view .undo-button {
+  margin: 0;
+  align-self: center;
+  font-size: 10px;
+}
+.sync-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 22px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.recording-view .session-screen .error {
+  margin: 0;
+  font-size: 12px;
+}
+@media (max-width: 350px) {
+  .v2-app.recording-view .main-content {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .recording-view .personal-bests > div {
+    gap: 4px;
+  }
+}
+@media (min-height: 800px) {
+  .recording-view .session-screen {
+    gap: 8px;
+  }
+  .recording-view .inline-memo textarea {
+    height: 44px;
+  }
+  .recording-view .number-wheel input {
+    height: 44px;
+  }
+}
+.recording-view .section-heading {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.recording-view .number-wheel input {
+  min-height: 1.2em;
+}
+.recording-view .inline-memo textarea {
+  min-height: 1.5em;
+}

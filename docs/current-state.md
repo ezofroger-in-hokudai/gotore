@@ -12,7 +12,7 @@ v2の画面・共有・セッションの規則は [gotore-v2-spec.md](gotore-v2
 | --- | --- | --- |
 | アカウント | 管理者発行、ログイン・ログアウト。設定で本人の表示名を取得・変更・同期。Auth未設定時はDBの既存名を保持（#29）。APIがトークンと認証設定の形式を検証 | frontend/src/features/settings/、auth-panel.tsx、backend/app/api/dependencies.py |
 | グループ | 作成・招待参加・一覧・メンバー表示。名称変更・招待コード再発行・退出・メンバー除外。退出・除外後は本人の履歴を残して共有解除 | features/v2/community.tsx、group-name-form.tsx、backend/app/services/training.py |
-| 記録 | 本人用の種目リストから選択し、候補の追加・削除も可能（#28）。v2では1セットずつDB保存。ホイール・直接入力・前回比較・RM・BEST・種目メモ。明示終了まで継続し、未保存入力は同じ端末で復元。旧記録の編集フォームは維持 | features/session/、workout-form.tsx、backend/app/domain/session.py |
+| 記録 | 本人用の種目リストから選択し、候補の追加・削除も可能（#28）。v2では1セットずつ端末へ即時追加し、DBへ順序付きでバックグラウンド保存。連続ホイール・直接入力・セット切替の前回比較・RM・BEST・常時表示のメモ。明示終了まで継続し、未保存入力は同じ端末で復元。旧記録の編集フォームは維持 | features/session/、workout-form.tsx、backend/app/domain/session.py |
 | 共有 | v2は開始時の全所属グループへ保存済みセットを共有。旧記録の共有範囲は維持。メンバー限定のLIVE/TODAYと最新記録 | backend/app/infrastructure/training_repository.py、record-list.tsx |
 | 自分の記録 | 本人の編集・削除・コピー・非共有メモ。日別セット数の月間ヒートマップと日付タップによる絞り込み。実記録を50件ずつ閲覧 | frontend/src/features/activity/、training/training-app.tsx |
 | 使い方 | 初回ガイドと設定からの再表示。通常画面は短い文言へ統一（#48） | frontend/src/features/onboarding/ |
@@ -57,3 +57,5 @@ GitHubのmain保護・レビュー必須設定は、管理者が設定状況を�
 4. 専用 `_test` DBを指定した `make check` と、ローカルSupabase上の `make test-e2e` を実行する。通知は [#21](https://github.com/ezofroger-in-hokudai/gotore/issues/21) で後続対応する。
 
 開始中はDB上1人1件の制約、セットと終了はrevision照合・再送照合、共有は本人・所属の複合外部キー、退出/除外のcascadeで整合性を保つ。新しい3テーブルにもRLSを適用し、ブラウザからの直接操作は許可しない。
+
+記録操作の改善では追加migrationはありません。送信待ちはユーザー別に端末へ保持し、アプリ表示中に再送、閉じた場合は次回起動時に再開します。未送信分がある状態で終了すると、同期を確認してからサーバーへ終了を送ります。競合時は端末データを保持し、確認なしに上書き・破棄しません。

@@ -1,39 +1,75 @@
 import { type Exercise, type TrainingSession, api } from "@/lib/api";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { SessionQueue } from "./session-queue";
 
-export function useSession(onChanged: () => void) {
-  const [session, setSession] = useState<TrainingSession | null>(null);
-  const [ready, setReady] = useState(false);
+export function useSession(userId: string, onChanged: () => void) {
+  const storageKey = `gotore:session-queue:v1:${userId}`;
+  const changed = useRef(onChanged);
+  changed.current = onChanged;
+  const [queue] = useState(
+    () =>
+      new SessionQueue({
+        read: () => localStorage.getItem(storageKey),
+        write: (value) =>
+          value === null
+            ? localStorage.removeItem(storageKey)
+            : localStorage.setItem(storageKey, value),
+        // 通信のロックと端末保存のロックを分け、別タブの同期中も入力を止めない。
+        lock: (name, work) =>
+          navigator.locks ? navigator.locks.request(`${storageKey}:${name}`, work) : work(),
+        load: () =>
+          api<TrainingSession | null>("/sessions/active", { signal: AbortSignal.timeout(15_000) }),
+        send: (id, revision, exercises) =>
+          api<TrainingSession>(`/sessions/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ expected_revision: revision, exercises }),
+            signal: AbortSignal.timeout(15_000),
+          }),
+      }),
+  );
+  const state = useSyncExternalStore(queue.subscribe, queue.getSnapshot, queue.getSnapshot);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const lock = useRef(false);
   const startId = useRef<string | null>(null);
-  const reload = useCallback(async () => {
-    try {
-      const current = await api<TrainingSession | null>("/sessions/active");
-      setSession(current);
-      setReady(true);
-      setError("");
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "復元できませんでした。");
-    }
-  }, []);
   useEffect(() => {
-    void reload();
-  }, [reload]);
-  const sessionId = session?.id;
+    queue.start();
+    void queue.restore().then(() => queue.sync());
+    const retry = () => {
+      if (!document.hidden) void queue.sync();
+    };
+    const storage = (event: StorageEvent) => {
+      if (event.key === storageKey) void queue.restore().then(retry);
+    };
+    const timer = window.setInterval(retry, 5000);
+    window.addEventListener("online", retry);
+    window.addEventListener("storage", storage);
+    document.addEventListener("visibilitychange", retry);
+    return () => {
+      queue.stop();
+      window.clearInterval(timer);
+      window.removeEventListener("online", retry);
+      window.removeEventListener("storage", storage);
+      document.removeEventListener("visibilitychange", retry);
+    };
+  }, [queue, storageKey]);
+  useEffect(() => {
+    if (state.saved) changed.current();
+  }, [state.saved]);
+  const sessionId = state.session?.id;
   useEffect(() => {
     if (!sessionId) return;
-    let stopped = false;
     let pending = false;
     const beat = async () => {
       if (document.hidden || pending) return;
       pending = true;
       try {
-        await api(`/sessions/${sessionId}/heartbeat`, { method: "POST" });
+        await api(`/sessions/${sessionId}/heartbeat`, {
+          method: "POST",
+          signal: AbortSignal.timeout(15_000),
+        });
       } catch {
-        if (!stopped)
-          setError("LIVEの接続を確認できません。保存済みを読み直すか、接続を確認してください。");
+        /* LIVEの一時切断で端末への入力を止めない。 */
       } finally {
         pending = false;
       }
@@ -42,21 +78,19 @@ export function useSession(onChanged: () => void) {
     const timer = window.setInterval(() => void beat(), 30_000);
     document.addEventListener("visibilitychange", beat);
     return () => {
-      stopped = true;
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", beat);
     };
   }, [sessionId]);
-
-  async function mutate(path: string, body: unknown, method = "POST") {
-    if (lock.current) throw new Error("保存中です。");
+  async function mutate(operation: () => Promise<TrainingSession>) {
+    if (lock.current) throw new Error("処理中です。");
     lock.current = true;
     setBusy(true);
     setError("");
     try {
-      const result = await api<TrainingSession>(path, { method, body: JSON.stringify(body) });
-      setSession(result.ended_at ? null : result);
-      onChanged();
+      const result = await operation();
+      await queue.accept(result);
+      changed.current();
       return result;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "保存できませんでした。");
@@ -67,31 +101,55 @@ export function useSession(onChanged: () => void) {
     }
   }
   return {
-    session,
-    ready,
+    ...state,
     busy,
-    error,
-    reload,
+    error: error || (!state.ready ? state.error : ""),
+    syncError: state.error,
+    sync: () => queue.sync(),
+    discardPending: () => queue.discardAfterConfirmation(),
+    reload: async () => {
+      try {
+        await queue.restore();
+        await queue.sync();
+        setError("");
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : "復元できませんでした。");
+      }
+    },
     start: async () => {
-      if (!ready) throw new Error("保存済みのトレーニングを確認しています。");
-      if (session) return session;
+      if (!state.ready) throw new Error("保存済みのトレーニングを確認しています。");
+      if (state.session) return state.session;
       startId.current ??= crypto.randomUUID();
-      const result = await mutate("/sessions", { id: startId.current });
+      const result = await mutate(() =>
+        api<TrainingSession>("/sessions", {
+          method: "POST",
+          body: JSON.stringify({ id: startId.current }),
+        }),
+      );
       startId.current = null;
       return result;
     },
-    save: (exercises: Exercise[]) => {
-      if (!session) throw new Error("先にトレーニングを開始してください。");
-      return mutate(
-        `/sessions/${session.id}`,
-        { expected_revision: session.revision, exercises },
-        "PATCH",
-      );
+    save: async (exercises: Exercise[], revision = state.session?.revision) => {
+      if (busy || revision === undefined) throw new Error("先にトレーニングを開始してください。");
+      const result = await queue.enqueue(exercises, revision);
+      void queue.sync();
+      return result;
     },
-    finish: () => {
-      if (!session) throw new Error("トレーニングがありません。");
-      return mutate(`/sessions/${session.id}/finish`, { expected_revision: session.revision });
-    },
+    finish: () =>
+      mutate(async () => {
+        await queue.sync();
+        const current = queue.state;
+        if (current.pending)
+          throw new Error(
+            "未送信のセットを同期してから終了してください。入力は端末に保持しています。",
+          );
+        if (!current.session) throw new Error("トレーニングがありません。");
+        return api<TrainingSession>(`/sessions/${current.session.id}/finish`, {
+          method: "POST",
+          body: JSON.stringify({ expected_revision: current.session.revision }),
+          signal: AbortSignal.timeout(15_000),
+        });
+      }),
   };
 }
 export type SessionController = ReturnType<typeof useSession>;

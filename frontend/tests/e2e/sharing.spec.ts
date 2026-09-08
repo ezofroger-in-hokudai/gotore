@@ -61,10 +61,8 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
       { times: 1 },
     );
     await pageA.getByRole("button", { name: "このセットを保存", exact: true }).click();
-    await expect(pageA.locator(".v2-app").getByRole("alert").first()).toContainText(
-      "通信できません",
-    );
-    await pageA.getByRole("button", { name: "このセットを保存", exact: true }).click();
+    await expect(pageA.locator(".sync-status")).toContainText("未送信");
+    await pageA.getByRole("button", { name: "再送", exact: true }).click();
     await expect(pageA.getByText("保存しました", { exact: true })).toBeVisible();
     await pageA.reload();
     await navigate(pageA, "記録");

@@ -59,6 +59,15 @@ export type GroupActivity = {
   }[];
 };
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+  }
+}
+
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const client = getSupabase();
   if (!client) throw new Error("ログインを利用できません。");
@@ -81,11 +90,12 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     const message = typeof body?.detail === "string" ? body.detail : null;
-    throw new Error(
+    throw new ApiError(
       message ??
         (response.status === 422
           ? "入力を確認してください。"
           : "取得できません。再試行してください。"),
+      response.status,
     );
   }
   return body as T;
