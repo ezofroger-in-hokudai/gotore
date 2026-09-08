@@ -1,6 +1,7 @@
 import { type Group, type GroupDetail, api } from "@/lib/api";
 import { type FormEvent, useState } from "react";
 import { GroupNameForm } from "./group-name-form";
+import { InviteCodePanel } from "./invite-code-panel";
 
 export function GroupPanel({
   groups,
@@ -78,23 +79,12 @@ export function GroupPanel({
           <p className="eyebrow">INVITE YOUR FRIENDS</p>
           <h2>{detail.name}</h2>
           <p className="muted">このコードを知っている人が参加できます。</p>
-          <div className="invite">
-            <code data-testid="invite-code">{detail.invite_code}</code>
-            <button
-              type="button"
-              className="secondary"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(detail.invite_code);
-                  setMessage("招待コードをコピーしました。");
-                } catch {
-                  setMessage("招待コードを選択してコピーしてください。");
-                }
-              }}
-            >
-              コピー
-            </button>
-          </div>
+          <InviteCodePanel
+            key={`invite:${detail.id}`}
+            group={detail}
+            owner={detail.owner_id === userId}
+            onRenewed={onGroup}
+          />
           <h3>
             メンバー <span className="muted">{detail.members.length}人</span>
           </h3>

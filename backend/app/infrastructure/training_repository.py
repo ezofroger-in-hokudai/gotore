@@ -3,9 +3,10 @@ from datetime import date
 from uuid import UUID
 
 from psycopg import Connection
+from psycopg.errors import UniqueViolation
 from psycopg.types.json import Jsonb
 
-from app.domain.errors import Conflict, NotFound
+from app.domain.errors import Conflict, NotFound, ServiceUnavailable
 from app.domain.identity import AuthenticatedUser, User
 from app.domain.workout import WorkoutInput
 
@@ -75,7 +76,8 @@ class TrainingRepository:
     def join_group(self, user_id: UUID, invite_code: str):
         with self.connection.transaction():
             group = self.connection.execute(
-                "SELECT * FROM public.gotore_groups WHERE invite_code = %s", (invite_code,)
+                "SELECT * FROM public.gotore_groups WHERE invite_code = %s FOR UPDATE",
+                (invite_code,),
             ).fetchone()
             if group is None:
                 raise NotFound("招待コードに対応するグループが見つかりません")
@@ -95,6 +97,35 @@ class TrainingRepository:
         if group is None:
             raise NotFound("グループが見つからないか、変更する権限がありません")
         return group
+
+    def renew_invite_code(self, user_id: UUID, group_id: UUID, expected_invite_code: str):
+        # 参加と同じグループ行をロックし、旧コードでの参加完了と再発行の順序を揃える。
+        with self.connection.transaction():
+            group = self.connection.execute(
+                "SELECT * FROM public.gotore_groups WHERE id = %s AND owner_id = %s FOR UPDATE",
+                (group_id, user_id),
+            ).fetchone()
+            if group is None:
+                raise NotFound("グループが見つからないか、変更する権限がありません")
+            if group["invite_code"] != expected_invite_code:
+                raise Conflict("招待コードは変更済みです。現在のコードを再取得してください")
+            for _ in range(5):
+                code = secrets.token_hex(6).upper()
+                if code == expected_invite_code:
+                    continue
+                try:
+                    # 一意制約の衝突はこの試行だけロールバックし、元のコードを保持する。
+                    with self.connection.transaction():
+                        return self.connection.execute(
+                            """UPDATE public.gotore_groups SET invite_code = %s
+                            WHERE id = %s RETURNING *""",
+                            (code, group_id),
+                        ).fetchone()
+                except UniqueViolation:
+                    continue
+            raise ServiceUnavailable(
+                "招待コードを発行できませんでした。時間をおいて再試行してください"
+            )
 
     def save_workout(self, user_id: UUID, workout: WorkoutInput):
         exercises = workout.model_dump(mode="json")["exercises"]

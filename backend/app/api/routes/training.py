@@ -14,6 +14,7 @@ from app.schemas.training import (
     GroupJoin,
     GroupRename,
     GroupResponse,
+    InviteCodeRenew,
     WorkoutResponse,
 )
 from app.services.training import TrainingService
@@ -57,6 +58,11 @@ def group(group_id: UUID, service: Service):
 @router.patch("/groups/{group_id}", response_model=GroupResponse)
 def rename_group(group_id: UUID, data: GroupRename, service: Service):
     return service.rename_group(group_id, data.name)
+
+
+@router.post("/groups/{group_id}/invite-code", response_model=GroupResponse)
+def renew_invite_code(group_id: UUID, data: InviteCodeRenew, service: Service):
+    return service.renew_invite_code(group_id, data.expected_invite_code)
 
 
 @router.get("/groups/{group_id}/workouts", response_model=list[WorkoutResponse])

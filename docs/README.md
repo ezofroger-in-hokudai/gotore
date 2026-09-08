@@ -24,6 +24,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [onboarding.md](onboarding.md): 初回利用ガイドの表示・保存・再表示。
 
+- [invite-code.md](invite-code.md): オーナーによる招待コード再発行・旧コード無効化。
+
 - [daily-improvements.md](daily-improvements.md): 入力操作・表示名・グループ名変更の合意範囲。
 
 - [admin-managed-accounts.md](admin-managed-accounts.md): テスト用アカウントの管理者発行、一般登録禁止、公開Authの設定。

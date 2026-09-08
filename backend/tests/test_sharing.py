@@ -477,3 +477,86 @@ def test_exercise_catalog_has_database_constraints_and_rls(client, connection):
                 "INSERT INTO public.gotore_exercise_options (user_id, name) VALUES (%s, '偽装')",
                 (USERS["A"],),
             )
+
+
+
+def test_owner_renews_invite_and_preserves_members_and_workouts(client):
+    group = create_group(client)
+    original = group["invite_code"]
+    client.post("/api/groups/join", json={"invite_code": original}, headers={"X-Test-User": "B"})
+    record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    endpoint = f"/api/groups/{group['id']}/invite-code"
+    for user in ["B", "C"]:
+        assert (
+            client.post(
+                endpoint, json={"expected_invite_code": original}, headers={"X-Test-User": user}
+            ).status_code
+            == 404
+        )
+    changed = client.post(endpoint, json={"expected_invite_code": original})
+    assert changed.status_code == 200
+    renewed = changed.json()
+    assert renewed["invite_code"] != original
+    assert renewed == {**group, "invite_code": renewed["invite_code"]}
+    assert client.post(endpoint, json={"expected_invite_code": original}).status_code == 409
+    assert (
+        client.post(
+            "/api/groups/join", json={"invite_code": original}, headers={"X-Test-User": "C"}
+        ).status_code
+        == 404
+    )
+    assert len(client.get(f"/api/groups/{group['id']}").json()["members"]) == 2
+    assert (
+        client.get(f"/api/groups/{group['id']}/workouts", headers={"X-Test-User": "B"}).json()[0][
+            "id"
+        ]
+        == record["id"]
+    )
+    assert (
+        client.post(
+            "/api/groups/join",
+            json={"invite_code": renewed["invite_code"]},
+            headers={"X-Test-User": "C"},
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            f"/api/groups/{USERS['C']}/invite-code", json={"expected_invite_code": original}
+        ).status_code
+        == 404
+    )
+
+
+@pytest.mark.parametrize(
+    "data",
+    [{}, {"expected_invite_code": "x"}, {"expected_invite_code": "A" * 12, "owner_id": "fake"}],
+)
+def test_renew_invite_rejects_invalid_input(client, data):
+    group = create_group(client)
+    assert client.post(f"/api/groups/{group['id']}/invite-code", json=data).status_code == 422
+    assert client.get(f"/api/groups/{group['id']}").json()["invite_code"] == group["invite_code"]
+
+
+def test_renew_invite_retries_collisions_without_losing_current_code(client, monkeypatch):
+    group = create_group(client)
+    other = create_group(client)
+    available = next(
+        value
+        for value in ["A" * 12, "B" * 12, "C" * 12]
+        if value not in [group["invite_code"], other["invite_code"]]
+    )
+    candidates = iter([group["invite_code"], other["invite_code"], available])
+    monkeypatch.setattr(
+        "app.infrastructure.training_repository.secrets.token_hex", lambda _: next(candidates)
+    )
+    endpoint = f"/api/groups/{group['id']}/invite-code"
+    response = client.post(endpoint, json={"expected_invite_code": group["invite_code"]})
+    assert response.status_code == 200
+    assert response.json()["invite_code"] == available
+    monkeypatch.setattr(
+        "app.infrastructure.training_repository.secrets.token_hex", lambda _: other["invite_code"]
+    )
+    response = client.post(endpoint, json={"expected_invite_code": available})
+    assert response.status_code == 503
+    assert client.get(f"/api/groups/{group['id']}").json()["invite_code"] == available

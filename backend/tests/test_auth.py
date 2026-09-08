@@ -26,6 +26,12 @@ def test_training_api_requires_login():
         assert client.post("/api/me/profile").status_code == 401
         assert client.post("/api/exercise-options", json={"name": "拒否"}).status_code == 401
         assert client.delete(f"/api/exercise-options/{uuid4()}").status_code == 401
+        assert (
+            client.post(
+                f"/api/groups/{uuid4()}/invite-code", json={"expected_invite_code": "A" * 12}
+            ).status_code
+            == 401
+        )
 
 
 def test_rejects_invalid_token_without_using_client_supplied_identity(monkeypatch):
