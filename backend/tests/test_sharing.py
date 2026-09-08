@@ -268,6 +268,8 @@ def test_rename_rejects_invalid_name_and_owner_changes(client, data):
 def test_public_database_role_cannot_read_or_write_training_data(client, connection):
     group = create_group(client)
     assert client.post("/api/workouts", json=payload(group_id=group["id"])).status_code == 201
+    deleted = client.post("/api/workouts", json=payload()).json()
+    assert client.delete(f"/api/workouts/{deleted['id']}?expected_revision=1").status_code == 204
     with connection.transaction(force_rollback=True):
         connection.execute("""DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
@@ -276,7 +278,8 @@ def test_public_database_role_cannot_read_or_write_training_data(client, connect
         END $$""")
         connection.execute("GRANT USAGE ON SCHEMA public TO authenticated")
         connection.execute("""GRANT SELECT, INSERT ON public.gotore_profiles,
-            public.gotore_groups, public.gotore_group_members, public.gotore_workouts
+            public.gotore_groups, public.gotore_group_members, public.gotore_workouts,
+            public.gotore_deleted_workouts
             TO authenticated""")
         connection.execute("SET LOCAL ROLE authenticated")
         for table in [
@@ -284,6 +287,7 @@ def test_public_database_role_cannot_read_or_write_training_data(client, connect
             "gotore_groups",
             "gotore_group_members",
             "gotore_workouts",
+            "gotore_deleted_workouts",
         ]:
             assert connection.execute(f"SELECT * FROM public.{table}").fetchall() == []
         with pytest.raises(psycopg.errors.InsufficientPrivilege), connection.transaction():
@@ -291,6 +295,115 @@ def test_public_database_role_cannot_read_or_write_training_data(client, connect
                 "INSERT INTO public.gotore_profiles (id, display_name) VALUES (%s, 'fake')",
                 (USERS["C"],),
             )
+
+
+def updated_payload(record, **changes):
+    return {
+        "performed_on": record["performed_on"],
+        "exercises": [{"name": "スクワット", "sets": [{"weight": 90, "reps": 5}]}],
+        "expected_revision": record.get("revision", 1),
+        **changes,
+    }
+
+
+def test_owner_edits_shared_record_and_retries_without_duplicate_updates(client):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    path = f"/api/workouts/{record['id']}"
+    for user in ["B", "C"]:
+        assert (
+            client.patch(
+                path, json=updated_payload(record), headers={"X-Test-User": user}
+            ).status_code
+            == 404
+        )
+    changed = client.patch(path, json=updated_payload(record))
+    assert changed.status_code == 200
+    assert changed.json()["revision"] == 2
+    for key in ["id", "user_id", "group_id", "created_at"]:
+        assert changed.json()[key] == record[key]
+    assert client.patch(path, json=updated_payload(record)).json() == changed.json()
+    assert (
+        client.patch(path, json=updated_payload(record, performed_on="2026-01-02")).status_code
+        == 409
+    )
+    assert (
+        client.get(f"/api/groups/{group['id']}/workouts", headers={"X-Test-User": "B"}).json()[0]
+        == changed.json()
+    )
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"group_id": None},
+        {"user_id": "fake"},
+        {"performed_on": "1999-12-31"},
+        {"exercises": []},
+        {"expected_revision": 0},
+        {"expected_revision": True},
+        {"exercises": [{"name": "種目", "sets": [{"weight": 0.01, "reps": 1}]}]},
+    ],
+)
+def test_edit_rejects_invalid_fields_without_changing_record(client, changes):
+    record = client.post("/api/workouts", json=payload()).json()
+    assert (
+        client.patch(
+            f"/api/workouts/{record['id']}", json=updated_payload(record, **changes)
+        ).status_code
+        == 422
+    )
+    assert client.get("/api/workouts").json() == [record]
+
+
+def test_delete_preserves_other_records_and_never_revives_from_post_retry(client, connection):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    original = payload(group_id=group["id"])
+    record = client.post("/api/workouts", json=original).json()
+    remaining = client.post("/api/workouts", json=payload()).json()
+    path = f"/api/workouts/{record['id']}?expected_revision=1"
+    for user in ["B", "C"]:
+        assert client.delete(path, headers={"X-Test-User": user}).status_code == 404
+    assert client.delete(path).status_code == 204
+    assert client.delete(path).status_code == 204
+    assert client.delete(path, headers={"X-Test-User": "B"}).status_code == 404
+    assert client.get("/api/workouts").json() == [remaining]
+    assert (
+        client.get(f"/api/groups/{group['id']}/workouts", headers={"X-Test-User": "B"}).json() == []
+    )
+    assert client.post("/api/workouts", json=original).status_code == 409
+    assert (
+        client.patch(f"/api/workouts/{record['id']}", json=updated_payload(record)).status_code
+        == 404
+    )
+    assert (
+        connection.execute(
+            "SELECT count(*) AS n FROM public.gotore_workouts WHERE id = %s", (record["id"],)
+        ).fetchone()["n"]
+        == 0
+    )
+    deleted = connection.execute(
+        "SELECT * FROM public.gotore_deleted_workouts WHERE id = %s", (record["id"],)
+    ).fetchone()
+    assert set(deleted) == {"id", "user_id", "deleted_at"}
+    assert str(deleted["user_id"]) == record["user_id"]
+
+
+def test_delete_conflicts_with_newer_edit(client):
+    record = client.post("/api/workouts", json=payload()).json()
+    path = f"/api/workouts/{record['id']}"
+    changed = client.patch(path, json=updated_payload(record))
+    assert changed.status_code == 200
+    assert client.delete(f"{path}?expected_revision=1").status_code == 409
+    assert len(client.get("/api/workouts").json()) == 1
+    assert client.delete(f"{path}?expected_revision=2").status_code == 204
+
 
 
 def test_activity_uses_all_own_sets_with_month_boundaries_and_daily_pages(client):

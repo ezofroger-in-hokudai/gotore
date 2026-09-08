@@ -8,7 +8,7 @@ from psycopg.types.json import Jsonb
 
 from app.domain.errors import Conflict, NotFound, ServiceUnavailable
 from app.domain.identity import AuthenticatedUser, User
-from app.domain.workout import WorkoutInput
+from app.domain.workout import WorkoutInput, WorkoutUpdate
 
 
 class TrainingRepository:
@@ -130,6 +130,11 @@ class TrainingRepository:
     def save_workout(self, user_id: UUID, workout: WorkoutInput):
         exercises = workout.model_dump(mode="json")["exercises"]
         with self.connection.transaction():
+            self.lock_workout(workout.id)
+            if self.connection.execute(
+                "SELECT id FROM public.gotore_deleted_workouts WHERE id = %s", (workout.id,)
+            ).fetchone():
+                raise Conflict("この記録は削除済みです。新しい記録として入力してください")
             if workout.group_id is not None:
                 self.group(user_id, workout.group_id)
             self.connection.execute(
@@ -189,3 +194,66 @@ class TrainingRepository:
             WHERE {where} ORDER BY {order} LIMIT %s OFFSET %s""",
             (*values, limit, offset),
         ).fetchall()
+
+    def lock_workout(self, workout_id: UUID):
+        # 行がまだない作成要求も、削除・編集と同じIDで順序付ける。
+        self.connection.execute(
+            "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (str(workout_id),)
+        )
+
+    def owned_workout(self, user_id: UUID, workout_id: UUID):
+        return self.connection.execute(
+            """SELECT w.*, p.display_name FROM public.gotore_workouts w
+            JOIN public.gotore_profiles p ON p.id = w.user_id
+            WHERE w.id = %s AND w.user_id = %s FOR UPDATE OF w""",
+            (workout_id, user_id),
+        ).fetchone()
+
+    def update_workout(self, user_id: UUID, workout_id: UUID, workout: WorkoutUpdate):
+        exercises = workout.model_dump(mode="json")["exercises"]
+        with self.connection.transaction():
+            self.lock_workout(workout_id)
+            record = self.owned_workout(user_id, workout_id)
+            if record is None:
+                raise NotFound("記録が見つからないか、操作する権限がありません")
+            unchanged = (
+                record["performed_on"] == workout.performed_on and record["exercises"] == exercises
+            )
+            if record["revision"] != workout.expected_revision:
+                if record["revision"] == workout.expected_revision + 1 and unchanged:
+                    return record
+                raise Conflict(
+                    "記録は別の操作で変更されています。一覧に戻って最新の内容を確認してください"
+                )
+            if unchanged:
+                return record
+            self.connection.execute(
+                """UPDATE public.gotore_workouts SET performed_on = %s, exercises = %s,
+                revision = revision + 1 WHERE id = %s""",
+                (workout.performed_on, Jsonb(exercises), workout_id),
+            )
+            return self.owned_workout(user_id, workout_id)
+
+    def delete_workout(self, user_id: UUID, workout_id: UUID, expected_revision: int):
+        with self.connection.transaction():
+            self.lock_workout(workout_id)
+            record = self.owned_workout(user_id, workout_id)
+            if record is None:
+                deleted = self.connection.execute(
+                    "SELECT id FROM public.gotore_deleted_workouts WHERE id = %s AND user_id = %s",
+                    (workout_id, user_id),
+                ).fetchone()
+                if deleted:
+                    return
+                raise NotFound("記録が見つからないか、操作する権限がありません")
+            if record["revision"] != expected_revision:
+                raise Conflict(
+                    "記録は別の操作で変更されています。一覧に戻って最新の内容を確認してください"
+                )
+            self.connection.execute(
+                "INSERT INTO public.gotore_deleted_workouts (id, user_id) VALUES (%s, %s)",
+                (workout_id, user_id),
+            )
+            self.connection.execute(
+                "DELETE FROM public.gotore_workouts WHERE id = %s", (workout_id,)
+            )

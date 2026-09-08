@@ -8,6 +8,8 @@
 
 種目の選択と本人用リストの管理は [exercise-options.md](exercise-options.md) を追加適用する。
 
+#6の追加範囲として、[本人の記録編集・削除](workout-management.md)を適用する。以下の初版時点の後続指定から変更した範囲は同書で定義する。
+
 初版後の名称設定・入力改善は [daily-improvements.md](daily-improvements.md) の合意範囲を追加適用する。初版からの変更点と未実装範囲は同書で区別する。
 
 - グループ名を入力して作成し、招待コードを仲間に渡す。仲間はコードで参加する。

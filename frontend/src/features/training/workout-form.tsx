@@ -5,6 +5,7 @@ import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from 
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import {
   type Draft,
+  editDraft,
   newDraft,
   newExercise,
   newSet,
@@ -20,7 +21,9 @@ export function WorkoutForm({
   userId,
   onSaved,
   onBack,
+  editing,
 }: {
+  editing?: Workout | null;
   groups: Group[];
   selectedGroup: string;
   userId: string;
@@ -44,27 +47,33 @@ export function WorkoutForm({
   }, [focusKey]);
 
   useEffect(() => {
+    if (editing) {
+      setDraft(editDraft(editing));
+      return;
+    }
     try {
       setDraft(readDraft(localStorage.getItem(storageKey)) ?? newDraft(selectedGroup));
     } catch {
       setDraft(newDraft(selectedGroup));
       setStorageWarning(true);
     }
-  }, [storageKey, selectedGroup]);
+  }, [storageKey, selectedGroup, editing]);
 
   useEffect(() => {
-    if (!draft) return;
+    if (!draft || editing) return;
     try {
       localStorage.setItem(storageKey, JSON.stringify(draft));
     } catch {
       setStorageWarning(true);
     }
-  }, [draft, storageKey]);
+  }, [draft, storageKey, editing]);
 
   function change(update: (draft: Draft) => Draft) {
     setError("");
-    // 内容を変えた保存は別の送信として扱い、同じ内容の再試行だけIDを維持する。
-    setDraft((current) => (current ? { ...update(current), id: crypto.randomUUID() } : current));
+    // 新規記録は内容変更で送信IDを更新し、既存記録の編集は元IDを維持する。
+    setDraft((current) =>
+      current ? { ...update(current), id: editing ? current.id : crypto.randomUUID() } : current,
+    );
   }
 
   function addSet(exerciseKey: string) {
@@ -140,14 +149,25 @@ export function WorkoutForm({
     setError("");
     setBusy(true);
     try {
-      const record = await api<Workout>("/workouts", {
-        method: "POST",
-        body: JSON.stringify(workoutPayload(draft)),
+      const payload = workoutPayload(draft);
+      const record = await api<Workout>(editing ? `/workouts/${editing.id}` : "/workouts", {
+        method: editing ? "PATCH" : "POST",
+        body: JSON.stringify(
+          editing
+            ? {
+                performed_on: payload.performed_on,
+                exercises: payload.exercises,
+                expected_revision: editing.revision,
+              }
+            : payload,
+        ),
       });
-      try {
-        localStorage.removeItem(storageKey);
-      } catch {
-        /* 保存済み記録の表示は継続する。 */
+      if (!editing) {
+        try {
+          localStorage.removeItem(storageKey);
+        } catch {
+          /* 保存済み記録の表示は継続する。 */
+        }
       }
       onSaved(record);
     } catch (reason) {
@@ -164,10 +184,15 @@ export function WorkoutForm({
   return (
     <section>
       <button type="button" className="back" disabled={busy} onClick={onBack}>
-        ← 戻る（下書きは残ります）
+        {editing ? "← 編集をやめて記録に戻る" : "← 戻る（下書きは残ります）"}
       </button>
       <p className="eyebrow">WORKOUT</p>
-      <h1>今日のトレーニング</h1>
+      <h1>{editing ? "トレーニングを編集" : "今日のトレーニング"}</h1>
+      {editing && (
+        <p className="notice">
+          共有先は変更できません。編集内容は自動保存されず、戻ると破棄されます。新規記録の下書きは残ります。
+        </p>
+      )}
       <p className="muted">ひとつずつ、その頑張りを記録しよう。</p>
       <p className="muted">Enterで次の入力へ。最後の回数欄ではセットを追加します。</p>
       <p className="muted">重量の薄い数字は前セットの値です。空欄でEnterを押すと採用します。</p>
@@ -216,6 +241,7 @@ export function WorkoutForm({
             <label>
               共有先
               <select
+                disabled={!!editing}
                 value={draft.group_id}
                 onChange={(e) => change((d) => ({ ...d, group_id: e.target.value }))}
               >
@@ -403,7 +429,13 @@ export function WorkoutForm({
                 : "この記録は自分だけに表示されます。"}
           </p>
           <button className="primary" type="submit" disabled={missingGroup}>
-            {busy ? "保存しています…" : target ? "記録を確定して共有 →" : "記録を保存 →"}
+            {busy
+              ? "保存しています…"
+              : editing
+                ? "変更を保存 →"
+                : target
+                  ? "記録を確定して共有 →"
+                  : "記録を保存 →"}
           </button>
         </fieldset>
         {error && (

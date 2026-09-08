@@ -18,6 +18,7 @@ type View = "home" | "records" | "groups" | "workout" | "settings";
 
 function Workspace({ session }: { session: Session }) {
   const [guideReplay, setGuideReplay] = useState(0);
+  const [editing, setEditing] = useState<Workout | null>(null);
   const [view, setView] = useState<View>("home");
   const [groupId, setGroupId] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -46,6 +47,7 @@ function Workspace({ session }: { session: Session }) {
   const records = useResource<Workout[]>(path, refreshKey, view === "home");
 
   function navigate(next: View) {
+    setEditing(null);
     setView(next);
     setPage(0);
     setSelectedDate("");
@@ -63,6 +65,12 @@ function Workspace({ session }: { session: Session }) {
     setSelectedDate("");
     setRefreshKey((value) => value + 1);
     setPage(0);
+    if (editing) {
+      setEditing(null);
+      setView("records");
+      setNotice("記録を更新しました。");
+      return;
+    }
     if (workout.group_id) {
       setGroupId(workout.group_id);
       setView("home");
@@ -112,11 +120,16 @@ function Workspace({ session }: { session: Session }) {
         )}
         {view === "workout" ? (
           <WorkoutForm
+            key={editing?.id ?? "new"}
+            editing={editing}
             groups={groups}
             selectedGroup={activeId}
             userId={session.user.id}
             onSaved={saved}
-            onBack={() => navigate("home")}
+            onBack={() => {
+              navigate(editing ? "records" : "home");
+              setRefreshKey((value) => value + 1);
+            }}
           />
         ) : view === "settings" ? (
           <>
@@ -225,6 +238,24 @@ function Workspace({ session }: { session: Session }) {
                 )}
                 {records.data && (
                   <RecordList
+                    onEdit={
+                      view === "records"
+                        ? (record) => {
+                            setEditing(record);
+                            setNotice("");
+                            setView("workout");
+                          }
+                        : undefined
+                    }
+                    onDeleted={
+                      view === "records"
+                        ? () => {
+                            setRefreshKey((value) => value + 1);
+                            setPage(0);
+                            setNotice("記録を削除しました。");
+                          }
+                        : undefined
+                    }
                     records={records.data}
                     userId={session.user.id}
                     empty={

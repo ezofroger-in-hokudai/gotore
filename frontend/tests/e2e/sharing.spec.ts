@@ -200,6 +200,20 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await expect(otherOptions).toBeEnabled();
     await expect(otherOptions.locator("option", { hasText: "ケーブルロウ" })).toHaveCount(0);
     await otherOptions.selectOption({ label: "ベンチプレス" });
+    await pageA.getByRole("button", { name: "編集", exact: true }).click();
+    await pageA.getByLabel("種目1 セット1 重量", { exact: true }).fill("85");
+    await pageA.getByRole("button", { name: "変更を保存 →", exact: true }).click();
+    await expect(pageA.getByRole("status").filter({ hasText: "記録を更新しました" })).toBeVisible();
+    await pageB.bringToFront();
+    await expect(card).toContainText("85");
+    await expect(pageB.getByRole("button", { name: "編集", exact: true })).toHaveCount(0);
+    await pageA.bringToFront();
+    await pageA.getByRole("button", { name: "削除", exact: true }).click();
+    await expect(pageA.getByText("本人の履歴と共有先から削除され", { exact: false })).toBeVisible();
+    await pageA.getByRole("button", { name: "記録を削除する", exact: true }).click();
+    await expect(pageA.getByRole("article")).toHaveCount(0);
+    await pageB.bringToFront();
+    await expect(card).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {
     await Promise.allSettled([a.close(), b.close()]);

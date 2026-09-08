@@ -21,6 +21,7 @@ export type Workout = {
   performed_on: string;
   exercises: Exercise[];
   created_at: string;
+  revision: number;
 };
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {

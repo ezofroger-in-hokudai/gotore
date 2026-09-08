@@ -32,11 +32,9 @@ class Exercise(BaseModel):
     sets: list[WorkoutSet] = Field(min_length=1, max_length=30)
 
 
-class WorkoutInput(BaseModel):
+class WorkoutContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    id: UUID
     performed_on: date
-    group_id: UUID | None = None
     exercises: list[Exercise] = Field(min_length=1, max_length=20)
 
     @field_validator("performed_on")
@@ -46,3 +44,12 @@ class WorkoutInput(BaseModel):
         if not date(2000, 1, 1) <= value <= today:
             raise ValueError("記録日は2000年1月1日から今日までにしてください")
         return value
+
+
+class WorkoutInput(WorkoutContent):
+    id: UUID
+    group_id: UUID | None = None
+
+
+class WorkoutUpdate(WorkoutContent):
+    expected_revision: int = Field(ge=1, strict=True)

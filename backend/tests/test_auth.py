@@ -32,6 +32,8 @@ def test_training_api_requires_login():
             ).status_code
             == 401
         )
+        assert client.patch(f"/api/workouts/{uuid4()}", json={}).status_code == 401
+        assert client.delete(f"/api/workouts/{uuid4()}?expected_revision=1").status_code == 401
 
 
 def test_rejects_invalid_token_without_using_client_supplied_identity(monkeypatch):
