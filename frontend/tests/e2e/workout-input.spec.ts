@@ -14,7 +14,7 @@ test("未保存入力と保存済みセットをタブ切替・再起動後も�
   await navigate(page, "記録");
   await expect(weight).toHaveValue("60.5");
   state.failSave = true;
-  await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
+  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("未送信");
   await expect(weight).toHaveValue("60.5");
   state.failSave = false;
@@ -28,7 +28,7 @@ test("未保存入力と保存済みセットをタブ切替・再起動後も�
   await expect(page.getByRole("button", { name: "セット1を編集", exact: true })).toContainText(
     "60.5",
   );
-  await page.getByRole("button", { name: "トレーニングを終了", exact: true }).click();
+  await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
   await page.getByRole("button", { name: "終了する", exact: true }).click();
   await expect(page.getByText("トレーニングを終了しました。", { exact: true })).toBeVisible();
   expect(state.session).toBeNull();
@@ -44,7 +44,7 @@ test("ホイール・直接入力・行編集・取消を区別し、BESTとRM�
   await page.getByRole("button", { name: "重量を増やす", exact: true }).click();
   await expect(weight).toHaveValue("82.5");
   await expect(page.getByText("BEST更新候補", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
+  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect(page.getByText("BEST更新！ 保存しました", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await weight.fill("70");
@@ -85,7 +85,7 @@ test("保存応答を失ったまま再起動しても二重追加せず、古�
     },
     { times: 1 },
   );
-  await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
+  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("未送信");
   await page.reload();
   await navigate(page, "記録");

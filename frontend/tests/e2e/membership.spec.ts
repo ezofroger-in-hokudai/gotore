@@ -70,9 +70,7 @@ for (const owner of [true, false]) {
       await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
       await navigate(page, "記録");
       await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "このセットを保存", exact: true }),
-      ).toBeEnabled();
+      await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeEnabled();
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,

@@ -9,6 +9,7 @@ export function InlineMemo({
   name,
   userId,
   onSaved,
+  omitWhenEmpty = false,
 }: {
   title: string;
   path: string;
@@ -16,6 +17,7 @@ export function InlineMemo({
   name?: string;
   userId: string;
   onSaved?: () => void;
+  omitWhenEmpty?: boolean;
 }) {
   const key = `gotore:memo-input:v1:${userId}:${name ?? path}`;
   const [draft] = useState<Memo | null>(() => {
@@ -33,7 +35,11 @@ export function InlineMemo({
   const dirty = useRef(!!draft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [editing, setEditing] = useState(!!draft);
+  const field = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (editing) field.current?.focus();
+  }, [editing]);
   useEffect(() => {
     if (initial) {
       if (!dirty.current) {
@@ -77,6 +83,7 @@ export function InlineMemo({
       setBusy(false);
     }
   }
+  if (omitWhenEmpty && !content.trim() && !editing && !error && !dirty.current) return null;
   return (
     <form
       className="inline-memo"
@@ -85,7 +92,6 @@ export function InlineMemo({
         if (!memo || busy) return;
         setBusy(true);
         setError("");
-        setNotice("");
         const sent = content;
         try {
           const saved = await api<Memo>(path, {
@@ -99,7 +105,7 @@ export function InlineMemo({
           setMemo(saved);
           dirty.current = false;
           localStorage.removeItem(key);
-          setNotice("保存済み");
+          setEditing(false);
           onSaved?.();
         } catch (reason) {
           setError(reason instanceof Error ? reason.message : "保存できません");
@@ -108,40 +114,60 @@ export function InlineMemo({
         }
       }}
     >
-      <div className="inline-memo-heading">
-        <label htmlFor={key}>{title}</label>
-        <span aria-live="polite">{notice}</span>
+      {!editing ? (
         <button
-          className="text-button"
-          type="submit"
-          disabled={!memo || busy}
-          aria-label={`${title}を保存`}
+          type="button"
+          className="memo-text"
+          aria-label={`${title}を編集`}
+          disabled={!memo}
+          onClick={() => setEditing(true)}
         >
-          {busy ? "保存中" : "保存"}
+          {content.trim() ? content : "メモ"}
         </button>
-      </div>
-      <textarea
-        id={key}
-        aria-label={title}
-        maxLength={1000}
-        rows={1}
-        disabled={busy || !memo}
-        placeholder="自分だけのメモ"
-        value={content}
-        onChange={(event) => {
-          setContent(event.target.value);
-          dirty.current = true;
-          setNotice("");
-          try {
-            localStorage.setItem(
-              key,
-              JSON.stringify({ content: event.target.value, revision: memo?.revision ?? 0 }),
-            );
-          } catch {
-            setError("端末へ保持できません。メモを保存してください。");
-          }
-        }}
-      />
+      ) : (
+        <>
+          <textarea
+            id={key}
+            aria-label={title}
+            maxLength={1000}
+            rows={2}
+            disabled={busy || !memo}
+            placeholder="メモ"
+            value={content}
+            ref={field}
+            onChange={(event) => {
+              setContent(event.target.value);
+              dirty.current = true;
+              try {
+                localStorage.setItem(
+                  key,
+                  JSON.stringify({ content: event.target.value, revision: memo?.revision ?? 0 }),
+                );
+              } catch {
+                setError("端末へ保持できません。メモを保存してください。");
+              }
+            }}
+          />
+          <div className="memo-actions">
+            <button
+              className="text-button"
+              type="button"
+              disabled={busy}
+              onClick={() => setEditing(false)}
+            >
+              閉じる
+            </button>
+            <button
+              className="text-button"
+              type="submit"
+              disabled={!memo || busy}
+              aria-label={`${title}を保存`}
+            >
+              {busy ? "保存中" : "保存"}
+            </button>
+          </div>
+        </>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}

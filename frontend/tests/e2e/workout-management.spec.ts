@@ -20,8 +20,8 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   let failDelete = true;
   let deletes = 0;
   await page.route("**/api/workouts**", (route) => {
-    if (new URL(route.request().url()).pathname === "/api/workouts/activity")
-      return route.fallback();
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/workouts/activity" || path.endsWith("/memo")) return route.fallback();
     const request = route.request();
     if (request.method() === "PATCH") {
       const body = request.postDataJSON();

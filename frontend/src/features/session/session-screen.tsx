@@ -201,7 +201,7 @@ function ActiveTraining({
           disabled={controller.busy}
           onClick={() => setFinishOpen(true)}
         >
-          トレーニングを終了
+          トレーニング終了
         </button>
       </div>
       {storageWarning && (
@@ -302,7 +302,7 @@ function ActiveTraining({
               </strong>
             </div>
             <div>
-              <span>推定1RM</span>
+              <span>1RM</span>
               <strong>
                 {context.data?.best_rm ?? "—"}
                 <small> kg</small>
@@ -318,6 +318,15 @@ function ActiveTraining({
               initial={context.data.memo}
               userId={userId}
               onSaved={context.retry}
+            />
+          )}
+          {context.data?.previous && (
+            <InlineMemo
+              key={context.data.previous.id}
+              title="前回のメモ"
+              path={`/workouts/${context.data.previous.id}/memo`}
+              userId={userId}
+              omitWhenEmpty
             />
           )}
           {context.error && (
@@ -410,19 +419,7 @@ function ActiveTraining({
               </button>
             </div>
           </div>
-          <div className="session-notes">
-            {context.data?.previous ? (
-              <InlineMemo
-                key={context.data.previous.id}
-                title="前回のメモ"
-                path={`/workouts/${context.data.previous.id}/memo`}
-                userId={userId}
-              />
-            ) : (
-              <p className="muted">前回のメモなし</p>
-            )}
-            <InlineMemo title="今回のメモ" path={`/workouts/${session.id}/memo`} userId={userId} />
-          </div>
+          <InlineMemo title="今回のメモ" path={`/workouts/${session.id}/memo`} userId={userId} />
           <form
             className="set-entry"
             onSubmit={(e) => {
@@ -530,7 +527,7 @@ function ActiveTraining({
                 />
               </div>
               <p className="rm-estimate">
-                推定1RM <strong>{rm ?? "—"}</strong> kg <span>（1〜10回）</span>
+                1RM <strong>{rm ?? "—"}</strong> kg <span>（1〜10回）</span>
               </p>
               <div className="save-feedback" aria-live="polite">
                 {feedback || (candidate ? <span className="best-badge">BEST更新候補</span> : "")}
@@ -539,7 +536,7 @@ function ActiveTraining({
                 {controller.busy
                   ? "保存中…"
                   : input.editing === null
-                    ? "このセットを保存"
+                    ? "次のセットへ"
                     : "変更を保存"}
               </button>
             </fieldset>
@@ -613,7 +610,7 @@ function ActiveTraining({
       )}
       {finishOpen && (
         <Sheet
-          title="トレーニングを終了"
+          title="トレーニング終了"
           onClose={() => {
             if (!controller.busy) setFinishOpen(false);
           }}

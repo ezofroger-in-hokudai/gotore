@@ -60,7 +60,7 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
       (route) => (route.request().method() === "PATCH" ? route.abort() : route.continue()),
       { times: 1 },
     );
-    await pageA.getByRole("button", { name: "このセットを保存", exact: true }).click();
+    await pageA.getByRole("button", { name: "次のセットへ", exact: true }).click();
     await expect(pageA.locator(".sync-status")).toContainText("未送信");
     await pageA.getByRole("button", { name: "再送", exact: true }).click();
     await expect(pageA.getByText("保存しました", { exact: true })).toBeVisible();
@@ -76,7 +76,7 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
       await expect(pageB.getByRole("article")).toContainText("共有テストA");
     }
     await pageA.bringToFront();
-    await pageA.getByRole("button", { name: "トレーニングを終了", exact: true }).click();
+    await pageA.getByRole("button", { name: "トレーニング終了", exact: true }).click();
     await pageA.getByRole("button", { name: "終了する", exact: true }).click();
     await navigate(pageA, "履歴");
     await expect(pageA.locator(".history-row")).toHaveCount(1);
@@ -94,7 +94,7 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await expect(pageB.getByText("本人だけの振り返り")).toHaveCount(0);
     await expect(pageB.getByRole("button", { name: "メモ", exact: true })).toHaveCount(0);
     await startTraining(pageB, "スクワット");
-    await pageB.getByRole("button", { name: "このセットを保存", exact: true }).click();
+    await pageB.getByRole("button", { name: "次のセットへ", exact: true }).click();
     await expect(pageB.getByText("保存しました", { exact: true })).toBeVisible();
     await navigate(pageB, "ホーム");
     await pageB.getByRole("button", { name: "朝の合トレ部の詳細", exact: true }).click();

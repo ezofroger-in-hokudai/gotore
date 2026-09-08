@@ -878,20 +878,24 @@
   min-width: 0;
   margin: 0;
 }
-.inline-memo-heading {
+.memo-text {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.memo-actions {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 26px;
-}
-.inline-memo-heading label {
-  font-size: 11px;
-  color: var(--muted);
-  flex: 1;
-}
-.inline-memo-heading span {
-  font-size: 10px;
-  color: var(--muted);
+  justify-content: flex-end;
+  gap: 8px;
 }
 .recording-view .inline-memo textarea {
   display: block;
@@ -901,16 +905,6 @@
   resize: vertical;
   font-size: 16px;
   line-height: 24px;
-}
-.session-notes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.session-notes > p {
-  font-size: 11px;
-  align-self: center;
-  margin: 0;
 }
 .recording-view .comparison-heading {
   margin: 0;
