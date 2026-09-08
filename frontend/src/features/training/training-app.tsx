@@ -45,7 +45,7 @@ function Workspace({ session }: { session: Session }) {
       : view === "home" && activeId
         ? `/groups/${activeId}/workouts?offset=${page * 50}`
         : null;
-  const records = useResource<Workout[]>(path, refreshKey, view === "home");
+  const records = useResource<Workout[]>(path, refreshKey, view === "home", view === "records");
 
   function navigate(next: View) {
     setEditing(null);
@@ -233,6 +233,7 @@ function Workspace({ session }: { session: Session }) {
                 {records.loading && records.data === null && (
                   <output className="loading">読み込み中…</output>
                 )}
+                {records.refreshing && <output className="loading">更新中…</output>}
                 {records.data && (
                   <RecordList
                     onEdit={

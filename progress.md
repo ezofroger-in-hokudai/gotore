@@ -545,3 +545,20 @@
 - 検証結果: make check成功（backend104件・frontend15件・lint・build）。ブラウザUI28件成功、実Supabase依存2件はローカルDocker停止のため失敗。二重通知が1件になり、入力保持・再試行・共有範囲を維持することを確認した。git diff --checkで確認。
 - 未解決事項: 実Supabaseによる全30件のE2EはPR CIで確認する。本番DB操作は行わない。
 - 次のアクション: push・画像付きPRを作成し、CI成功後にmainへ反映する。
+
+## 2026-09-08 13:55 JST
+- 変更内容: ユーザーが追加migration適用後の記録復旧を確認し、#52を完了。次に毎回の読み込みが遅いとの依頼を#11（imtkgtr担当）で開始した。
+- 目的: 無料枠・地域・通信・DB処理を切り分け、比較して改善する。
+- 影響範囲・関連ファイル: backendの認証・DB依存とプロフィール、vercel.json、docs/loading-performance.md、task.md。
+- 検証結果: 公開health各方式6回のうち初回を除く中央値は新規HTTP接続392.7ms、再利用222.2ms。経路はhnd1::iad1。本番認証・DBを含む画面の速度とは区別する。
+- 未解決事項: SupabaseのRegion、本番の認証済みAPI各段階、改善案の比較と回帰検証。
+- 次のアクション: 先に接続の分離・プロフィールの不要書込・計測のテストを追加し、比較用実装を試す。
+
+## 2026-09-08 14:15 JST
+- 変更内容: Auth接続をlifespanで共有し、毎回の認証と要求ごとのヘッダー分離を保持。変更なしのprofileをSELECT1回へ変更し、Server-Timingを追加。自分の記録だけを画面内に最大5ページ・60秒保持し、再訪時に更新中表示と再取得、保存削除・失敗・別ユーザーで破棄する。日付書式の生成も共有した。
+- 目的: 全画面、特に過去の記録の通信待ちと再訪時の空白を減らす。ユーザー指定によりMumbai・Vercelの配置や契約は変更しない。
+- 影響範囲・関連ファイル: backend/app、frontendのuseResource・training-app・record-list、scripts/benchmark_loading.py、docs/loading-performance.md、既存認証テスト・追加性能/E2E。
+- 比較結果: 遅延モデル＋実PostgreSQL、10記録・初回除外8回で、現行230.2ms、HTTP再利用150.4ms、profile削減186.2ms、併用109.1ms。併用を採用。9要求のAuth接続9→1、一覧のSQL3→2。これは本番の速度改善率ではない。
+- 検証結果: 先行テストで不要UPSERT・未実装の接続分離/計測・再訪時の表示消失を確認。実装後make check成功（backend109件・frontend15件・lint/build）。全E2Eは29成功・2失敗（ローカルSupabase未起動）。追加した別ユーザーの分離を含む履歴テスト2件も成功。起動時はnode_modulesの領域外symlinkをNext.jsが拒否したため専用の依存へ変更。新規E2Eのalert参照はNextの通知領域と競合し、main配下へ修正した。
+- 未解決事項: 実Supabaseを含む全32件E2EはPR CIで確認。本番の認証済み履歴の初回・再訪の測定は反映後に確認する。追加migrationは不要。
+- 次のアクション: 比較・画像付きPRをpushし、CIを確認してmainへ反映。#11は本番での実測とユーザーの体感確認まで継続する。

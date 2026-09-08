@@ -9,7 +9,7 @@ from fastapi import Header
 from fastapi.testclient import TestClient
 from psycopg.rows import dict_row
 
-from app.api.dependencies import current_user, database
+from app.api.dependencies import auth_client, current_user, database
 from app.core.config import settings
 from app.domain.identity import AuthenticatedUser
 from app.main import app
@@ -814,3 +814,11 @@ def test_memo_conflict_retry_and_clear_never_restore_old_content(client):
     }
     assert client.put(path, json=first).status_code == 409
     assert client.get(path).json() == {"content": "", "revision": 2}
+
+
+@pytest.fixture(autouse=True)
+def auth_transport():
+    # 既存の認証シナリオは外部通信を差し替え、接続共有自体は専用テストで確認する。
+    app.dependency_overrides[auth_client] = lambda: httpx
+    yield
+    app.dependency_overrides.pop(auth_client, None)
