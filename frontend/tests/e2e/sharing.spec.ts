@@ -124,6 +124,21 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
       .click();
     await expect(pageA.getByRole("article")).toHaveCount(1);
     await expect(pageA.getByRole("article")).toContainText("ベンチプレス");
+    const calendar = pageA.getByRole("region", { name: "活動カレンダー", exact: true });
+    const recordedDay = calendar.getByRole("button", { name: /、2セット、1件$/ });
+    await expect(recordedDay).toHaveCount(1);
+    await recordedDay.click();
+    await expect(pageA.getByRole("article")).toHaveCount(1);
+    await expect(pageA.getByRole("article")).toContainText("ベンチプレス");
+    await pageA.getByRole("button", { name: "日付の絞り込みを解除", exact: true }).click();
+    await pageB.bringToFront();
+    await pageB
+      .getByRole("navigation")
+      .getByRole("button", { name: "自分の記録", exact: true })
+      .click();
+    await expect(pageB.getByText("この月の記録はまだありません。", { exact: true })).toBeVisible();
+    await expect(pageB.getByRole("article")).toHaveCount(0);
+    await pageA.bringToFront();
     await pageA.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
     await expect(pageA.getByLabel("表示名", { exact: true })).toHaveValue("変更後のA");
     expect(errors).toEqual([]);

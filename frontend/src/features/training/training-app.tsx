@@ -4,6 +4,8 @@ import type { Group, GroupDetail, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
+import { ActivityCalendar } from "../activity/activity-calendar";
+import { dateLabel } from "../activity/calendar";
 import { SettingsPanel } from "../settings/settings-panel";
 import { AuthPanel } from "./auth-panel";
 import { GroupPanel } from "./group-panel";
@@ -18,6 +20,7 @@ function Workspace({ session }: { session: Session }) {
   const [groupId, setGroupId] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [page, setPage] = useState(0);
+  const [selectedDate, setSelectedDate] = useState("");
   const [notice, setNotice] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const groupList = useResource<Group[]>(
@@ -34,7 +37,7 @@ function Workspace({ session }: { session: Session }) {
   );
   const path =
     view === "records"
-      ? `/workouts?offset=${page * 50}`
+      ? `/workouts?offset=${page * 50}${selectedDate ? `&performed_on=${selectedDate}` : ""}`
       : view === "home" && activeId
         ? `/groups/${activeId}/workouts?offset=${page * 50}`
         : null;
@@ -43,13 +46,19 @@ function Workspace({ session }: { session: Session }) {
   function navigate(next: View) {
     setView(next);
     setPage(0);
+    setSelectedDate("");
     setNotice("");
   }
   function select(id: string) {
     setGroupId(id);
     setPage(0);
   }
+  function selectDate(value: string) {
+    setSelectedDate(value);
+    setPage(0);
+  }
   function saved(workout: Workout) {
+    setSelectedDate("");
     setRefreshKey((value) => value + 1);
     setPage(0);
     if (workout.group_id) {
@@ -164,6 +173,27 @@ function Workspace({ session }: { session: Session }) {
                     <span className="muted">5秒ごとに更新</span>
                   </div>
                 )}
+                {view === "records" && (
+                  <>
+                    <ActivityCalendar
+                      selectedDate={selectedDate}
+                      onSelect={selectDate}
+                      refreshKey={refreshKey}
+                    />
+                    {selectedDate && (
+                      <div className="daily-record-heading">
+                        <h2>{dateLabel(selectedDate)}のトレーニング</h2>
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() => selectDate("")}
+                        >
+                          日付の絞り込みを解除
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
                 {records.error && (
                   <div className="error" role="alert">
                     {records.error}
@@ -182,7 +212,9 @@ function Workspace({ session }: { session: Session }) {
                     empty={
                       view === "home"
                         ? "記録を共有すると、ここに仲間の頑張りが並びます。"
-                        : "最初のトレーニングを記録してみましょう。"
+                        : selectedDate
+                          ? "この日のトレーニング記録はありません。"
+                          : "最初のトレーニングを記録してみましょう。"
                     }
                   />
                 )}

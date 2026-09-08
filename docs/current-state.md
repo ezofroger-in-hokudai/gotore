@@ -12,7 +12,7 @@
 | グループ | 作成・招待参加・一覧・メンバー表示。オーナーが名称変更（メンバー除外は未実装） | group-panel.tsx、group-name-form.tsx、backend/app/services/training.py |
 | 記録 | 日付・種目・重量・回数・セットをDB保存。Enterで次の入力へ移動し、空欄で前重量を採用。下書きを同じブラウザで復元 | workout-form.tsx、backend/app/domain/workout.py |
 | 共有 | 保存時に選んだグループだけへ共有。メンバー限定の一覧 | backend/app/infrastructure/training_repository.py、record-list.tsx |
-| 自分の記録 | 過去の実データを日付順に閲覧。再ログイン後も保持 | frontend/src/features/training/training-app.tsx |
+| 自分の記録 | 日別セット数の月間ヒートマップと日付タップによる絞り込み。実記録を50件ずつ閲覧 | frontend/src/features/activity/、training/training-app.tsx |
 | ホーム画面起動 | Web manifest、standalone設定、PNGアイコン、安全領域。オンライン利用が前提 | frontend/src/app/manifest.ts、apple-icon.tsx、layout.tsx |
 | DB・設定 | migration、RLS、外部キー・一意制約、ローカル設定の生成 | supabase/migrations/、scripts/configure_local.py |
 
@@ -38,3 +38,5 @@ SCORE、AI、ランキング、スタンプ、コメント、Push通知、詳細
 
 今週追加するものは、初版を使って確認した結果からIssueにします。
 GitHubのmain保護・レビュー必須設定は、管理者が設定状況を確認してください。
+
+#35（親#14）の追加仕様は [activity-heatmap.md](activity-heatmap.md)。表示する指標はセット数で、SCORE・BEST・種目別推移は後続。新しいmigrationは不要。検証・PRの状態はprogress.mdと週次計画#33で追跡する。

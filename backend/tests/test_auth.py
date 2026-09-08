@@ -12,7 +12,12 @@ from app.main import app
 
 def test_training_api_requires_login():
     with TestClient(app) as client:
-        for path in ["/api/me", "/api/groups", "/api/workouts"]:
+        for path in [
+            "/api/me",
+            "/api/groups",
+            "/api/workouts",
+            "/api/workouts/activity?month=2024-02",
+        ]:
             response = client.get(path)
             assert response.status_code == 401
             assert response.headers["cache-control"] == "no-store"

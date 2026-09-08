@@ -1,8 +1,11 @@
+from datetime import date
 from uuid import UUID
 
+from app.domain.activity import month_bounds, validate_activity_date
 from app.domain.identity import AuthenticatedUser
 from app.domain.workout import WorkoutInput
 from app.infrastructure.training_repository import TrainingRepository
+from app.schemas.activity import ActivityDay, MonthlyActivity
 
 
 class TrainingService:
@@ -29,5 +32,23 @@ class TrainingService:
     def save_workout(self, workout: WorkoutInput):
         return self.repository.save_workout(self.user.id, workout)
 
-    def workouts(self, group_id: UUID | None, limit: int, offset: int):
-        return self.repository.workouts(self.user.id, group_id, limit, offset)
+    def activity(self, month: str):
+        start, end = month_bounds(month)
+        days = [
+            ActivityDay.model_validate(row)
+            for row in self.repository.activity(self.user.id, start, end)
+        ]
+        return MonthlyActivity(
+            month=month,
+            total_sets=sum(day.set_count for day in days),
+            workout_count=sum(day.workout_count for day in days),
+            active_days=len(days),
+            days=days,
+        )
+
+    def workouts(
+        self, group_id: UUID | None, limit: int, offset: int, performed_on: date | None = None
+    ):
+        if performed_on is not None:
+            validate_activity_date(performed_on)
+        return self.repository.workouts(self.user.id, group_id, limit, offset, performed_on)

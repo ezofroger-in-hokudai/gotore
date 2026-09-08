@@ -1,5 +1,14 @@
 import { getSupabase } from "./supabase";
 
+export type MonthlyActivity = {
+  month: string;
+  metric: "sets";
+  total_sets: number;
+  workout_count: number;
+  active_days: number;
+  days: { date: string; set_count: number; workout_count: number }[];
+};
+
 export type Group = { id: string; name: string; owner_id: string; invite_code: string };
 export type GroupDetail = Group & { members: { id: string; display_name: string }[] };
 export type Exercise = { name: string; sets: { weight: number; reps: number }[] };
