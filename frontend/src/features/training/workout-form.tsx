@@ -1,7 +1,8 @@
 "use client";
 
-import { type Group, type Workout, api } from "@/lib/api";
+import { type ExerciseOption, type Group, type Workout, api } from "@/lib/api";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import {
   type Draft,
   newDraft,
@@ -11,6 +12,7 @@ import {
   today,
   workoutPayload,
 } from "./draft";
+import { useResource } from "./use-resource";
 
 export function WorkoutForm({
   groups,
@@ -25,6 +27,8 @@ export function WorkoutForm({
   onSaved: (workout: Workout) => void;
   onBack: () => void;
 }) {
+  const catalog = useResource<ExerciseOption[]>("/exercise-options");
+  const options = catalog.data ?? [];
   const storageKey = `gotore:draft:${userId}`;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -167,6 +171,28 @@ export function WorkoutForm({
       <p className="muted">ひとつずつ、その頑張りを記録しよう。</p>
       <p className="muted">Enterで次の入力へ。最後の回数欄ではセットを追加します。</p>
       <p className="muted">重量の薄い数字は前セットの値です。空欄でEnterを押すと採用します。</p>
+      <p className="muted">
+        種目は自分のリストから選びます。新しい種目は下の管理欄で追加できます。
+      </p>
+      {catalog.loading && <output className="loading">種目リストを読み込んでいます…</output>}
+      {catalog.error && (
+        <div className="error" role="alert">
+          {catalog.error}
+          <button type="button" className="text-button" onClick={catalog.retry}>
+            種目リストを再取得
+          </button>
+        </div>
+      )}
+      {catalog.data?.length === 0 && !catalog.error && (
+        <p className="notice">
+          種目リストは空です。「自分の種目リストを管理」から追加してください。
+        </p>
+      )}
+      <ExerciseCatalog
+        options={options}
+        disabled={busy || catalog.loading || catalog.data === null || !!catalog.error}
+        onChanged={catalog.retry}
+      />
       <form
         onSubmit={submit}
         onKeyDown={(event) => {
@@ -209,11 +235,10 @@ export function WorkoutForm({
                 <span className="number">{String(index + 1).padStart(2, "0")}</span>
                 <label className="grow">
                   種目名
-                  <input
+                  <select
+                    aria-label="種目名"
                     required
-                    maxLength={60}
-                    list="exercises"
-                    placeholder="例：ベンチプレス"
+                    disabled={catalog.loading || catalog.data === null}
                     value={exercise.name}
                     onChange={(e) =>
                       change((d) => ({
@@ -223,7 +248,17 @@ export function WorkoutForm({
                         ),
                       }))
                     }
-                  />
+                  >
+                    <option value="">種目を選んでください</option>
+                    {exercise.name && !options.some((option) => option.name === exercise.name) && (
+                      <option value={exercise.name}>{exercise.name}（下書きの種目）</option>
+                    )}
+                    {options.map((option) => (
+                      <option key={option.id} value={option.name}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 {draft.exercises.length > 1 && (
                   <button
@@ -324,7 +359,10 @@ export function WorkoutForm({
                         ...d,
                         exercises: d.exercises.map((item) =>
                           item.key === exercise.key
-                            ? { ...item, sets: item.sets.filter((s) => s.key !== set.key) }
+                            ? {
+                                ...item,
+                                sets: item.sets.filter((s) => s.key !== set.key),
+                              }
                             : item,
                         ),
                       }))
@@ -344,25 +382,16 @@ export function WorkoutForm({
               </button>
             </div>
           ))}
-          <datalist id="exercises">
-            {[
-              "ベンチプレス",
-              "スクワット",
-              "デッドリフト",
-              "ペックフライ",
-              "ラットプルダウン",
-              "ショルダープレス",
-              "懸垂",
-              "腕立て伏せ",
-            ].map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
           <button
             type="button"
             className="secondary full"
             disabled={draft.exercises.length >= 20}
-            onClick={() => change((d) => ({ ...d, exercises: [...d.exercises, newExercise()] }))}
+            onClick={() =>
+              change((d) => ({
+                ...d,
+                exercises: [...d.exercises, newExercise()],
+              }))
+            }
           >
             ＋ 種目を追加
           </button>

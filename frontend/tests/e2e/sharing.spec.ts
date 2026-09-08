@@ -63,7 +63,11 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
 
     await pageA.bringToFront();
     await pageA.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
-    await pageA.getByLabel("種目名", { exact: true }).fill("ベンチプレス");
+    await pageA.getByText("自分の種目リストを管理", { exact: true }).click();
+    await pageA.getByLabel("追加する種目名", { exact: true }).fill("ケーブルロウ");
+    await pageA.getByRole("button", { name: "リストに追加", exact: true }).click();
+    await expect(pageA.getByRole("status").filter({ hasText: "追加しました" })).toBeVisible();
+    await pageA.getByLabel("種目名", { exact: true }).selectOption({ label: "ケーブルロウ" });
     await pageA.getByLabel("種目1 セット1 重量", { exact: true }).fill("82.5");
     await pageA.getByLabel("種目1 セット1 回数", { exact: true }).fill("8");
     await pageA.getByRole("button", { name: "＋ セットを追加", exact: true }).click();
@@ -76,7 +80,9 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await expect(pageA.getByText("確定すると「夜の合トレ部」", { exact: false })).toBeVisible();
 
     // 一度だけ通信を失敗させ、入力を失わず同じ記録を再送できることを確認する。
-    await pageA.route("**/api/workouts", (route) => route.abort(), { times: 1 });
+    await pageA.route("**/api/workouts", (route) => route.abort(), {
+      times: 1,
+    });
     await pageA.getByRole("button", { name: "記録を確定して共有 →", exact: true }).click();
     await expect(
       pageA.getByRole("alert").filter({ hasText: "入力内容は残っています" }),
@@ -88,8 +94,8 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     ).toBeVisible();
 
     await pageB.bringToFront();
-    await expect(pageB.getByRole("article").filter({ hasText: "ベンチプレス" })).toHaveCount(1);
-    const card = pageB.getByRole("article").filter({ hasText: "ベンチプレス" });
+    await expect(pageB.getByRole("article").filter({ hasText: "ケーブルロウ" })).toHaveCount(1);
+    const card = pageB.getByRole("article").filter({ hasText: "ケーブルロウ" });
     await expect(card).toContainText("共有テストA");
     await card.getByText("セットの詳細を見る", { exact: true }).click();
     await expect(card).toContainText("82.5");
@@ -97,7 +103,10 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     expect(
       await pageB.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
-    await pageB.screenshot({ path: "test-results/group-feed-mobile.png", fullPage: true });
+    await pageB.screenshot({
+      path: "test-results/group-feed-mobile.png",
+      fullPage: true,
+    });
 
     await pageA.bringToFront();
     await pageA.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
@@ -123,13 +132,13 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
       .getByRole("button", { name: "自分の記録", exact: true })
       .click();
     await expect(pageA.getByRole("article")).toHaveCount(1);
-    await expect(pageA.getByRole("article")).toContainText("ベンチプレス");
+    await expect(pageA.getByRole("article")).toContainText("ケーブルロウ");
     const calendar = pageA.getByRole("region", { name: "活動カレンダー", exact: true });
     const recordedDay = calendar.getByRole("button", { name: /、2セット、1件$/ });
     await expect(recordedDay).toHaveCount(1);
     await recordedDay.click();
     await expect(pageA.getByRole("article")).toHaveCount(1);
-    await expect(pageA.getByRole("article")).toContainText("ベンチプレス");
+    await expect(pageA.getByRole("article")).toContainText("ケーブルロウ");
     await pageA.getByRole("button", { name: "日付の絞り込みを解除", exact: true }).click();
     await pageB.bringToFront();
     await pageB
@@ -141,6 +150,25 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await pageA.bringToFront();
     await pageA.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
     await expect(pageA.getByLabel("表示名", { exact: true })).toHaveValue("変更後のA");
+    await pageA
+      .getByRole("navigation")
+      .getByRole("button", { name: "自分の記録", exact: true })
+      .click();
+    await pageA.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
+    await pageA.getByLabel("種目名", { exact: true }).selectOption({ label: "ケーブルロウ" });
+    await pageA.getByText("自分の種目リストを管理", { exact: true }).click();
+    await pageA.getByRole("button", { name: "ケーブルロウをリストから削除", exact: true }).click();
+    await pageA.getByRole("button", { name: "削除する", exact: true }).click();
+    await expect(pageA.getByRole("status").filter({ hasText: "削除しました" })).toBeVisible();
+    await pageA.getByRole("button", { name: "← 戻る（下書きは残ります）", exact: true }).click();
+    await expect(pageA.getByRole("article")).toContainText("ケーブルロウ");
+    await pageB.bringToFront();
+    await expect(card).toContainText("ケーブルロウ");
+    await pageB.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
+    const otherOptions = pageB.getByLabel("種目名", { exact: true });
+    await expect(otherOptions).toBeEnabled();
+    await expect(otherOptions.locator("option", { hasText: "ケーブルロウ" })).toHaveCount(0);
+    await otherOptions.selectOption({ label: "ベンチプレス" });
     expect(errors).toEqual([]);
   } finally {
     await Promise.allSettled([a.close(), b.close()]);

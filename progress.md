@@ -289,3 +289,40 @@
 - 検証結果: make check成功（backend76件・frontend13件・lint・本番build）。git diff --checkを確認。新機能追加ではないため新しい先行テストは作らず、既存の名前保持・集計・共有権限の回帰で確認した。
 - 未解決事項: ローカルDocker停止のため実Supabase共有E2EはCIのmake test-e2eで再確認する。
 - 次のアクション: 解消をpushし最新CIを確認する。mainへのマージ・本番操作は行わない。
+
+## 2026-09-07 21:40 JST
+
+- 変更内容: 全Issue・担当・コメント・既存PRを確認し、imtkgtr担当#28を優先。週次計画#33と本人用の種目リスト仕様を作成し、先行DB/APIテスト8件が未実装API・テーブルで失敗することを確認した。
+- 目的: 自由入力から、追加・削除できる本人用リストの選択入力へ変更する。
+- 影響範囲・関連ファイル: docs/exercise-options.md、task.md、種目候補専用のdomain/service/repository/API、追加migration、backend/tests/test_sharing.py。元作業ツリーの変更・PR #32は保持し、origin/main eeed08eから/tmp/gotore-28に分離。
+- 合意・計画: ユーザーが候補登録と選択式への変更を確認。初回は既存8候補、削除後も履歴・下書きを保持する。複数種目をまとめるプリセットは#17。#14の最初の集計範囲は確認中、#10はOS・配布条件等が未決。IXYZONE担当は変更しない。
+- 検証状況: Docker停止を確認。既存の検証専用PostgreSQLをUNIXソケット限定で再開した。初回テストはソケット権限・接続ロールの指定不足で実行できず、確認済みのgotore_test_ownerとgotore_testを指定して先行失敗を確認した。
+- 未解決事項: API実装後のテスト、UI・共有E2E、PR・CI・レビュー。公開DB migration・デプロイは未実施。
+- 次のアクション: 実装と境界値・本人限定・履歴保持の検証を完了し、push・main向けPRを作成する。
+
+## 2026-09-07 21:45 JST
+
+- 変更内容: #28の本人用種目リストを実装。初回8候補をDBへ一度だけ作成し、追加・削除・選択、重複追加の集約、通信失敗時の入力保持・再試行を用意した。記録は従来の名前スナップショットで保存し、候補削除後も共有済み記録と下書きを保持する。
+- 目的: 種目を自由入力する手間を減らし、本人が管理する候補を次回以降の記録でも使えるようにする。
+- 影響範囲・関連ファイル: backendのexercise_catalog各層・router・認証/共有テスト、追加migration、frontendのExerciseCatalog・WorkoutForm・API型・CSS・E2E、仕様・README・task.md・画面例。新しいSDKや依存は追加していない。
+- 検証結果: make check成功（Ruff・Biome、専用PostgreSQLでbackend56件、frontend単体11件、Next.js本番build）。全E2Eは13件中11件成功、実Supabase依存2件はDocker停止で失敗。その後追加した空白/61文字・複数種目選択を含む種目UI3件が成功し、重複分を除きUI12件相当を確認した。390px画像・横はみ出しなしを確認。git diff --checkと文書相対リンク39件を確認し、元からGit対象外のPDF・参考画像3点だけ専用worktreeに存在しない。
+- テスト経緯: 先行UIテストは自由入力がselect要素でないため失敗した後に実装。全体検証で保存ボタンを未選択時に無効化した差が既存テストを検出したため、従来通り送信時の入力検証を用いる形へ戻して成功を確認した。標準Playwrightがサーバー起動前の接続確認で待機したため今回のプロセスだけ中断し、専用8100/3100番を明示起動、PLAYWRIGHT_REUSE_SERVER=1で実行した。期待する保存・共有・認可は緩めていない。
+- 未解決事項: 実Supabaseの候補保持・別人分離・共有E2EはPR CIで確認する。公開環境には追加migration適用が必要で、適用・デプロイ・マージは行っていない。#14の指標合意・#10の移植条件・#17のメニュープリセットは継続して別途扱う。
+- 次のアクション: 今回の差分だけをコミット・pushし、Closes #28・Refs #33を付けたmain向けPRを作成する。CI結果を確認し、レビュー待ちとして引き継ぐ。既存の未コミット変更とPR #32は保持する。
+
+## 2026-09-07 21:47 JST
+
+- 変更内容: #28のコミット23ec7b4をfeat/28-exercise-optionsへpushし、main向けPR #34を作成した。週次計画は#33。今回の専用8100/3100番と一時PostgreSQLは停止済み。
+- 目的: 本人用種目リストの実装をレビュー可能にし、ローカルDocker停止で未完了の共有E2EをCIで確認する。
+- 影響範囲・関連ファイル: progress.md、GitHub PR #34（Closes #28、Refs #33）。元作業ツリーのnext-env.d.tsと未追跡資料はそのまま保持した。
+- 確認結果: push先とPR先頭23ec7b4が一致し、mainと競合なし。backend・frontend・Vercelのチェック成功、databaseジョブは実Supabaseの準備中。文書追記のみのため新しいテストは追加せず、git diff --checkで確認する。最終CI結果はPRで追跡する。
+- 未解決事項: PRの全共有E2E・人によるレビュー、公開DBへのmigration適用。#14の集計範囲は確認待ち、#10の移植条件と#17のメニュープリセットは別途。マージ・公開DB操作は行っていない。
+- 次のアクション: 本記録をpushしてCI完了を確認する。実装者以外のレビュー後に、管理者が公開前migrationと統合を行う。
+
+## 2026-09-08 03:02 JST
+- 変更内容: PR #34のmain競合を解消するため、fff26d4を取り込んだ。UIモックで種目候補APIと最新プロフィール取得APIの両方を保持した。
+- 目的: mainへ統合済みの名前保持修正を維持しながら、種目リストPRをレビュー・統合できるようにする。
+- 影響範囲・関連ファイル: main取り込みとfrontend/tests/e2e/mock-training.ts、progress.md。ユーザーの元作業領域は変更しない。
+- 検証結果: make check成功（backend69件・frontend11件・lint・本番build）。git diff --checkを確認。新機能は追加していないため先行テストは新設せず、既存の回帰で確認した。
+- 未解決事項: ローカルDockerは停止中のため実Supabase共有E2EはCIのmake test-e2eで再確認する。
+- 次のアクション: 解消をpushしPR #34の最新CIを確認する。mainへのマージと本番操作は行わない。
