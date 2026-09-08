@@ -5,84 +5,83 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GO TORE デザイン見本</title>
   <style>
-    :root { color-scheme: light; --accent:#d32f2f; --pressed:#b71c1c; --soft:#fdecec; --bg:#fafafa; --surface:#fff; --text:#1f1f1f; --muted:#666; --line:#e5e7eb; font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif; color:var(--text); background:#efefef; }
+    :root { color-scheme:light; --accent:#d32f2f; --pressed:#b71c1c; --text:#1f1f1f; --muted:#666; --line:#e5e7eb; font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif; color:var(--text); background:#efefef; }
     * { box-sizing:border-box; }
-    body { margin:0; padding:24px 16px; line-height:1.5; }
+    body { margin:0; padding:24px 16px; font-size:.875rem; line-height:1.5; }
     .heading { max-width:1200px; margin:0 auto 24px; }
-    h1 { font-size:1.5rem; margin:0 0 8px; }
-    h2 { font-size:1.5rem; line-height:1.3; margin:0; }
-    h3 { font-size:1rem; margin:0 0 8px; }
+    h1 { font-size:1.25rem; margin:0 0 8px; }
+    h2 { font-size:1.125rem; line-height:1.3; margin:0; }
+    h3 { font-size:1rem; margin:0; }
     p { margin:0; }
-    .muted { color:var(--muted); font-size:.875rem; }
+    .muted { color:var(--muted); font-size:.75rem; }
     main { max-width:1200px; margin:auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:24px; }
-    .phone { min-width:0; min-height:720px; display:flex; flex-direction:column; background:var(--bg); border:1px solid #c7c7c7; border-radius:24px; overflow:hidden; }
-    .top { padding:24px 16px 16px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    .body { padding:0 16px 24px; flex:1; }
-    .stack { display:grid; gap:16px; }
-    .card { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; }
+    .phone { min-width:0; height:720px; display:flex; flex-direction:column; background:#fafafa; border:1px solid #999; overflow:auto; }
+    .top { padding:8px 12px; min-height:64px; display:flex; flex:none; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--line); }
+    .body { padding:8px 12px; flex:1 0 auto; }
+    .stack { display:grid; gap:8px; align-content:start; }
+    .rule { padding:12px 0; border-bottom:1px solid var(--line); }
     .row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
-    .count { font-size:2rem; font-weight:700; line-height:1.2; font-variant-numeric:tabular-nums; }
-    .unit { font-size:.875rem; font-weight:400; color:var(--muted); }
-    .badge { background:var(--soft); color:var(--pressed); padding:4px 8px; border-radius:8px; font-size:.875rem; }
-    button,input { font:inherit; color:inherit; min-width:0; }
-    button { min-width:48px; min-height:48px; border-radius:12px; border:1px solid #767676; padding:8px 16px; background:var(--surface); font-weight:600; cursor:pointer; }
-    button:focus-visible,summary:focus-visible { outline:3px solid var(--pressed); outline-offset:3px; }
-    button:active { background:var(--soft); }
+    .count { font-size:1.5rem; font-weight:700; line-height:1.25; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+    .unit { font-size:.75rem; font-weight:400; color:var(--muted); }
+    button,input,textarea { font:inherit; color:inherit; min-width:0; border-radius:0; }
+    button { min-width:48px; min-height:48px; border:1px solid #767676; padding:8px 12px; background:white; font-weight:600; cursor:pointer; }
+    button:focus-visible,input:focus-visible,textarea:focus-visible { outline:2px solid var(--pressed); outline-offset:2px; }
+    button:active { background:#fdecec; }
     .primary { background:var(--accent); border-color:var(--accent); color:white; width:100%; }
     .primary:active { background:var(--pressed); }
-    .plain { border:0; color:var(--accent); background:transparent; }
-    .action { padding:16px; }
-    .tabs { display:flex; gap:4px; padding:8px; border-top:1px solid var(--line); background:white; }
-    .tabs button { flex:1; border:0; padding:8px 2px; color:var(--muted); border-radius:8px; font-size:.75rem; font-weight:400; }
-    .tabs .active { color:var(--pressed); background:var(--soft); font-weight:700; box-shadow:inset 0 -3px var(--accent); }
-    .icon { display:block; font-size:1.25rem; line-height:1.3; }
-    details { margin-top:8px; }
-    summary { min-height:48px; padding:12px 0; font-size:.875rem; color:var(--muted); cursor:pointer; }
-    label { display:grid; gap:8px; font-size:.875rem; color:var(--muted); }
-    input { width:100%; min-height:48px; border:1px solid #767676; border-radius:12px; padding:8px; background:white; font-size:1rem; }
-    input:focus { outline:2px solid var(--accent); outline-offset:2px; }
-    .sets { display:grid; grid-template-columns:minmax(0,.6fr) repeat(2,minmax(0,1fr)); gap:8px; align-items:center; }
+    .plain { border:0; background:transparent; }
+    .red { color:var(--accent); }
+    .action { padding:12px; flex:none; border-top:1px solid var(--line); }
+    .tabs { display:flex; flex:none; gap:4px; padding:4px 8px; border-top:1px solid var(--line); }
+    .tabs button { flex:1; border:0; padding:8px 2px; color:var(--muted); background:transparent; font-size:.75rem; font-weight:400; }
+    .tabs .active { color:var(--pressed); font-weight:700; box-shadow:inset 0 -3px var(--accent); }
+    label { display:grid; gap:4px; font-size:.75rem; color:var(--muted); }
+    input { width:100%; min-height:48px; border:1px solid #767676; padding:8px; background:white; font-size:1rem; }
+    textarea { width:100%; height:64px; min-height:48px; border:1px solid #767676; padding:8px; background:white; font-size:1rem; line-height:1.4; resize:none; }
+    .bests { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:8px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .sets { display:grid; grid-template-columns:minmax(0,.5fr) repeat(2,minmax(0,1fr)); gap:8px; align-items:center; }
     .sets .muted { text-align:center; }
-    .setting { width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:16px 0; border:0; border-bottom:1px solid var(--line); border-radius:0; text-align:left; }
-    .setting:last-child { border-bottom:0; }
+    .pager { display:flex; align-items:center; justify-content:space-between; gap:4px; flex-wrap:wrap; }
+    .setting { width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 0; border:0; border-bottom:1px solid var(--line); background:transparent; text-align:left; }
     .setting span { overflow-wrap:anywhere; }
-    .section { margin-top:24px; }
-    .swatches { display:flex; gap:16px; margin-top:16px; flex-wrap:wrap; font-size:.875rem; }
-    .swatch { display:inline-block; width:16px; height:16px; border:1px solid #767676; border-radius:50%; vertical-align:middle; margin-right:8px; }
+    .exercise-name { flex:1; min-width:0; overflow-wrap:anywhere; }
   </style>
 </head>
 <body>
   <header class="heading">
     <h1>GO TORE · デザイン見本</h1>
-    <p class="muted">スマホ中心 / 短い言葉 / 赤で主操作を明確に</p>
-    <p class="muted">構成の参照用です。ボタンで保存・移動はしません。</p>
-    <div class="swatches"><span><i class="swatch" style="background:#d32f2f"></i>主操作</span><span><i class="swatch" style="background:#fafafa"></i>背景</span><span><i class="swatch" style="background:#1f1f1f"></i>文字</span></div>
+    <p class="muted">1画面中心 / 控えめな文字 / 直線と赤</p>
+    <p class="muted">架空データによる構成の参照用です。ボタンで保存・切り替えはしません。</p>
   </header>
   <main>
     <section class="phone" aria-label="一覧テンプレート">
-      <header class="top"><h2>自分の記録</h2><button class="plain" type="button" aria-label="日付を選ぶ">日付</button></header>
-      <div class="body stack" style="align-content:start">
-        <div class="card row"><div><p class="muted">今週</p><p class="count">12 <span class="unit">セット</span></p></div><span class="badge">3日記録</span></div>
-        <div class="card"><div class="row"><h3>9月8日</h3><span class="muted">自分だけ</span></div><p>ベンチプレス</p><p><strong>60</strong> <span class="unit">kg ×</span> <strong>8</strong> <span class="unit">回 · 3セット</span></p><details><summary>詳細</summary><p class="muted">60kg × 8回 / 60kg × 8回 / 60kg × 8回</p></details></div>
-        <div class="card"><div class="row"><h3>9月6日</h3><span class="muted">共有済み</span></div><p>スクワット</p><p><strong>80</strong> <span class="unit">kg ×</span> <strong>10</strong> <span class="unit">回 · 4セット</span></p><details><summary>詳細</summary><p class="muted">80kg × 10回 · 4セット</p></details></div>
+      <header class="top"><h2>自分の記録</h2><button class="plain" type="button">日付</button></header>
+      <div class="body stack">
+        <div class="rule row"><div><p class="muted">今週</p><p class="count">12 <span class="unit">セット</span></p></div><span class="muted">3日記録</span></div>
+        <div class="rule"><div class="row"><h3>9月8日</h3><span class="muted">自分だけ</span></div><div class="row"><div><p>ベンチプレス</p><p><strong>60</strong> <span class="unit">kg ×</span> <strong>8</strong> <span class="unit">回 · 3セット</span></p></div><button class="plain" type="button" aria-label="9月8日の詳細">詳細</button></div></div>
+        <div class="rule"><div class="row"><h3>9月6日</h3><span class="muted">共有済み</span></div><div class="row"><div><p>スクワット</p><p><strong>80</strong> <span class="unit">kg ×</span> <strong>10</strong> <span class="unit">回 · 4セット</span></p></div><button class="plain" type="button" aria-label="9月6日の詳細">詳細</button></div></div>
+        <div class="pager"><button class="plain" type="button">前へ</button><span class="muted">1 / 3</span><button class="plain" type="button">次へ</button></div>
       </div>
-      <div class="action"><button class="primary" type="button">＋ 記録する</button></div>
-      <nav class="tabs" aria-label="一覧のナビ見本"><button type="button"><span class="icon" aria-hidden="true">⌂</span>ホーム</button><button type="button" class="active" aria-current="page"><span class="icon" aria-hidden="true">▤</span>記録</button><button type="button"><span class="icon" aria-hidden="true">○○</span>グループ</button><button type="button"><span class="icon" aria-hidden="true">⚙</span>設定</button></nav>
+      <div class="action"><button class="primary" type="button">＋ 記録</button></div>
+      <nav class="tabs" aria-label="一覧のナビ見本"><button type="button">ホーム</button><button type="button" class="active" aria-current="page">記録</button><button type="button">グループ</button><button type="button">設定</button></nav>
     </section>
     <section class="phone" aria-label="入力テンプレート">
-      <header class="top"><button class="plain" type="button" aria-label="前の画面へ戻る">←</button><h2>記録</h2><span class="muted">自分だけ</span></header>
-      <div class="body stack" style="align-content:start">
-        <label>日付<input value="2026/09/08" readonly></label>
-        <label>種目<input value="ベンチプレス" readonly></label>
-        <div class="card stack"><div class="sets"><span></span><span class="muted">kg</span><span class="muted">回</span></div><div class="sets"><span class="muted">1</span><input aria-label="セット1の重量" value="60" readonly><input aria-label="セット1の回数" value="8" readonly></div><div class="sets"><span class="muted">2</span><input aria-label="セット2の重量" value="60" readonly><input aria-label="セット2の回数" value="8" readonly></div><button class="plain" type="button">＋ セット</button></div>
-        <button type="button">＋ 種目</button>
+      <header class="top"><button class="plain" type="button" aria-label="前の画面へ戻る">←</button><h2>記録</h2><button class="plain" type="button" aria-label="日付 2026年9月8日">9/8</button></header>
+      <div class="body stack">
+        <div class="row"><h3 class="exercise-name">ベンチプレス</h3><button class="plain" type="button">種目変更</button></div>
+        <div class="bests" aria-label="ベンチプレスの自己ベスト"><div><p class="muted">推定1RM</p><p class="count">90 <span class="unit">kg</span></p></div><div><p class="muted">最高重量</p><p class="count">80 <span class="unit">kg</span></p></div></div>
+        <label>メモ<textarea aria-label="ベンチプレスのメモ" rows="2">肩に気をつける</textarea></label>
+        <div class="sets"><span class="muted">セット</span><span class="muted">kg</span><span class="muted">回</span></div>
+        <div class="sets"><span class="muted">1</span><input aria-label="セット1の重量" value="60" readonly><input aria-label="セット1の回数" value="8" readonly></div>
+        <div class="sets"><span class="muted">2</span><input aria-label="セット2の重量" value="60" readonly><input aria-label="セット2の回数" value="8" readonly></div>
+        <div class="pager"><button class="plain" type="button" aria-label="前のセットへ">←</button><span class="muted">1–2 / 4</span><button class="plain" type="button" aria-label="次のセットへ">→</button><button class="plain red" type="button">＋ セット</button></div>
       </div>
-      <div class="action"><button class="primary" type="button">保存</button></div>
+      <div class="action stack"><div class="pager"><button class="plain" type="button" aria-label="前の種目へ">←</button><span class="muted">種目 1 / 3</span><button class="plain" type="button" aria-label="次の種目へ">→</button><button class="plain" type="button">＋ 種目</button></div><div class="row"><span class="muted">自分だけ</span><button class="plain" type="button">共有先</button></div><button class="primary" type="button">保存</button></div>
     </section>
     <section class="phone" aria-label="設定テンプレート">
       <header class="top"><h2>設定</h2></header>
-      <div class="body"><div class="card"><button class="setting" type="button"><span>表示名</span><span class="muted">トレーニー ›</span></button><button class="setting" type="button"><span>種目</span><span aria-hidden="true">›</span></button></div><h3 class="section">サポート</h3><div class="card"><button class="setting" type="button"><span>使い方</span><span aria-hidden="true">›</span></button></div><div class="section"><button class="plain" type="button">ログアウト</button></div></div>
-      <nav class="tabs" aria-label="設定のナビ見本"><button type="button"><span class="icon" aria-hidden="true">⌂</span>ホーム</button><button type="button"><span class="icon" aria-hidden="true">▤</span>記録</button><button type="button"><span class="icon" aria-hidden="true">○○</span>グループ</button><button type="button" class="active" aria-current="page"><span class="icon" aria-hidden="true">⚙</span>設定</button></nav>
+      <div class="body"><button class="setting" type="button"><span>表示名</span><span class="muted">トレーニー ›</span></button><button class="setting" type="button"><span>種目</span><span aria-hidden="true">›</span></button><button class="setting" type="button"><span>使い方</span><span aria-hidden="true">›</span></button><button class="setting red" type="button">ログアウト</button></div>
+      <nav class="tabs" aria-label="設定のナビ見本"><button type="button">ホーム</button><button type="button">記録</button><button type="button">グループ</button><button type="button" class="active" aria-current="page">設定</button></nav>
     </section>
   </main>
 </body>
