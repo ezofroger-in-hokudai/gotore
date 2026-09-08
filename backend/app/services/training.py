@@ -4,6 +4,7 @@ from uuid import UUID
 from app.domain.activity import month_bounds, validate_activity_date
 from app.domain.identity import AuthenticatedUser
 from app.domain.workout import WorkoutInput, WorkoutUpdate
+from app.domain.workout_memo import WorkoutMemoInput
 from app.infrastructure.training_repository import TrainingRepository
 from app.schemas.activity import ActivityDay, MonthlyActivity
 
@@ -71,3 +72,9 @@ class TrainingService:
         return self.repository.end_membership(
             self.user.id, group_id, member_id, expected_joined_at, owner_action=True
         )
+
+    def workout_memo(self, workout_id: UUID):
+        return self.repository.workout_memo(self.user.id, workout_id)
+
+    def save_workout_memo(self, workout_id: UUID, memo: WorkoutMemoInput):
+        return self.repository.save_workout_memo(self.user.id, workout_id, memo)

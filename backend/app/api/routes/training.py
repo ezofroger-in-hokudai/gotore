@@ -9,6 +9,7 @@ from app.api.dependencies import training_service
 from app.domain.identity import User
 from app.domain.workout import WorkoutInput, WorkoutUpdate
 from app.schemas.activity import MonthlyActivity
+from app.domain.workout_memo import WorkoutMemoInput
 from app.schemas.training import (
     GroupCreate,
     GroupDetail,
@@ -16,6 +17,8 @@ from app.schemas.training import (
     GroupRename,
     GroupResponse,
     InviteCodeRenew,
+
+    WorkoutMemoResponse,
     WorkoutResponse,
 )
 from app.services.training import TrainingService
@@ -129,3 +132,12 @@ def remove_member(
 ):
     service.remove_member(group_id, member_id, expected_joined_at)
     return Response(status_code=204)
+
+@router.get("/workouts/{workout_id}/memo", response_model=WorkoutMemoResponse)
+def workout_memo(workout_id: UUID, service: Service):
+    return service.workout_memo(workout_id)
+
+
+@router.put("/workouts/{workout_id}/memo", response_model=WorkoutMemoResponse)
+def save_workout_memo(workout_id: UUID, data: WorkoutMemoInput, service: Service):
+    return service.save_workout_memo(workout_id, data)

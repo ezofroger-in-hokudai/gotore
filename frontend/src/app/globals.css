@@ -938,3 +938,27 @@ fieldset {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+
+.workout-memo {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.workout-memo textarea {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+  background: var(--panel);
+  color: var(--text);
+}
+.memo-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}

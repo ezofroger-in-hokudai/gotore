@@ -36,6 +36,13 @@ def test_training_api_requires_login():
         assert client.delete(f"/api/workouts/{uuid4()}?expected_revision=1").status_code == 401
         assert client.delete(f"/api/groups/{uuid4()}/membership").status_code == 401
         assert client.delete(f"/api/groups/{uuid4()}/members/{uuid4()}").status_code == 401
+        assert client.get(f"/api/workouts/{uuid4()}/memo").status_code == 401
+        assert (
+            client.put(
+                f"/api/workouts/{uuid4()}/memo", json={"content": "秘密", "expected_revision": 0}
+            ).status_code
+            == 401
+        )
 
 
 def test_rejects_invalid_token_without_using_client_supplied_identity(monkeypatch):

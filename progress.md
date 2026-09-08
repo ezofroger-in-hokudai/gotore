@@ -475,3 +475,18 @@
 - 検証結果: frontend単体12件と本番build成功。既存のコピー元不変・新規ID・日付・非共有テストで確認した。
 - 未解決事項: 最新pushのCIと第三者レビュー。
 - 次のアクション: 変更をpushしてPR #44のチェックを確認する。
+
+## 2026-09-08 02:40 JST
+- 変更内容: 未担当#22をimtkgtrへ割り当て、本人メモの実装単位#43を担当設定付きで追加した。関連docs・task・progress・既存API／DB／画面・テストを確認し仕様を文書化した。
+- 目的: 共有しない本人の振り返りを保存できるようにする。
+- 影響範囲・関連ファイル: docs/private-workout-memo.md、専用memoテーブル・API・画面とテスト。
+- 未解決事項: 先行テスト後に本人限定・共有非表示・競合・削除連動とUIを実装し検証する。
+- 次のアクション: 未実装GETの先行失敗を確認し、専用DTOと保存処理を実装する。
+
+## 2026-09-08 02:51 JST
+- 変更内容: 本人限定メモの専用API・DB・入力画面、版による競合・再送・空欄化、元記録削除のCASCADEを実装した。共有一覧のDTOは変更せず、必要時だけ本人APIで取得する。
+- 目的: グループへ漏らさず振り返りを保存し、同時編集や通信失敗で入力を失わないようにする。
+- 影響範囲・関連ファイル: workout_memo domain、training API/service/repository、private_workout_memos migration、workout-memo画面、docs/private-workout-memo.md・画像・関連テスト。
+- 検証結果: 未実装GET失敗後に実装。make check成功（backend63件・frontend11件・lint・build）。RLS、本人／他人、共有DTO不変、1000文字境界、HTML文字列、競合・再送・空欄化・共有解除後保持・元記録削除を確認。最初の画面テストでtextareaを内包したlabelの検索が入力値に影響されたため、明示的なhtmlForと独立textareaへ変更した。修正後UI1件成功、入力保持・読み直し確認・消去・共有一覧非表示を確認。最終lint/buildも成功。
+- 未解決事項: ローカル全E2Eの既存UI11件は成功、実Supabase依存2件はDocker停止で失敗。実Authとメモ再取得・他人の共有非表示はCIで確認する。migrationをAPIより先に適用する。
+- 次のアクション: #43の画像付きPRを作成し、CI・第三者レビューへ進める。マージ・本番DB操作は実行しない。

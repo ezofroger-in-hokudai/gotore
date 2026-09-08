@@ -280,6 +280,8 @@ function Workspace({ session }: { session: Session }) {
                           }
                         : undefined
                     }
+
+                    personal={view === "records"}
                     records={records.data}
                     userId={session.user.id}
                     empty={

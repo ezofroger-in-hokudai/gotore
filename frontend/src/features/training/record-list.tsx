@@ -2,14 +2,18 @@ import type { Workout } from "@/lib/api";
 import { ReuseWorkout } from "./reuse-workout";
 import { WorkoutActions } from "./workout-actions";
 
+import { WorkoutMemo } from "./workout-memo";
+
 export function RecordList({
   records,
   userId,
   empty,
+  personal = false,
   onReuse,
   onEdit,
   onDeleted,
 }: {
+  personal?: boolean;
   records: Workout[];
   userId: string;
   empty: string;
@@ -81,6 +85,8 @@ export function RecordList({
           {record.user_id === userId && onEdit && onDeleted && (
             <WorkoutActions record={record} onEdit={onEdit} onDeleted={onDeleted} />
           )}
+
+          {personal && record.user_id === userId && <WorkoutMemo workoutId={record.id} />}
         </article>
       ))}
     </div>

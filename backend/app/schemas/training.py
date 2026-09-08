@@ -57,3 +57,8 @@ class WorkoutResponse(BaseModel):
     performed_on: date
     exercises: list[Exercise]
     created_at: datetime
+
+
+class WorkoutMemoResponse(BaseModel):
+    content: str
+    revision: int

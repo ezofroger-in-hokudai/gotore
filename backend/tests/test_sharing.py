@@ -267,7 +267,13 @@ def test_rename_rejects_invalid_name_and_owner_changes(client, data):
 
 def test_public_database_role_cannot_read_or_write_training_data(client, connection):
     group = create_group(client)
-    assert client.post("/api/workouts", json=payload(group_id=group["id"])).status_code == 201
+    record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    assert (
+        client.put(
+            f"/api/workouts/{record['id']}/memo", json={"content": "非公開", "expected_revision": 0}
+        ).status_code
+        == 200
+    )
     deleted = client.post("/api/workouts", json=payload()).json()
     assert client.delete(f"/api/workouts/{deleted['id']}?expected_revision=1").status_code == 204
     with connection.transaction(force_rollback=True):
@@ -278,8 +284,8 @@ def test_public_database_role_cannot_read_or_write_training_data(client, connect
         END $$""")
         connection.execute("GRANT USAGE ON SCHEMA public TO authenticated")
         connection.execute("""GRANT SELECT, INSERT ON public.gotore_profiles,
-            public.gotore_groups, public.gotore_group_members, public.gotore_workouts,
-            public.gotore_deleted_workouts
+            public.gotore_groups, public.gotore_group_members,
+            public.gotore_workouts, public.gotore_workout_memos, public.gotore_deleted_workouts
             TO authenticated""")
         connection.execute("SET LOCAL ROLE authenticated")
         for table in [
@@ -287,6 +293,7 @@ def test_public_database_role_cannot_read_or_write_training_data(client, connect
             "gotore_groups",
             "gotore_group_members",
             "gotore_workouts",
+            "gotore_workout_memos",
             "gotore_deleted_workouts",
         ]:
             assert connection.execute(f"SELECT * FROM public.{table}").fetchall() == []
@@ -750,3 +757,65 @@ def test_membership_changes_require_owner_or_self_and_reject_bad_dates(client):
         assert client.delete(path, params={"expected_joined_at": value}).status_code == 422
     assert client.delete(path).status_code == 422
     assert len(client.get(f"/api/groups/{group['id']}").json()["members"]) == 2
+
+
+
+def test_private_memo_is_owner_only_and_never_in_shared_workouts(client, connection):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    path = f"/api/workouts/{record['id']}/memo"
+    assert client.get(path).json() == {"content": "", "revision": 0}
+    content = "<script>alert(1)</script>\n自分の気づき"
+    saved = client.put(path, json={"content": content, "expected_revision": 0})
+    assert saved.status_code == 200
+    assert saved.json() == {"content": content, "revision": 1}
+    assert client.get(path).json() == saved.json()
+    for user in ["B", "C"]:
+        headers = {"X-Test-User": user}
+        assert client.get(path, headers=headers).status_code == 404
+        assert (
+            client.put(
+                path, json={"content": "他人", "expected_revision": 1}, headers=headers
+            ).status_code
+            == 404
+        )
+    assert client.get(
+        f"/api/groups/{group['id']}/workouts", headers={"X-Test-User": "B"}
+    ).json() == [record]
+    assert client.get("/api/workouts").json() == [record]
+    connection.execute(
+        "UPDATE public.gotore_workouts SET group_id = NULL WHERE id = %s", (record["id"],)
+    )
+    assert client.get(path).json() == saved.json()
+    connection.execute("DELETE FROM public.gotore_workouts WHERE id = %s", (record["id"],))
+    assert client.get(path).status_code == 404
+    assert (
+        connection.execute("SELECT count(*) AS n FROM public.gotore_workout_memos").fetchone()["n"]
+        == 0
+    )
+
+
+def test_memo_conflict_retry_and_clear_never_restore_old_content(client):
+    record = client.post("/api/workouts", json=payload()).json()
+    path = f"/api/workouts/{record['id']}/memo"
+    first = {"content": "あ" * 1000, "expected_revision": 0}
+    assert client.put(path, json=first).json()["revision"] == 1
+    assert client.put(path, json=first).json()["revision"] == 1
+    assert client.put(path, json={"content": "別の入力", "expected_revision": 0}).status_code == 409
+    for changes in [
+        {"content": "a" * 1001},
+        {"content": None},
+        {"expected_revision": True},
+        {"expected_revision": -1},
+        {"user_id": "fake"},
+    ]:
+        assert client.put(path, json={**first, **changes}).status_code == 422
+    assert client.put(path, json={"content": "", "expected_revision": 1}).json() == {
+        "content": "",
+        "revision": 2,
+    }
+    assert client.put(path, json=first).status_code == 409
+    assert client.get(path).json() == {"content": "", "revision": 2}

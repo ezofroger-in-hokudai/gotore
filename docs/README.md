@@ -49,3 +49,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [group-membership.md](group-membership.md): グループ退出・除外と本人履歴保持。
 
 - [workout-reuse.md](workout-reuse.md): 本人の過去記録を新規下書きへコピー。
+
+- [private-workout-memo.md](private-workout-memo.md): 本人だけの記録メモと非共有API。
