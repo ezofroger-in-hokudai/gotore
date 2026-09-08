@@ -97,7 +97,7 @@ function DisplayNameForm({ displayName, onSaved }: { displayName: string; onSave
         {message && <output className="notice">{message}</output>}
         {needsSync && (
           <div className="error" role="alert">
-            表示名は更新済みですが、共有記録への反映を確認できませんでした。
+            表示名は更新済み。共有への反映は未確認です。
             <button
               className="secondary full"
               type="button"
@@ -108,10 +108,10 @@ function DisplayNameForm({ displayName, onSaved }: { displayName: string; onSave
                 try {
                   await syncProfile();
                   setNeedsSync(false);
-                  setMessage("共有記録への反映を確認しました。");
+                  setMessage("反映しました。");
                   onSaved();
                 } catch {
-                  setError("反映を確認できませんでした。時間をおいて再試行してください。");
+                  setError("反映を確認できません。再試行してください。");
                 } finally {
                   setBusy(false);
                 }

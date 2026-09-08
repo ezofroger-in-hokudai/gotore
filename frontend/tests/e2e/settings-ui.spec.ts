@@ -73,7 +73,7 @@ test("表示名の失敗・部分成功・同期再試行を区別する", async
   const updates = state.authUpdates;
   state.failSync = false;
   await page.getByRole("button", { name: "再試行", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "反映を確認しました" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "反映しました" })).toBeVisible();
   expect(state.authUpdates).toBe(updates);
   expect(state.user.user_metadata.display_name).toBe("変更した名前");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -93,6 +93,7 @@ test("オーナーは名前変更を再試行でき、招待コードは変わ�
   state.failRename = false;
   await page.getByRole("button", { name: "変更する", exact: true }).click();
   await expect(page.getByRole("heading", { name: "新しいグループ", exact: true })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "変更しました" })).toHaveCount(1);
   await expect(page.getByTestId("invite-code")).toHaveText("ABCDEF123456");
   await page.screenshot({ path: "test-results/group-settings-mobile.png", fullPage: true });
 });

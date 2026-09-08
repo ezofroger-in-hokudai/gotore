@@ -5,12 +5,11 @@ type ProfileActions = {
 
 export async function saveDisplayName(value: string, actions: ProfileActions) {
   const name = value.trim();
-  if (!name || Array.from(name).length > 20)
-    throw new Error("表示名は1〜20文字で入力してください。");
+  if (!name || Array.from(name).length > 20) throw new Error("表示名は1〜20文字です。");
   try {
     await actions.updateAuth(name);
   } catch {
-    throw new Error("表示名を変更できませんでした。接続を確認して再試行してください。");
+    throw new Error("表示名を変更できません。再試行してください。");
   }
   try {
     await actions.syncProfile();

@@ -135,7 +135,7 @@ export function ActivityCalendar({
               </span>
             ))}
           </div>
-          {activity.data.workout_count === 0 && <p className="muted">この月の記録はありません。</p>}
+          {activity.data.workout_count === 0 && <p className="muted">この月は記録なし</p>}
         </>
       )}
     </section>

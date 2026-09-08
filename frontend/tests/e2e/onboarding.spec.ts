@@ -33,7 +33,7 @@ test("初回ガイドは完了・再ログイン後に再表示せず、設定�
   await expect(page.getByRole("navigation")).toBeVisible();
   await expect(guide).toHaveCount(0);
   await page.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
-  await page.getByRole("button", { name: "使い方を見る", exact: true }).click();
+  await page.getByRole("button", { name: "使い方", exact: true }).click();
   await expect(guide).toContainText("1 / 3");
   await expect(guide.getByRole("heading")).toBeFocused();
   expect(state.authUpdates).toBe(0);

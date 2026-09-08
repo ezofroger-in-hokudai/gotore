@@ -45,7 +45,7 @@ export function InviteCodePanel({
       setMessage("取得しました。");
       onRenewed(current);
     } catch {
-      setError("現在のコードを確認できませんでした。時間をおいて再試行してください。");
+      setError("コードを取得できません。再取得してください。");
     } finally {
       setBusy(false);
     }
@@ -64,7 +64,7 @@ export function InviteCodePanel({
               await navigator.clipboard.writeText(code);
               setMessage("コピーしました。");
             } catch {
-              setMessage("招待コードを選択してコピーしてください。");
+              setMessage("コードを選択してコピーしてください。");
             }
           }}
         >

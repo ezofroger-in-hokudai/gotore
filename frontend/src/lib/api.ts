@@ -28,7 +28,7 @@ export type Workout = {
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const client = getSupabase();
-  if (!client) throw new Error("ログインの準備ができていません。");
+  if (!client) throw new Error("ログインを利用できません。");
   const { data, error } = await client.auth.getSession();
   if (error || !data.session) throw new Error("ログインし直してください。");
   let response: Response;
@@ -43,7 +43,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
       },
     });
   } catch {
-    throw new Error("通信できませんでした。接続を確認して再試行してください。");
+    throw new Error("通信できませんでした。再試行してください。");
   }
   const body = await response.json().catch(() => null);
   if (!response.ok) {
@@ -51,8 +51,8 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     throw new Error(
       message ??
         (response.status === 422
-          ? "入力内容を確認してください。重量は小数1桁まで、回数は1以上の整数です。"
-          : "データを取得できませんでした。時間をおいて再試行してください。"),
+          ? "入力を確認してください。"
+          : "取得できません。再試行してください。"),
     );
   }
   return body as T;

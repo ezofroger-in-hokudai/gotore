@@ -37,8 +37,6 @@ test("ログイン失敗は管理者への案内を表示し、再試行でき�
   await page.getByLabel("パスワード", { exact: true }).fill(testPassword);
   const submit = page.getByRole("button", { name: "ログイン", exact: true });
   await submit.click();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText(
-    "管理者にお問い合わせください",
-  );
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("解決しなければ管理者へ");
   await expect(submit).toBeEnabled();
 });

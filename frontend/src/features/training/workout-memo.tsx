@@ -42,7 +42,7 @@ export function WorkoutMemo({ workoutId }: { workoutId: string }) {
       setContent(value.content);
       setNotice("保存しました。");
     } catch (reason) {
-      setError(`${reason instanceof Error ? reason.message : "保存できませんでした。"}`);
+      setError(reason instanceof Error ? reason.message : "保存できませんでした。");
     } finally {
       setBusy(false);
     }

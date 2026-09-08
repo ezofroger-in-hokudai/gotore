@@ -90,7 +90,7 @@ test("セット数ヒートマップから日付を選び、日別記録を50件
   await expect(page.getByRole("article")).toContainText("2024-02-29の種目51");
   await page.getByRole("button", { name: "2024年2月2日、0セット、0件", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(0);
-  await expect(page.getByText("この日の記録はありません。", { exact: true })).toBeVisible();
+  await expect(page.getByText("この日は記録なし", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "すべての記録", exact: true }).click();
   await expect(day).toHaveAttribute("aria-pressed", "false");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -108,7 +108,7 @@ test("月と日付の取得失敗を再試行し、遅い前日の応答を表�
   await expect(page.getByRole("button", { name: /2024年2月29日/ })).toHaveCount(0);
   state.failMonth(false);
   await page.getByRole("button", { name: "再試行", exact: true }).click();
-  await expect(page.getByText("この月の記録はありません。", { exact: true })).toBeVisible();
+  await expect(page.getByText("この月は記録なし", { exact: true })).toBeVisible();
   await page.getByLabel("月", { exact: true }).fill("2024-02");
   state.failDay(true);
   await page.getByRole("button", { name: /2024年2月29日/ }).click();
@@ -127,7 +127,7 @@ test("月と日付の取得失敗を再試行し、遅い前日の応答を表�
     await expect(page.getByRole("article")).toHaveCount(0);
     await page.getByRole("button", { name: /2024年2月2日、/ }).click();
     release();
-    await expect(page.getByText("この日の記録はありません。", { exact: true })).toBeVisible();
+    await expect(page.getByText("この日は記録なし", { exact: true })).toBeVisible();
     await expect(page.getByRole("article")).toHaveCount(0);
   } finally {
     release();

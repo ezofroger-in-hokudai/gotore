@@ -147,7 +147,7 @@ export function WorkoutForm({
     const next = exercise.sets[setIndex + 1];
     if (next) inputs.current.get(`${next.key}:weight`)?.focus();
     else if (exercise.sets.length < 30) addSet(exercise.key);
-    else setError("1種目は30セットまでです。保存は下の確定ボタンから行ってください。");
+    else setError("1種目は30セットまでです。");
   }
 
   async function submit(event: FormEvent) {
@@ -196,7 +196,7 @@ export function WorkoutForm({
 
       <h1>{editing ? "記録の編集" : "記録"}</h1>
 
-      {source && <p className="notice">{source.performed_on}の記録をコピーしました。</p>}
+      {source && <p className="notice">{source.performed_on}からコピー</p>}
 
       {catalog.loading && <output className="loading">読み込み中…</output>}
       {catalog.error && (
@@ -429,7 +429,7 @@ export function WorkoutForm({
           </p>
         )}
         {storageWarning && (
-          <output className="notice">下書きを保持できません。閉じる前に保存してください。</output>
+          <output className="notice">下書きを保持できません。保存してください。</output>
         )}
       </form>
     </section>
