@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Response
 
 from app.api.dependencies import current_user, database
+from app.core.timing import measure
 from app.domain.exercise_catalog import ExerciseOptionInput
 from app.infrastructure.exercise_catalog import ExerciseCatalogRepository
 from app.infrastructure.training_repository import TrainingRepository
@@ -14,7 +15,8 @@ router = APIRouter(tags=["exercise-catalog"])
 
 
 def exercise_catalog(user=Depends(current_user), connection=Depends(database)):
-    TrainingRepository(connection).profile(user)
+    with measure("profile"):
+        TrainingRepository(connection).profile(user)
     return ExerciseCatalogService(ExerciseCatalogRepository(connection), user.id)
 
 

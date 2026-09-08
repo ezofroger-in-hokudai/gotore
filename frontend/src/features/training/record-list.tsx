@@ -4,6 +4,14 @@ import { WorkoutActions } from "./workout-actions";
 
 import { WorkoutMemo } from "./workout-memo";
 
+const savedAtFormatter = new Intl.DateTimeFormat("ja-JP", {
+  month: "numeric",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Asia/Tokyo",
+});
+
 export function RecordList({
   records,
   userId,
@@ -69,14 +77,7 @@ export function RecordList({
           <div className="record-footer">
             <span>{record.group_id ? "共有済み" : "自分だけ"}</span>
             <time dateTime={record.created_at}>
-              {new Intl.DateTimeFormat("ja-JP", {
-                month: "numeric",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZone: "Asia/Tokyo",
-              }).format(new Date(record.created_at))}{" "}
-              保存
+              {savedAtFormatter.format(new Date(record.created_at))} 保存
             </time>
           </div>
           {record.user_id === userId && onReuse && (

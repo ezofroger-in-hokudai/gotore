@@ -17,6 +17,14 @@ class TrainingRepository:
         self.connection = connection
 
     def profile(self, user: AuthenticatedUser) -> User:
+        existing = self.connection.execute(
+            "SELECT id, display_name FROM public.gotore_profiles WHERE id = %s", (user.id,)
+        ).fetchone()
+        # 通常の読み込みではUPSERTの行ロックと追加のDB往復を避ける。
+        if existing is not None and (
+            user.display_name is None or existing["display_name"] == user.display_name
+        ):
+            return User.model_validate(existing)
         # 既定値は新規作成時だけ補い、Auth未設定なら保存済みの名前に触れない。
         result = self.connection.execute(
             """INSERT INTO public.gotore_profiles (id, display_name)

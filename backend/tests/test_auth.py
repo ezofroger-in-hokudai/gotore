@@ -5,7 +5,7 @@ import pytest
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
 
-from app.api.dependencies import current_user
+from app.api.dependencies import auth_client, current_user
 from app.core.config import settings
 from app.main import app
 
@@ -71,7 +71,9 @@ def test_identity_comes_from_auth_server_and_does_not_expose_email(monkeypatch):
         )
 
     monkeypatch.setattr(httpx, "get", verified)
-    result = current_user(HTTPAuthorizationCredentials(scheme="Bearer", credentials="verified"))
+    result = current_user(
+        HTTPAuthorizationCredentials(scheme="Bearer", credentials="verified"), httpx
+    )
     assert result.model_dump(mode="json") == {"id": user_id, "display_name": "本人"}
 
 
@@ -170,5 +172,13 @@ def test_supported_public_key_formats_are_passed_unchanged(monkeypatch, key):
         return httpx.Response(200, json={"id": str(uuid4())})
 
     monkeypatch.setattr(httpx, "get", verify)
-    result = current_user(HTTPAuthorizationCredentials(scheme="Bearer", credentials="token"))
+    result = current_user(HTTPAuthorizationCredentials(scheme="Bearer", credentials="token"), httpx)
     assert result.display_name is None
+
+
+@pytest.fixture(autouse=True)
+def auth_transport():
+    # 既存の認証シナリオは外部通信を差し替え、接続共有自体は専用テストで確認する。
+    app.dependency_overrides[auth_client] = lambda: httpx
+    yield
+    app.dependency_overrides.pop(auth_client, None)
