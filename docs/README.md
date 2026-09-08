@@ -14,6 +14,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 ## 開発用の文書
 
+- [design-system.md](design-system.md): スマホアプリを見据えた色・文字・余白・操作と共通部品の基準。[画面見本](design-preview.html)。
+
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
