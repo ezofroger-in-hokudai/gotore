@@ -20,7 +20,7 @@ for (const ongoing of [false, true]) {
     await page.route("**/api/workouts?**", (route) => route.fulfill({ json: [original] }));
     if (ongoing) {
       await startTraining(page);
-      await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
+      await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
       await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
     }
     await openRecord(page);

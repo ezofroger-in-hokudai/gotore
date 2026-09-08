@@ -84,6 +84,11 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
       if (!state.session) return route.fulfill({ status: 409, json: { detail: "終了済み" } });
       const body = route.request().postDataJSON();
       if (state.failSave) return route.abort();
+      if (
+        body.expected_revision + 1 === state.session.revision &&
+        JSON.stringify(body.exercises) === JSON.stringify(state.session.exercises)
+      )
+        return route.fulfill({ json: state.session });
       if (body.expected_revision !== state.session.revision)
         return route.fulfill({
           status: 409,
