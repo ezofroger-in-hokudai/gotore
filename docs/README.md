@@ -21,6 +21,9 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [../README.md](../README.md): 初回セットアップ、日々の開発、環境変数、migration、検証の共通手順。
 - [../supabase/README.md](../supabase/README.md): migrationの作成・検証・履歴管理、共有DBへの反映手順。日々のローカル更新は未適用migrationを適用し、resetは失ってよいデータでの再構築検証に限定する。
+
+- [onboarding.md](onboarding.md): 初回利用ガイドの表示・保存・再表示。
+
 - [daily-improvements.md](daily-improvements.md): 入力操作・表示名・グループ名変更の合意範囲。
 
 - [admin-managed-accounts.md](admin-managed-accounts.md): テスト用アカウントの管理者発行、一般登録禁止、公開Authの設定。
