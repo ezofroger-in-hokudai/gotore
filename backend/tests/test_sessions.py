@@ -170,6 +170,7 @@ def test_latest_set_and_best_are_only_new_improvements(client):
     session = save(client, session).json()
     path = f"/api/groups/{group['id']}/activity"
     assert client.get(path).json()["feed"][0]["best"] is False
+    assert session["best_updated"] is False
     exercises = session["exercises"]
     exercises[0]["sets"].append({"weight": 82.5, "reps": 8})
     session = client.patch(
@@ -177,6 +178,7 @@ def test_latest_set_and_best_are_only_new_improvements(client):
         json={"expected_revision": session["revision"], "exercises": exercises},
     ).json()
     assert client.get(path).json()["feed"][0]["best"] is True
+    assert session["best_updated"] is True
     exercises[0]["sets"].append({"weight": 82.5, "reps": 8})
     session = client.patch(
         f"/api/sessions/{session['id']}",

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining } from "./mock-training";
+import { mockTraining, navigate, openGroup, openRecord, startTraining } from "./mock-training";
 
 test("本人メモの取得・失敗・競合・読み直し・消去を確認し、共有一覧には出さない", async ({
   page,
@@ -43,10 +43,8 @@ test("本人メモの取得・失敗・競合・読み直し・消去を確認�
     if (failLoad) return route.abort();
     return route.fulfill({ json: memo });
   });
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "自分の記録", exact: true })
-    .click();
+  await page.getByRole("navigation").getByRole("button", { name: "履歴", exact: true }).click();
+  await page.locator(".history-row").first().click();
   expect(memoReads).toBe(0);
   await page.getByRole("button", { name: "メモ", exact: true }).click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText("通信できません");
@@ -91,7 +89,7 @@ test("本人メモの取得・失敗・競合・読み直し・消去を確認�
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
   const reads = memoReads;
   await page.getByRole("navigation").getByRole("button", { name: "ホーム", exact: true }).click();
-  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(page.getByRole("article")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "メモ", exact: true })).toHaveCount(0);
   expect(memoReads).toBe(reads);
 });

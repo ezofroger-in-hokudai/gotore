@@ -629,3 +629,12 @@
 - 検証結果: 専用gotore_v2_test DBでバックエンド118件、フロントエンド単体20件を含むmake check成功。稼働を再確認できたローカルSupabaseにmake db-migrateで追加migration4件を適用（データリセットなし）、db lint --local --fail-on error成功。一般ユーザーの新規登録拒否も実Authで成功。
 - 未解決事項: 全画面テストは33/35成功。カード切替直後の選択復元と、実共有テストで意図したグループを退出する指定を修正済みで再検証中。これまでのDocker停止の制約は解消した。本番DB・デプロイは操作していない。
 - 次のアクション: v2画面の全E2Eと最終画像を確認し、UIのコミットへまとめる。
+
+## 2026-09-09 04:13 JST
+- 変更内容: v2のホーム・記録・履歴・設定と各シートを実装し、既存の記録編集・削除・コピー・グループ管理を接続。セットの保存・取消・通信応答喪失後の復元・競合検知、同名種目が複数行ある履歴の編集を検証した。BEST表示は保存APIが確定した結果を使用する。カード切替後の選択保持と320px幅の余白を修正し、ライト/ダークの色とLIVEアニメーションを資料に合わせた。
+- 目的: 合意した全所属グループ共有・明示終了・再開・LIVEを、v2の画面遷移とデータ整合性を保って利用可能にする。
+- 影響範囲・関連ファイル: frontend/src/features/{session,v2,training,onboarding}/、frontend/src/app/v2.css、frontend/src/lib/api.ts、frontend/tests/、backend/app/schemas/session.py、backend/tests/test_sessions.py、docs/current-state.md、task.md。
+- 検証結果: 専用gotore_v2_test DBを指定した最終make check成功（backend118件・frontend単体21件、lint/build）。最終make test-e2eは全35件成功。実Supabaseで2アカウント・2グループへの共有、再開、本人メモ、退出・再参加後に旧共有を復活させない動作、一般登録拒否まで確認した。ローカルmigration適用とDB lintも成功。320/390/430px幅の横方向のはみ出しをE2Eで確認し、ホーム・記録の画像を目視確認。最終の色トークン調整後はCSS lintとgit diff --checkを確認した。
+- テスト方針: 業務ルールは先行API・単体テストから実装し、画面はデザイン照合と並行して既存E2Eを更新した。画像用のデータはMOCKであり、画面画像は配置の確認にのみ使用した。
+- 未解決事項: iOS/Android実機のキーボード・触覚・ホーム画面起動とOS文字拡大は未検証。通知はIssue #21へ後続条件を記録済み。本番DB・デプロイ・push・PR・マージは未実施。開始時からのnext-env.d.tsと未追跡資料は今回のコミットに含めない。
+- 次のアクション: ローカル実装をレビューし、公開時は追加migrationを先に適用してAPIとフロントエンドを更新する。実機操作と通知の後続対応を進める。

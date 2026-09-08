@@ -4,7 +4,7 @@ const steps = [
   {
     title: "仲間とつながる",
     description: "グループを作成、または招待コードで参加。ひとりでも使えます。",
-    hint: "表示名と記録は選んだグループだけに共有。メモは自分だけ。",
+    hint: "開始時の全所属グループに、表示名と保存済みセットを共有。メモは自分だけ。",
     tips: [
       "再発行で旧コードは無効。",
       "退出・除外後も本人の記録は残り、再参加しても再共有しません。オーナーは退出不可。",
@@ -12,17 +12,17 @@ const steps = [
   },
   {
     title: "トレーニングを記録",
-    description: "日付・種目・セットを入力。種目リストは追加・削除できます。",
-    hint: "新規入力はブラウザに下書き保存。確定前は非共有。",
+    description: "種目を選んで1セットずつ保存。種目一覧は追加・削除できます。",
+    hint: "保存済みセットはサーバー、入力中の値はこの端末に保存。ホームに戻っても継続。",
     tips: [
-      "Enterで次の欄へ。最後の回数欄ではセット追加。空の重量欄では前セットの重量を採用。",
-      "種目削除後も記録・下書きは保持。コピーは今日・自分だけの新規下書き。",
+      "重量・回数は上下の値をタップ、スワイプ、または中央の数値を直接入力。",
+      "終了ボタンで終了。画面を閉じるとLIVEはしばらくして消えますが、トレーニングは残ります。",
     ],
   },
   {
     title: "記録を振り返る",
     description: "カレンダーはセット数で色分け。タップでその日の記録へ。",
-    hint: "「自分の記録」で編集・削除・コピー・メモ。",
+    hint: "「履歴」で編集・削除・コピー・メモ。",
     tips: [
       "編集・メモは保存で確定。閉じると未保存の入力は消えます。共有先は編集不可。",
       "メモは1000文字まで。空欄保存で消去。記録削除は共有先にも反映され、復元不可。",
@@ -36,7 +36,7 @@ export function OnboardingGuide({ userId, replay }: { userId: string; replay: nu
   const [step, setStep] = useState(0);
   const [storageWarning, setStorageWarning] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
-  const storageKey = `gotore:onboarding:v1:${userId}`;
+  const storageKey = `gotore:onboarding:v2:${userId}`;
 
   useEffect(() => {
     if (replay > 0) {

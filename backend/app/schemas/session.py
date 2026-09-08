@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.domain.workout import WorkoutSet
 from app.schemas.training import MemberResponse, WorkoutMemoResponse, WorkoutResponse
@@ -9,6 +9,7 @@ from app.schemas.training import MemberResponse, WorkoutMemoResponse, WorkoutRes
 
 class SessionResponse(WorkoutResponse):
     started_at: datetime
+    best_updated: bool = Field(default=False, validation_alias="feed_best")
 
 
 class InvitePreview(BaseModel):
