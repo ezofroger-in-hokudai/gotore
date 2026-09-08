@@ -108,3 +108,5 @@ MOCK用の採点・自動反応・固定AIは今回の範囲に含めない。
 - [Psycopgのトランザクション](https://www.psycopg.org/psycopg3/docs/basic/transactions.html)
 - [Next.jsのホーム画面追加対応](https://nextjs.org/docs/app/guides/progressive-web-apps)
 - [Appleのホーム画面追加手順](https://support.apple.com/ja-jp/guide/iphone/iphea86e5236/ios)
+
+追加仕様: [グループ退出・除外](group-membership.md)に基づき、共有解除と本人履歴保持を採用する。

@@ -3,6 +3,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import AwareDatetime
 
 from app.api.dependencies import training_service
 from app.domain.identity import User
@@ -108,4 +109,23 @@ def delete_workout(
     workout_id: UUID, service: Service, expected_revision: Annotated[int, Query(ge=1)]
 ):
     service.delete_workout(workout_id, expected_revision)
+    return Response(status_code=204)
+
+
+@router.delete("/groups/{group_id}/membership", status_code=204)
+def leave_group(
+    group_id: UUID, expected_joined_at: Annotated[AwareDatetime, Query()], service: Service
+):
+    service.leave_group(group_id, expected_joined_at)
+    return Response(status_code=204)
+
+
+@router.delete("/groups/{group_id}/members/{member_id}", status_code=204)
+def remove_member(
+    group_id: UUID,
+    member_id: UUID,
+    expected_joined_at: Annotated[AwareDatetime, Query()],
+    service: Service,
+):
+    service.remove_member(group_id, member_id, expected_joined_at)
     return Response(status_code=204)

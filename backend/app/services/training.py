@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from uuid import UUID
 
 from app.domain.activity import month_bounds, validate_activity_date
@@ -61,3 +61,13 @@ class TrainingService:
 
     def delete_workout(self, workout_id: UUID, expected_revision: int):
         return self.repository.delete_workout(self.user.id, workout_id, expected_revision)
+
+    def leave_group(self, group_id: UUID, expected_joined_at: datetime):
+        return self.repository.end_membership(
+            self.user.id, group_id, self.user.id, expected_joined_at, owner_action=False
+        )
+
+    def remove_member(self, group_id: UUID, member_id: UUID, expected_joined_at: datetime):
+        return self.repository.end_membership(
+            self.user.id, group_id, member_id, expected_joined_at, owner_action=True
+        )

@@ -673,3 +673,80 @@ def test_renew_invite_retries_collisions_without_losing_current_code(client, mon
     response = client.post(endpoint, json={"expected_invite_code": available})
     assert response.status_code == 503
     assert client.get(f"/api/groups/{group['id']}").json()["invite_code"] == available
+
+
+
+def joined_at(client, group, user="B"):
+    members = client.get(f"/api/groups/{group['id']}").json()["members"]
+    return next(
+        member.get("joined_at", "2026-01-01T00:00:00Z")
+        for member in members
+        if member["id"] == str(USERS[user])
+    )
+
+
+@pytest.mark.parametrize("self_leave", [True, False])
+def test_departure_preserves_personal_history_and_rejoin_never_reshares(client, self_leave):
+    group = create_group(client)
+    other = create_group(client)
+    b = {"X-Test-User": "B"}
+    for target in [group, other]:
+        client.post("/api/groups/join", json={"invite_code": target["invite_code"]}, headers=b)
+    original = payload(group_id=group["id"])
+    shared = client.post("/api/workouts", json=original, headers=b).json()
+    personal = client.post("/api/workouts", json=payload(), headers=b).json()
+    other_record = client.post(
+        "/api/workouts", json=payload(group_id=other["id"]), headers=b
+    ).json()
+    owner_record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    suffix = "membership" if self_leave else f"members/{USERS['B']}"
+    path = f"/api/groups/{group['id']}/{suffix}"
+    params = {"expected_joined_at": joined_at(client, group)}
+    actor = b if self_leave else {}
+    assert client.delete(path, params=params, headers=actor).status_code == 204
+    assert client.delete(path, params=params, headers=actor).status_code == 204
+    assert client.get(f"/api/groups/{group['id']}", headers=b).status_code == 404
+    assert client.get(f"/api/groups/{group['id']}/workouts", headers=b).status_code == 404
+    assert (
+        client.post("/api/workouts", json=payload(group_id=group["id"]), headers=b).status_code
+        == 404
+    )
+    records = {record["id"]: record for record in client.get("/api/workouts", headers=b).json()}
+    assert records == {
+        shared["id"]: {**shared, "group_id": None},
+        personal["id"]: personal,
+        other_record["id"]: other_record,
+    }
+    assert client.get(f"/api/groups/{group['id']}/workouts").json() == [owner_record]
+    assert (
+        client.post(
+            "/api/groups/join", json={"invite_code": group["invite_code"]}, headers=b
+        ).status_code
+        == 200
+    )
+    assert client.delete(path, params=params, headers=actor).status_code == 409
+    assert client.post("/api/workouts", json=original, headers=b).status_code == 409
+    assert client.get(f"/api/groups/{group['id']}/workouts", headers=b).json() == [owner_record]
+    assert (
+        client.post("/api/workouts", json=payload(group_id=group["id"]), headers=b).status_code
+        == 201
+    )
+
+
+def test_membership_changes_require_owner_or_self_and_reject_bad_dates(client):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    params = {"expected_joined_at": joined_at(client, group)}
+    path = f"/api/groups/{group['id']}/members/{USERS['B']}"
+    for actor in ["B", "C"]:
+        assert client.delete(path, params=params, headers={"X-Test-User": actor}).status_code == 404
+    for suffix in ["membership", f"members/{USERS['A']}"]:
+        assert (
+            client.delete(f"/api/groups/{group['id']}/{suffix}", params=params).status_code == 409
+        )
+    for value in ["invalid", "2026-01-01"]:
+        assert client.delete(path, params={"expected_joined_at": value}).status_code == 422
+    assert client.delete(path).status_code == 422
+    assert len(client.get(f"/api/groups/{group['id']}").json()["members"]) == 2

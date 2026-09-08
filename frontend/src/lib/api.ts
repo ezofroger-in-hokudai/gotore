@@ -10,7 +10,9 @@ export type MonthlyActivity = {
 };
 
 export type Group = { id: string; name: string; owner_id: string; invite_code: string };
-export type GroupDetail = Group & { members: { id: string; display_name: string }[] };
+export type GroupDetail = Group & {
+  members: { id: string; display_name: string; joined_at: string }[];
+};
 export type ExerciseOption = { id: string; name: string };
 export type Exercise = { name: string; sets: { weight: number; reps: number }[] };
 export type Workout = {

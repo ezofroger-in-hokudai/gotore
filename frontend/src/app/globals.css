@@ -905,3 +905,24 @@ fieldset {
   gap: 12px;
   align-items: center;
 }
+
+
+.membership-list {
+  margin-bottom: 16px;
+}
+.membership-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+  overflow-wrap: anywhere;
+}
+.membership-confirm {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
