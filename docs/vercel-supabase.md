@@ -56,7 +56,7 @@ Config／Secretと反映タイミングは [Vercel環境変数](https://vercel.c
 
 - テスト中は [管理者登録ガイド](admin-managed-accounts.md) に従い、一般登録を禁止して確認済みアカウントを発行する。公開プロジェクトの設定は管理者が行う。
 - 公開用のSupabaseプロジェクトを用意する。ローカルDBのテストアカウントや記録は自動移行しない。
-- 対象プロジェクトと既存テーブルを確認したうえで、リポジトリのmigrationを適用する。既存データを消す `db reset` は本番へ実行しない。今回はリモートDB操作を行っていない。
+- 対象プロジェクトと既存テーブルを確認したうえで、リポジトリのmigrationを適用する。既存データを消す `db reset` は本番へ実行しない。今回はリモートDB操作を行っていない。具体的な履歴確認・dry-run・適用は [共有DBへの適用手順](../supabase/README.md#共有dbへの適用担当者向け) を参照する。Vercelのbuildや現在のCIはクラウドDBへのmigrationを自動適用しない。
 - Connect画面でTransaction Poolerの接続先を取得し、`DATABASE_URL` に設定する。例のホスト名をそのまま使わない。パスワードの特殊文字はURLエンコードし、`sslmode=require` を指定する。
 - APIは直接SQL接続で認可を実施する。ローカル同様、migrationのテーブルを操作でき、RLSで一律拒否されない信頼済みサーバー用DBロールで接続する。ブラウザへ接続文字列を渡さない。
 - AuthのSite URLと許可するRedirect URLを公開URLに合わせる。登録確認メールを使う場合は送信元・SMTPも設定する。

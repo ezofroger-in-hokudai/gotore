@@ -326,3 +326,34 @@
 - 検証結果: make check成功（backend69件・frontend11件・lint・本番build）。git diff --checkを確認。新機能は追加していないため先行テストは新設せず、既存の回帰で確認した。
 - 未解決事項: ローカルDockerは停止中のため実Supabase共有E2EはCIのmake test-e2eで再確認する。
 - 次のアクション: 解消をpushしPR #34の最新CIを確認する。mainへのマージと本番操作は行わない。
+
+## 2026-09-08 01:09 JST
+
+- 変更内容: ユーザーの追加依頼を受け、origin/main（eeed08e）から開発手順整備の専用ブランチを作成した。README・関連docs・環境変数の読み込みコード・migration・既存テスト・CIを確認し、初回／日常／DB変更／公開反映の手順を整理する。
+- 目的: pull後のDB更新や環境変数変更で迷わず、通常の開発でresetに頼らず進められるようにする。
+- 影響範囲: 開発用文書、環境変数サンプルの説明、Makefileのローカルmigration用コマンド。アプリの仕様・実環境ファイル・既存データは変更しない。
+- 関連ファイル: README.md、CONTRIBUTING.md、Makefile、各.env.example、supabase/README.md、docs/README.md、task.md。週次計画 #33 への追加作業としてPRに紐付ける。種目・ヒートマップの既存PRは独立してレビュー待ち。
+- テスト方針: 文書・サンプルコメント・既存CLIへの薄いMakeターゲット追加のため、アプリの失敗テストは先に書かない。固定CLI 2.107.0のhelp、makeの展開・引数受け渡し、文書リンクと環境変数定義の整合性、git diff --checkで検証する。
+- 未解決事項: これから手順を反映・検証する。CLI helpの初回実行はsandboxによるCLI設定ディレクトリへの書き込み制限で失敗したため、権限付きで再実行してオプションを確認した。DBへの適用・reset・クラウド操作は行っていない。
+- 次のアクション: 手順・サンプル・共通コマンドを整備して検証結果を記録し、commit・push・main向けPRを作成する。
+
+## 2026-09-08 01:16 JST
+
+- 変更内容: READMEに初回準備・ログイン・pull後の更新・停止・PR・環境変数の読み込み先と反映方法・migration・検証・トラブル対処を整理した。3つの環境変数サンプルに用途を追記し、supabase/README.mdへSQLの作成／追加適用／再構築／履歴ずれ／共有DB反映を記載した。make db-migrationsとmake db-migrateを追加し、CIの一時DBでも実行するようにした。
+- 目的: 開発参加時と日々の更新で必要な操作がREADMEから辿れ、通常適用とデータを削除するreset、ローカルと共有環境を区別できるようにする。
+- 影響範囲: 文書・サンプルコメント・Makefile・CI。新しいアプリ環境変数・依存・migration SQLは追加していない。
+- 関連ファイル: README.md、CONTRIBUTING.md、backend/README.md、frontend/README.md、supabase/README.md、docs/README.md、docs/vercel-supabase.md、各環境変数サンプル、Makefile、.github/workflows/ci.yml、task.md。
+- 確認結果: ローカルリンク・見出しアンカー65件とbashブロックの構文、文書内のmakeターゲット、追加2ターゲットの固定CLI・--local展開とCLI上書き時の引数を確認した。サンプルの全変数名を設定クラス・Next.js・READMEと照合。実.envのGit除外も確認した。既存のconfigure_local.pyを一時ディレクトリへコピーし、仮のCLI出力のみで新規生成・0600・既存内容保持・値の非表示・非ローカル接続先拒否を確認した。git diff --check成功。
+- 検証上の補足: 文書検査の初回は検査用の正規表現がtest-e2eの数字を扱えず失敗したため、検査側を修正して成功した。資料一覧からのPDF2件・画像1件は元から未追跡で、独立worktreeには存在しない既存リンクとして区別した。今回追加・変更したリンクに欠落はない。元の作業場所の生成差分・資料・実.envは変更していない。
+- 未解決事項: Docker daemonが停止しているためローカルSupabaseでの実行は未実施。DB操作を伴わない検証範囲は完了しており、追加コマンドと既存機能の実DB・E2E検証はPRのCIで確認する。実クラウドへのlink・migration・設定変更・デプロイは行っていない。
+- 次のアクション: commit・push・main向けPRを作成し、CI結果とレビューを確認する。週次計画 #33 への追加理由はユーザーの開発手順整備依頼であり、既存機能の受け入れ条件は変更しない。
+
+## 2026-09-08 01:18 JST
+
+- 変更内容: 開発手順整備をコミット08d530eとしてpushし、main向けPR #37を作成した。task.mdへ共有先を記録した。
+- 目的: 整備したREADME・環境変数・migration手順と検証結果をチームがレビューできる状態にする。
+- 影響範囲: docs/development-setupの共有と記録更新。mainへのマージ・リモートDB操作は行っていない。
+- 関連ファイル: task.md、progress.md、PR https://github.com/ezofroger-in-hokudai/gotore/pull/37 。
+- 確認結果: push成功、PRは競合なし。GitHubのbackend・frontend・databaseとVercelのチェック開始を確認した。元の作業場所のnext-env.d.ts差分・未追跡資料を保持し、実環境ファイルは含めていない。今回は記録だけの変更であり、git diff --checkを確認する。
+- 未解決事項: リモートCIの最終結果と第三者レビュー。ローカルDocker停止により未実施の実DB検証はCIで補完し、結果をPRに記載する。
+- 次のアクション: 最新コミットのCI完了を確認してPRの検証結果を更新する。失敗時は原因を調査・修正する。統合はレビュー後に行う。
