@@ -19,6 +19,7 @@ type View = "home" | "records" | "groups" | "workout" | "settings";
 function Workspace({ session }: { session: Session }) {
   const [guideReplay, setGuideReplay] = useState(0);
   const [editing, setEditing] = useState<Workout | null>(null);
+  const [source, setSource] = useState<Workout | null>(null);
   const [view, setView] = useState<View>("home");
   const [groupId, setGroupId] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -48,6 +49,7 @@ function Workspace({ session }: { session: Session }) {
 
   function navigate(next: View) {
     setEditing(null);
+    setSource(null);
     setView(next);
     setPage(0);
     setSelectedDate("");
@@ -63,6 +65,7 @@ function Workspace({ session }: { session: Session }) {
   }
   function saved(workout: Workout) {
     setSelectedDate("");
+    setSource(null);
     setRefreshKey((value) => value + 1);
     setPage(0);
     if (editing) {
@@ -122,6 +125,7 @@ function Workspace({ session }: { session: Session }) {
           <WorkoutForm
             key={editing?.id ?? "new"}
             editing={editing}
+            source={source}
             groups={groups}
             selectedGroup={activeId}
             userId={session.user.id}
@@ -251,6 +255,17 @@ function Workspace({ session }: { session: Session }) {
                       view === "records"
                         ? (record) => {
                             setEditing(record);
+                            setSource(null);
+                            setNotice("");
+                            setView("workout");
+                          }
+                        : undefined
+                    }
+                    onReuse={
+                      view === "records"
+                        ? (record) => {
+                            setSource(record);
+                            setEditing(null);
                             setNotice("");
                             setView("workout");
                           }

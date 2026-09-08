@@ -62,3 +62,35 @@ test("編集入力を作っても保存済み記録を変更せず、行キー�
   first.exercises[0].sets[0].weight = "100";
   assert.equal(record.exercises[0].sets[0].weight, 90);
 });
+
+test("再利用は新規IDと今日の日付・非共有の下書きにし、元の実績を変更しない", async () => {
+  const { reuseDraft, today } = await import("../../src/features/training/draft");
+  const record = {
+    id: "old",
+    user_id: "user",
+    display_name: "本人",
+    group_id: "old-group",
+    performed_on: "2026-01-01",
+    created_at: "2026-01-01T00:00:00Z",
+    exercises: [
+      {
+        name: "スクワット",
+        sets: [
+          { weight: 80.5, reps: 8 },
+          { weight: 0, reps: 10 },
+        ],
+      },
+    ],
+  };
+  const first = reuseDraft(record);
+  const second = reuseDraft(record);
+  assert.notEqual(first.id, record.id);
+  assert.notEqual(first.id, second.id);
+  assert.equal(first.performed_on, today());
+  assert.equal(first.group_id, "");
+  assert.notEqual(first.exercises[0].key, second.exercises[0].key);
+  assert.notEqual(first.exercises[0].sets[0].key, first.exercises[0].sets[1].key);
+  assert.deepEqual(workoutPayload(first).exercises, record.exercises);
+  first.exercises[0].sets[0].weight = "90";
+  assert.equal(record.exercises[0].sets[0].weight, 80.5);
+});

@@ -118,3 +118,20 @@ export function editDraft(record: Workout): Draft {
     })),
   };
 }
+
+export function reuseDraft(record: Pick<Workout, "exercises">): Draft {
+  return {
+    id: crypto.randomUUID(),
+    performed_on: today(),
+    group_id: "",
+    exercises: record.exercises.map((exercise) => ({
+      key: crypto.randomUUID(),
+      name: exercise.name,
+      sets: exercise.sets.map((set) => ({
+        key: crypto.randomUUID(),
+        weight: String(set.weight),
+        reps: String(set.reps),
+      })),
+    })),
+  };
+}

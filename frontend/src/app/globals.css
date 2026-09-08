@@ -926,3 +926,15 @@ fieldset {
   border: 1px solid var(--line);
   border-radius: 12px;
 }
+
+
+.reuse-workout {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.reuse-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

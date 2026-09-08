@@ -47,3 +47,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 元のPDFを暗黙に読み替えません。新しい文書の追加・適用範囲の確定に合わせて、この一覧も更新します。
 
 - [group-membership.md](group-membership.md): グループ退出・除外と本人履歴保持。
+
+- [workout-reuse.md](workout-reuse.md): 本人の過去記録を新規下書きへコピー。

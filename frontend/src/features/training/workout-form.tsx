@@ -10,6 +10,7 @@ import {
   newExercise,
   newSet,
   readDraft,
+  reuseDraft,
   today,
   workoutPayload,
 } from "./draft";
@@ -22,8 +23,10 @@ export function WorkoutForm({
   onSaved,
   onBack,
   editing,
+  source,
 }: {
   editing?: Workout | null;
+  source?: Workout | null;
   groups: Group[];
   selectedGroup: string;
   userId: string;
@@ -51,13 +54,17 @@ export function WorkoutForm({
       setDraft(editDraft(editing));
       return;
     }
+    if (source) {
+      setDraft(reuseDraft(source));
+      return;
+    }
     try {
       setDraft(readDraft(localStorage.getItem(storageKey)) ?? newDraft(selectedGroup));
     } catch {
       setDraft(newDraft(selectedGroup));
       setStorageWarning(true);
     }
-  }, [storageKey, selectedGroup, editing]);
+  }, [storageKey, selectedGroup, editing, source]);
 
   useEffect(() => {
     if (!draft || editing) return;
@@ -194,6 +201,7 @@ export function WorkoutForm({
         </p>
       )}
       <p className="muted">ひとつずつ、その頑張りを記録しよう。</p>
+      {source && <p className="notice">{source.performed_on}の記録をコピーしました。</p>}
       <p className="muted">Enterで次の入力へ。最後の回数欄ではセットを追加します。</p>
       <p className="muted">重量の薄い数字は前セットの値です。空欄でEnterを押すと採用します。</p>
       <p className="muted">

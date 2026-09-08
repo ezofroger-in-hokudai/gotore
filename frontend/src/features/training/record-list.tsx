@@ -1,16 +1,19 @@
 import type { Workout } from "@/lib/api";
+import { ReuseWorkout } from "./reuse-workout";
 import { WorkoutActions } from "./workout-actions";
 
 export function RecordList({
   records,
   userId,
   empty,
+  onReuse,
   onEdit,
   onDeleted,
 }: {
   records: Workout[];
   userId: string;
   empty: string;
+  onReuse?: (record: Workout) => void;
   onEdit?: (record: Workout) => void;
   onDeleted?: () => void;
 }) {
@@ -74,6 +77,7 @@ export function RecordList({
               保存
             </time>
           </div>
+          {record.user_id === userId && onReuse && (<ReuseWorkout record={record} onReuse={onReuse} />)}
           {record.user_id === userId && onEdit && onDeleted && (
             <WorkoutActions record={record} onEdit={onEdit} onDeleted={onDeleted} />
           )}
