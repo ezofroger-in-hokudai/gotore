@@ -1,4 +1,5 @@
 import { type Page, expect } from "@playwright/test";
+import type { TrainingSession } from "../../src/lib/api";
 
 // UI単独の検証用。実際の認証・DB・共有検証はsharing.spec.tsで行う。
 export async function mockTraining(page: Page, owner = true, showGuide = false) {
@@ -31,6 +32,10 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     failOptionWrite: false,
     authUpdates: 0,
     syncs: 0,
+    session: null as TrainingSession | null,
+    finished: [] as TrainingSession[],
+    failSave: false,
+    saves: 0,
   };
   await page.route("**/auth/v1/**", async (route) => {
     if (route.request().method() === "PUT") {
@@ -55,6 +60,123 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
   });
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
+    if (path === "/api/sessions/active") return route.fulfill({ json: state.session });
+    if (path === "/api/sessions") {
+      state.session ??= {
+        id: route.request().postDataJSON().id,
+        user_id: user.id,
+        display_name: user.user_metadata.display_name,
+        group_id: null,
+        shared_group_ids: [group.id],
+        exercises: [],
+        revision: 1,
+        performed_on: new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(
+          new Date(),
+        ),
+        created_at: new Date().toISOString(),
+        started_at: new Date().toISOString(),
+        ended_at: null,
+      };
+      return route.fulfill({ status: 201, json: state.session });
+    }
+    if (path.startsWith("/api/sessions/")) {
+      if (path.endsWith("/heartbeat")) return route.fulfill({ status: 204 });
+      if (!state.session) return route.fulfill({ status: 409, json: { detail: "終了済み" } });
+      const body = route.request().postDataJSON();
+      if (state.failSave) return route.abort();
+      if (body.expected_revision !== state.session.revision)
+        return route.fulfill({
+          status: 409,
+          json: { detail: "別の更新があります。保存済みを読み直してください" },
+        });
+      if (path.endsWith("/finish")) {
+        const ended = {
+          ...state.session,
+          revision: state.session.revision + 1,
+          ended_at: new Date().toISOString(),
+        };
+        state.finished.push(ended);
+        state.session = null;
+        return route.fulfill({ json: ended });
+      }
+      state.saves++;
+      const before = state.session.exercises.flatMap((exercise) => exercise.sets);
+      const after = (body.exercises as TrainingSession["exercises"]).flatMap(
+        (exercise) => exercise.sets,
+      );
+      const latest = after.at(-1);
+      const bestUpdated =
+        after.length === before.length + 1 &&
+        !!latest &&
+        latest.weight > Math.max(80, ...before.map((value) => value.weight));
+      state.session = {
+        ...state.session,
+        exercises: body.exercises,
+        best_updated: bestUpdated,
+        revision: state.session.revision + 1,
+      };
+      return route.fulfill({ json: state.session });
+    }
+    if (path === "/api/exercises/context")
+      return route.fulfill({
+        json: {
+          best_weight: 80,
+          best_rm: 101.3,
+          previous: {
+            id: "previous",
+            performed_on: "2026-01-01",
+            sets: [
+              { weight: 80, reps: 8 },
+              { weight: 75, reps: 10 },
+            ],
+          },
+          memo: { content: "", revision: 0 },
+        },
+      });
+    if (path === "/api/exercises/memo")
+      return route.fulfill({
+        json: { content: route.request().postDataJSON().content, revision: 1 },
+      });
+    if (path.endsWith("/memo")) return route.fulfill({ json: { content: "", revision: 0 } });
+    if (path === `/api/groups/${group.id}/activity`) {
+      const latest = state.session?.exercises.length ? state.session : state.finished.at(-1);
+      const exercise = latest?.exercises.at(-1);
+      const value = exercise?.sets.at(-1);
+      return route.fulfill({
+        json: {
+          group_id: group.id,
+          member_count: 1,
+          live_count: state.session ? 1 : 0,
+          today_count: state.session || state.finished.length ? 1 : 0,
+          members: [
+            {
+              id: user.id,
+              display_name: user.user_metadata.display_name,
+              live: !!state.session,
+              today: !!state.session || !!state.finished.length,
+            },
+          ],
+          feed:
+            value && latest && exercise
+              ? [
+                  {
+                    workout_id: latest.id,
+                    user_id: user.id,
+                    display_name: user.user_metadata.display_name,
+                    exercise: exercise.name,
+                    ...value,
+                    estimated_rm: null,
+                    updated_at: latest.created_at,
+                    best: false,
+                  },
+                ]
+              : [],
+        },
+      });
+    }
+    if (path === "/api/groups/preview")
+      return route.fulfill({ json: { ...group, member_count: 1, already_member: false } });
+    if (path === "/api/groups/join") return route.fulfill({ json: group });
     if (path === "/api/exercise-options") {
       if (route.request().method() === "POST") {
         if (state.failOptionWrite) return route.abort();
@@ -117,12 +239,15 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
           days: [],
         },
       });
-    if (path.endsWith("/workouts")) return route.fulfill({ json: [] });
+    if (path.endsWith("/workouts"))
+      return route.fulfill({
+        json: [...(state.session?.exercises.length ? [state.session] : []), ...state.finished],
+      });
     return route.fulfill({ status: 404, json: { detail: "UIテスト対象外" } });
   });
   if (!showGuide)
     await page.addInitScript(
-      (id) => localStorage.setItem(`gotore:onboarding:v1:${id}`, "seen"),
+      (id) => localStorage.setItem(`gotore:onboarding:v2:${id}`, "seen"),
       user.id,
     );
   await page.goto("/");
@@ -131,4 +256,27 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page.getByRole("navigation")).toBeVisible();
   return state;
+}
+
+export async function navigate(page: Page, name: string) {
+  await page.getByRole("navigation").getByRole("button", { name, exact: true }).click();
+}
+export async function startTraining(page: Page, name = "ベンチプレス") {
+  await navigate(page, "記録");
+  await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
+  await page.getByRole("button", { name: new RegExp(`^${name}`) }).click();
+}
+export async function openGroup(page: Page, destination?: "members" | "invite" | "manage") {
+  await navigate(page, "ホーム");
+  await page
+    .getByRole("button", { name: /の詳細$/ })
+    .first()
+    .click();
+  if (destination === "members") await page.getByRole("button", { name: /^メンバー一覧/ }).click();
+  if (destination === "invite") await page.getByRole("button", { name: /^メンバーを招待/ }).click();
+  if (destination === "manage") await page.getByText("グループを管理", { exact: true }).click();
+}
+export async function openRecord(page: Page) {
+  await navigate(page, "履歴");
+  await page.locator(".history-row").first().click();
 }

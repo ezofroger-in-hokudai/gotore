@@ -24,6 +24,39 @@ export type Workout = {
   exercises: Exercise[];
   created_at: string;
   revision: number;
+  started_at?: string | null;
+  ended_at?: string | null;
+  shared_group_ids?: string[];
+};
+
+export type TrainingSession = Workout & {
+  started_at: string;
+  ended_at: string | null;
+  best_updated?: boolean;
+};
+export type ExerciseContext = {
+  best_weight: number | null;
+  best_rm: number | null;
+  previous: { id: string; performed_on: string; sets: Exercise["sets"] } | null;
+  memo: { content: string; revision: number };
+};
+export type GroupActivity = {
+  group_id: string;
+  member_count: number;
+  live_count: number;
+  today_count: number;
+  members: { id: string; display_name: string; live: boolean; today: boolean }[];
+  feed: {
+    workout_id: string;
+    user_id: string;
+    display_name: string;
+    exercise: string;
+    weight: number;
+    reps: number;
+    estimated_rm: number | null;
+    updated_at: string;
+    best: boolean;
+  }[];
 };
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {

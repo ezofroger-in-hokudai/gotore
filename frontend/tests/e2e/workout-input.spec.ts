@@ -1,61 +1,109 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining } from "./mock-training";
+import { mockTraining, navigate, startTraining } from "./mock-training";
 
-test("Enterで入力を進め、未確定の記録を送信せず下書きを保持する", async ({ page }) => {
-  await mockTraining(page);
-  await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
-  let submissions = 0;
-  await page.route("**/api/workouts", (route) => {
-    if (route.request().method() === "POST") submissions++;
-    return route.fulfill({
-      status: 500,
-      json: { detail: "入力テストでは保存しない" },
-    });
-  });
-  await page.getByLabel("種目名", { exact: true }).selectOption({ label: "スクワット" });
-  const weight = page.getByLabel("種目1 セット1 重量", { exact: true });
-  const reps = page.getByLabel("種目1 セット1 回数", { exact: true });
+test("未保存入力と保存済みセットをタブ切替・再起動後も復元し、明示終了する", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page, "スクワット");
+  const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
+  const reps = page.getByRole("spinbutton", { name: "回数", exact: true });
   await weight.fill("60.5");
-  await weight.press("Enter");
-  await expect(reps).toBeFocused();
   await reps.fill("8");
-  await reps.dispatchEvent("keydown", { key: "Enter", isComposing: true });
-  await expect(page.getByLabel("種目1 セット2 重量", { exact: true })).toHaveCount(0);
-  await reps.press("Enter");
-  const nextWeight = page.getByLabel("種目1 セット2 重量", { exact: true });
-  await expect(nextWeight).toBeFocused();
-  await expect(nextWeight).toHaveValue("");
-  await expect(nextWeight).toHaveAttribute("placeholder", "60.5");
-  await expect(page.getByLabel("種目1 セット2 回数", { exact: true })).toHaveValue("");
-  await nextWeight.press("Enter");
-  await expect(nextWeight).toHaveValue("60.5");
-  await expect(page.getByLabel("種目1 セット2 回数", { exact: true })).toBeFocused();
-  await reps.press("Enter");
-  await expect(nextWeight).toBeFocused();
-  await expect(page.getByLabel("種目1 セット3 重量", { exact: true })).toHaveCount(0);
-  await nextWeight.dispatchEvent("keydown", { key: "Enter", repeat: true });
-  await expect(nextWeight).toBeFocused();
-  await nextWeight.fill("1001");
-  await nextWeight.press("Enter");
-  await expect(nextWeight).toBeFocused();
-  await nextWeight.fill("60");
-  await page.getByRole("button", { name: "← 戻る", exact: true }).click();
+  await navigate(page, "ホーム");
+  expect(state.saves).toBe(0);
   await page.reload();
-  await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
-  await expect(nextWeight).toHaveValue("60");
-  await page.screenshot({
-    path: "test-results/workout-input-mobile.png",
-    fullPage: true,
-  });
-  for (let count = 2; count < 30; count++) {
-    await page.getByRole("button", { name: "＋ セット", exact: true }).click();
+  await navigate(page, "記録");
+  await expect(weight).toHaveValue("60.5");
+  state.failSave = true;
+  await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
+  await expect(page.locator(".v2-app").getByRole("alert").first()).toContainText("通信できません");
+  await expect(weight).toHaveValue("60.5");
+  state.failSave = false;
+  await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
+  await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
+  expect(state.session?.exercises[0].sets).toEqual([{ weight: 60.5, reps: 8 }]);
+  await navigate(page, "ホーム");
+  await expect(page.getByRole("article")).toContainText("60.5");
+  await page.reload();
+  await navigate(page, "記録");
+  await expect(page.getByRole("button", { name: "セット1を編集", exact: true })).toContainText(
+    "60.5",
+  );
+  await page.getByRole("button", { name: "トレーニングを終了", exact: true }).click();
+  await page.getByRole("button", { name: "終了する", exact: true }).click();
+  await expect(page.getByText("トレーニングを終了しました。", { exact: true })).toBeVisible();
+  expect(state.session).toBeNull();
+  expect(state.finished).toHaveLength(1);
+});
+
+test("ホイール・直接入力・行編集・取消を区別し、BESTとRMを表示する", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
+  await weight.fill("80");
+  await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("8");
+  await page.getByRole("button", { name: "重量を増やす", exact: true }).click();
+  await expect(weight).toHaveValue("82.5");
+  await expect(page.getByText("BEST更新候補", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
+  await expect(page.getByText("BEST更新！ 保存しました", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
+  await weight.fill("70");
+  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+  expect(state.session?.exercises[0].sets[0].weight).toBe(82.5);
+  await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
+  await weight.fill("75");
+  await page.getByRole("button", { name: "変更を保存", exact: true }).click();
+  expect(state.session?.exercises[0].sets).toHaveLength(1);
+  await page.getByRole("button", { name: "直前の保存を取り消す", exact: true }).click();
+  await expect(page.getByText("直前の保存を取り消しました", { exact: true })).toBeVisible();
+  expect(state.session?.exercises[0].sets[0].weight).toBe(82.5);
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({ path: `test-results/v2-record-${width}.png`, fullPage: true });
   }
-  const lastReps = page.getByLabel("種目1 セット30 回数", { exact: true });
-  await page.getByLabel("種目1 セット30 重量", { exact: true }).fill("60");
-  await lastReps.fill("10");
-  await lastReps.press("Enter");
-  await expect(page.getByRole("button", { name: "＋ セット", exact: true })).toBeDisabled();
-  await expect(page.getByLabel("種目1 セット31 重量", { exact: true })).toHaveCount(0);
-  expect(submissions).toBe(0);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("保存応答を失ったまま再起動しても二重追加せず、古い編集を上書きしない", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("80");
+  await page.route(
+    "**/api/sessions/*",
+    (route) => {
+      if (route.request().method() !== "PATCH") return route.fallback();
+      const body = route.request().postDataJSON();
+      if (state.session)
+        state.session = {
+          ...state.session,
+          exercises: body.exercises,
+          revision: state.session.revision + 1,
+        };
+      return route.abort();
+    },
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "このセットを保存", exact: true }).click();
+  await expect(page.locator(".v2-app").getByRole("alert").first()).toContainText("通信できません");
+  await page.reload();
+  await navigate(page, "記録");
+  await expect(page.getByText("前回の保存を確認しました", { exact: true })).toBeVisible();
+  expect(state.session?.exercises[0].sets).toHaveLength(1);
+  await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
+  await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("82.5");
+  if (state.session)
+    state.session = {
+      ...state.session,
+      revision: state.session.revision + 1,
+      exercises: [{ name: "ベンチプレス", sets: [{ weight: 85, reps: 10 }] }],
+    };
+  await page.reload();
+  await navigate(page, "記録");
+  await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("82.5");
+  await expect(page.getByRole("button", { name: "変更を保存", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
+  await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("85");
+  await expect(page.getByRole("button", { name: "変更を保存", exact: true })).toBeEnabled();
 });

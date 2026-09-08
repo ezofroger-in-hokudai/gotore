@@ -1,17 +1,19 @@
 # 現在のシステム
 
-更新日: 2026-09-08。実装Issue: [#1](https://github.com/ezofroger-in-hokudai/gotore/issues/1)。
+更新日: 2026-09-09（v2実装ブランチ）。実装Issue: [#1](https://github.com/ezofroger-in-hokudai/gotore/issues/1)。
 初版の完成ラインはユーザー指定の「グループ作成・記録・記録共有」です。
 仕様とMOCK資料からの変更点は [standard-v0.1-scope.md](standard-v0.1-scope.md)、検証結果は [progress.md](../progress.md) を参照してください。
+
+v2の画面・共有・セッションの規則は [gotore-v2-spec.md](gotore-v2-spec.md) を優先します。開始時の全所属グループ共有、終了ボタンによるセッション確定、サーバーからの再開、LIVE/TODAY、前回比較・BEST・種目メモを追加しています。本番へは未反映です。
 
 ## 実装した機能
 
 | 機能 | 動作 | 主な配置先 |
 | --- | --- | --- |
 | アカウント | 管理者発行、ログイン・ログアウト。設定で本人の表示名を取得・変更・同期。Auth未設定時はDBの既存名を保持（#29）。APIがトークンと認証設定の形式を検証 | frontend/src/features/settings/、auth-panel.tsx、backend/app/api/dependencies.py |
-| グループ | 作成・招待参加・一覧・メンバー表示。名称変更・招待コード再発行・退出・メンバー除外。退出・除外後は本人の履歴を残して共有解除 | group-panel.tsx、group-name-form.tsx、backend/app/services/training.py |
-| 記録 | 本人用の種目リストから選択し、候補の追加・削除も可能（#28）。日付・種目・重量・回数・セットをDB保存。Enterで次の入力へ移動し、空欄で前重量を採用。下書きを同じブラウザで復元 | workout-form.tsx、backend/app/domain/workout.py |
-| 共有 | 保存時に選んだグループだけへ共有。メンバー限定の一覧 | backend/app/infrastructure/training_repository.py、record-list.tsx |
+| グループ | 作成・招待参加・一覧・メンバー表示。名称変更・招待コード再発行・退出・メンバー除外。退出・除外後は本人の履歴を残して共有解除 | features/v2/community.tsx、group-name-form.tsx、backend/app/services/training.py |
+| 記録 | 本人用の種目リストから選択し、候補の追加・削除も可能（#28）。v2では1セットずつDB保存。ホイール・直接入力・前回比較・RM・BEST・種目メモ。明示終了まで継続し、未保存入力は同じ端末で復元。旧記録の編集フォームは維持 | features/session/、workout-form.tsx、backend/app/domain/session.py |
+| 共有 | v2は開始時の全所属グループへ保存済みセットを共有。旧記録の共有範囲は維持。メンバー限定のLIVE/TODAYと最新記録 | backend/app/infrastructure/training_repository.py、record-list.tsx |
 | 自分の記録 | 本人の編集・削除・コピー・非共有メモ。日別セット数の月間ヒートマップと日付タップによる絞り込み。実記録を50件ずつ閲覧 | frontend/src/features/activity/、training/training-app.tsx |
 | 使い方 | 初回ガイドと設定からの再表示。通常画面は短い文言へ統一（#48） | frontend/src/features/onboarding/ |
 | ホーム画面起動 | Web manifest、standalone設定、PNGアイコン、安全領域。オンライン利用が前提 | frontend/src/app/manifest.ts、apple-icon.tsx、layout.tsx |
@@ -39,10 +41,19 @@ SCORE、AI、ランキング、スタンプ、コメント、Push通知、詳細
 今週追加するものは、初版を使って確認した結果からIssueにします。
 GitHubのmain保護・レビュー必須設定は、管理者が設定状況を確認してください。
 
-#35（親#14）の追加仕様は [activity-heatmap.md](activity-heatmap.md)。表示する指標はセット数で、SCORE・BEST・種目別推移は後続。新しいmigrationは不要。検証・PRの状態はprogress.mdと週次計画#33で追跡する。
+#35（親#14）の追加仕様は [activity-heatmap.md](activity-heatmap.md)。表示する指標はセット数で、当時はSCORE・BEST・種目別推移を後続とした。v2ではBESTを追加し、SCORE・種目別推移は後続。ヒートマップ単独の追加migrationは不要。検証・PRの状態はprogress.mdと週次計画#33で追跡する。
 
 #28の追加仕様は [exercise-options.md](exercise-options.md)。公開前に追加migrationを適用する。候補を削除しても過去記録・下書きは保持する。検証とPRはprogress.md・週次計画#33で追跡する。
 
 2026-09-08の追加実装と残る条件は[Issue確認記録](issue-review-2026-09-08.md)にまとめています。#48の統合PRは上表の機能を含みます。マージ・CIの確定結果はGitHubとprogress.mdを参照してください。
 
 追加migrationは種目リスト・記録revision/削除済みID・本人メモの3件です。公開DBへの適用はAPI更新前に行います。今回の統合で本番DB操作は実施していません。
+
+## v2の適用手順
+
+1. `20260909040000_sessions.sql` をAPI更新前に適用する。ローカルは `make db-migrate`。既存データ・非共有範囲を維持する追加migrationで、DBリセットは不要。
+2. FastAPIとNext.jsを同じリリースで更新する。既存 `/workouts` APIは残し、進行中の記録更新には `/sessions/{id}` を使用する。
+3. 新規 `/sessions`、`/sessions/active`、`/sessions/{id}/finish`、`/sessions/{id}/heartbeat`、`/groups/{id}/activity`、`/groups/preview`、`/exercises/context`、`/exercises/memo` を使用する。OpenAPIに入出力を掲載。
+4. 専用 `_test` DBを指定した `make check` と、ローカルSupabase上の `make test-e2e` を実行する。通知は [#21](https://github.com/ezofroger-in-hokudai/gotore/issues/21) で後続対応する。
+
+開始中はDB上1人1件の制約、セットと終了はrevision照合・再送照合、共有は本人・所属の複合外部キー、退出/除外のcascadeで整合性を保つ。新しい3テーブルにもRLSを適用し、ブラウザからの直接操作は許可しない。

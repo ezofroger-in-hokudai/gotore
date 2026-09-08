@@ -14,6 +14,10 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 ## 開発用の文書
 
+- [GOTORE v2 実装仕様](gotore-v2-spec.md): 2026-09-09合意の全所属グループ共有、終了・復元、LIVE、記録・BEST・種目メモ。v2実装では旧業務仕様との差分を本書で適用する。
+- [GOTORE v2 引き継ぎ](gotore_v2/GOTORE_v2_Codex_handoff/gotore-v2-handoff/README.md): Figma確定版v2の画面・操作、全33状態、主要9画像、トークン、受け入れ条件。業務ルールには未決定事項を含む。
+- [GOTORE v2 整合性レビュー](gotore-v2-review.md): 現行仕様・実装との照合結果、試作遷移の差分、実装前に必要な判断と推奨案。提案は未承認で、既存業務仕様を上書きしない。
+
 - [design-system.md](design-system.md): スマホアプリを見据えた色・文字・余白・操作と共通部品の基準。[画面見本](design-preview.html)。
 
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。

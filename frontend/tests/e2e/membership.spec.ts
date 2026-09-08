@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining } from "./mock-training";
+import { mockTraining, navigate, openGroup, openRecord, startTraining } from "./mock-training";
 
 for (const owner of [true, false]) {
   test(owner
     ? "オーナーは対象者を確認して除外し、失敗時は再試行できる"
-    : "本人が退出し、過去の共有先を下書きから選び直せる", async ({ page }) => {
+    : "本人が退出しても進行中の入力を失わず記録を続けられる", async ({ page }) => {
     const { user, group } = await mockTraining(page, owner);
     const other = {
       id: "00000000-0000-0000-0000-000000000004",
@@ -29,18 +29,12 @@ for (const owner of [true, false]) {
       }
       if (new URL(request.url()).pathname === "/api/groups")
         return route.fulfill({ json: ended && !owner ? [] : [group] });
+      if (new URL(request.url()).pathname.endsWith("/activity")) return route.fallback();
       if (new URL(request.url()).pathname.endsWith("/workouts")) return route.fulfill({ json: [] });
       return route.fulfill({ json: { ...group, members: ended ? [self] : [self, other] } });
     });
-    if (!owner) {
-      await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
-      await page.getByLabel("種目名", { exact: true }).selectOption({ label: "スクワット" });
-      await page.getByRole("button", { name: "← 戻る", exact: true }).click();
-    }
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "グループ", exact: true })
-      .click();
+    if (!owner) await startTraining(page, "スクワット");
+    await openGroup(page, "members");
     const action = page.getByRole("button", {
       name: owner ? "合トレ仲間を除外" : "退出",
       exact: true,
@@ -73,12 +67,12 @@ for (const owner of [true, false]) {
       );
       await expect(page.getByRole("status").filter({ hasText: "除外しました" })).toBeVisible();
     } else {
-      await expect(page.getByRole("status").filter({ hasText: "退出しました" })).toBeVisible();
-      await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
-      await expect(page.getByLabel("種目名", { exact: true })).toHaveValue("スクワット");
-      await expect(page.getByRole("button", { name: "保存", exact: true })).toBeDisabled();
-      await page.getByRole("combobox", { name: "共有先", exact: true }).selectOption("");
-      await expect(page.getByRole("button", { name: "保存", exact: true })).toBeEnabled();
+      await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
+      await navigate(page, "記録");
+      await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "このセットを保存", exact: true }),
+      ).toBeEnabled();
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,

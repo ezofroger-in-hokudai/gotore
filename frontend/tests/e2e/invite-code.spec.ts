@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining } from "./mock-training";
+import { mockTraining, navigate, openGroup, openRecord, startTraining } from "./mock-training";
 
 test("オーナーは影響を確認して再発行でき、失敗時は再取得できる", async ({ page }, testInfo) => {
   const duplicateKeys: string[] = [];
@@ -16,7 +16,7 @@ test("オーナーは影響を確認して再発行でき、失敗時は再取�
     state.group.invite_code = "FEDCBA654321";
     return route.fulfill({ json: state.group });
   });
-  await page.getByRole("navigation").getByRole("button", { name: "グループ", exact: true }).click();
+  await openGroup(page, "invite");
   await page.getByRole("button", { name: "再発行", exact: true }).click();
   await expect(
     page.getByText("古いコードは無効になります。", {
@@ -49,7 +49,7 @@ test("オーナーは影響を確認して再発行でき、失敗時は再取�
 
 test("通常メンバーはコードを見られるが再発行できない", async ({ page }) => {
   await mockTraining(page, false);
-  await page.getByRole("navigation").getByRole("button", { name: "グループ", exact: true }).click();
+  await openGroup(page, "invite");
   await expect(page.getByTestId("invite-code")).toHaveText("ABCDEF123456");
   await expect(page.getByRole("button", { name: "再発行", exact: true })).toHaveCount(0);
 });

@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining } from "./mock-training";
+import { mockTraining, navigate, openRecord, startTraining } from "./mock-training";
 
 test("編集の競合・キャンセル・保存で新規下書きを保持し、削除を確認する", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const { user, group } = await mockTraining(page);
+  const state = await mockTraining(page);
+  const { user, group } = state;
   let record = {
     id: "00000000-0000-0000-0000-000000000010",
     user_id: user.id,
@@ -48,13 +49,10 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     }
     return route.fulfill({ json: removed ? [] : [record] });
   });
-  await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
-  await page.getByLabel("種目名", { exact: true }).selectOption({ label: "スクワット" });
-  await page.getByRole("button", { name: "← 戻る", exact: true }).click();
-  const draftKey = `gotore:draft:${user.id}`;
+  await startTraining(page, "スクワット");
+  const draftKey = `gotore:session-input:v2:${user.id}:${state.session?.id}`;
   const draft = await page.evaluate((key) => localStorage.getItem(key), draftKey);
-  const openRecords = () =>
-    page.getByRole("navigation").getByRole("button", { name: "自分の記録", exact: true }).click();
+  const openRecords = () => openRecord(page);
   await openRecords();
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "共有先", exact: true })).toBeDisabled();
@@ -86,7 +84,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await page.getByRole("button", { name: "削除する", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(0);
   expect(await page.evaluate((key) => localStorage.getItem(key), draftKey)).toBe(draft);
-  await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
-  await expect(page.getByLabel("種目名", { exact: true })).toHaveValue("スクワット");
+  await navigate(page, "記録");
+  await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

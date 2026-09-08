@@ -235,22 +235,34 @@ export function WorkoutForm({
                 onChange={(e) => change((d) => ({ ...d, performed_on: e.target.value }))}
               />
             </label>
-            <label>
-              共有先
-              <select
-                disabled={!!editing}
-                value={draft.group_id}
-                onChange={(e) => change((d) => ({ ...d, group_id: e.target.value }))}
-              >
-                <option value="">自分だけ</option>
-                {missingGroup && <option value={draft.group_id}>共有先を選び直してください</option>}
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {editing?.started_at ? (
+              <p className="muted">
+                共有先
+                <br />
+                {editing.shared_group_ids?.length
+                  ? `${editing.shared_group_ids.length}グループ（変更不可）`
+                  : "自分だけ"}
+              </p>
+            ) : (
+              <label>
+                共有先
+                <select
+                  disabled={!!editing}
+                  value={draft.group_id}
+                  onChange={(e) => change((d) => ({ ...d, group_id: e.target.value }))}
+                >
+                  <option value="">自分だけ</option>
+                  {missingGroup && (
+                    <option value={draft.group_id}>共有先を選び直してください</option>
+                  )}
+                  {groups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
           {draft.exercises.map((exercise, index) => (
             <div className="panel exercise" key={exercise.key}>

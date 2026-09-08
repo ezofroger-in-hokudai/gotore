@@ -11,7 +11,7 @@ export function ReuseWorkout({
     <div className="reuse-workout">
       {confirming ? (
         <>
-          <p>下書きをこの記録で置き換えますか？</p>
+          <p>この記録を今日のトレーニングへコピーしますか？</p>
 
           <div className="reuse-buttons">
             <button type="button" className="secondary" onClick={() => setConfirming(false)}>

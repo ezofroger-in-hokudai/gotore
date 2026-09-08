@@ -1,4 +1,5 @@
 import type { Workout } from "@/lib/api";
+import { estimatedRM } from "../session/session";
 import { ReuseWorkout } from "./reuse-workout";
 import { WorkoutActions } from "./workout-actions";
 
@@ -55,7 +56,7 @@ export function RecordList({
           <h3 className="exercise-summary">
             {record.exercises.map((exercise) => exercise.name).join(" / ")}
           </h3>
-          <details>
+          <details open={personal}>
             <summary>セット詳細</summary>
             <div className="record-details">
               {record.exercises.map((exercise, index) => (
@@ -66,7 +67,8 @@ export function RecordList({
                     <div className="record-set" key={`${index}-${setIndex}`}>
                       <span>SET {setIndex + 1}</span>
                       <strong>
-                        {set.weight} <small>kg</small> × {set.reps} <small>回</small>
+                        {set.weight} <small>kg</small> × {set.reps}{" "}
+                        <small>回 · RM {estimatedRM(set.weight, set.reps) ?? "—"}</small>
                       </strong>
                     </div>
                   ))}
@@ -75,7 +77,9 @@ export function RecordList({
             </div>
           </details>
           <div className="record-footer">
-            <span>{record.group_id ? "共有済み" : "自分だけ"}</span>
+            <span>
+              {record.group_id || record.shared_group_ids?.length ? "共有済み" : "自分だけ"}
+            </span>
             <time dateTime={record.created_at}>
               {savedAtFormatter.format(new Date(record.created_at))} 保存
             </time>
