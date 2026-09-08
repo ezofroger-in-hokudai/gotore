@@ -97,9 +97,9 @@ function Workspace({ session }: { session: Session }) {
               const result = await getSupabase()?.auth.signOut({
                 scope: "local",
               });
-              if (result?.error) setNotice("ログアウトできませんでした。再試行してください。");
+              if (result?.error) setNotice("ログアウトできません。再試行してください。");
             } catch {
-              setNotice("ログアウトできませんでした。接続を確認してください。");
+              setNotice("ログアウトできません。接続を確認してください。");
             } finally {
               setSigningOut(false);
             }
@@ -137,14 +137,12 @@ function Workspace({ session }: { session: Session }) {
           <>
             <SettingsPanel onSaved={() => setRefreshKey((value) => value + 1)} />
             <section className="panel">
-              <h2>使い方</h2>
-
               <button
                 className="secondary full"
                 type="button"
                 onClick={() => setGuideReplay((value) => value + 1)}
               >
-                使い方を見る
+                使い方
               </button>
             </section>
           </>
@@ -269,7 +267,7 @@ function Workspace({ session }: { session: Session }) {
                     personal={view === "records"}
                     records={records.data}
                     userId={session.user.id}
-                    empty={view === "home" ? "" : selectedDate ? "この日の記録はありません。" : ""}
+                    empty={view === "home" ? "" : selectedDate ? "この日は記録なし" : ""}
                   />
                 )}
                 {(page > 0 || records.data?.length === 50) && (
@@ -374,7 +372,7 @@ export function TrainingApp() {
   if (!ready)
     return (
       <main className="auth-page">
-        <output>GO TOREを開いています…</output>
+        <output>読み込み中…</output>
       </main>
     );
   return session ? <Workspace key={session.user.id} session={session} /> : <AuthPanel />;

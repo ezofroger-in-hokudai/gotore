@@ -126,9 +126,7 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await pageB.getByRole("button", { name: "参加", exact: true }).click();
     await pageB.getByLabel("招待コード", { exact: true }).fill(invite);
     await pageB.getByRole("button", { name: "参加する", exact: true }).click();
-    await expect(pageB.getByRole("main").getByRole("alert")).toContainText(
-      "招待コードに対応するグループが見つかりません",
-    );
+    await expect(pageB.getByRole("main").getByRole("alert")).toContainText("招待コードが無効です");
     await pageB.getByLabel("招待コード", { exact: true }).fill(renewedInvite);
     await pageB.getByRole("button", { name: "参加する", exact: true }).click();
     await expect(pageB.getByRole("main").getByRole("alert")).toHaveCount(0);
@@ -148,7 +146,7 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
     await expect(pageA.getByRole("alert").filter({ hasText: "表示名は更新済み" })).toBeVisible();
     await pageA.unroute("**/api/me/profile");
     await pageA.getByRole("button", { name: "再試行", exact: true }).click();
-    await expect(pageA.getByRole("status").filter({ hasText: "反映を確認しました" })).toBeVisible();
+    await expect(pageA.getByRole("status").filter({ hasText: "反映しました" })).toBeVisible();
     await pageB.bringToFront();
     await expect(card).toContainText("変更後のA");
 
@@ -176,7 +174,7 @@ test("2人がグループへ参加し、記録を共有して再ログイン後�
       .getByRole("navigation")
       .getByRole("button", { name: "自分の記録", exact: true })
       .click();
-    await expect(pageB.getByText("この月の記録はありません。", { exact: true })).toBeVisible();
+    await expect(pageB.getByText("この月は記録なし", { exact: true })).toBeVisible();
     await expect(pageB.getByRole("article")).toHaveCount(0);
     await pageA.bringToFront();
     await pageA.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();

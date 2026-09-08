@@ -67,22 +67,18 @@ export function MembershipPanel({
           </div>
         ))}
       </div>
-      {owner ? (
-        <p className="muted">オーナーはこの退出できません。</p>
-      ) : (
-        self && (
-          <button
-            type="button"
-            className="secondary"
-            disabled={busy}
-            onClick={() => {
-              setTarget(self);
-              setError("");
-            }}
-          >
-            退出
-          </button>
-        )
+      {!owner && self && (
+        <button
+          type="button"
+          className="secondary"
+          disabled={busy}
+          onClick={() => {
+            setTarget(self);
+            setError("");
+          }}
+        >
+          退出
+        </button>
       )}
       {target && (
         <div className="membership-confirm">

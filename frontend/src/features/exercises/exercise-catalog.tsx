@@ -24,7 +24,7 @@ export function ExerciseCatalog({
     if (busy) return;
     const normalized = name.trim();
     if (!normalized || [...normalized].length > 60) {
-      setError("種目名は前後の空白を除いて1〜60文字で入力してください。");
+      setError("種目名は1〜60文字です。");
       return;
     }
     setPending(true);
@@ -36,7 +36,7 @@ export function ExerciseCatalog({
         body: JSON.stringify({ name: normalized }),
       });
       setName("");
-      setNotice(`「${normalized}」を追加しました。`);
+      setNotice("追加しました。");
       onChanged();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "種目を追加できませんでした。");
@@ -52,7 +52,7 @@ export function ExerciseCatalog({
     setNotice("");
     try {
       await api<void>(`/exercise-options/${deleting.id}`, { method: "DELETE" });
-      setNotice(`「${deleting.name}」をリストから削除しました。`);
+      setNotice("削除しました。");
       setDeleting(null);
       onChanged();
     } catch (reason) {

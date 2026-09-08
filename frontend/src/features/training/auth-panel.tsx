@@ -20,12 +20,10 @@ export function AuthPanel() {
     try {
       const result = await client.auth.signInWithPassword({ email, password });
       if (result.error) {
-        setError(
-          "ログインできませんでした。メールアドレスとパスワードを確認し、解決しない場合は管理者にお問い合わせください。",
-        );
+        setError("ログインできません。入力を確認し、解決しなければ管理者へ。");
       }
     } catch {
-      setError("接続できませんでした。時間をおいて再試行してください。");
+      setError("接続できません。再試行してください。");
     } finally {
       setBusy(false);
     }
@@ -73,7 +71,7 @@ export function AuthPanel() {
         </form>
         {!configured && (
           <p role="alert" className="error">
-            ログインの準備ができていません。管理者にお問い合わせください。
+            ログインできません。管理者へ。
           </p>
         )}
         {error && (

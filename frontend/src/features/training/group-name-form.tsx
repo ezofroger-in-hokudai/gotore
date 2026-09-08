@@ -15,7 +15,7 @@ export function GroupNameForm({
     if (busy) return;
     const value = name.trim();
     if (!value || Array.from(value).length > 40) {
-      setError("グループ名は1〜40文字で入力してください。");
+      setError("グループ名は1〜40文字です。");
       return;
     }
     setBusy(true);

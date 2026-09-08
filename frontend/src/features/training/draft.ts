@@ -69,7 +69,7 @@ export function readDraft(value: string | null): Draft | null {
 
 export function workoutPayload(draft: Draft) {
   const exercises = draft.exercises.map((exercise) => {
-    if (!exercise.name.trim()) throw new Error("種目名を入力してください。");
+    if (!exercise.name.trim()) throw new Error("種目を選んでください。");
     return {
       name: exercise.name.trim(),
       sets: exercise.sets.map((set) => {
@@ -86,9 +86,7 @@ export function workoutPayload(draft: Draft) {
           reps < 1 ||
           reps > 1000
         ) {
-          throw new Error(
-            "重量は0〜1,000kg（小数1桁まで）、回数は1〜1,000の整数で入力してください。",
-          );
+          throw new Error("重量: 0〜1,000kg・小数1桁まで。回数: 1〜1,000の整数。");
         }
         return { weight, reps };
       }),

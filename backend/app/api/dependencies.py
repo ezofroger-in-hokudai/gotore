@@ -26,7 +26,7 @@ def current_user(
         raise HTTPException(401, "ログインし直してください")
     if invalid_field := settings.auth_configuration_error():
         logger.error("認証設定が不正です: %s を確認してください", invalid_field)
-        raise HTTPException(503, "認証サービスの設定を確認してください。管理者に連絡してください")
+        raise HTTPException(503, "ログイン設定を管理者へ確認してください")
     try:
         response = httpx.get(
             f"{settings.supabase_url.rstrip('/')}/auth/v1/user",
@@ -66,9 +66,7 @@ def database():
         ) as connection:
             yield connection
     except psycopg.Error:
-        raise HTTPException(
-            503, "記録サービスを利用できません。時間をおいて再試行してください"
-        ) from None
+        raise HTTPException(503, "記録サービスを利用できません。再試行してください") from None
 
 
 def training_service(

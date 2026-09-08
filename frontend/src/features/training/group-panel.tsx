@@ -92,14 +92,7 @@ export function GroupPanel({
             onChanged={onMembershipChanged}
           />
           {detail.owner_id === userId && (
-            <GroupNameForm
-              key={detail.id}
-              group={detail}
-              onSaved={(group) => {
-                onGroup(group);
-                setMessage("変更しました。");
-              }}
-            />
+            <GroupNameForm key={detail.id} group={detail} onSaved={onGroup} />
           )}
         </div>
       )}

@@ -83,7 +83,7 @@ class TrainingRepository:
                 (invite_code,),
             ).fetchone()
             if group is None:
-                raise NotFound("招待コードに対応するグループが見つかりません")
+                raise NotFound("招待コードが無効です")
             self.connection.execute(
                 """INSERT INTO public.gotore_group_members (group_id, user_id, joined_at)
                 VALUES (%s, %s, clock_timestamp()) ON CONFLICT (group_id, user_id) DO NOTHING""",
@@ -98,7 +98,7 @@ class TrainingRepository:
             (name, group_id, user_id),
         ).fetchone()
         if group is None:
-            raise NotFound("グループが見つからないか、変更する権限がありません")
+            raise NotFound("グループを変更できません")
         return group
 
     def renew_invite_code(self, user_id: UUID, group_id: UUID, expected_invite_code: str):
@@ -109,9 +109,9 @@ class TrainingRepository:
                 (group_id, user_id),
             ).fetchone()
             if group is None:
-                raise NotFound("グループが見つからないか、変更する権限がありません")
+                raise NotFound("グループを変更できません")
             if group["invite_code"] != expected_invite_code:
-                raise Conflict("招待コードは変更済みです。現在のコードを再取得してください")
+                raise Conflict("コードは変更済みです。再取得してください")
             for _ in range(5):
                 code = secrets.token_hex(6).upper()
                 if code == expected_invite_code:
@@ -126,9 +126,7 @@ class TrainingRepository:
                         ).fetchone()
                 except UniqueViolation:
                     continue
-            raise ServiceUnavailable(
-                "招待コードを発行できませんでした。時間をおいて再試行してください"
-            )
+            raise ServiceUnavailable("コードを発行できません。再試行してください")
 
     def save_workout(self, user_id: UUID, workout: WorkoutInput):
         exercises = workout.model_dump(mode="json")["exercises"]
@@ -137,7 +135,7 @@ class TrainingRepository:
             if self.connection.execute(
                 "SELECT id FROM public.gotore_deleted_workouts WHERE id = %s", (workout.id,)
             ).fetchone():
-                raise Conflict("この記録は削除済みです。新しい記録として入力してください")
+                raise Conflict("削除済みです。新規記録を作成してください")
             if workout.group_id is not None:
                 self.group(user_id, workout.group_id, lock_membership=True)
             self.connection.execute(
@@ -158,7 +156,7 @@ class TrainingRepository:
                 or row["performed_on"] != workout.performed_on
                 or row["exercises"] != exercises
             ):
-                raise Conflict("同じ保存IDで異なる記録が送信されました。記録一覧を確認してください")
+                raise Conflict("保存が競合しました。記録一覧を確認してください")
         return row
 
     def activity(self, user_id: UUID, start: date, end: date):
@@ -218,16 +216,14 @@ class TrainingRepository:
             self.lock_workout(workout_id)
             record = self.owned_workout(user_id, workout_id)
             if record is None:
-                raise NotFound("記録が見つからないか、操作する権限がありません")
+                raise NotFound("記録を操作できません")
             unchanged = (
                 record["performed_on"] == workout.performed_on and record["exercises"] == exercises
             )
             if record["revision"] != workout.expected_revision:
                 if record["revision"] == workout.expected_revision + 1 and unchanged:
                     return record
-                raise Conflict(
-                    "記録は別の操作で変更されています。一覧に戻って最新の内容を確認してください"
-                )
+                raise Conflict("記録は変更済みです。一覧へ戻ってください")
             if unchanged:
                 return record
             self.connection.execute(
@@ -248,11 +244,9 @@ class TrainingRepository:
                 ).fetchone()
                 if deleted:
                     return
-                raise NotFound("記録が見つからないか、操作する権限がありません")
+                raise NotFound("記録を操作できません")
             if record["revision"] != expected_revision:
-                raise Conflict(
-                    "記録は別の操作で変更されています。一覧に戻って最新の内容を確認してください"
-                )
+                raise Conflict("記録は変更済みです。一覧へ戻ってください")
             self.connection.execute(
                 "INSERT INTO public.gotore_deleted_workouts (id, user_id) VALUES (%s, %s)",
                 (workout_id, user_id),
@@ -276,7 +270,7 @@ class TrainingRepository:
                 "SELECT * FROM public.gotore_groups WHERE id = %s FOR NO KEY UPDATE", (group_id,)
             ).fetchone()
             if group is None or (owner_action and group["owner_id"] != actor_id):
-                raise NotFound("グループが見つからないか、操作する権限がありません")
+                raise NotFound("グループを操作できません")
             if group["owner_id"] == member_id:
                 raise Conflict("オーナーは退出・除外できません")
             membership = self.connection.execute(
@@ -287,7 +281,7 @@ class TrainingRepository:
             if membership is None:
                 return
             if membership["joined_at"] != expected_joined_at:
-                raise Conflict("参加状況が変わっています。グループを開き直して確認してください")
+                raise Conflict("参加状況が変わりました。グループを開き直してください")
             # 本人の履歴を保持して共有を解除してから、所属の外部キーを外す。
             self.connection.execute(
                 """UPDATE public.gotore_workouts SET group_id = NULL
@@ -308,7 +302,7 @@ class TrainingRepository:
             (workout_id, user_id),
         ).fetchone()
         if record is None:
-            raise NotFound("記録が見つからないか、操作する権限がありません")
+            raise NotFound("記録を操作できません")
         return record
 
     def save_workout_memo(self, user_id: UUID, workout_id: UUID, memo: WorkoutMemoInput):
@@ -319,15 +313,13 @@ class TrainingRepository:
                 (workout_id, user_id),
             ).fetchone()
             if record is None:
-                raise NotFound("記録が見つからないか、操作する権限がありません")
+                raise NotFound("記録を操作できません")
             current = self.workout_memo(user_id, workout_id)
             unchanged = current["content"] == memo.content
             if current["revision"] != memo.expected_revision:
                 if current["revision"] == memo.expected_revision + 1 and unchanged:
                     return current
-                raise Conflict(
-                    "メモは別の操作で変更されています。保存済みの内容を読み直してください"
-                )
+                raise Conflict("メモは変更済みです。読み直してください")
             if unchanged:
                 return current
             return self.connection.execute(

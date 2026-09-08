@@ -43,4 +43,4 @@ class ExerciseCatalogRepository:
             (option_id, user_id),
         )
         if deleted.rowcount == 0:
-            raise NotFound("種目が見つからないか、削除する権限がありません")
+            raise NotFound("種目を削除できません")
