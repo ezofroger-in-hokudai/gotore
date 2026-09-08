@@ -412,7 +412,6 @@ def test_delete_conflicts_with_newer_edit(client):
     assert client.delete(f"{path}?expected_revision=2").status_code == 204
 
 
-
 def test_activity_uses_all_own_sets_with_month_boundaries_and_daily_pages(client):
     group = create_group(client)
     client.post(
@@ -507,7 +506,6 @@ def test_daily_records_reject_invalid_dates(client, day):
     assert client.get("/api/workouts", params={"performed_on": day}).status_code == 422
 
 
-
 def test_exercise_options_are_private_persistent_and_idempotent(client):
     path = "/api/exercise-options"
     initial = client.get(path)
@@ -599,7 +597,6 @@ def test_exercise_catalog_has_database_constraints_and_rls(client, connection):
             )
 
 
-
 def test_owner_renews_invite_and_preserves_members_and_workouts(client):
     group = create_group(client)
     original = group["invite_code"]
@@ -682,7 +679,6 @@ def test_renew_invite_retries_collisions_without_losing_current_code(client, mon
     assert client.get(f"/api/groups/{group['id']}").json()["invite_code"] == available
 
 
-
 def joined_at(client, group, user="B"):
     members = client.get(f"/api/groups/{group['id']}").json()["members"]
     return next(
@@ -757,7 +753,6 @@ def test_membership_changes_require_owner_or_self_and_reject_bad_dates(client):
         assert client.delete(path, params={"expected_joined_at": value}).status_code == 422
     assert client.delete(path).status_code == 422
     assert len(client.get(f"/api/groups/{group['id']}").json()["members"]) == 2
-
 
 
 def test_private_memo_is_owner_only_and_never_in_shared_workouts(client, connection):

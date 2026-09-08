@@ -4,7 +4,7 @@ import { mockTraining } from "./mock-training";
 test("初回ガイドは完了・再ログイン後に再表示せず、設定から読み直せる", async ({
   page,
 }, testInfo) => {
-  const state = await mockTraining(page);
+  const state = await mockTraining(page, true, true);
   const guide = page.getByRole("region", { name: "使い方ガイド" });
   await expect(guide).toBeVisible();
   await expect(guide).toContainText("1 / 3");
@@ -16,7 +16,7 @@ test("初回ガイドは完了・再ログイン後に再表示せず、設定�
   await expect(guide).toContainText("1 / 3");
   await guide.getByRole("button", { name: "次へ", exact: true }).click();
   await guide.getByRole("button", { name: "次へ", exact: true }).click();
-  await expect(guide).toContainText("自分だけの記録");
+  await expect(guide).toContainText("カレンダーはセット数");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
@@ -29,11 +29,11 @@ test("初回ガイドは完了・再ログイン後に再表示せず、設定�
   await page.getByRole("button", { name: "ログアウト", exact: true }).click();
   await page.getByLabel("メールアドレス", { exact: true }).fill("ui@example.test");
   await page.getByLabel("パスワード", { exact: true }).fill("ui-test-password");
-  await page.getByRole("button", { name: "ログインする →", exact: true }).click();
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page.getByRole("navigation")).toBeVisible();
   await expect(guide).toHaveCount(0);
   await page.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
-  await page.getByRole("button", { name: "使い方ガイドを開く", exact: true }).click();
+  await page.getByRole("button", { name: "使い方を見る", exact: true }).click();
   await expect(guide).toContainText("1 / 3");
   await expect(guide.getByRole("heading")).toBeFocused();
   expect(state.authUpdates).toBe(0);
@@ -46,11 +46,11 @@ test("他ユーザーの表示済み状態を使わず、スキップしても�
   await page.addInitScript(() => {
     localStorage.setItem("gotore:onboarding:v1:other-user", "seen");
   });
-  const state = await mockTraining(page);
+  const state = await mockTraining(page, true, true);
   const guide = page.getByRole("region", { name: "使い方ガイド" });
   await expect(guide).toBeVisible();
-  await page.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
-  await page.getByLabel("種目名", { exact: true }).fill("ベンチプレス");
+  await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
+  await page.getByLabel("種目名", { exact: true }).selectOption({ label: "ベンチプレス" });
   await page.getByRole("combobox", { name: /^共有先/ }).selectOption("");
   const key = `gotore:draft:${state.user.id}`;
   const draft = await page.evaluate((value) => localStorage.getItem(value), key);
@@ -76,9 +76,9 @@ test("表示済みの保存ができなくてもガイドを閉じて通常操�
       return set.call(this, key, value);
     };
   });
-  await mockTraining(page);
+  await mockTraining(page, true, true);
   const guide = page.getByRole("region", { name: "使い方ガイド" });
-  await expect(guide).toContainText("次回も表示されることがあります");
+  await expect(guide).toContainText("次回もガイドが表示される場合があります");
   await guide.getByRole("button", { name: "スキップ", exact: true }).click();
   await expect(guide).toHaveCount(0);
   await page.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();

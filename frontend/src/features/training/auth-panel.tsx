@@ -35,26 +35,13 @@ export function AuthPanel() {
     <main className="auth-page">
       <div className="wordmark">
         GO<span>TORE</span>
-        <small>TRAIN TOGETHER, ANYWHERE.</small>
       </div>
       <div className="auth-intro">
-        <p className="eyebrow">離れていても、合トレ。</p>
-        <h1>
-          今日の頑張りを、
-          <br />
-          仲間と残そう。
-        </h1>
-        <p>
-          記録して、共有する。
-          <br />
-          仲間の一回が、自分の次の一回になる。
-        </p>
+        <h1>仲間と、合トレ。</h1>
       </div>
       <section className="panel auth-form">
         <h2>ログイン</h2>
-        <p className="notice">
-          アカウントは管理者が発行します。利用する方は管理者にお問い合わせください。
-        </p>
+        <p className="notice">アカウントの発行は管理者へ。</p>
         <form onSubmit={submit}>
           <fieldset disabled={busy || !configured}>
             <label>
@@ -78,11 +65,9 @@ export function AuthPanel() {
                 placeholder="6文字以上"
               />
             </label>
-            <p className="notice">
-              グループへ共有した記録と表示名は、そのグループのメンバーに見えます。
-            </p>
+
             <button className="primary" type="submit">
-              {busy ? "確認しています…" : "ログインする →"}
+              {busy ? "確認中…" : "ログイン"}
             </button>
           </fieldset>
         </form>
@@ -97,7 +82,6 @@ export function AuthPanel() {
           </p>
         )}
       </section>
-      <p className="auth-footer">見る。見られる。続けられる。</p>
     </main>
   );
 }

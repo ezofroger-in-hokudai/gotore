@@ -1,7 +1,7 @@
 import { type Page, expect } from "@playwright/test";
 
 // UI単独の検証用。実際の認証・DB・共有検証はsharing.spec.tsで行う。
-export async function mockTraining(page: Page, owner = true) {
+export async function mockTraining(page: Page, owner = true, showGuide = false) {
   const user = {
     id: "00000000-0000-0000-0000-000000000001",
     aud: "authenticated",
@@ -120,10 +120,15 @@ export async function mockTraining(page: Page, owner = true) {
     if (path.endsWith("/workouts")) return route.fulfill({ json: [] });
     return route.fulfill({ status: 404, json: { detail: "UIテスト対象外" } });
   });
+  if (!showGuide)
+    await page.addInitScript(
+      (id) => localStorage.setItem(`gotore:onboarding:v1:${id}`, "seen"),
+      user.id,
+    );
   await page.goto("/");
   await page.getByLabel("メールアドレス", { exact: true }).fill("ui@example.test");
   await page.getByLabel("パスワード", { exact: true }).fill("ui-test-password");
-  await page.getByRole("button", { name: "ログインする →", exact: true }).click();
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page.getByRole("navigation")).toBeVisible();
   return state;
 }

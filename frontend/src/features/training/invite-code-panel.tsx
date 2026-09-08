@@ -26,7 +26,7 @@ export function InviteCodePanel({
       });
       setCode(updated.invite_code);
       setExpected(null);
-      setMessage("新しい招待コードを発行しました。新しいコードを仲間に渡してください。");
+      setMessage("再発行しました。");
       onRenewed(updated);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "再発行できませんでした。");
@@ -42,7 +42,7 @@ export function InviteCodePanel({
       const current = await api<Group>(`/groups/${group.id}`);
       setCode(current.invite_code);
       setExpected(null);
-      setMessage("現在の招待コードを確認しました。");
+      setMessage("取得しました。");
       onRenewed(current);
     } catch {
       setError("現在のコードを確認できませんでした。時間をおいて再試行してください。");
@@ -62,7 +62,7 @@ export function InviteCodePanel({
           onClick={async () => {
             try {
               await navigator.clipboard.writeText(code);
-              setMessage("招待コードをコピーしました。");
+              setMessage("コピーしました。");
             } catch {
               setMessage("招待コードを選択してコピーしてください。");
             }
@@ -74,8 +74,8 @@ export function InviteCodePanel({
       {owner &&
         (expected ? (
           <div className="invite-confirm">
-            <h3>招待コードの再発行</h3>
-            <p>古いコードでは参加できなくなります。既存メンバーと記録はそのまま残ります。</p>
+            <h3>再発行しますか？</h3>
+            <p>古いコードは無効になります。</p>
             <div className="invite-actions">
               <button
                 className="secondary"
@@ -93,7 +93,7 @@ export function InviteCodePanel({
                 disabled={busy || !!error}
                 onClick={() => void renew()}
               >
-                {busy ? "確認しています…" : "再発行する"}
+                {busy ? "確認中…" : "再発行する"}
               </button>
             </div>
           </div>
@@ -107,19 +107,19 @@ export function InviteCodePanel({
               setMessage("");
             }}
           >
-            招待コードを再発行
+            再発行
           </button>
         ))}
       {error && (
         <div className="error" role="alert">
-          {error} 再発行済みの可能性があるため、現在のコードを確認してください。
+          {error} 再取得してください。
           <button
             className="secondary full"
             type="button"
             disabled={busy}
             onClick={() => void reload()}
           >
-            現在のコードを再取得
+            再取得
           </button>
         </div>
       )}

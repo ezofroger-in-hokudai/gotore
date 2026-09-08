@@ -191,35 +191,24 @@ export function WorkoutForm({
   return (
     <section>
       <button type="button" className="back" disabled={busy} onClick={onBack}>
-        {editing ? "← 編集をやめて記録に戻る" : "← 戻る（下書きは残ります）"}
+        {editing ? "← 戻る" : "← 戻る"}
       </button>
-      <p className="eyebrow">WORKOUT</p>
-      <h1>{editing ? "トレーニングを編集" : "今日のトレーニング"}</h1>
-      {editing && (
-        <p className="notice">
-          共有先は変更できません。編集内容は自動保存されず、戻ると破棄されます。新規記録の下書きは残ります。
-        </p>
-      )}
-      <p className="muted">ひとつずつ、その頑張りを記録しよう。</p>
+
+      <h1>{editing ? "記録の編集" : "記録"}</h1>
+
       {source && <p className="notice">{source.performed_on}の記録をコピーしました。</p>}
-      <p className="muted">Enterで次の入力へ。最後の回数欄ではセットを追加します。</p>
-      <p className="muted">重量の薄い数字は前セットの値です。空欄でEnterを押すと採用します。</p>
-      <p className="muted">
-        種目は自分のリストから選びます。新しい種目は下の管理欄で追加できます。
-      </p>
-      {catalog.loading && <output className="loading">種目リストを読み込んでいます…</output>}
+
+      {catalog.loading && <output className="loading">読み込み中…</output>}
       {catalog.error && (
         <div className="error" role="alert">
           {catalog.error}
           <button type="button" className="text-button" onClick={catalog.retry}>
-            種目リストを再取得
+            再試行
           </button>
         </div>
       )}
       {catalog.data?.length === 0 && !catalog.error && (
-        <p className="notice">
-          種目リストは空です。「自分の種目リストを管理」から追加してください。
-        </p>
+        <p className="notice">種目を追加してください。</p>
       )}
       <ExerciseCatalog
         options={options}
@@ -236,7 +225,7 @@ export function WorkoutForm({
         <fieldset disabled={busy}>
           <div className="panel form-grid">
             <label>
-              トレーニング日
+              日付
               <input
                 type="date"
                 min="2000-01-01"
@@ -253,7 +242,7 @@ export function WorkoutForm({
                 value={draft.group_id}
                 onChange={(e) => change((d) => ({ ...d, group_id: e.target.value }))}
               >
-                <option value="">自分だけの記録</option>
+                <option value="">自分だけ</option>
                 {missingGroup && <option value={draft.group_id}>共有先を選び直してください</option>}
                 {groups.map((group) => (
                   <option key={group.id} value={group.id}>
@@ -283,9 +272,9 @@ export function WorkoutForm({
                       }))
                     }
                   >
-                    <option value="">種目を選んでください</option>
+                    <option value="">選択してください</option>
                     {exercise.name && !options.some((option) => option.name === exercise.name) && (
-                      <option value={exercise.name}>{exercise.name}（下書きの種目）</option>
+                      <option value={exercise.name}>{exercise.name}（保存済み）</option>
                     )}
                     {options.map((option) => (
                       <option key={option.id} value={option.name}>
@@ -313,7 +302,7 @@ export function WorkoutForm({
               <div className="set-head">
                 <span>SET</span>
                 <span>重量 kg</span>
-                <span>回数 reps</span>
+                <span>回数</span>
                 <span />
               </div>
               {exercise.sets.map((set, setIndex) => (
@@ -412,7 +401,7 @@ export function WorkoutForm({
                 disabled={exercise.sets.length >= 30}
                 onClick={() => addSet(exercise.key)}
               >
-                ＋ セットを追加
+                ＋ セット
               </button>
             </div>
           ))}
@@ -427,34 +416,20 @@ export function WorkoutForm({
               }))
             }
           >
-            ＋ 種目を追加
+            ＋ 種目
           </button>
-          <p className="notice">
-            {target
-              ? `確定すると「${target.name}」のメンバーに、表示名・日付・種目・重量・回数が共有されます。`
-              : missingGroup
-                ? "共有先を選び直してください。"
-                : "この記録は自分だけに表示されます。"}
-          </p>
+          {missingGroup && <p className="notice">共有先を選び直してください。</p>}
           <button className="primary" type="submit" disabled={missingGroup}>
-            {busy
-              ? "保存しています…"
-              : editing
-                ? "変更を保存 →"
-                : target
-                  ? "記録を確定して共有 →"
-                  : "記録を保存 →"}
+            {busy ? "保存中…" : editing ? "保存" : target ? "保存して共有" : "保存"}
           </button>
         </fieldset>
         {error && (
           <p role="alert" className="error">
-            {error} 入力内容は残っています。
+            {error}
           </p>
         )}
         {storageWarning && (
-          <output className="notice">
-            このブラウザでは下書きを保持できません。画面を閉じる前に保存してください。
-          </output>
+          <output className="notice">下書きを保持できません。閉じる前に保存してください。</output>
         )}
       </form>
     </section>

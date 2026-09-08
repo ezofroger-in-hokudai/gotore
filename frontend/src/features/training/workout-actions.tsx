@@ -31,7 +31,7 @@ export function WorkoutActions({
     <div className="workout-actions">
       {confirming ? (
         <>
-          <p>この記録を削除しますか？本人の履歴と共有先から削除され、元に戻せません。</p>
+          <p>この記録を削除しますか？</p>
           <div className="action-buttons">
             <button
               className="secondary"
@@ -42,7 +42,7 @@ export function WorkoutActions({
               キャンセル
             </button>
             <button className="primary" type="button" disabled={busy} onClick={remove}>
-              {busy ? "削除しています…" : "記録を削除する"}
+              {busy ? "削除中…" : "削除する"}
             </button>
           </div>
         </>

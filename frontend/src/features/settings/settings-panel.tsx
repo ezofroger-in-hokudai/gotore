@@ -11,17 +11,16 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
   }
   return (
     <section>
-      <p className="eyebrow">SETTINGS</p>
       <h1>設定</h1>
       {profile.error ? (
         <div className="error" role="alert">
           {profile.error}
           <button className="secondary full" type="button" onClick={profile.retry}>
-            表示名の読み込みを再試行
+            再試行
           </button>
         </div>
       ) : (
-        <output className="loading">表示名を読み込んでいます…</output>
+        <output className="loading">読み込み中…</output>
       )}
     </section>
   );
@@ -57,7 +56,7 @@ function DisplayNameForm({ displayName, onSaved }: { displayName: string; onSave
       setName(result.name);
       setNeedsSync(!result.synced);
       if (result.synced) {
-        setMessage("表示名を変更しました。");
+        setMessage("保存しました。");
         onSaved();
       }
     } catch (reason) {
@@ -69,7 +68,6 @@ function DisplayNameForm({ displayName, onSaved }: { displayName: string; onSave
 
   return (
     <section>
-      <p className="eyebrow">SETTINGS</p>
       <h1>設定</h1>
       <form className="panel" onSubmit={submit}>
         <fieldset disabled={busy}>
@@ -86,11 +84,9 @@ function DisplayNameForm({ displayName, onSaved }: { displayName: string; onSave
               }}
             />
           </label>
-          <p className="muted">
-            所属グループのメンバー一覧と、過去の共有記録にも新しい表示名が表示されます。
-          </p>
+
           <button className="primary" type="submit">
-            {busy ? "変更しています…" : "表示名を変更"}
+            {busy ? "変更中…" : "保存"}
           </button>
         </fieldset>
         {error && (
@@ -121,14 +117,11 @@ function DisplayNameForm({ displayName, onSaved }: { displayName: string; onSave
                 }
               }}
             >
-              共有記録への反映を再試行
+              再試行
             </button>
           </div>
         )}
       </form>
-      <p className="muted">
-        メールアドレス・パスワードの変更は、テスト運用の管理者にお問い合わせください。
-      </p>
     </section>
   );
 }

@@ -25,8 +25,8 @@ export function RecordList({
     return (
       <div className="empty">
         <span className="empty-symbol">＋</span>
-        <h2>ここから、最初の一回。</h2>
-        <p>{empty}</p>
+        <h2>記録なし</h2>
+        {empty && <p>{empty}</p>}
       </div>
     );
   return (
@@ -38,9 +38,7 @@ export function RecordList({
             <div className="grow">
               <strong>{record.display_name}</strong>
               {record.user_id === userId && <span className="you">YOU</span>}
-              <p className="record-date">
-                {record.performed_on.replaceAll("-", ".")} のトレーニング
-              </p>
+              <p className="record-date">{record.performed_on.replaceAll("-", ".")}</p>
             </div>
             <span className="badge">
               {record.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} SETS
@@ -50,7 +48,7 @@ export function RecordList({
             {record.exercises.map((exercise) => exercise.name).join(" / ")}
           </h3>
           <details>
-            <summary>セットの詳細を見る</summary>
+            <summary>セット詳細</summary>
             <div className="record-details">
               {record.exercises.map((exercise, index) => (
                 <div key={`${index}-${exercise.name}`}>
@@ -69,7 +67,7 @@ export function RecordList({
             </div>
           </details>
           <div className="record-footer">
-            <span>{record.group_id ? "グループに共有済み" : "自分だけの記録"}</span>
+            <span>{record.group_id ? "共有済み" : "自分だけ"}</span>
             <time dateTime={record.created_at}>
               {new Intl.DateTimeFormat("ja-JP", {
                 month: "numeric",
@@ -81,7 +79,9 @@ export function RecordList({
               保存
             </time>
           </div>
-          {record.user_id === userId && onReuse && (<ReuseWorkout record={record} onReuse={onReuse} />)}
+          {record.user_id === userId && onReuse && (
+            <ReuseWorkout record={record} onReuse={onReuse} />
+          )}
           {record.user_id === userId && onEdit && onDeleted && (
             <WorkoutActions record={record} onEdit={onEdit} onDeleted={onDeleted} />
           )}

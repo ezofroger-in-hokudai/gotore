@@ -32,7 +32,7 @@ export function MembershipPanel({
         { method: "DELETE" },
       );
       setTarget(null);
-      setNotice("メンバーを除外しました。本人の記録は保持されています。");
+      setNotice("除外しました。");
       onChanged(left);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "操作できませんでした。");
@@ -68,7 +68,7 @@ export function MembershipPanel({
         ))}
       </div>
       {owner ? (
-        <p className="muted">オーナーはこのグループから退出できません。</p>
+        <p className="muted">オーナーはこの退出できません。</p>
       ) : (
         self && (
           <button
@@ -80,7 +80,7 @@ export function MembershipPanel({
               setError("");
             }}
           >
-            グループから退出
+            退出
           </button>
         )
       )}
@@ -89,9 +89,6 @@ export function MembershipPanel({
           <p>
             「{group.name}」から{target.id === userId ? "退出" : `${target.display_name}さんを除外`}
             しますか？
-          </p>
-          <p>
-            本人の履歴は残り、このグループへの過去の共有は解除されます。再参加しても以前の記録は自動共有されません。
           </p>
           <button
             type="button"
@@ -102,7 +99,7 @@ export function MembershipPanel({
             キャンセル
           </button>{" "}
           <button type="button" className="primary" disabled={busy} onClick={confirm}>
-            {busy ? "処理しています…" : target.id === userId ? "退出する" : "除外する"}
+            {busy ? "処理中…" : target.id === userId ? "退出する" : "除外する"}
           </button>
         </div>
       )}

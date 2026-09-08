@@ -19,6 +19,8 @@ for (const storageFails of [false, true]) {
     let saved: typeof record | null = null;
     let submissions = 0;
     await page.route("**/api/workouts**", (route) => {
+      if (new URL(route.request().url()).pathname === "/api/workouts/activity")
+        return route.fallback();
       if (route.request().method() === "POST") {
         submissions++;
         const body = route.request().postDataJSON();
@@ -32,18 +34,18 @@ for (const storageFails of [false, true]) {
       }
       return route.fulfill({ json: saved ? [saved, record] : [record] });
     });
-    await page.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
-    await page.getByLabel("種目名", { exact: true }).fill("残したい下書き");
-    await page.getByRole("button", { name: "← 戻る（下書きは残ります）", exact: true }).click();
+    await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
+    await page.getByLabel("種目名", { exact: true }).selectOption({ label: "ベンチプレス" });
+    await page.getByRole("button", { name: "← 戻る", exact: true }).click();
     const key = `gotore:draft:${user.id}`;
     const draft = await page.evaluate((key) => localStorage.getItem(key), key);
     await page
       .getByRole("navigation")
       .getByRole("button", { name: "自分の記録", exact: true })
       .click();
-    await page.getByRole("button", { name: "この内容でもう一度", exact: true }).click();
+    await page.getByRole("button", { name: "コピー", exact: true }).click();
     await expect(
-      page.getByText("入力途中の下書きがある場合は置き換わります", { exact: false }),
+      page.getByText("下書きをこの記録で置き換えますか？", { exact: false }),
     ).toBeVisible();
     if (!storageFails) await page.screenshot({ path: "test-results/workout-reuse-mobile.png" });
     await page.getByRole("button", { name: "キャンセル", exact: true }).click();
@@ -56,8 +58,8 @@ for (const storageFails of [false, true]) {
           return original.call(this, key, value);
         };
       });
-    await page.getByRole("button", { name: "この内容でもう一度", exact: true }).click();
-    await page.getByRole("button", { name: "コピーして入力する", exact: true }).click();
+    await page.getByRole("button", { name: "コピー", exact: true }).click();
+    await page.getByRole("button", { name: "コピーする", exact: true }).click();
     await expect(page.getByLabel("種目1 セット1 重量", { exact: true })).toHaveValue("80.5");
     await expect(page.getByRole("combobox", { name: "共有先", exact: true })).toHaveValue("");
     expect(submissions).toBe(0);
@@ -69,10 +71,10 @@ for (const storageFails of [false, true]) {
       expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBe(draft);
     } else {
       await page.reload();
-      await page.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
+      await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
       await expect(page.getByLabel("種目1 セット1 重量", { exact: true })).toHaveValue("82.5");
     }
-    await page.getByRole("button", { name: "記録を保存 →", exact: true }).click();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
     await expect(page.getByRole("article")).toHaveCount(2);
     expect(JSON.stringify(record)).toBe(snapshot);
     expect(submissions).toBe(1);

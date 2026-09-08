@@ -44,11 +44,7 @@ export function GroupPanel({
       });
       onGroup(group);
       form.reset();
-      setMessage(
-        mode === "create"
-          ? "グループを作成しました。招待コードを仲間に渡しましょう。"
-          : "グループに参加しました。",
-      );
+      setMessage(mode === "create" ? "作成しました。" : "参加しました。");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "操作できませんでした。");
     } finally {
@@ -58,9 +54,8 @@ export function GroupPanel({
 
   return (
     <section>
-      <p className="eyebrow">YOUR TEAM</p>
-      <h1>一緒に、続けよう。</h1>
-      <p className="muted">グループを作って、いつもの仲間を招待。</p>
+      <h1>グループ</h1>
+
       {groups.length > 0 && (
         <div className="group-list">
           {groups.map((group) => (
@@ -79,9 +74,8 @@ export function GroupPanel({
       )}
       {detail && (
         <div className="panel">
-          <p className="eyebrow">INVITE YOUR FRIENDS</p>
           <h2>{detail.name}</h2>
-          <p className="muted">このコードを知っている人が参加できます。</p>
+
           <InviteCodePanel
             key={`invite:${detail.id}`}
             group={detail}
@@ -103,7 +97,7 @@ export function GroupPanel({
               group={detail}
               onSaved={(group) => {
                 onGroup(group);
-                setMessage("グループ名を変更しました。");
+                setMessage("変更しました。");
               }}
             />
           )}
@@ -120,7 +114,7 @@ export function GroupPanel({
               setError("");
             }}
           >
-            グループを作る
+            作成
           </button>
           <button
             type="button"
@@ -131,7 +125,7 @@ export function GroupPanel({
               setError("");
             }}
           >
-            招待コードで参加
+            参加
           </button>
         </div>
         <form onSubmit={submit} key={mode}>
@@ -149,11 +143,7 @@ export function GroupPanel({
               />
             </label>
             <button type="submit" className="primary">
-              {busy
-                ? "処理しています…"
-                : mode === "create"
-                  ? "グループを作成 →"
-                  : "グループに参加 →"}
+              {busy ? "処理中…" : mode === "create" ? "作成する" : "参加する"}
             </button>
           </fieldset>
         </form>

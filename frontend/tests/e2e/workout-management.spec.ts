@@ -19,6 +19,8 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   let failDelete = true;
   let deletes = 0;
   await page.route("**/api/workouts**", (route) => {
+    if (new URL(route.request().url()).pathname === "/api/workouts/activity")
+      return route.fallback();
     const request = route.request();
     if (request.method() === "PATCH") {
       const body = request.postDataJSON();
@@ -46,9 +48,9 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     }
     return route.fulfill({ json: removed ? [] : [record] });
   });
-  await page.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
-  await page.getByLabel("種目名", { exact: true }).fill("新規の下書き");
-  await page.getByRole("button", { name: "← 戻る（下書きは残ります）", exact: true }).click();
+  await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
+  await page.getByLabel("種目名", { exact: true }).selectOption({ label: "スクワット" });
+  await page.getByRole("button", { name: "← 戻る", exact: true }).click();
   const draftKey = `gotore:draft:${user.id}`;
   const draft = await page.evaluate((key) => localStorage.getItem(key), draftKey);
   const openRecords = () =>
@@ -57,32 +59,34 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "共有先", exact: true })).toBeDisabled();
   await page.getByLabel("種目1 セット1 重量", { exact: true }).fill("70");
-  await page.getByRole("button", { name: "変更を保存 →", exact: true }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("入力内容は残っています");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "一覧に戻って最新の内容を確認してください",
+  );
   await expect(page.getByLabel("種目1 セット1 重量", { exact: true })).toHaveValue("70");
-  await page.getByRole("button", { name: "← 編集をやめて記録に戻る", exact: true }).click();
+  await page.getByRole("button", { name: "← 戻る", exact: true }).click();
   expect(await page.evaluate((key) => localStorage.getItem(key), draftKey)).toBe(draft);
   conflict = false;
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByLabel("種目1 セット1 重量", { exact: true })).toHaveValue("60");
   await page.getByLabel("種目1 セット1 重量", { exact: true }).fill("70");
   await page.screenshot({ path: "test-results/workout-edit-mobile.png" });
-  await page.getByRole("button", { name: "変更を保存 →", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "記録を更新しました" })).toBeVisible();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "更新しました" })).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), draftKey)).toBe(draft);
   await page.getByRole("button", { name: "削除", exact: true }).click();
   await page.getByRole("button", { name: "キャンセル", exact: true }).click();
   expect(deletes).toBe(0);
   await page.getByRole("button", { name: "削除", exact: true }).click();
   await page.screenshot({ path: "test-results/workout-delete-mobile.png" });
-  await page.getByRole("button", { name: "記録を削除する", exact: true }).click();
+  await page.getByRole("button", { name: "削除する", exact: true }).click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText("通信できません");
   await expect(page.getByRole("article")).toHaveCount(1);
   failDelete = false;
-  await page.getByRole("button", { name: "記録を削除する", exact: true }).click();
+  await page.getByRole("button", { name: "削除する", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(0);
   expect(await page.evaluate((key) => localStorage.getItem(key), draftKey)).toBe(draft);
-  await page.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
-  await expect(page.getByLabel("種目名", { exact: true })).toHaveValue("新規の下書き");
+  await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
+  await expect(page.getByLabel("種目名", { exact: true })).toHaveValue("スクワット");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

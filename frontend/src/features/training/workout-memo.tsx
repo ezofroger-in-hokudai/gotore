@@ -40,11 +40,9 @@ export function WorkoutMemo({ workoutId }: { workoutId: string }) {
       });
       setMemo(value);
       setContent(value.content);
-      setNotice("自分用メモを保存しました。");
+      setNotice("保存しました。");
     } catch (reason) {
-      setError(
-        `${reason instanceof Error ? reason.message : "保存できませんでした。"} 入力内容は残っています。`,
-      );
+      setError(`${reason instanceof Error ? reason.message : "保存できませんでした。"}`);
     } finally {
       setBusy(false);
     }
@@ -63,18 +61,13 @@ export function WorkoutMemo({ workoutId }: { workoutId: string }) {
             void load();
           }}
         >
-          自分用メモ
+          メモ
         </button>
       ) : (
         <>
-          <h4>自分用メモ</h4>
-          <p className="muted">
-            自分だけが読めます。グループには共有されません。空欄を保存すると内容を消去します。
-          </p>
-          <p className="muted">閉じると未保存の入力は消えます。</p>
           {memo && (
             <div>
-              <label htmlFor={`memo-${workoutId}`}>メモ（1000文字まで）</label>
+              <label htmlFor={`memo-${workoutId}`}>メモ</label>
               <textarea
                 id={`memo-${workoutId}`}
                 maxLength={1000}
@@ -88,11 +81,11 @@ export function WorkoutMemo({ workoutId }: { workoutId: string }) {
               />
             </div>
           )}
-          {busy && <output>メモを処理しています…</output>}
+          {busy && <output>処理中…</output>}
           <div className="memo-buttons">
             {memo && (
               <button type="button" className="primary" disabled={busy} onClick={save}>
-                メモを保存
+                保存
               </button>
             )}
             <button
@@ -118,12 +111,12 @@ export function WorkoutMemo({ workoutId }: { workoutId: string }) {
                 else void load();
               }}
             >
-              {memo ? "保存済みを読み直す" : "取得を再試行"}
+              {memo ? "読み直す" : "再試行"}
             </button>
           </div>
           {reload && (
             <div className="notice">
-              <p>未保存の入力を破棄して、保存済みのメモを読み直しますか？</p>
+              <p>入力を破棄して読み直しますか？</p>
               <button
                 type="button"
                 className="secondary"

@@ -60,7 +60,7 @@ async function activityFixture(page: Page) {
     .getByRole("navigation")
     .getByRole("button", { name: "自分の記録", exact: true })
     .click();
-  await page.getByLabel("表示する月", { exact: true }).fill("2024-02");
+  await page.getByLabel("月", { exact: true }).fill("2024-02");
   return {
     failMonth: (value: boolean) => {
       failMonth = value;
@@ -90,15 +90,13 @@ test("セット数ヒートマップから日付を選び、日別記録を50件
   await expect(page.getByRole("article")).toContainText("2024-02-29の種目51");
   await page.getByRole("button", { name: "2024年2月2日、0セット、0件", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(0);
-  await expect(
-    page.getByText("この日のトレーニング記録はありません。", { exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "日付の絞り込みを解除", exact: true }).click();
+  await expect(page.getByText("この日の記録はありません。", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "すべての記録", exact: true }).click();
   await expect(day).toHaveAttribute("aria-pressed", "false");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "2024年2月1日、5セット、2件", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(2);
-  await page.getByRole("article").first().getByText("セットの詳細を見る", { exact: true }).click();
+  await page.getByRole("article").first().getByText("セット詳細", { exact: true }).click();
   await page.screenshot({ path: "test-results/activity-heatmap-mobile.png", fullPage: true });
 });
 
@@ -109,9 +107,9 @@ test("月と日付の取得失敗を再試行し、遅い前日の応答を表�
   await expect(page.getByRole("alert").filter({ hasText: "通信できません" })).toBeVisible();
   await expect(page.getByRole("button", { name: /2024年2月29日/ })).toHaveCount(0);
   state.failMonth(false);
-  await page.getByRole("button", { name: "活動カレンダーを再取得", exact: true }).click();
-  await expect(page.getByText("この月の記録はまだありません。", { exact: true })).toBeVisible();
-  await page.getByLabel("表示する月", { exact: true }).fill("2024-02");
+  await page.getByRole("button", { name: "再試行", exact: true }).click();
+  await expect(page.getByText("この月の記録はありません。", { exact: true })).toBeVisible();
+  await page.getByLabel("月", { exact: true }).fill("2024-02");
   state.failDay(true);
   await page.getByRole("button", { name: /2024年2月29日/ }).click();
   await expect(page.getByRole("alert").filter({ hasText: "通信できません" })).toBeVisible();
@@ -129,9 +127,7 @@ test("月と日付の取得失敗を再試行し、遅い前日の応答を表�
     await expect(page.getByRole("article")).toHaveCount(0);
     await page.getByRole("button", { name: /2024年2月2日、/ }).click();
     release();
-    await expect(
-      page.getByText("この日のトレーニング記録はありません。", { exact: true }),
-    ).toBeVisible();
+    await expect(page.getByText("この日の記録はありません。", { exact: true })).toBeVisible();
     await expect(page.getByRole("article")).toHaveCount(0);
   } finally {
     release();
@@ -148,7 +144,7 @@ test("日本時間の今日を示し、未来の日付と範囲外の月への�
   await expect(
     page.getByRole("button", { name: "2024年2月12日、未来の日付", exact: true }),
   ).toBeDisabled();
-  await page.getByLabel("表示する月", { exact: true }).fill("2000-01");
+  await page.getByLabel("月", { exact: true }).fill("2000-01");
   await expect(page.getByRole("button", { name: "前の月", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "次の月", exact: true })).toBeEnabled();
 });

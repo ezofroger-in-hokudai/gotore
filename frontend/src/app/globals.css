@@ -809,7 +809,6 @@ fieldset {
   margin-bottom: 0;
 }
 
-
 .exercise-catalog summary {
   cursor: pointer;
   min-height: 44px;
@@ -838,7 +837,6 @@ fieldset {
 .exercise-options li button {
   flex-shrink: 0;
 }
-
 
 .onboarding-guide {
   border-color: var(--accent);
@@ -874,7 +872,6 @@ fieldset {
   flex: 1;
 }
 
-
 .invite-confirm {
   padding: 16px;
   margin-top: 12px;
@@ -893,7 +890,6 @@ fieldset {
   flex: 1;
 }
 
-
 .workout-actions {
   border-top: 1px solid var(--line);
   margin-top: 16px;
@@ -905,7 +901,6 @@ fieldset {
   gap: 12px;
   align-items: center;
 }
-
 
 .membership-list {
   margin-bottom: 16px;
@@ -927,7 +922,6 @@ fieldset {
   border-radius: 12px;
 }
 
-
 .reuse-workout {
   margin-top: 16px;
   border-top: 1px solid var(--line);
@@ -938,7 +932,6 @@ fieldset {
   flex-wrap: wrap;
   gap: 8px;
 }
-
 
 .workout-memo {
   margin-top: 16px;

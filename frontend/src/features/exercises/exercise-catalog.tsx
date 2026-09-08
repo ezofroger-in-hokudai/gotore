@@ -36,7 +36,7 @@ export function ExerciseCatalog({
         body: JSON.stringify({ name: normalized }),
       });
       setName("");
-      setNotice(`「${normalized}」をリストに追加しました。同名の種目はひとつにまとまります。`);
+      setNotice(`「${normalized}」を追加しました。`);
       onChanged();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "種目を追加できませんでした。");
@@ -52,7 +52,7 @@ export function ExerciseCatalog({
     setNotice("");
     try {
       await api<void>(`/exercise-options/${deleting.id}`, { method: "DELETE" });
-      setNotice(`「${deleting.name}」をリストから削除しました。記録と下書きは残っています。`);
+      setNotice(`「${deleting.name}」をリストから削除しました。`);
       setDeleting(null);
       onChanged();
     } catch (reason) {
@@ -64,16 +64,16 @@ export function ExerciseCatalog({
 
   return (
     <details className="panel exercise-catalog">
-      <summary>自分の種目リストを管理</summary>
-      <p className="muted">自分だけの候補です。追加した種目は記録欄から選べます。</p>
+      <summary>種目リスト</summary>
+
       <form onSubmit={add}>
         <fieldset disabled={busy}>
           <label>
-            追加する種目名
+            新しい種目
             <input required value={name} onChange={(event) => setName(event.target.value)} />
           </label>
           <button className="secondary" type="submit">
-            リストに追加
+            追加
           </button>
         </fieldset>
       </form>
@@ -99,9 +99,7 @@ export function ExerciseCatalog({
       </ul>
       {deleting && (
         <fieldset className="notice" aria-label="種目リストからの削除確認">
-          <p>
-            「{deleting.name}」をリストから削除しますか？ 過去の記録と入力中の下書きは残ります。
-          </p>
+          <p>「{deleting.name}」をリストから削除しますか？</p>
           <button type="button" className="secondary" disabled={busy} onClick={remove}>
             削除する
           </button>

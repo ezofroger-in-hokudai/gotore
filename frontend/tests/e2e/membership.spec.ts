@@ -33,22 +33,19 @@ for (const owner of [true, false]) {
       return route.fulfill({ json: { ...group, members: ended ? [self] : [self, other] } });
     });
     if (!owner) {
-      await page.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
-      await page.getByLabel("種目名", { exact: true }).fill("退出前の下書き");
-      await page.getByRole("button", { name: "← 戻る（下書きは残ります）", exact: true }).click();
+      await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
+      await page.getByLabel("種目名", { exact: true }).selectOption({ label: "スクワット" });
+      await page.getByRole("button", { name: "← 戻る", exact: true }).click();
     }
     await page
       .getByRole("navigation")
       .getByRole("button", { name: "グループ", exact: true })
       .click();
     const action = page.getByRole("button", {
-      name: owner ? "合トレ仲間を除外" : "グループから退出",
+      name: owner ? "合トレ仲間を除外" : "退出",
       exact: true,
     });
-    if (owner)
-      await expect(page.getByRole("button", { name: "グループから退出", exact: true })).toHaveCount(
-        0,
-      );
+    if (owner) await expect(page.getByRole("button", { name: "退出", exact: true })).toHaveCount(0);
     else
       await expect(page.getByRole("button", { name: "合トレ仲間を除外", exact: true })).toHaveCount(
         0,
@@ -57,8 +54,8 @@ for (const owner of [true, false]) {
     await page.getByRole("button", { name: "キャンセル", exact: true }).click();
     expect(attempts).toBe(0);
     await action.click();
-    await expect(page.getByText("本人の履歴は残り", { exact: false })).toBeVisible();
-    await page.getByText("本人の履歴は残り", { exact: false }).scrollIntoViewIfNeeded();
+    await expect(page.locator(".membership-confirm")).toBeVisible();
+    await page.locator(".membership-confirm").scrollIntoViewIfNeeded();
     await page.screenshot({
       path: `test-results/membership-${owner ? "remove" : "leave"}-mobile.png`,
     });
@@ -74,18 +71,14 @@ for (const owner of [true, false]) {
       await expect(page.getByRole("button", { name: "合トレ仲間を除外", exact: true })).toHaveCount(
         0,
       );
-      await expect(
-        page.getByRole("status").filter({ hasText: "メンバーを除外しました" }),
-      ).toBeVisible();
+      await expect(page.getByRole("status").filter({ hasText: "除外しました" })).toBeVisible();
     } else {
-      await expect(
-        page.getByRole("status").filter({ hasText: "グループを退出しました" }),
-      ).toBeVisible();
-      await page.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
-      await expect(page.getByLabel("種目名", { exact: true })).toHaveValue("退出前の下書き");
-      await expect(page.getByRole("button", { name: "記録を保存 →", exact: true })).toBeDisabled();
+      await expect(page.getByRole("status").filter({ hasText: "退出しました" })).toBeVisible();
+      await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
+      await expect(page.getByLabel("種目名", { exact: true })).toHaveValue("スクワット");
+      await expect(page.getByRole("button", { name: "保存", exact: true })).toBeDisabled();
       await page.getByRole("combobox", { name: "共有先", exact: true }).selectOption("");
-      await expect(page.getByRole("button", { name: "記録を保存 →", exact: true })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "保存", exact: true })).toBeEnabled();
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
