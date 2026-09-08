@@ -53,3 +53,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [private-workout-memo.md](private-workout-memo.md): 本人だけの記録メモと非共有API。
 
 - [ios-options.md](ios-options.md): iOS移植の方式比較・認証／下書きの境界・公式資料と実機検証案。
+
+- [issue-review-2026-09-08.md](issue-review-2026-09-08.md): 今回のIssue実装・PRと、残る実機／仕様／運用条件。

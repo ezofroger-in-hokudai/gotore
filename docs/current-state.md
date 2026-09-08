@@ -19,7 +19,7 @@
 公開APIは `/api`。ローカルではNext.jsからFastAPIへ転送します。
 Vercel Servicesでは1プロジェクトの共通ルートから各サービスへ振り分けます。設定は [vercel-supabase.md](vercel-supabase.md) を参照してください。ユーザーが公開サイトをデプロイし、migration適用を報告済みです。公開Authの登録制限・手動発行・URL設定は [管理者登録ガイド](admin-managed-accounts.md) に従って管理者が反映します。今回のログイン専用変更の公開反映は未実施です。
 業務データはFastAPI経由で操作し、ブラウザからのDB直接アクセスはRLSで拒否します。
-追加の名称設定・入力操作の仕様は [daily-improvements.md](daily-improvements.md)。#4・#7は一部実装で、メール／パスワード変更・メンバー除外を含みません。名称設定・入力改善はPR #27でmainへ統合済みです。#29の名前保持修正はローカルで実装し、push・PR・本番反映は未実施です。最新のレビュー・検証状況はPRとprogress.mdで追跡します。
+追加の名称設定・入力操作の仕様は [daily-improvements.md](daily-improvements.md)。#4・#7は一部実装で、メール／パスワード変更・メンバー除外を含みません。名称設定・入力改善はPR #27でmainへ統合済みです。#29の名前保持修正はPR #32でmainへ統合済みです。本番反映はこの記録で保証しません。最新のレビュー・検証状況はPRとprogress.mdで追跡します。
 ローカルSupabaseのプロジェクトIDは `gotore`、ポートは59320番台です。
 
 ## 検証
@@ -42,3 +42,5 @@ GitHubのmain保護・レビュー必須設定は、管理者が設定状況を�
 #35（親#14）の追加仕様は [activity-heatmap.md](activity-heatmap.md)。表示する指標はセット数で、SCORE・BEST・種目別推移は後続。新しいmigrationは不要。検証・PRの状態はprogress.mdと週次計画#33で追跡する。
 
 #28の追加仕様は [exercise-options.md](exercise-options.md)。公開前に追加migrationを適用する。候補を削除しても過去記録・下書きは保持する。検証とPRはprogress.md・週次計画#33で追跡する。
+
+2026-09-08の追加実装・レビュー待ちPRと残る条件は[Issue確認記録](issue-review-2026-09-08.md)にまとめています。未マージの機能を上表のmain実装済みとして扱いません。
