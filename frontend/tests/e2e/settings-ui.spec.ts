@@ -36,19 +36,17 @@ test("プロフィール取得中・失敗時は名前を保存できず、再�
   });
   await page.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
   try {
-    await expect(
-      page.getByRole("status").filter({ hasText: "表示名を読み込んでいます" }),
-    ).toBeVisible();
-    await expect(page.getByRole("button", { name: "表示名を変更", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("status").filter({ hasText: "読み込み中" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "保存", exact: true })).toHaveCount(0);
   } finally {
     release();
   }
   await expect(
     page.getByRole("alert").filter({ hasText: "プロフィールを取得できません" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "表示名を変更", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "保存", exact: true })).toHaveCount(0);
   fail = false;
-  await page.getByRole("button", { name: "表示名の読み込みを再試行", exact: true }).click();
+  await page.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(page.getByLabel("表示名", { exact: true })).toHaveValue("保存済みの名前");
   expect(state.authUpdates).toBe(0);
 });
@@ -59,22 +57,22 @@ test("表示名の失敗・部分成功・同期再試行を区別する", async
   const name = page.getByLabel("表示名", { exact: true });
   await expect(name).toHaveValue("画面テスト");
   await name.fill("   ");
-  await page.getByRole("button", { name: "表示名を変更", exact: true }).click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "1〜20文字" })).toBeVisible();
   expect(state.authUpdates).toBe(0);
   state.failAuth = true;
   await name.fill("変更した名前");
-  await page.getByRole("button", { name: "表示名を変更", exact: true }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "表示名を変更できません" })).toBeVisible();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "変更できません" })).toBeVisible();
   await expect(name).toHaveValue("変更した名前");
   expect(state.syncs).toBe(0);
   state.failAuth = false;
   state.failSync = true;
-  await page.getByRole("button", { name: "表示名を変更", exact: true }).click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "表示名は更新済み" })).toBeVisible();
   const updates = state.authUpdates;
   state.failSync = false;
-  await page.getByRole("button", { name: "共有記録への反映を再試行", exact: true }).click();
+  await page.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "反映を確認しました" })).toBeVisible();
   expect(state.authUpdates).toBe(updates);
   expect(state.user.user_metadata.display_name).toBe("変更した名前");
@@ -85,15 +83,15 @@ test("表示名の失敗・部分成功・同期再試行を区別する", async
 test("オーナーは名前変更を再試行でき、招待コードは変わらない", async ({ page }) => {
   const state = await mockTraining(page);
   await page.getByRole("navigation").getByRole("button", { name: "グループ", exact: true }).click();
-  const name = page.getByLabel("新しいグループ名", { exact: true });
+  const name = page.getByLabel("変更後の名前", { exact: true });
   await expect(name).toHaveValue("画面テスト部");
   await name.fill("新しいグループ");
   state.failRename = true;
-  await page.getByRole("button", { name: "グループ名を変更", exact: true }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "入力内容は残っています" })).toBeVisible();
+  await page.getByRole("button", { name: "変更する", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "通信できません" })).toBeVisible();
   await expect(name).toHaveValue("新しいグループ");
   state.failRename = false;
-  await page.getByRole("button", { name: "グループ名を変更", exact: true }).click();
+  await page.getByRole("button", { name: "変更する", exact: true }).click();
   await expect(page.getByRole("heading", { name: "新しいグループ", exact: true })).toBeVisible();
   await expect(page.getByTestId("invite-code")).toHaveText("ABCDEF123456");
   await page.screenshot({ path: "test-results/group-settings-mobile.png", fullPage: true });
@@ -103,12 +101,12 @@ test("メンバーにはオーナーの名称変更欄を表示しない", async
   await mockTraining(page, false);
   await page.getByRole("navigation").getByRole("button", { name: "グループ", exact: true }).click();
   await expect(page.getByTestId("invite-code")).toBeVisible();
-  await expect(page.getByLabel("新しいグループ名", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("変更後の名前", { exact: true })).toHaveCount(0);
 });
 
 test("画面切替の一覧再取得中も、選択済みの共有先を消さない", async ({ page }) => {
   const state = await mockTraining(page);
-  await expect(page.getByRole("combobox", { name: "表示するグループ", exact: true })).toHaveValue(
+  await expect(page.getByRole("combobox", { name: "グループ", exact: true })).toHaveValue(
     state.group.id,
   );
   let release = () => {};
@@ -120,13 +118,11 @@ test("画面切替の一覧再取得中も、選択済みの共有先を消さ�
     await route.fulfill({ json: [state.group] });
   });
   try {
-    await page.getByRole("button", { name: "＋ トレーニングを記録", exact: true }).click();
+    await page.getByRole("button", { name: "＋ 記録する", exact: true }).click();
     await expect(page.getByRole("combobox", { name: "共有先", exact: true })).toHaveValue(
       state.group.id,
     );
-    await expect(
-      page.getByRole("button", { name: "記録を確定して共有 →", exact: true }),
-    ).toBeEnabled();
+    await expect(page.getByRole("button", { name: "保存して共有", exact: true })).toBeEnabled();
   } finally {
     release();
   }
@@ -165,9 +161,7 @@ test("別の記録一覧へ切り替えたときに前の記録を流用しな�
       .getByRole("button", { name: "自分の記録", exact: true })
       .click();
     await expect(page.getByRole("article")).toHaveCount(0);
-    await expect(
-      page.getByRole("status").filter({ hasText: "記録を読み込んでいます" }),
-    ).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "読み込み中" })).toBeVisible();
   } finally {
     release();
   }

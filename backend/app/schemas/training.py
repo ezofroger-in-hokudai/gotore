@@ -23,6 +23,13 @@ class GroupJoin(BaseModel):
     ]
 
 
+class InviteCodeRenew(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_invite_code: Annotated[
+        str, StringConstraints(strip_whitespace=True, to_upper=True, pattern=r"^[A-Fa-f0-9]{12}$")
+    ]
+
+
 class GroupResponse(BaseModel):
     id: UUID
     name: str
@@ -34,6 +41,7 @@ class GroupResponse(BaseModel):
 class MemberResponse(BaseModel):
     id: UUID
     display_name: str
+    joined_at: datetime
 
 
 class GroupDetail(GroupResponse):
@@ -41,6 +49,7 @@ class GroupDetail(GroupResponse):
 
 
 class WorkoutResponse(BaseModel):
+    revision: int
     id: UUID
     user_id: UUID
     display_name: str
@@ -48,3 +57,8 @@ class WorkoutResponse(BaseModel):
     performed_on: date
     exercises: list[Exercise]
     created_at: datetime
+
+
+class WorkoutMemoResponse(BaseModel):
+    content: str
+    revision: int

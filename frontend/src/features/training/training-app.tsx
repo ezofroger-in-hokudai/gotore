@@ -6,6 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { ActivityCalendar } from "../activity/activity-calendar";
 import { dateLabel } from "../activity/calendar";
+import { OnboardingGuide } from "../onboarding/onboarding-guide";
 import { SettingsPanel } from "../settings/settings-panel";
 import { AuthPanel } from "./auth-panel";
 import { GroupPanel } from "./group-panel";
@@ -16,6 +17,9 @@ import { WorkoutForm } from "./workout-form";
 type View = "home" | "records" | "groups" | "workout" | "settings";
 
 function Workspace({ session }: { session: Session }) {
+  const [guideReplay, setGuideReplay] = useState(0);
+  const [editing, setEditing] = useState<Workout | null>(null);
+  const [source, setSource] = useState<Workout | null>(null);
   const [view, setView] = useState<View>("home");
   const [groupId, setGroupId] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -29,7 +33,7 @@ function Workspace({ session }: { session: Session }) {
     view === "home" || view === "groups",
   );
   const groups = groupList.data ?? [];
-  const activeId = groupId || groups[0]?.id || "";
+  const activeId = groups.some((group) => group.id === groupId) ? groupId : groups[0]?.id || "";
   const detail = useResource<GroupDetail>(
     activeId && view === "groups" ? `/groups/${activeId}` : null,
     refreshKey,
@@ -44,6 +48,8 @@ function Workspace({ session }: { session: Session }) {
   const records = useResource<Workout[]>(path, refreshKey, view === "home");
 
   function navigate(next: View) {
+    setEditing(null);
+    setSource(null);
     setView(next);
     setPage(0);
     setSelectedDate("");
@@ -59,15 +65,20 @@ function Workspace({ session }: { session: Session }) {
   }
   function saved(workout: Workout) {
     setSelectedDate("");
+    setSource(null);
     setRefreshKey((value) => value + 1);
     setPage(0);
+    if (editing) {
+      setEditing(null);
+      setView("records");
+      setNotice("更新しました。");
+      return;
+    }
     if (workout.group_id) {
       setGroupId(workout.group_id);
       setView("home");
     } else setView("records");
-    setNotice(
-      workout.group_id ? "記録を保存し、グループへ共有しました。" : "自分の記録を保存しました。",
-    );
+    setNotice(workout.group_id ? "共有しました。" : "保存しました。");
   }
 
   return (
@@ -83,7 +94,9 @@ function Workspace({ session }: { session: Session }) {
           onClick={async () => {
             setSigningOut(true);
             try {
-              const result = await getSupabase()?.auth.signOut({ scope: "local" });
+              const result = await getSupabase()?.auth.signOut({
+                scope: "local",
+              });
               if (result?.error) setNotice("ログアウトできませんでした。再試行してください。");
             } catch {
               setNotice("ログアウトできませんでした。接続を確認してください。");
@@ -96,6 +109,7 @@ function Workspace({ session }: { session: Session }) {
         </button>
       </header>
       <main className="main-content">
+        <OnboardingGuide userId={session.user.id} replay={guideReplay} />
         {notice && <output className="notice">{notice}</output>}
         {groupList.error && (
           <div className="error" role="alert">
@@ -107,18 +121,46 @@ function Workspace({ session }: { session: Session }) {
         )}
         {view === "workout" ? (
           <WorkoutForm
+            key={editing?.id ?? "new"}
+            editing={editing}
+            source={source}
             groups={groups}
             selectedGroup={activeId}
             userId={session.user.id}
             onSaved={saved}
-            onBack={() => navigate("home")}
+            onBack={() => {
+              navigate(editing ? "records" : "home");
+              setRefreshKey((value) => value + 1);
+            }}
           />
         ) : view === "settings" ? (
-          <SettingsPanel onSaved={() => setRefreshKey((value) => value + 1)} />
+          <>
+            <SettingsPanel onSaved={() => setRefreshKey((value) => value + 1)} />
+            <section className="panel">
+              <h2>使い方</h2>
+
+              <button
+                className="secondary full"
+                type="button"
+                onClick={() => setGuideReplay((value) => value + 1)}
+              >
+                使い方を見る
+              </button>
+            </section>
+          </>
         ) : (
           <>
             {view === "groups" ? (
               <GroupPanel
+                onMembershipChanged={(left) => {
+                  setRefreshKey((value) => value + 1);
+                  if (left) {
+                    setGroupId("");
+                    setPage(0);
+                    setView("home");
+                    setNotice("退出しました。");
+                  }
+                }}
                 userId={session.user.id}
                 groups={groups}
                 detail={detail.data}
@@ -132,18 +174,13 @@ function Workspace({ session }: { session: Session }) {
               <>
                 <div className="page-title">
                   <div>
-                    <p className="eyebrow">
-                      {view === "home" ? "TRAIN TOGETHER" : "YOUR WORKOUTS"}
-                    </p>
-                    <h1>
-                      {view === "home" ? "仲間の、今日の頑張り。" : "積み重ねた、自分の記録。"}
-                    </h1>
+                    <h1>{view === "home" ? "ホーム" : "自分の記録"}</h1>
                   </div>
                   <span className="red-dot" />
                 </div>
                 {view === "home" && groups.length > 0 && (
                   <label className="group-select">
-                    表示するグループ
+                    グループ
                     <select value={activeId} onChange={(e) => select(e.target.value)}>
                       {groups.map((group) => (
                         <option key={group.id} value={group.id}>
@@ -155,22 +192,15 @@ function Workspace({ session }: { session: Session }) {
                 )}
                 {view === "home" && !groups.length && !groupList.loading && !groupList.error && (
                   <div className="welcome panel">
-                    <p className="eyebrow">START YOUR TEAM</p>
-                    <h2>
-                      いつもの仲間と、
-                      <br />
-                      ここでも合トレ。
-                    </h2>
-                    <p>グループを作るか、仲間からの招待コードで参加しましょう。</p>
+                    <h2>グループなし</h2>
                     <button type="button" className="primary" onClick={() => navigate("groups")}>
-                      グループを作る・参加する →
+                      作成・参加
                     </button>
                   </div>
                 )}
                 {view === "home" && activeId && (
                   <div className="feed-heading">
                     <h2>みんなの記録</h2>
-                    <span className="muted">5秒ごとに更新</span>
                   </div>
                 )}
                 {view === "records" && (
@@ -182,13 +212,13 @@ function Workspace({ session }: { session: Session }) {
                     />
                     {selectedDate && (
                       <div className="daily-record-heading">
-                        <h2>{dateLabel(selectedDate)}のトレーニング</h2>
+                        <h2>{dateLabel(selectedDate)}</h2>
                         <button
                           type="button"
                           className="text-button"
                           onClick={() => selectDate("")}
                         >
-                          日付の絞り込みを解除
+                          すべての記録
                         </button>
                       </div>
                     )}
@@ -203,19 +233,43 @@ function Workspace({ session }: { session: Session }) {
                   </div>
                 )}
                 {records.loading && records.data === null && (
-                  <output className="loading">記録を読み込んでいます…</output>
+                  <output className="loading">読み込み中…</output>
                 )}
                 {records.data && (
                   <RecordList
+                    onEdit={
+                      view === "records"
+                        ? (record) => {
+                            setEditing(record);
+                            setSource(null);
+                            setNotice("");
+                            setView("workout");
+                          }
+                        : undefined
+                    }
+                    onReuse={
+                      view === "records"
+                        ? (record) => {
+                            setSource(record);
+                            setEditing(null);
+                            setNotice("");
+                            setView("workout");
+                          }
+                        : undefined
+                    }
+                    onDeleted={
+                      view === "records"
+                        ? () => {
+                            setRefreshKey((value) => value + 1);
+                            setPage(0);
+                            setNotice("削除しました。");
+                          }
+                        : undefined
+                    }
+                    personal={view === "records"}
                     records={records.data}
                     userId={session.user.id}
-                    empty={
-                      view === "home"
-                        ? "記録を共有すると、ここに仲間の頑張りが並びます。"
-                        : selectedDate
-                          ? "この日のトレーニング記録はありません。"
-                          : "最初のトレーニングを記録してみましょう。"
-                    }
+                    empty={view === "home" ? "" : selectedDate ? "この日の記録はありません。" : ""}
                   />
                 )}
                 {(page > 0 || records.data?.length === 50) && (
@@ -254,7 +308,7 @@ function Workspace({ session }: { session: Session }) {
               className="primary record-cta"
               onClick={() => navigate("workout")}
             >
-              ＋ トレーニングを記録
+              ＋ 記録する
             </button>
           </>
         )}

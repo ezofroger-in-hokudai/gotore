@@ -1,10 +1,16 @@
 # スタンダード版 v0.1 — グループ・記録・共有
 
+画面文言は2026-09-08の[簡略化方針](ui-copy.md)を優先する。説明は初回ガイドに集約し、以下の業務ルールを維持する。
+
 状態: ユーザー指定の初版の完成ラインは「グループを作る・記録する・記録を共有する」。ホーム画面に追加するWebアプリとして実装し、ユーザーがHTTPS公開済み。テスト運用は管理者発行アカウントでのログイン専用へ変更する。今回の変更の公開反映と実機確認は別途行う。先の広い範囲案を本書で置き換える。
 
 ## 今回の範囲
 
 本人の活動表示は [activity-heatmap.md](activity-heatmap.md) を追加適用する。
+
+種目の選択と本人用リストの管理は [exercise-options.md](exercise-options.md) を追加適用する。
+
+#6の追加範囲として、[本人の記録編集・削除](workout-management.md)を適用する。以下の初版時点の後続指定から変更した範囲は同書で定義する。
 
 初版後の名称設定・入力改善は [daily-improvements.md](daily-improvements.md) の合意範囲を追加適用する。初版からの変更点と未実装範囲は同書で区別する。
 
@@ -104,3 +110,5 @@ MOCK用の採点・自動反応・固定AIは今回の範囲に含めない。
 - [Psycopgのトランザクション](https://www.psycopg.org/psycopg3/docs/basic/transactions.html)
 - [Next.jsのホーム画面追加対応](https://nextjs.org/docs/app/guides/progressive-web-apps)
 - [Appleのホーム画面追加手順](https://support.apple.com/ja-jp/guide/iphone/iphea86e5236/ios)
+
+追加仕様: [グループ退出・除外](group-membership.md)に基づき、共有解除と本人履歴保持を採用する。

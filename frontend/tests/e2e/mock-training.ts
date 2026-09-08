@@ -1,7 +1,7 @@
 import { type Page, expect } from "@playwright/test";
 
 // UI単独の検証用。実際の認証・DB・共有検証はsharing.spec.tsで行う。
-export async function mockTraining(page: Page, owner = true) {
+export async function mockTraining(page: Page, owner = true, showGuide = false) {
   const user = {
     id: "00000000-0000-0000-0000-000000000001",
     aud: "authenticated",
@@ -23,6 +23,12 @@ export async function mockTraining(page: Page, owner = true) {
     failAuth: false,
     failSync: false,
     failRename: false,
+    options: [
+      { id: "option-bench", name: "ベンチプレス" },
+      { id: "option-squat", name: "スクワット" },
+    ],
+    failOptions: false,
+    failOptionWrite: false,
     authUpdates: 0,
     syncs: 0,
   };
@@ -49,6 +55,25 @@ export async function mockTraining(page: Page, owner = true) {
   });
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
+    if (path === "/api/exercise-options") {
+      if (route.request().method() === "POST") {
+        if (state.failOptionWrite) return route.abort();
+        const name = route.request().postDataJSON().name.trim();
+        const option = state.options.find((item) => item.name === name) ?? {
+          id: crypto.randomUUID(),
+          name,
+        };
+        if (!state.options.includes(option)) state.options.push(option);
+        return route.fulfill({ status: 201, json: option });
+      }
+      if (state.failOptions) return route.abort();
+      return route.fulfill({ json: state.options });
+    }
+    if (path.startsWith("/api/exercise-options/")) {
+      if (state.failOptionWrite) return route.abort();
+      state.options = state.options.filter((item) => item.id !== path.split("/").at(-1));
+      return route.fulfill({ status: 204 });
+    }
     if (path === "/api/me") {
       return route.fulfill({
         json: { id: user.id, display_name: user.user_metadata.display_name },
@@ -71,7 +96,13 @@ export async function mockTraining(page: Page, owner = true) {
       return route.fulfill({
         json: {
           ...group,
-          members: [{ id: user.id, display_name: user.user_metadata.display_name }],
+          members: [
+            {
+              id: user.id,
+              display_name: user.user_metadata.display_name,
+              joined_at: "2026-01-01T00:00:00Z",
+            },
+          ],
         },
       });
     }
@@ -89,10 +120,15 @@ export async function mockTraining(page: Page, owner = true) {
     if (path.endsWith("/workouts")) return route.fulfill({ json: [] });
     return route.fulfill({ status: 404, json: { detail: "UIテスト対象外" } });
   });
+  if (!showGuide)
+    await page.addInitScript(
+      (id) => localStorage.setItem(`gotore:onboarding:v1:${id}`, "seen"),
+      user.id,
+    );
   await page.goto("/");
   await page.getByLabel("メールアドレス", { exact: true }).fill("ui@example.test");
   await page.getByLabel("パスワード", { exact: true }).fill("ui-test-password");
-  await page.getByRole("button", { name: "ログインする →", exact: true }).click();
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page.getByRole("navigation")).toBeVisible();
   return state;
 }

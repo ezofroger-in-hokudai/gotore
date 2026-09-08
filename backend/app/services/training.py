@@ -1,9 +1,10 @@
-from datetime import date
+from datetime import date, datetime
 from uuid import UUID
 
 from app.domain.activity import month_bounds, validate_activity_date
 from app.domain.identity import AuthenticatedUser
-from app.domain.workout import WorkoutInput
+from app.domain.workout import WorkoutInput, WorkoutUpdate
+from app.domain.workout_memo import WorkoutMemoInput
 from app.infrastructure.training_repository import TrainingRepository
 from app.schemas.activity import ActivityDay, MonthlyActivity
 
@@ -29,6 +30,9 @@ class TrainingService:
     def rename_group(self, group_id: UUID, name: str):
         return self.repository.rename_group(self.user.id, group_id, name)
 
+    def renew_invite_code(self, group_id: UUID, expected_invite_code: str):
+        return self.repository.renew_invite_code(self.user.id, group_id, expected_invite_code)
+
     def save_workout(self, workout: WorkoutInput):
         return self.repository.save_workout(self.user.id, workout)
 
@@ -52,3 +56,25 @@ class TrainingService:
         if performed_on is not None:
             validate_activity_date(performed_on)
         return self.repository.workouts(self.user.id, group_id, limit, offset, performed_on)
+
+    def update_workout(self, workout_id: UUID, workout: WorkoutUpdate):
+        return self.repository.update_workout(self.user.id, workout_id, workout)
+
+    def delete_workout(self, workout_id: UUID, expected_revision: int):
+        return self.repository.delete_workout(self.user.id, workout_id, expected_revision)
+
+    def leave_group(self, group_id: UUID, expected_joined_at: datetime):
+        return self.repository.end_membership(
+            self.user.id, group_id, self.user.id, expected_joined_at, owner_action=False
+        )
+
+    def remove_member(self, group_id: UUID, member_id: UUID, expected_joined_at: datetime):
+        return self.repository.end_membership(
+            self.user.id, group_id, member_id, expected_joined_at, owner_action=True
+        )
+
+    def workout_memo(self, workout_id: UUID):
+        return self.repository.workout_memo(self.user.id, workout_id)
+
+    def save_workout_memo(self, workout_id: UUID, memo: WorkoutMemoInput):
+        return self.repository.save_workout_memo(self.user.id, workout_id, memo)

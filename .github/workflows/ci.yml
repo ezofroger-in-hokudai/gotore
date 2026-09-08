@@ -101,6 +101,9 @@ jobs:
       - name: Verify migrations apply cleanly
         run: supabase db reset
 
+      - name: Verify daily migration commands
+        run: make db-migrations db-migrate SUPABASE_CLI=supabase
+
       - name: Lint database schema
         run: supabase db lint --local --fail-on error
 

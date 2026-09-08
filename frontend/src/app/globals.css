@@ -808,3 +808,150 @@ fieldset {
   font-size: 16px;
   margin-bottom: 0;
 }
+
+.exercise-catalog summary {
+  cursor: pointer;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.exercise-options {
+  list-style: none;
+  margin: 18px 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.exercise-options li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.exercise-options li span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.exercise-options li button {
+  flex-shrink: 0;
+}
+
+.onboarding-guide {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.onboarding-header,
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.onboarding-header .eyebrow {
+  margin: 0;
+}
+.onboarding-header .text-button {
+  flex-shrink: 0;
+}
+.onboarding-guide h2 {
+  margin: 20px 0 12px;
+}
+.onboarding-hint {
+  padding: 12px;
+  background: var(--panel);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+}
+.onboarding-actions {
+  margin-top: 20px;
+}
+.onboarding-actions button {
+  flex: 1;
+}
+
+.invite-confirm {
+  padding: 16px;
+  margin-top: 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.invite-confirm h3 {
+  margin-top: 0;
+}
+.invite-actions {
+  display: flex;
+  gap: 12px;
+}
+.invite-actions button {
+  flex: 1;
+}
+
+.workout-actions {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.membership-list {
+  margin-bottom: 16px;
+}
+.membership-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+  overflow-wrap: anywhere;
+}
+.membership-confirm {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.reuse-workout {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.reuse-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workout-memo {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.workout-memo textarea {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+  background: var(--panel);
+  color: var(--text);
+}
+.memo-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}

@@ -267,7 +267,15 @@ def test_rename_rejects_invalid_name_and_owner_changes(client, data):
 
 def test_public_database_role_cannot_read_or_write_training_data(client, connection):
     group = create_group(client)
-    assert client.post("/api/workouts", json=payload(group_id=group["id"])).status_code == 201
+    record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    assert (
+        client.put(
+            f"/api/workouts/{record['id']}/memo", json={"content": "非公開", "expected_revision": 0}
+        ).status_code
+        == 200
+    )
+    deleted = client.post("/api/workouts", json=payload()).json()
+    assert client.delete(f"/api/workouts/{deleted['id']}?expected_revision=1").status_code == 204
     with connection.transaction(force_rollback=True):
         connection.execute("""DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
@@ -276,7 +284,8 @@ def test_public_database_role_cannot_read_or_write_training_data(client, connect
         END $$""")
         connection.execute("GRANT USAGE ON SCHEMA public TO authenticated")
         connection.execute("""GRANT SELECT, INSERT ON public.gotore_profiles,
-            public.gotore_groups, public.gotore_group_members, public.gotore_workouts
+            public.gotore_groups, public.gotore_group_members,
+            public.gotore_workouts, public.gotore_workout_memos, public.gotore_deleted_workouts
             TO authenticated""")
         connection.execute("SET LOCAL ROLE authenticated")
         for table in [
@@ -284,6 +293,8 @@ def test_public_database_role_cannot_read_or_write_training_data(client, connect
             "gotore_groups",
             "gotore_group_members",
             "gotore_workouts",
+            "gotore_workout_memos",
+            "gotore_deleted_workouts",
         ]:
             assert connection.execute(f"SELECT * FROM public.{table}").fetchall() == []
         with pytest.raises(psycopg.errors.InsufficientPrivilege), connection.transaction():
@@ -291,6 +302,114 @@ def test_public_database_role_cannot_read_or_write_training_data(client, connect
                 "INSERT INTO public.gotore_profiles (id, display_name) VALUES (%s, 'fake')",
                 (USERS["C"],),
             )
+
+
+def updated_payload(record, **changes):
+    return {
+        "performed_on": record["performed_on"],
+        "exercises": [{"name": "スクワット", "sets": [{"weight": 90, "reps": 5}]}],
+        "expected_revision": record.get("revision", 1),
+        **changes,
+    }
+
+
+def test_owner_edits_shared_record_and_retries_without_duplicate_updates(client):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    path = f"/api/workouts/{record['id']}"
+    for user in ["B", "C"]:
+        assert (
+            client.patch(
+                path, json=updated_payload(record), headers={"X-Test-User": user}
+            ).status_code
+            == 404
+        )
+    changed = client.patch(path, json=updated_payload(record))
+    assert changed.status_code == 200
+    assert changed.json()["revision"] == 2
+    for key in ["id", "user_id", "group_id", "created_at"]:
+        assert changed.json()[key] == record[key]
+    assert client.patch(path, json=updated_payload(record)).json() == changed.json()
+    assert (
+        client.patch(path, json=updated_payload(record, performed_on="2026-01-02")).status_code
+        == 409
+    )
+    assert (
+        client.get(f"/api/groups/{group['id']}/workouts", headers={"X-Test-User": "B"}).json()[0]
+        == changed.json()
+    )
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"group_id": None},
+        {"user_id": "fake"},
+        {"performed_on": "1999-12-31"},
+        {"exercises": []},
+        {"expected_revision": 0},
+        {"expected_revision": True},
+        {"exercises": [{"name": "種目", "sets": [{"weight": 0.01, "reps": 1}]}]},
+    ],
+)
+def test_edit_rejects_invalid_fields_without_changing_record(client, changes):
+    record = client.post("/api/workouts", json=payload()).json()
+    assert (
+        client.patch(
+            f"/api/workouts/{record['id']}", json=updated_payload(record, **changes)
+        ).status_code
+        == 422
+    )
+    assert client.get("/api/workouts").json() == [record]
+
+
+def test_delete_preserves_other_records_and_never_revives_from_post_retry(client, connection):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    original = payload(group_id=group["id"])
+    record = client.post("/api/workouts", json=original).json()
+    remaining = client.post("/api/workouts", json=payload()).json()
+    path = f"/api/workouts/{record['id']}?expected_revision=1"
+    for user in ["B", "C"]:
+        assert client.delete(path, headers={"X-Test-User": user}).status_code == 404
+    assert client.delete(path).status_code == 204
+    assert client.delete(path).status_code == 204
+    assert client.delete(path, headers={"X-Test-User": "B"}).status_code == 404
+    assert client.get("/api/workouts").json() == [remaining]
+    assert (
+        client.get(f"/api/groups/{group['id']}/workouts", headers={"X-Test-User": "B"}).json() == []
+    )
+    assert client.post("/api/workouts", json=original).status_code == 409
+    assert (
+        client.patch(f"/api/workouts/{record['id']}", json=updated_payload(record)).status_code
+        == 404
+    )
+    assert (
+        connection.execute(
+            "SELECT count(*) AS n FROM public.gotore_workouts WHERE id = %s", (record["id"],)
+        ).fetchone()["n"]
+        == 0
+    )
+    deleted = connection.execute(
+        "SELECT * FROM public.gotore_deleted_workouts WHERE id = %s", (record["id"],)
+    ).fetchone()
+    assert set(deleted) == {"id", "user_id", "deleted_at"}
+    assert str(deleted["user_id"]) == record["user_id"]
+
+
+def test_delete_conflicts_with_newer_edit(client):
+    record = client.post("/api/workouts", json=payload()).json()
+    path = f"/api/workouts/{record['id']}"
+    changed = client.patch(path, json=updated_payload(record))
+    assert changed.status_code == 200
+    assert client.delete(f"{path}?expected_revision=1").status_code == 409
+    assert len(client.get("/api/workouts").json()) == 1
+    assert client.delete(f"{path}?expected_revision=2").status_code == 204
 
 
 def test_activity_uses_all_own_sets_with_month_boundaries_and_daily_pages(client):
@@ -385,3 +504,313 @@ def test_activity_rejects_invalid_or_out_of_range_months(client, month):
 @pytest.mark.parametrize("day", ["2023-02-29", "1999-12-31", "9999-01-01", "bad"])
 def test_daily_records_reject_invalid_dates(client, day):
     assert client.get("/api/workouts", params={"performed_on": day}).status_code == 422
+
+
+def test_exercise_options_are_private_persistent_and_idempotent(client):
+    path = "/api/exercise-options"
+    initial = client.get(path)
+    assert initial.status_code == 200
+    assert len(initial.json()) == 8
+    assert initial.headers["cache-control"] == "no-store"
+    assert client.get(path).json() == initial.json()
+    first = client.post(path, json={"name": "  自分の種目  "})
+    assert first.status_code == 201
+    assert first.json()["name"] == "自分の種目"
+    assert client.post(path, json={"name": "自分の種目"}).json() == first.json()
+    assert len(client.get(path).json()) == 9
+    others = client.get(path, headers={"X-Test-User": "B"}).json()
+    assert len(others) == 8
+    assert not any(item["name"] == "自分の種目" for item in others)
+    assert (
+        client.delete(f"{path}/{first.json()['id']}", headers={"X-Test-User": "B"}).status_code
+        == 404
+    )
+    assert len(client.get(path).json()) == 9
+    for item in client.get(path).json():
+        assert client.delete(f"{path}/{item['id']}").status_code == 204
+    assert client.get(path).json() == []
+    assert client.get(path).json() == []
+    assert len(client.get(path, headers={"X-Test-User": "B"}).json()) == 8
+    assert client.post(path, json={"name": "再追加"}).status_code == 201
+    assert len(client.get(path).json()) == 1
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"name": " "},
+        {"name": "長" * 61},
+        {"name": 123},
+        {"name": "偽装", "user_id": str(USERS["B"])},
+        {},
+    ],
+)
+def test_exercise_options_reject_invalid_names_and_owner_override(client, data):
+    assert client.post("/api/exercise-options", json=data).status_code == 422
+
+
+def test_deleting_exercise_option_preserves_saved_and_shared_workouts(client):
+    path = "/api/exercise-options"
+    option = client.post(path, json={"name": "長" * 60}).json()
+    assert len(option["name"]) == 60
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    record = payload(group_id=group["id"])
+    record["exercises"][0]["name"] = option["name"]
+    assert client.post("/api/workouts", json=record).status_code == 201
+    assert client.delete(f"{path}/{option['id']}").status_code == 204
+    assert client.delete(f"{path}/{option['id']}").status_code == 404
+    assert client.get("/api/workouts").json()[0]["exercises"][0]["name"] == option["name"]
+    shared = client.get(f"/api/groups/{group['id']}/workouts", headers={"X-Test-User": "B"})
+    assert shared.json()[0]["exercises"][0]["name"] == option["name"]
+    assert client.post("/api/workouts", json=record).status_code == 201
+
+
+def test_exercise_catalog_has_database_constraints_and_rls(client, connection):
+    client.get("/api/exercise-options")
+    for invalid in ["", " ", "長" * 61]:
+        with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+            connection.execute(
+                "INSERT INTO public.gotore_exercise_options (user_id, name) VALUES (%s, %s)",
+                (USERS["A"], invalid),
+            )
+    with pytest.raises(psycopg.errors.UniqueViolation), connection.transaction():
+        connection.execute(
+            "INSERT INTO public.gotore_exercise_options (user_id, name) VALUES (%s, %s)",
+            (USERS["A"], "ベンチプレス"),
+        )
+    with connection.transaction(force_rollback=True):
+        connection.execute("CREATE ROLE gotore_options_test NOLOGIN")
+        connection.execute("GRANT USAGE ON SCHEMA public TO gotore_options_test")
+        connection.execute("""GRANT SELECT, INSERT, DELETE ON public.gotore_exercise_options,
+            public.gotore_exercise_catalogs TO gotore_options_test""")
+        connection.execute("SET LOCAL ROLE gotore_options_test")
+        for table in ["gotore_exercise_options", "gotore_exercise_catalogs"]:
+            assert connection.execute(f"SELECT * FROM public.{table}").fetchall() == []
+            assert connection.execute(f"DELETE FROM public.{table}").rowcount == 0
+        with pytest.raises(psycopg.errors.InsufficientPrivilege), connection.transaction():
+            connection.execute(
+                "INSERT INTO public.gotore_exercise_options (user_id, name) VALUES (%s, '偽装')",
+                (USERS["A"],),
+            )
+
+
+def test_owner_renews_invite_and_preserves_members_and_workouts(client):
+    group = create_group(client)
+    original = group["invite_code"]
+    client.post("/api/groups/join", json={"invite_code": original}, headers={"X-Test-User": "B"})
+    record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    endpoint = f"/api/groups/{group['id']}/invite-code"
+    for user in ["B", "C"]:
+        assert (
+            client.post(
+                endpoint, json={"expected_invite_code": original}, headers={"X-Test-User": user}
+            ).status_code
+            == 404
+        )
+    changed = client.post(endpoint, json={"expected_invite_code": original})
+    assert changed.status_code == 200
+    renewed = changed.json()
+    assert renewed["invite_code"] != original
+    assert renewed == {**group, "invite_code": renewed["invite_code"]}
+    assert client.post(endpoint, json={"expected_invite_code": original}).status_code == 409
+    assert (
+        client.post(
+            "/api/groups/join", json={"invite_code": original}, headers={"X-Test-User": "C"}
+        ).status_code
+        == 404
+    )
+    assert len(client.get(f"/api/groups/{group['id']}").json()["members"]) == 2
+    assert (
+        client.get(f"/api/groups/{group['id']}/workouts", headers={"X-Test-User": "B"}).json()[0][
+            "id"
+        ]
+        == record["id"]
+    )
+    assert (
+        client.post(
+            "/api/groups/join",
+            json={"invite_code": renewed["invite_code"]},
+            headers={"X-Test-User": "C"},
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            f"/api/groups/{USERS['C']}/invite-code", json={"expected_invite_code": original}
+        ).status_code
+        == 404
+    )
+
+
+@pytest.mark.parametrize(
+    "data",
+    [{}, {"expected_invite_code": "x"}, {"expected_invite_code": "A" * 12, "owner_id": "fake"}],
+)
+def test_renew_invite_rejects_invalid_input(client, data):
+    group = create_group(client)
+    assert client.post(f"/api/groups/{group['id']}/invite-code", json=data).status_code == 422
+    assert client.get(f"/api/groups/{group['id']}").json()["invite_code"] == group["invite_code"]
+
+
+def test_renew_invite_retries_collisions_without_losing_current_code(client, monkeypatch):
+    group = create_group(client)
+    other = create_group(client)
+    available = next(
+        value
+        for value in ["A" * 12, "B" * 12, "C" * 12]
+        if value not in [group["invite_code"], other["invite_code"]]
+    )
+    candidates = iter([group["invite_code"], other["invite_code"], available])
+    monkeypatch.setattr(
+        "app.infrastructure.training_repository.secrets.token_hex", lambda _: next(candidates)
+    )
+    endpoint = f"/api/groups/{group['id']}/invite-code"
+    response = client.post(endpoint, json={"expected_invite_code": group["invite_code"]})
+    assert response.status_code == 200
+    assert response.json()["invite_code"] == available
+    monkeypatch.setattr(
+        "app.infrastructure.training_repository.secrets.token_hex", lambda _: other["invite_code"]
+    )
+    response = client.post(endpoint, json={"expected_invite_code": available})
+    assert response.status_code == 503
+    assert client.get(f"/api/groups/{group['id']}").json()["invite_code"] == available
+
+
+def joined_at(client, group, user="B"):
+    members = client.get(f"/api/groups/{group['id']}").json()["members"]
+    return next(
+        member.get("joined_at", "2026-01-01T00:00:00Z")
+        for member in members
+        if member["id"] == str(USERS[user])
+    )
+
+
+@pytest.mark.parametrize("self_leave", [True, False])
+def test_departure_preserves_personal_history_and_rejoin_never_reshares(client, self_leave):
+    group = create_group(client)
+    other = create_group(client)
+    b = {"X-Test-User": "B"}
+    for target in [group, other]:
+        client.post("/api/groups/join", json={"invite_code": target["invite_code"]}, headers=b)
+    original = payload(group_id=group["id"])
+    shared = client.post("/api/workouts", json=original, headers=b).json()
+    personal = client.post("/api/workouts", json=payload(), headers=b).json()
+    other_record = client.post(
+        "/api/workouts", json=payload(group_id=other["id"]), headers=b
+    ).json()
+    owner_record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    suffix = "membership" if self_leave else f"members/{USERS['B']}"
+    path = f"/api/groups/{group['id']}/{suffix}"
+    params = {"expected_joined_at": joined_at(client, group)}
+    actor = b if self_leave else {}
+    assert client.delete(path, params=params, headers=actor).status_code == 204
+    assert client.delete(path, params=params, headers=actor).status_code == 204
+    assert client.get(f"/api/groups/{group['id']}", headers=b).status_code == 404
+    assert client.get(f"/api/groups/{group['id']}/workouts", headers=b).status_code == 404
+    assert (
+        client.post("/api/workouts", json=payload(group_id=group["id"]), headers=b).status_code
+        == 404
+    )
+    records = {record["id"]: record for record in client.get("/api/workouts", headers=b).json()}
+    assert records == {
+        shared["id"]: {**shared, "group_id": None},
+        personal["id"]: personal,
+        other_record["id"]: other_record,
+    }
+    assert client.get(f"/api/groups/{group['id']}/workouts").json() == [owner_record]
+    assert (
+        client.post(
+            "/api/groups/join", json={"invite_code": group["invite_code"]}, headers=b
+        ).status_code
+        == 200
+    )
+    assert client.delete(path, params=params, headers=actor).status_code == 409
+    assert client.post("/api/workouts", json=original, headers=b).status_code == 409
+    assert client.get(f"/api/groups/{group['id']}/workouts", headers=b).json() == [owner_record]
+    assert (
+        client.post("/api/workouts", json=payload(group_id=group["id"]), headers=b).status_code
+        == 201
+    )
+
+
+def test_membership_changes_require_owner_or_self_and_reject_bad_dates(client):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    params = {"expected_joined_at": joined_at(client, group)}
+    path = f"/api/groups/{group['id']}/members/{USERS['B']}"
+    for actor in ["B", "C"]:
+        assert client.delete(path, params=params, headers={"X-Test-User": actor}).status_code == 404
+    for suffix in ["membership", f"members/{USERS['A']}"]:
+        assert (
+            client.delete(f"/api/groups/{group['id']}/{suffix}", params=params).status_code == 409
+        )
+    for value in ["invalid", "2026-01-01"]:
+        assert client.delete(path, params={"expected_joined_at": value}).status_code == 422
+    assert client.delete(path).status_code == 422
+    assert len(client.get(f"/api/groups/{group['id']}").json()["members"]) == 2
+
+
+def test_private_memo_is_owner_only_and_never_in_shared_workouts(client, connection):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    path = f"/api/workouts/{record['id']}/memo"
+    assert client.get(path).json() == {"content": "", "revision": 0}
+    content = "<script>alert(1)</script>\n自分の気づき"
+    saved = client.put(path, json={"content": content, "expected_revision": 0})
+    assert saved.status_code == 200
+    assert saved.json() == {"content": content, "revision": 1}
+    assert client.get(path).json() == saved.json()
+    for user in ["B", "C"]:
+        headers = {"X-Test-User": user}
+        assert client.get(path, headers=headers).status_code == 404
+        assert (
+            client.put(
+                path, json={"content": "他人", "expected_revision": 1}, headers=headers
+            ).status_code
+            == 404
+        )
+    assert client.get(
+        f"/api/groups/{group['id']}/workouts", headers={"X-Test-User": "B"}
+    ).json() == [record]
+    assert client.get("/api/workouts").json() == [record]
+    connection.execute(
+        "UPDATE public.gotore_workouts SET group_id = NULL WHERE id = %s", (record["id"],)
+    )
+    assert client.get(path).json() == saved.json()
+    connection.execute("DELETE FROM public.gotore_workouts WHERE id = %s", (record["id"],))
+    assert client.get(path).status_code == 404
+    assert (
+        connection.execute("SELECT count(*) AS n FROM public.gotore_workout_memos").fetchone()["n"]
+        == 0
+    )
+
+
+def test_memo_conflict_retry_and_clear_never_restore_old_content(client):
+    record = client.post("/api/workouts", json=payload()).json()
+    path = f"/api/workouts/{record['id']}/memo"
+    first = {"content": "あ" * 1000, "expected_revision": 0}
+    assert client.put(path, json=first).json()["revision"] == 1
+    assert client.put(path, json=first).json()["revision"] == 1
+    assert client.put(path, json={"content": "別の入力", "expected_revision": 0}).status_code == 409
+    for changes in [
+        {"content": "a" * 1001},
+        {"content": None},
+        {"expected_revision": True},
+        {"expected_revision": -1},
+        {"user_id": "fake"},
+    ]:
+        assert client.put(path, json={**first, **changes}).status_code == 422
+    assert client.put(path, json={"content": "", "expected_revision": 1}).json() == {
+        "content": "",
+        "revision": 2,
+    }
+    assert client.put(path, json=first).status_code == 409
+    assert client.get(path).json() == {"content": "", "revision": 2}

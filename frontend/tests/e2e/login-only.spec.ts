@@ -3,11 +3,11 @@ import { localAuth, testPassword } from "./local-auth";
 
 test("ログイン専用画面は管理者発行を案内し、新規登録を提供しない", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "ログインする →", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "新規登録", exact: true })).toHaveCount(0);
   await expect(page.getByLabel("表示名", { exact: true })).toHaveCount(0);
   await expect(
-    page.getByText("アカウントは管理者が発行します。利用する方は管理者にお問い合わせください。", {
+    page.getByText("アカウントの発行は管理者へ。", {
       exact: true,
     }),
   ).toBeVisible();
@@ -35,7 +35,7 @@ test("ログイン失敗は管理者への案内を表示し、再試行でき�
   await page.goto("/");
   await page.getByLabel("メールアドレス", { exact: true }).fill("gotore-invalid@example.test");
   await page.getByLabel("パスワード", { exact: true }).fill(testPassword);
-  const submit = page.getByRole("button", { name: "ログインする →", exact: true });
+  const submit = page.getByRole("button", { name: "ログイン", exact: true });
   await submit.click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText(
     "管理者にお問い合わせください",

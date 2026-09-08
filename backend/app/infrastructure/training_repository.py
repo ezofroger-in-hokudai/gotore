@@ -1,13 +1,15 @@
 import secrets
-from datetime import date
+from datetime import date, datetime
 from uuid import UUID
 
 from psycopg import Connection
+from psycopg.errors import UniqueViolation
 from psycopg.types.json import Jsonb
 
-from app.domain.errors import Conflict, NotFound
+from app.domain.errors import Conflict, NotFound, ServiceUnavailable
 from app.domain.identity import AuthenticatedUser, User
-from app.domain.workout import WorkoutInput
+from app.domain.workout import WorkoutInput, WorkoutUpdate
+from app.domain.workout_memo import WorkoutMemoInput
 
 
 class TrainingRepository:
@@ -39,11 +41,13 @@ class TrainingRepository:
             (user_id,),
         ).fetchall()
 
-    def group(self, user_id: UUID, group_id: UUID):
+    def group(self, user_id: UUID, group_id: UUID, *, lock_membership: bool = False):
+        lock = " FOR SHARE OF m" if lock_membership else ""
         result = self.connection.execute(
             """SELECT g.* FROM public.gotore_groups g
             JOIN public.gotore_group_members m ON m.group_id = g.id
-            WHERE m.user_id = %s AND g.id = %s""",
+            WHERE m.user_id = %s AND g.id = %s"""
+            + lock,
             (user_id, group_id),
         ).fetchone()
         if result is None:
@@ -52,7 +56,7 @@ class TrainingRepository:
 
     def members(self, group_id: UUID):
         return self.connection.execute(
-            """SELECT p.id, p.display_name FROM public.gotore_profiles p
+            """SELECT p.id, p.display_name, m.joined_at FROM public.gotore_profiles p
             JOIN public.gotore_group_members m ON m.user_id = p.id
             WHERE m.group_id = %s ORDER BY m.joined_at, p.id""",
             (group_id,),
@@ -75,13 +79,14 @@ class TrainingRepository:
     def join_group(self, user_id: UUID, invite_code: str):
         with self.connection.transaction():
             group = self.connection.execute(
-                "SELECT * FROM public.gotore_groups WHERE invite_code = %s", (invite_code,)
+                "SELECT * FROM public.gotore_groups WHERE invite_code = %s FOR NO KEY UPDATE",
+                (invite_code,),
             ).fetchone()
             if group is None:
                 raise NotFound("招待コードに対応するグループが見つかりません")
             self.connection.execute(
-                """INSERT INTO public.gotore_group_members (group_id, user_id) VALUES (%s, %s)
-                ON CONFLICT (group_id, user_id) DO NOTHING""",
+                """INSERT INTO public.gotore_group_members (group_id, user_id, joined_at)
+                VALUES (%s, %s, clock_timestamp()) ON CONFLICT (group_id, user_id) DO NOTHING""",
                 (group["id"], user_id),
             )
         return group
@@ -96,11 +101,45 @@ class TrainingRepository:
             raise NotFound("グループが見つからないか、変更する権限がありません")
         return group
 
+    def renew_invite_code(self, user_id: UUID, group_id: UUID, expected_invite_code: str):
+        # 参加と同じグループ行をロックし、旧コードでの参加完了と再発行の順序を揃える。
+        with self.connection.transaction():
+            group = self.connection.execute(
+                "SELECT * FROM public.gotore_groups WHERE id = %s AND owner_id = %s FOR UPDATE",
+                (group_id, user_id),
+            ).fetchone()
+            if group is None:
+                raise NotFound("グループが見つからないか、変更する権限がありません")
+            if group["invite_code"] != expected_invite_code:
+                raise Conflict("招待コードは変更済みです。現在のコードを再取得してください")
+            for _ in range(5):
+                code = secrets.token_hex(6).upper()
+                if code == expected_invite_code:
+                    continue
+                try:
+                    # 一意制約の衝突はこの試行だけロールバックし、元のコードを保持する。
+                    with self.connection.transaction():
+                        return self.connection.execute(
+                            """UPDATE public.gotore_groups SET invite_code = %s
+                            WHERE id = %s RETURNING *""",
+                            (code, group_id),
+                        ).fetchone()
+                except UniqueViolation:
+                    continue
+            raise ServiceUnavailable(
+                "招待コードを発行できませんでした。時間をおいて再試行してください"
+            )
+
     def save_workout(self, user_id: UUID, workout: WorkoutInput):
         exercises = workout.model_dump(mode="json")["exercises"]
         with self.connection.transaction():
+            self.lock_workout(workout.id)
+            if self.connection.execute(
+                "SELECT id FROM public.gotore_deleted_workouts WHERE id = %s", (workout.id,)
+            ).fetchone():
+                raise Conflict("この記録は削除済みです。新しい記録として入力してください")
             if workout.group_id is not None:
-                self.group(user_id, workout.group_id)
+                self.group(user_id, workout.group_id, lock_membership=True)
             self.connection.execute(
                 """INSERT INTO public.gotore_workouts
                 (id, user_id, group_id, performed_on, exercises) VALUES (%s, %s, %s, %s, %s)
@@ -158,3 +197,143 @@ class TrainingRepository:
             WHERE {where} ORDER BY {order} LIMIT %s OFFSET %s""",
             (*values, limit, offset),
         ).fetchall()
+
+    def lock_workout(self, workout_id: UUID):
+        # 行がまだない作成要求も、削除・編集と同じIDで順序付ける。
+        self.connection.execute(
+            "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (str(workout_id),)
+        )
+
+    def owned_workout(self, user_id: UUID, workout_id: UUID):
+        return self.connection.execute(
+            """SELECT w.*, p.display_name FROM public.gotore_workouts w
+            JOIN public.gotore_profiles p ON p.id = w.user_id
+            WHERE w.id = %s AND w.user_id = %s FOR UPDATE OF w""",
+            (workout_id, user_id),
+        ).fetchone()
+
+    def update_workout(self, user_id: UUID, workout_id: UUID, workout: WorkoutUpdate):
+        exercises = workout.model_dump(mode="json")["exercises"]
+        with self.connection.transaction():
+            self.lock_workout(workout_id)
+            record = self.owned_workout(user_id, workout_id)
+            if record is None:
+                raise NotFound("記録が見つからないか、操作する権限がありません")
+            unchanged = (
+                record["performed_on"] == workout.performed_on and record["exercises"] == exercises
+            )
+            if record["revision"] != workout.expected_revision:
+                if record["revision"] == workout.expected_revision + 1 and unchanged:
+                    return record
+                raise Conflict(
+                    "記録は別の操作で変更されています。一覧に戻って最新の内容を確認してください"
+                )
+            if unchanged:
+                return record
+            self.connection.execute(
+                """UPDATE public.gotore_workouts SET performed_on = %s, exercises = %s,
+                revision = revision + 1 WHERE id = %s""",
+                (workout.performed_on, Jsonb(exercises), workout_id),
+            )
+            return self.owned_workout(user_id, workout_id)
+
+    def delete_workout(self, user_id: UUID, workout_id: UUID, expected_revision: int):
+        with self.connection.transaction():
+            self.lock_workout(workout_id)
+            record = self.owned_workout(user_id, workout_id)
+            if record is None:
+                deleted = self.connection.execute(
+                    "SELECT id FROM public.gotore_deleted_workouts WHERE id = %s AND user_id = %s",
+                    (workout_id, user_id),
+                ).fetchone()
+                if deleted:
+                    return
+                raise NotFound("記録が見つからないか、操作する権限がありません")
+            if record["revision"] != expected_revision:
+                raise Conflict(
+                    "記録は別の操作で変更されています。一覧に戻って最新の内容を確認してください"
+                )
+            self.connection.execute(
+                "INSERT INTO public.gotore_deleted_workouts (id, user_id) VALUES (%s, %s)",
+                (workout_id, user_id),
+            )
+            self.connection.execute(
+                "DELETE FROM public.gotore_workouts WHERE id = %s", (workout_id,)
+            )
+
+    def end_membership(
+        self,
+        actor_id: UUID,
+        group_id: UUID,
+        member_id: UUID,
+        expected_joined_at: datetime,
+        *,
+        owner_action: bool,
+    ):
+        with self.connection.transaction():
+            # 外部キーの参照を妨げず、参加・退出・除外の順序を揃える。
+            group = self.connection.execute(
+                "SELECT * FROM public.gotore_groups WHERE id = %s FOR NO KEY UPDATE", (group_id,)
+            ).fetchone()
+            if group is None or (owner_action and group["owner_id"] != actor_id):
+                raise NotFound("グループが見つからないか、操作する権限がありません")
+            if group["owner_id"] == member_id:
+                raise Conflict("オーナーは退出・除外できません")
+            membership = self.connection.execute(
+                """SELECT joined_at FROM public.gotore_group_members
+                WHERE group_id = %s AND user_id = %s FOR UPDATE""",
+                (group_id, member_id),
+            ).fetchone()
+            if membership is None:
+                return
+            if membership["joined_at"] != expected_joined_at:
+                raise Conflict("参加状況が変わっています。グループを開き直して確認してください")
+            # 本人の履歴を保持して共有を解除してから、所属の外部キーを外す。
+            self.connection.execute(
+                """UPDATE public.gotore_workouts SET group_id = NULL
+                WHERE group_id = %s AND user_id = %s""",
+                (group_id, member_id),
+            )
+            self.connection.execute(
+                "DELETE FROM public.gotore_group_members WHERE group_id = %s AND user_id = %s",
+                (group_id, member_id),
+            )
+
+    def workout_memo(self, user_id: UUID, workout_id: UUID):
+        record = self.connection.execute(
+            """SELECT COALESCE(m.content, '') AS content, COALESCE(m.revision, 0) AS revision
+            FROM public.gotore_workouts w
+            LEFT JOIN public.gotore_workout_memos m ON m.workout_id = w.id
+            WHERE w.id = %s AND w.user_id = %s""",
+            (workout_id, user_id),
+        ).fetchone()
+        if record is None:
+            raise NotFound("記録が見つからないか、操作する権限がありません")
+        return record
+
+    def save_workout_memo(self, user_id: UUID, workout_id: UUID, memo: WorkoutMemoInput):
+        with self.connection.transaction():
+            # 未作成メモも元記録で直列化し、記録削除との競合を防ぐ。
+            record = self.connection.execute(
+                "SELECT id FROM public.gotore_workouts WHERE id = %s AND user_id = %s FOR UPDATE",
+                (workout_id, user_id),
+            ).fetchone()
+            if record is None:
+                raise NotFound("記録が見つからないか、操作する権限がありません")
+            current = self.workout_memo(user_id, workout_id)
+            unchanged = current["content"] == memo.content
+            if current["revision"] != memo.expected_revision:
+                if current["revision"] == memo.expected_revision + 1 and unchanged:
+                    return current
+                raise Conflict(
+                    "メモは別の操作で変更されています。保存済みの内容を読み直してください"
+                )
+            if unchanged:
+                return current
+            return self.connection.execute(
+                """INSERT INTO public.gotore_workout_memos (workout_id, content, revision)
+                VALUES (%s, %s, %s) ON CONFLICT (workout_id) DO UPDATE
+                SET content = EXCLUDED.content, revision = EXCLUDED.revision
+                RETURNING content, revision""",
+                (workout_id, memo.content, current["revision"] + 1),
+            ).fetchone()

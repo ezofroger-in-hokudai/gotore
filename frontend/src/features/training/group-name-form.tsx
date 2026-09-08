@@ -28,7 +28,7 @@ export function GroupNameForm({
       });
       setName(updated.name);
       onSaved(updated);
-      setMessage("グループ名を変更しました。");
+      setMessage("変更しました。");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "変更できませんでした。");
     } finally {
@@ -38,10 +38,10 @@ export function GroupNameForm({
 
   return (
     <form onSubmit={submit}>
-      <h3>オーナー設定</h3>
+      <h3>名前の変更</h3>
       <fieldset disabled={busy}>
         <label>
-          新しいグループ名
+          変更後の名前
           <input
             required
             maxLength={40}
@@ -54,12 +54,12 @@ export function GroupNameForm({
           />
         </label>
         <button type="submit" className="secondary full">
-          {busy ? "変更しています…" : "グループ名を変更"}
+          {busy ? "変更中…" : "変更する"}
         </button>
       </fieldset>
       {error && (
         <p className="error" role="alert">
-          {error} 入力内容は残っています。
+          {error}
         </p>
       )}
       {message && <output className="notice">{message}</output>}

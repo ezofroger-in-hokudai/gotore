@@ -2,11 +2,13 @@ from datetime import date
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import AwareDatetime
 
 from app.api.dependencies import training_service
 from app.domain.identity import User
-from app.domain.workout import WorkoutInput
+from app.domain.workout import WorkoutInput, WorkoutUpdate
+from app.domain.workout_memo import WorkoutMemoInput
 from app.schemas.activity import MonthlyActivity
 from app.schemas.training import (
     GroupCreate,
@@ -14,6 +16,8 @@ from app.schemas.training import (
     GroupJoin,
     GroupRename,
     GroupResponse,
+    InviteCodeRenew,
+    WorkoutMemoResponse,
     WorkoutResponse,
 )
 from app.services.training import TrainingService
@@ -59,6 +63,11 @@ def rename_group(group_id: UUID, data: GroupRename, service: Service):
     return service.rename_group(group_id, data.name)
 
 
+@router.post("/groups/{group_id}/invite-code", response_model=GroupResponse)
+def renew_invite_code(group_id: UUID, data: InviteCodeRenew, service: Service):
+    return service.renew_invite_code(group_id, data.expected_invite_code)
+
+
 @router.get("/groups/{group_id}/workouts", response_model=list[WorkoutResponse])
 def group_workouts(group_id: UUID, service: Service, limit: Limit = 50, offset: Offset = 0):
     return service.workouts(group_id, limit, offset)
@@ -90,3 +99,45 @@ def activity(month: str, service: Service):
 @router.post("/workouts", response_model=WorkoutResponse, status_code=201)
 def save_workout(data: WorkoutInput, service: Service):
     return service.save_workout(data)
+
+
+@router.patch("/workouts/{workout_id}", response_model=WorkoutResponse)
+def update_workout(workout_id: UUID, data: WorkoutUpdate, service: Service):
+    return service.update_workout(workout_id, data)
+
+
+@router.delete("/workouts/{workout_id}", status_code=204)
+def delete_workout(
+    workout_id: UUID, service: Service, expected_revision: Annotated[int, Query(ge=1)]
+):
+    service.delete_workout(workout_id, expected_revision)
+    return Response(status_code=204)
+
+
+@router.delete("/groups/{group_id}/membership", status_code=204)
+def leave_group(
+    group_id: UUID, expected_joined_at: Annotated[AwareDatetime, Query()], service: Service
+):
+    service.leave_group(group_id, expected_joined_at)
+    return Response(status_code=204)
+
+
+@router.delete("/groups/{group_id}/members/{member_id}", status_code=204)
+def remove_member(
+    group_id: UUID,
+    member_id: UUID,
+    expected_joined_at: Annotated[AwareDatetime, Query()],
+    service: Service,
+):
+    service.remove_member(group_id, member_id, expected_joined_at)
+    return Response(status_code=204)
+
+
+@router.get("/workouts/{workout_id}/memo", response_model=WorkoutMemoResponse)
+def workout_memo(workout_id: UUID, service: Service):
+    return service.workout_memo(workout_id)
+
+
+@router.put("/workouts/{workout_id}/memo", response_model=WorkoutMemoResponse)
+def save_workout_memo(workout_id: UUID, data: WorkoutMemoInput, service: Service):
+    return service.save_workout_memo(workout_id, data)

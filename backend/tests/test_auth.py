@@ -17,12 +17,32 @@ def test_training_api_requires_login():
             "/api/groups",
             "/api/workouts",
             "/api/workouts/activity?month=2024-02",
+            "/api/exercise-options",
         ]:
             response = client.get(path)
             assert response.status_code == 401
             assert response.headers["cache-control"] == "no-store"
         assert client.patch(f"/api/groups/{uuid4()}", json={"name": "拒否"}).status_code == 401
         assert client.post("/api/me/profile").status_code == 401
+        assert client.post("/api/exercise-options", json={"name": "拒否"}).status_code == 401
+        assert client.delete(f"/api/exercise-options/{uuid4()}").status_code == 401
+        assert (
+            client.post(
+                f"/api/groups/{uuid4()}/invite-code", json={"expected_invite_code": "A" * 12}
+            ).status_code
+            == 401
+        )
+        assert client.patch(f"/api/workouts/{uuid4()}", json={}).status_code == 401
+        assert client.delete(f"/api/workouts/{uuid4()}?expected_revision=1").status_code == 401
+        assert client.delete(f"/api/groups/{uuid4()}/membership").status_code == 401
+        assert client.delete(f"/api/groups/{uuid4()}/members/{uuid4()}").status_code == 401
+        assert client.get(f"/api/workouts/{uuid4()}/memo").status_code == 401
+        assert (
+            client.put(
+                f"/api/workouts/{uuid4()}/memo", json={"content": "秘密", "expected_revision": 0}
+            ).status_code
+            == 401
+        )
 
 
 def test_rejects_invalid_token_without_using_client_supplied_identity(monkeypatch):

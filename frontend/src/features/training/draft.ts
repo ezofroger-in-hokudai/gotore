@@ -1,3 +1,5 @@
+import type { Workout } from "@/lib/api";
+
 export type DraftSet = { key: string; weight: string; reps: string };
 export type DraftExercise = { key: string; name: string; sets: DraftSet[] };
 export type Draft = {
@@ -97,5 +99,39 @@ export function workoutPayload(draft: Draft) {
     performed_on: draft.performed_on,
     group_id: draft.group_id || null,
     exercises,
+  };
+}
+
+export function editDraft(record: Workout): Draft {
+  return {
+    id: record.id,
+    performed_on: record.performed_on,
+    group_id: record.group_id ?? "",
+    exercises: record.exercises.map((exercise) => ({
+      key: crypto.randomUUID(),
+      name: exercise.name,
+      sets: exercise.sets.map((set) => ({
+        key: crypto.randomUUID(),
+        weight: String(set.weight),
+        reps: String(set.reps),
+      })),
+    })),
+  };
+}
+
+export function reuseDraft(record: Pick<Workout, "exercises">): Draft {
+  return {
+    id: crypto.randomUUID(),
+    performed_on: today(),
+    group_id: "",
+    exercises: record.exercises.map((exercise) => ({
+      key: crypto.randomUUID(),
+      name: exercise.name,
+      sets: exercise.sets.map((set) => ({
+        key: crypto.randomUUID(),
+        weight: String(set.weight),
+        reps: String(set.reps),
+      })),
+    })),
   };
 }

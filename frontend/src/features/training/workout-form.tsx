@@ -1,16 +1,20 @@
 "use client";
 
-import { type Group, type Workout, api } from "@/lib/api";
+import { type ExerciseOption, type Group, type Workout, api } from "@/lib/api";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import {
   type Draft,
+  editDraft,
   newDraft,
   newExercise,
   newSet,
   readDraft,
+  reuseDraft,
   today,
   workoutPayload,
 } from "./draft";
+import { useResource } from "./use-resource";
 
 export function WorkoutForm({
   groups,
@@ -18,13 +22,19 @@ export function WorkoutForm({
   userId,
   onSaved,
   onBack,
+  editing,
+  source,
 }: {
+  editing?: Workout | null;
+  source?: Workout | null;
   groups: Group[];
   selectedGroup: string;
   userId: string;
   onSaved: (workout: Workout) => void;
   onBack: () => void;
 }) {
+  const catalog = useResource<ExerciseOption[]>("/exercise-options");
+  const options = catalog.data ?? [];
   const storageKey = `gotore:draft:${userId}`;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -40,27 +50,37 @@ export function WorkoutForm({
   }, [focusKey]);
 
   useEffect(() => {
+    if (editing) {
+      setDraft(editDraft(editing));
+      return;
+    }
+    if (source) {
+      setDraft(reuseDraft(source));
+      return;
+    }
     try {
       setDraft(readDraft(localStorage.getItem(storageKey)) ?? newDraft(selectedGroup));
     } catch {
       setDraft(newDraft(selectedGroup));
       setStorageWarning(true);
     }
-  }, [storageKey, selectedGroup]);
+  }, [storageKey, selectedGroup, editing, source]);
 
   useEffect(() => {
-    if (!draft) return;
+    if (!draft || editing) return;
     try {
       localStorage.setItem(storageKey, JSON.stringify(draft));
     } catch {
       setStorageWarning(true);
     }
-  }, [draft, storageKey]);
+  }, [draft, storageKey, editing]);
 
   function change(update: (draft: Draft) => Draft) {
     setError("");
-    // 内容を変えた保存は別の送信として扱い、同じ内容の再試行だけIDを維持する。
-    setDraft((current) => (current ? { ...update(current), id: crypto.randomUUID() } : current));
+    // 新規記録は内容変更で送信IDを更新し、既存記録の編集は元IDを維持する。
+    setDraft((current) =>
+      current ? { ...update(current), id: editing ? current.id : crypto.randomUUID() } : current,
+    );
   }
 
   function addSet(exerciseKey: string) {
@@ -136,14 +156,25 @@ export function WorkoutForm({
     setError("");
     setBusy(true);
     try {
-      const record = await api<Workout>("/workouts", {
-        method: "POST",
-        body: JSON.stringify(workoutPayload(draft)),
+      const payload = workoutPayload(draft);
+      const record = await api<Workout>(editing ? `/workouts/${editing.id}` : "/workouts", {
+        method: editing ? "PATCH" : "POST",
+        body: JSON.stringify(
+          editing
+            ? {
+                performed_on: payload.performed_on,
+                exercises: payload.exercises,
+                expected_revision: editing.revision,
+              }
+            : payload,
+        ),
       });
-      try {
-        localStorage.removeItem(storageKey);
-      } catch {
-        /* 保存済み記録の表示は継続する。 */
+      if (!editing) {
+        try {
+          localStorage.removeItem(storageKey);
+        } catch {
+          /* 保存済み記録の表示は継続する。 */
+        }
       }
       onSaved(record);
     } catch (reason) {
@@ -160,13 +191,30 @@ export function WorkoutForm({
   return (
     <section>
       <button type="button" className="back" disabled={busy} onClick={onBack}>
-        ← 戻る（下書きは残ります）
+        {editing ? "← 戻る" : "← 戻る"}
       </button>
-      <p className="eyebrow">WORKOUT</p>
-      <h1>今日のトレーニング</h1>
-      <p className="muted">ひとつずつ、その頑張りを記録しよう。</p>
-      <p className="muted">Enterで次の入力へ。最後の回数欄ではセットを追加します。</p>
-      <p className="muted">重量の薄い数字は前セットの値です。空欄でEnterを押すと採用します。</p>
+
+      <h1>{editing ? "記録の編集" : "記録"}</h1>
+
+      {source && <p className="notice">{source.performed_on}の記録をコピーしました。</p>}
+
+      {catalog.loading && <output className="loading">読み込み中…</output>}
+      {catalog.error && (
+        <div className="error" role="alert">
+          {catalog.error}
+          <button type="button" className="text-button" onClick={catalog.retry}>
+            再試行
+          </button>
+        </div>
+      )}
+      {catalog.data?.length === 0 && !catalog.error && (
+        <p className="notice">種目を追加してください。</p>
+      )}
+      <ExerciseCatalog
+        options={options}
+        disabled={busy || catalog.loading || catalog.data === null || !!catalog.error}
+        onChanged={catalog.retry}
+      />
       <form
         onSubmit={submit}
         onKeyDown={(event) => {
@@ -177,7 +225,7 @@ export function WorkoutForm({
         <fieldset disabled={busy}>
           <div className="panel form-grid">
             <label>
-              トレーニング日
+              日付
               <input
                 type="date"
                 min="2000-01-01"
@@ -190,10 +238,11 @@ export function WorkoutForm({
             <label>
               共有先
               <select
+                disabled={!!editing}
                 value={draft.group_id}
                 onChange={(e) => change((d) => ({ ...d, group_id: e.target.value }))}
               >
-                <option value="">自分だけの記録</option>
+                <option value="">自分だけ</option>
                 {missingGroup && <option value={draft.group_id}>共有先を選び直してください</option>}
                 {groups.map((group) => (
                   <option key={group.id} value={group.id}>
@@ -209,11 +258,10 @@ export function WorkoutForm({
                 <span className="number">{String(index + 1).padStart(2, "0")}</span>
                 <label className="grow">
                   種目名
-                  <input
+                  <select
+                    aria-label="種目名"
                     required
-                    maxLength={60}
-                    list="exercises"
-                    placeholder="例：ベンチプレス"
+                    disabled={catalog.loading || catalog.data === null}
                     value={exercise.name}
                     onChange={(e) =>
                       change((d) => ({
@@ -223,7 +271,17 @@ export function WorkoutForm({
                         ),
                       }))
                     }
-                  />
+                  >
+                    <option value="">選択してください</option>
+                    {exercise.name && !options.some((option) => option.name === exercise.name) && (
+                      <option value={exercise.name}>{exercise.name}（保存済み）</option>
+                    )}
+                    {options.map((option) => (
+                      <option key={option.id} value={option.name}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 {draft.exercises.length > 1 && (
                   <button
@@ -244,7 +302,7 @@ export function WorkoutForm({
               <div className="set-head">
                 <span>SET</span>
                 <span>重量 kg</span>
-                <span>回数 reps</span>
+                <span>回数</span>
                 <span />
               </div>
               {exercise.sets.map((set, setIndex) => (
@@ -324,7 +382,10 @@ export function WorkoutForm({
                         ...d,
                         exercises: d.exercises.map((item) =>
                           item.key === exercise.key
-                            ? { ...item, sets: item.sets.filter((s) => s.key !== set.key) }
+                            ? {
+                                ...item,
+                                sets: item.sets.filter((s) => s.key !== set.key),
+                              }
                             : item,
                         ),
                       }))
@@ -340,52 +401,35 @@ export function WorkoutForm({
                 disabled={exercise.sets.length >= 30}
                 onClick={() => addSet(exercise.key)}
               >
-                ＋ セットを追加
+                ＋ セット
               </button>
             </div>
           ))}
-          <datalist id="exercises">
-            {[
-              "ベンチプレス",
-              "スクワット",
-              "デッドリフト",
-              "ペックフライ",
-              "ラットプルダウン",
-              "ショルダープレス",
-              "懸垂",
-              "腕立て伏せ",
-            ].map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
           <button
             type="button"
             className="secondary full"
             disabled={draft.exercises.length >= 20}
-            onClick={() => change((d) => ({ ...d, exercises: [...d.exercises, newExercise()] }))}
+            onClick={() =>
+              change((d) => ({
+                ...d,
+                exercises: [...d.exercises, newExercise()],
+              }))
+            }
           >
-            ＋ 種目を追加
+            ＋ 種目
           </button>
-          <p className="notice">
-            {target
-              ? `確定すると「${target.name}」のメンバーに、表示名・日付・種目・重量・回数が共有されます。`
-              : missingGroup
-                ? "共有先を選び直してください。"
-                : "この記録は自分だけに表示されます。"}
-          </p>
+          {missingGroup && <p className="notice">共有先を選び直してください。</p>}
           <button className="primary" type="submit" disabled={missingGroup}>
-            {busy ? "保存しています…" : target ? "記録を確定して共有 →" : "記録を保存 →"}
+            {busy ? "保存中…" : editing ? "保存" : target ? "保存して共有" : "保存"}
           </button>
         </fieldset>
         {error && (
           <p role="alert" className="error">
-            {error} 入力内容は残っています。
+            {error}
           </p>
         )}
         {storageWarning && (
-          <output className="notice">
-            このブラウザでは下書きを保持できません。画面を閉じる前に保存してください。
-          </output>
+          <output className="notice">下書きを保持できません。閉じる前に保存してください。</output>
         )}
       </form>
     </section>

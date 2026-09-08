@@ -1,5 +1,7 @@
 # 活動ヒートマップと日別記録（#14）
 
+画面文言は2026-09-08の[簡略化方針](ui-copy.md)を優先する。説明は初回ガイドに集約し、以下の業務ルールを維持する。
+
 実装Issue: [#35](https://github.com/ezofroger-in-hokudai/gotore/issues/35)、親Issue: [#14](https://github.com/ezofroger-in-hokudai/gotore/issues/14)、週次計画: [#33](https://github.com/ezofroger-in-hokudai/gotore/issues/33)。
 
 2026-09-07の会話で、ユーザーが「ヒートマップ」「まずはセット数」「日付をタップしてその日のトレーニングを表示」を指定した。初版の本人記録一覧へ、以下を追加する。

@@ -30,11 +30,8 @@ export function ActivityCalendar({
 
   return (
     <section className="panel activity-calendar" aria-label="活動カレンダー">
-      <p className="eyebrow">YOUR ACTIVITY</p>
-      <h2>トレーニングの積み重ね</h2>
-      <p className="muted">
-        色の濃さは1日の合計セット数です。日付をタップすると記録を確認できます。
-      </p>
+      <h2>カレンダー</h2>
+
       <div className="activity-month">
         <button
           type="button"
@@ -46,7 +43,7 @@ export function ActivityCalendar({
           ←
         </button>
         <label className="grow">
-          表示する月
+          月
           <input
             type="month"
             min="2000-01"
@@ -69,16 +66,14 @@ export function ActivityCalendar({
         <div className="error" role="alert">
           {activity.error}
           <button type="button" className="text-button" onClick={activity.retry}>
-            活動カレンダーを再取得
+            再試行
           </button>
         </div>
       )}
-      {!activity.data && !activity.error && (
-        <output className="loading">活動カレンダーを読み込んでいます…</output>
-      )}
+      {!activity.data && !activity.error && <output className="loading">読み込み中…</output>}
       {activity.data && (
         <>
-          {activity.loading && <output className="muted">活動カレンダーを更新しています…</output>}
+          {activity.loading && <output className="muted">更新中…</output>}
           <dl className="activity-totals">
             <div>
               <dt>合計セット</dt>
@@ -140,9 +135,7 @@ export function ActivityCalendar({
               </span>
             ))}
           </div>
-          {activity.data.workout_count === 0 && (
-            <p className="muted">この月の記録はまだありません。</p>
-          )}
+          {activity.data.workout_count === 0 && <p className="muted">この月の記録はありません。</p>}
         </>
       )}
     </section>

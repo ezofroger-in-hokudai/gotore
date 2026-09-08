@@ -1,4 +1,4 @@
-.PHONY: frontend backend install install-frontend install-backend env-local check test-backend test-frontend test-e2e build-frontend lint-backend lint-frontend lint db-start db-stop db-reset db-lint db-new
+.PHONY: frontend backend install install-frontend install-backend env-local check test-backend test-frontend test-e2e build-frontend lint-backend lint-frontend lint db-start db-stop db-migrations db-migrate db-reset db-lint db-new
 
 SUPABASE_CLI ?= bunx supabase@2.107.0
 
@@ -46,6 +46,12 @@ db-start:
 
 db-stop:
 	$(SUPABASE_CLI) stop
+
+db-migrations:
+	$(SUPABASE_CLI) migration list --local
+
+db-migrate:
+	$(SUPABASE_CLI) migration up --local
 
 db-reset:
 	$(SUPABASE_CLI) db reset --local
