@@ -45,3 +45,7 @@ gotore_exercise_catalogsで初期化済みの本人を保持し、gotore_exercis
 390px幅のブラウザ検証用データによる画面。実ユーザーの情報は含まない。
 
 ![種目リストの追加・削除と記録時の選択](images/exercise-catalog-mobile.png)
+
+## 記録中の参考情報
+
+[記録画面の追加要件](design-system.md#record-input-context)（#56）として、選択中の種目の推定1RM・最高重量・種目メモを表示する方針を採用した。BESTの算出・種目同定は#17、種目メモの保存仕様は#22で定義し、本人用候補の現在のAPI・DB仕様は今回変更しない。
