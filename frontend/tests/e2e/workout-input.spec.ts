@@ -43,9 +43,9 @@ test("ホイール・直接入力・行編集・取消を区別し、BESTとRM�
   await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("8");
   await page.getByRole("button", { name: "重量を増やす", exact: true }).click();
   await expect(weight).toHaveValue("82.5");
-  await expect(page.getByText("BEST更新候補", { exact: true })).toBeVisible();
+  await expect(page.locator(".record-candidate")).toBeVisible();
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
-  await expect(page.getByText("BEST更新！ 保存しました", { exact: true })).toBeVisible();
+  await expect(page.locator(".save-feedback .record-celebration")).toBeVisible();
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await weight.fill("70");
   await page.getByRole("button", { name: "キャンセル", exact: true }).click();

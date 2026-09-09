@@ -1,6 +1,6 @@
 "use client";
 
-import type { ExerciseContext, ExerciseOption, TrainingSession } from "@/lib/api";
+import type { ExerciseContext, ExerciseOption, SessionBests, TrainingSession } from "@/lib/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import { useResource } from "../training/use-resource";
@@ -117,12 +117,25 @@ function ActiveTraining({
   const [finishOpen, setFinishOpen] = useState(false);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [submission, setSubmission] = useState<{ revision: number; set: number } | null>(null);
   const [storageWarning, setStorageWarning] = useState(false);
   const [undo, setUndo] = useState<{
     exercises: TrainingSession["exercises"];
     revision: number;
   } | null>(null);
   const [query, setQuery] = useState("");
+  const overviewBests = useResource<SessionBests>(
+    `/sessions/${session.id}/bests`,
+    controller.confirmedRevision,
+    false,
+    true,
+    { enabled: selecting && session.exercises.length > 0 },
+  );
+  const bestPositions = new Set(
+    overviewBests.data?.revision === session.revision && !controller.pending
+      ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
+      : [],
+  );
   const context = useResource<ExerciseContext>(
     input.name
       ? `/exercises/context?name=${encodeURIComponent(input.name)}&session_id=${session.id}`
@@ -164,15 +177,13 @@ function ActiveTraining({
     };
   }, [persistInput]);
   useEffect(() => {
-    if (controller.saved?.id === session.id)
-      setFeedback((current) =>
-        current.startsWith("直前")
-          ? current
-          : controller.saved?.best_updated
-            ? "BEST更新！ 保存しました"
-            : "保存しました",
-      );
-  }, [controller.saved, session.id]);
+    if (
+      submission &&
+      controller.saved?.id === session.id &&
+      controller.saved.revision >= submission.revision
+    )
+      setFeedback((current) => (current.startsWith("直前") ? current : "保存しました"));
+  }, [controller.saved, session.id, submission]);
   // 応答だけ失われた保存は、再起動時にサーバーと照合して二重追加を防ぐ。
   useEffect(() => {
     try {
@@ -208,6 +219,7 @@ function ActiveTraining({
       const value = setValue(input.weight, input.reps);
       const exercises = updateSet(session.exercises, input.name, value, input.editing);
       const result = await controller.save(exercises, session.revision);
+      setSubmission({ revision: result.revision, set: (input.editing ?? sets.length) + 1 });
       setUndo({ exercises: session.exercises, revision: result.revision });
       const nextInput = { ...input, revision: result.revision, editing: null, dirty: false };
       setInput(nextInput);
@@ -231,6 +243,13 @@ function ActiveTraining({
   const candidate =
     input.editing === null && bestUpdate(Number(input.weight), Number(input.reps), context.data);
   const rm = estimatedRM(Number(input.weight), Number(input.reps));
+  const awaitingSave = submission && controller.confirmedRevision < submission.revision;
+  const celebrated =
+    !!submission &&
+    controller.saved?.revision === submission.revision &&
+    controller.saved.best_updated &&
+    feedback === "保存しました" &&
+    !awaitingSave;
 
   return (
     <section className={`session-screen${selecting ? "" : " entering-sets"}`}>
@@ -240,7 +259,7 @@ function ActiveTraining({
         </span>
         <button
           type="button"
-          className="text-button finish-training"
+          className="secondary finish-training"
           disabled={controller.busy}
           onClick={() => setFinishOpen(true)}
         >
@@ -260,9 +279,6 @@ function ActiveTraining({
               種目一覧
             </button>
           </div>
-          <button className="secondary full" type="button" onClick={() => setCatalogOpen(true)}>
-            新しい種目を追加
-          </button>
           <section className="session-overview" aria-label="今回のトレーニング">
             <h2>今回のトレーニング</h2>
             {session.exercises.length ? (
@@ -273,7 +289,17 @@ function ActiveTraining({
                   </h3>
                   <ol>
                     {exercise.sets.map((value, i) => (
-                      <li key={`set-${i + 1}`}>
+                      <li
+                        key={`set-${i + 1}`}
+                        className={
+                          bestPositions.has(`${index}:${i}`) ? "record-celebration" : undefined
+                        }
+                      >
+                        {bestPositions.has(`${index}:${i}`) && (
+                          <span role="img" aria-label="最高記録">
+                            🔥{" "}
+                          </span>
+                        )}
                         {i + 1}: {value.weight}kg × {value.reps}回
                       </li>
                     ))}
@@ -284,6 +310,14 @@ function ActiveTraining({
               <p className="muted">まだセットがありません</p>
             )}
           </section>
+          {overviewBests.error && (
+            <p className="error" role="alert">
+              {overviewBests.error}
+              <button className="text-button" type="button" onClick={overviewBests.retry}>
+                再試行
+              </button>
+            </p>
+          )}
           <label className="search-label">
             種目を検索
             <input
@@ -333,6 +367,7 @@ function ActiveTraining({
                     });
                     setSelecting(false);
                     setFeedback("");
+                    setSubmission(null);
                     setUndo(null);
                   }}
                 >
@@ -346,6 +381,9 @@ function ActiveTraining({
           {!names.length && !catalog.loading && (
             <p className="muted">種目一覧から種目を追加してください。</p>
           )}
+          <button className="secondary full" type="button" onClick={() => setCatalogOpen(true)}>
+            新しい種目を追加
+          </button>
         </>
       ) : (
         <>
@@ -425,20 +463,12 @@ function ActiveTraining({
               </h2>
             </div>
             <section className="comparison-table" ref={comparisonTable} aria-label="全セットの比較">
-              <div className="comparison-labels">
-                <span>SET</span>
-                <span>重量 × 回数 / RM</span>
-                <span>重量 × 回数 / RM</span>
-              </div>
               {Array.from({ length: Math.max(previous.length, sets.length, 1) }, (_, i) => (
                 <div className="comparison-row" key={`set-${i + 1}`}>
                   <span>{i + 1}</span>
                   <div>
                     {previous[i] ? (
-                      <>
-                        {previous[i].weight}kg × {previous[i].reps}
-                        <small>RM {estimatedRM(previous[i].weight, previous[i].reps) ?? "—"}</small>
-                      </>
+                      <SetMeasurement weight={previous[i].weight} reps={previous[i].reps} />
                     ) : (
                       "—"
                     )}
@@ -460,14 +490,7 @@ function ActiveTraining({
                       setFeedback("");
                     }}
                   >
-                    {sets[i] ? (
-                      <>
-                        {sets[i].weight}kg × {sets[i].reps}
-                        <small>RM {estimatedRM(sets[i].weight, sets[i].reps) ?? "—"}</small>
-                      </>
-                    ) : (
-                      "—"
-                    )}
+                    {sets[i] ? <SetMeasurement weight={sets[i].weight} reps={sets[i].reps} /> : "—"}
                   </button>
                 </div>
               ))}
@@ -580,22 +603,55 @@ function ActiveTraining({
                   }}
                 />
               </div>
-              <p className="rm-estimate">
+              <p className={`rm-estimate${candidate ? " record-candidate" : ""}`}>
                 1RM <strong>{rm ?? "—"}</strong> kg <span>（1〜10回）</span>
               </p>
               <div className="save-feedback" aria-live="polite">
-                {feedback || (candidate ? <span className="best-badge">BEST更新候補</span> : "")}
+                {feedback ? (
+                  <span className={celebrated ? "record-celebration" : undefined}>
+                    {celebrated && (
+                      <span role="img" aria-label="最高記録">
+                        🔥{" "}
+                      </span>
+                    )}
+                    {submission && !feedback.startsWith("直前") && (
+                      <span>SET {submission.set} · </span>
+                    )}
+                    <span>
+                      {awaitingSave
+                        ? controller.status === "offline" || controller.status === "conflict"
+                          ? "端末に保存 · 未送信"
+                          : "端末に保存 · 保存中…"
+                        : feedback}
+                    </span>
+                  </span>
+                ) : (
+                  ""
+                )}
               </div>
-              <button className="primary full" type="submit">
-                {controller.busy
-                  ? "保存中…"
-                  : input.editing === null
-                    ? "次のセットへ"
-                    : "変更を保存"}
-              </button>
-              <button className="text-button full" type="button" onClick={() => setSelecting(true)}>
-                次の種目へ
-              </button>
+              <div className="set-actions">
+                <button
+                  className="secondary next-exercise"
+                  type="button"
+                  onClick={() => setSelecting(true)}
+                >
+                  次の種目へ<span aria-hidden="true"> ›</span>
+                </button>
+                <button
+                  className="primary"
+                  type="submit"
+                  aria-label={input.editing === null ? "次のセットへ" : "変更を保存"}
+                >
+                  <span>
+                    {controller.busy
+                      ? "保存中…"
+                      : input.editing === null
+                        ? "次のセットへ"
+                        : "変更を保存"}
+                  </span>
+                  <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
+                </button>
+              </div>
             </fieldset>
           </form>
           {error && (
@@ -694,10 +750,21 @@ function ActiveTraining({
               }
             }}
           >
-            終了する
+            {controller.busy ? "終了中…" : "終了する"}
           </button>
         </Sheet>
       )}
     </section>
+  );
+}
+
+function SetMeasurement({ weight, reps }: { weight: number; reps: number }) {
+  return (
+    <span className="set-measurement">
+      <span>
+        {weight}kg × {reps}
+      </span>
+      <small>RM {estimatedRM(weight, reps) ?? "—"}</small>
+    </span>
   );
 }

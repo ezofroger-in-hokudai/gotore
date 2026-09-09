@@ -557,17 +557,11 @@
 .comparison-table {
   margin-bottom: 12px;
 }
-.comparison-labels,
 .comparison-row {
   display: grid;
   grid-template-columns: 27px 1fr 1fr;
   gap: 8px;
   align-items: center;
-}
-.comparison-labels {
-  color: var(--muted);
-  font-size: 10px;
-  padding-bottom: 7px;
 }
 .comparison-row {
   border-top: 1px solid var(--line);
@@ -579,9 +573,22 @@
   color: var(--muted);
 }
 .comparison-row small {
-  display: block;
+  display: inline;
   font-size: 10px;
   color: var(--muted);
+}
+.set-measurement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+}
+.set-measurement > span,
+.set-measurement > small {
+  white-space: nowrap;
+}
+.record-candidate {
+  color: var(--accent);
 }
 .comparison-row button {
   background: transparent;
@@ -684,7 +691,38 @@
   margin: 12px 0;
 }
 .finish-training {
-  margin-top: 24px;
+  margin: 0;
+  flex-shrink: 0;
+}
+.v2-app .finish-training {
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.set-actions {
+  display: grid;
+  grid-template-columns: 106px minmax(0, 1fr);
+  gap: 8px;
+}
+.set-actions .primary {
+  flex-direction: column;
+  gap: 2px;
+}
+.set-actions small {
+  font-size: 10px;
+  font-weight: 400;
+}
+.v2-app .next-exercise {
+  padding: 8px 4px;
+  font-size: 12px;
+  border-color: var(--muted);
+}
+.record-celebration {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 800;
 }
 .sharing-caption {
   margin: 10px 0 0;
@@ -921,10 +959,6 @@
 .recording-view .comparison-table {
   margin: 0;
 }
-.recording-view .comparison-labels {
-  padding: 0;
-  font-size: 9px;
-}
 .recording-view .comparison-row {
   min-height: 39px;
 }
@@ -1067,11 +1101,6 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
   min-height: 0;
-}
-.entering-sets .comparison-labels {
-  position: sticky;
-  top: 0;
-  background: var(--bg);
 }
 .session-overview {
   padding: 12px;

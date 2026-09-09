@@ -1,5 +1,6 @@
 from urllib.parse import urlsplit
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +15,7 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8000
     database_url: str = ""
+    database_pool_max_size: int = Field(default=4, ge=0, le=10)
     supabase_url: str = ""
     supabase_anon_key: str = ""
 

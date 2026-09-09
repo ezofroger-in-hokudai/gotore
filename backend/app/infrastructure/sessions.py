@@ -9,6 +9,7 @@ from app.domain.session import (
     estimated_rm,
     latest_change,
     personal_bests,
+    session_best_sets,
 )
 from app.infrastructure.training_repository import TrainingRepository
 
@@ -16,7 +17,10 @@ from app.infrastructure.training_repository import TrainingRepository
 class SessionRepository(TrainingRepository):
     def active(self, user_id: UUID):
         return self.connection.execute(
-            """SELECT w.*, p.display_name FROM public.gotore_workouts w
+            """SELECT w.*, p.display_name,
+            ARRAY(SELECT s.group_id FROM public.gotore_workout_shares s
+                WHERE s.workout_id = w.id ORDER BY s.group_id) AS shared_group_ids
+            FROM public.gotore_workouts w
             JOIN public.gotore_profiles p ON p.id = w.user_id
             WHERE w.user_id = %s AND w.started_at IS NOT NULL AND w.ended_at IS NULL""",
             (user_id,),
@@ -25,20 +29,14 @@ class SessionRepository(TrainingRepository):
     def with_shares(self, row):
         if row is None:
             return None
+        if "shared_group_ids" in row:
+            return row
         shares = self.connection.execute(
             """SELECT group_id FROM public.gotore_workout_shares
             WHERE workout_id = %s ORDER BY group_id""",
             (row["id"],),
         ).fetchall()
         return {**row, "shared_group_ids": [s["group_id"] for s in shares]}
-
-    def mark_activity(self, workout_id: UUID):
-        self.connection.execute(
-            """INSERT INTO public.gotore_session_days (workout_id, day)
-            VALUES (%s, (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date)
-            ON CONFLICT DO NOTHING""",
-            (workout_id,),
-        )
 
     def start(self, user_id: UUID, workout_id: UUID):
         with self.connection.transaction():
@@ -64,21 +62,22 @@ class SessionRepository(TrainingRepository):
                 WHERE user_id = %s ORDER BY group_id FOR SHARE""",
                 (user_id,),
             ).fetchall()
-            self.connection.execute(
-                """INSERT INTO public.gotore_workouts
+            group_ids = [membership["group_id"] for membership in memberships]
+            # 所属の行ロックを保持したまま、開始・共有・当日の活動を一括で保存する。
+            row = self.connection.execute(
+                """WITH started AS (INSERT INTO public.gotore_workouts
                 (id, user_id, performed_on, exercises, started_at, last_seen_at)
                 VALUES (%s, %s, (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date,
-                '[]', clock_timestamp(), clock_timestamp())""",
-                (workout_id, user_id),
-            )
-            for membership in memberships:
-                self.connection.execute(
-                    """INSERT INTO public.gotore_workout_shares (workout_id, group_id, user_id)
-                    VALUES (%s, %s, %s)""",
-                    (workout_id, membership["group_id"], user_id),
-                )
-            self.mark_activity(workout_id)
-            return self.with_shares(self.owned_workout(user_id, workout_id))
+                '[]', clock_timestamp(), clock_timestamp()) RETURNING *),
+                shared AS (INSERT INTO public.gotore_workout_shares (workout_id, group_id, user_id)
+                    SELECT s.id, g.id, s.user_id FROM started s, unnest(%s::uuid[]) AS g(id)),
+                activity AS (INSERT INTO public.gotore_session_days (workout_id, day)
+                    SELECT id, performed_on FROM started)
+                SELECT s.*, p.display_name FROM started s
+                JOIN public.gotore_profiles p ON p.id = s.user_id""",
+                (workout_id, user_id, group_ids),
+            ).fetchone()
+            return {**row, "shared_group_ids": group_ids}
 
     def session(self, user_id: UUID, workout_id: UUID):
         record = self.owned_workout(user_id, workout_id)
@@ -105,7 +104,7 @@ class SessionRepository(TrainingRepository):
                 if added:
                     exercise = exercises[ei]
                     value = exercise["sets"][si]
-                    previous = self.context(user_id, exercise["name"], None)
+                    previous = self.bests(user_id, exercise["name"])
                     rm = estimated_rm(value["weight"], value["reps"])
                     is_best = (
                         previous["best_weight"] is not None
@@ -115,14 +114,19 @@ class SessionRepository(TrainingRepository):
                         and previous["best_rm"] is not None
                         and rm > previous["best_rm"]
                     )
-                self.connection.execute(
-                    """UPDATE public.gotore_workouts SET exercises = %s, revision = revision + 1,
+                updated = self.connection.execute(
+                    """WITH updated AS (UPDATE public.gotore_workouts
+                    SET exercises = %s, revision = revision + 1,
                     updated_at = clock_timestamp(), last_seen_at = clock_timestamp(),
-                    feed_exercise = %s, feed_set = %s, feed_best = %s WHERE id = %s""",
+                    feed_exercise = %s, feed_set = %s, feed_best = %s WHERE id = %s RETURNING *),
+                    activity AS (INSERT INTO public.gotore_session_days (workout_id, day)
+                        SELECT id, (last_seen_at AT TIME ZONE 'Asia/Tokyo')::date FROM updated
+                        ON CONFLICT DO NOTHING)
+                    SELECT * FROM updated""",
                     (Jsonb(exercises), ei, si, is_best, workout_id),
-                )
-                self.mark_activity(workout_id)
-            return self.with_shares(self.session(user_id, workout_id))
+                ).fetchone()
+                row = {**row, **updated}
+            return self.with_shares(row)
 
     def finish(self, user_id: UUID, workout_id: UUID, revision: int):
         with self.connection.transaction():
@@ -132,12 +136,12 @@ class SessionRepository(TrainingRepository):
                 return self.with_shares(row)
             if row["revision"] != revision or row["ended_at"] is not None:
                 raise Conflict("別の更新があります。保存済みを読み直してください")
-            self.connection.execute(
+            updated = self.connection.execute(
                 """UPDATE public.gotore_workouts SET ended_at = clock_timestamp(),
-                revision = revision + 1 WHERE id = %s""",
+                revision = revision + 1 WHERE id = %s RETURNING *""",
                 (workout_id,),
-            )
-            return self.with_shares(self.session(user_id, workout_id))
+            ).fetchone()
+            return {**row, **updated}
 
     def heartbeat(self, user_id: UUID, workout_id: UUID):
         with self.connection.transaction():
@@ -145,10 +149,44 @@ class SessionRepository(TrainingRepository):
             if row["ended_at"] is not None:
                 raise Conflict("トレーニングは終了しています")
             self.connection.execute(
-                "UPDATE public.gotore_workouts SET last_seen_at = clock_timestamp() WHERE id = %s",
+                """WITH updated AS (UPDATE public.gotore_workouts
+                SET last_seen_at = clock_timestamp() WHERE id = %s RETURNING id, last_seen_at)
+                INSERT INTO public.gotore_session_days (workout_id, day)
+                SELECT id, (last_seen_at AT TIME ZONE 'Asia/Tokyo')::date FROM updated
+                ON CONFLICT DO NOTHING""",
                 (workout_id,),
             )
-            self.mark_activity(workout_id)
+
+    def bests(self, user_id: UUID, name: str):
+        rows = self.connection.execute(
+            """SELECT exercises FROM public.gotore_workouts
+            WHERE user_id = %s AND exercises @> %s""",
+            (user_id, Jsonb([{"name": name}])),
+        ).fetchall()
+        return personal_bests(
+            [s for row in rows for e in row["exercises"] if e["name"] == name for s in e["sets"]]
+        )
+
+    def overview_bests(self, user_id: UUID, workout_id: UUID):
+        row = self.session(user_id, workout_id)
+        names = list({e["name"] for e in row["exercises"]})
+        others = (
+            self.connection.execute(
+                """SELECT w.exercises FROM public.gotore_workouts w
+            WHERE w.user_id = %s AND w.id != %s
+            AND EXISTS (SELECT 1 FROM jsonb_array_elements(w.exercises) e
+                WHERE e->>'name' = ANY(%s::text[]))""",
+                (user_id, workout_id, names),
+            ).fetchall()
+            if names
+            else []
+        )
+        return {
+            "revision": row["revision"],
+            "sets": session_best_sets(
+                row["exercises"], [e for other in others for e in other["exercises"]]
+            ),
+        }
 
     def preview(self, user_id: UUID, code: str):
         row = self.connection.execute(
@@ -259,7 +297,7 @@ class SessionRepository(TrainingRepository):
                 row["feed_exercise"] if row["feed_exercise"] is not None else -1
             ]
             s = exercise["sets"][row["feed_set"] if row["feed_set"] is not None else -1]
-            best = self.context(row["user_id"], exercise["name"], None)
+            best = self.bests(row["user_id"], exercise["name"]) if row["feed_best"] else None
             rm = estimated_rm(s["weight"], s["reps"])
             feed.append(
                 {
@@ -271,7 +309,7 @@ class SessionRepository(TrainingRepository):
                     "reps": s["reps"],
                     "estimated_rm": rm,
                     "updated_at": row["updated_at"],
-                    "best": row["feed_best"]
+                    "best": best is not None
                     and (
                         (float(s["weight"]) > 0 and float(s["weight"]) == best["best_weight"])
                         or (rm is not None and rm == best["best_rm"])

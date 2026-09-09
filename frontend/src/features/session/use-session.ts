@@ -32,6 +32,7 @@ export function useSession(userId: string, onChanged: () => void) {
   const [error, setError] = useState("");
   const lock = useRef(false);
   const startId = useRef<string | null>(null);
+  const lastActivity = useRef(0);
   useEffect(() => {
     queue.start();
     void queue.restore().then(() => queue.sync());
@@ -54,20 +55,24 @@ export function useSession(userId: string, onChanged: () => void) {
     };
   }, [queue, storageKey]);
   useEffect(() => {
-    if (state.saved) changed.current();
+    if (state.saved) {
+      lastActivity.current = Date.now();
+      changed.current();
+    }
   }, [state.saved]);
   const sessionId = state.session?.id;
   useEffect(() => {
     if (!sessionId) return;
     let pending = false;
     const beat = async () => {
-      if (document.hidden || pending) return;
+      if (document.hidden || pending || Date.now() - lastActivity.current < 30_000) return;
       pending = true;
       try {
         await api(`/sessions/${sessionId}/heartbeat`, {
           method: "POST",
           signal: AbortSignal.timeout(15_000),
         });
+        lastActivity.current = Date.now();
       } catch {
         /* LIVEの一時切断で端末への入力を止めない。 */
       } finally {
@@ -89,6 +94,7 @@ export function useSession(userId: string, onChanged: () => void) {
     setError("");
     try {
       const result = await operation();
+      lastActivity.current = Date.now();
       await queue.accept(result);
       changed.current();
       return result;
@@ -124,6 +130,7 @@ export function useSession(userId: string, onChanged: () => void) {
         api<TrainingSession>("/sessions", {
           method: "POST",
           body: JSON.stringify({ id: startId.current }),
+          signal: AbortSignal.timeout(15_000),
         }),
       );
       startId.current = null;

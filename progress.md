@@ -1,5 +1,13 @@
 # progress.md
 
+## 2026-09-09 12:12 JST
+- 変更内容: PR #63がマージ済みであることと追加フィードバック6点を確認し、最新mainから追加修正ブランチを作成。受け入れ条件をtask.md・v2仕様へ追記した。タッチのホバー残留、セット番号と同期状態、種目・終了ボタンの配置、確定BESTの赤色・炎表示を修正中。開始・保存・終了・生存確認のSQLを集約し、活動表示で不要な本人履歴・メモ取得を除いた。
+- 目的: 押した結果と次の操作を明確にし、開始・終了を含む通信待ちを減らす。サーバーでの成功確認、共有先、revision、所属行ロック、未送信キューは維持する。
+- 影響範囲・関連ファイル: backend/app/infrastructure/sessions.py、frontend/src/features/{session,v2}/、frontend/src/app/、関連テスト、task.md、docs/gotore-v2-spec.md。
+- 検証経緯: 専用DBで往復上限の先行テスト2件が失敗（開始14往復、3人の通常フィード9往復）、タッチE2Eも番号付き受付表示がなく失敗することを確認してから実装。DBの関連11件は成功。新規テストのrevision初期値を1に修正した。中間CSSの構文誤りとそのためのE2Eサーバー検出失敗を修正し、再検証へ進む。
+- 未解決事項: 全検証・性能比較・画面確認・PR作成はこれから。元からのnext-env.d.tsと未追跡資料は保持し対象外とする。
+- 次のアクション: 遅延・失敗・連続タップとBEST確定のE2E、専用DBでの比較、make check、実Supabase E2Eを完了してPRに記載する。
+
 ## 2026-09-07 15:22 JST
 
 - 変更内容: ユーザーのPR作成依頼を受け、#29作業ブランチのpush完了と既存PRなしを確認。main向けPRにCloses #29、合意した名前保持ルール、検証結果と未完了項目を記載する。
@@ -712,3 +720,35 @@
 - 検証結果: 既存のmake check（backend118件・frontend単体29件、lint/build）と実Supabase E2E46件の成功結果をPRへ記載。画像参照先、PRテンプレート構造、git diff --checkを確認。今回はレビュー用文書のみのため先行テストの追加とアプリテストの再実行は不要と判断した。
 - 未解決事項: PRのCIと第三者レビュー、iOS/Android実機確認。本番の通信時間改善率は未測定。開始時からのnext-env.d.tsと未追跡資料は保持する。
 - 次のアクション: 修正ブランチをpushし、画像付きPRを作成してCIの状態を確認する。マージ・本番反映は行わない。
+
+## 2026-09-09 12:24 JST
+- 変更内容: セッションAPIの開始・共有・当日活動を同一SQLで保存し、保存・終了のRETURNINGと共有先の同時取得で再読込を削減。通常フィードで不要な履歴・私的メモ取得を除いた。専用DB向けの再実行可能な比較スクリプトとSQL往復上限の回帰テストを追加。
+- 目的: 開始・終了とその他の遅い操作について、共有・排他・revisionを維持してDB通信の待ちを減らす。
+- 影響範囲・関連ファイル: backend/app/infrastructure/sessions.py、backend/tests/test_session_performance.py、scripts/benchmark_sessions.py、docs/loading-performance.md。APIの入出力・DB schema・リージョン・認証方式は変更なし。
+- 検証結果: 専用gotore_v2_testを指定したmake check成功（backend120件、frontend単体29件、lint/build）。比較スクリプトはSQLごと40ms、初回除外8回で、開始14→7往復/581.6→291.9ms、保存8→4/333.4→167.7ms、終了5→3/209.0→126.2ms、生存確認3→2/126.2→85.0ms、通常フィード3人9→3/375.5→125.8ms。途中のスクリプトの行長lint失敗は修正済み。
+- 未解決事項: 本番のAuth・DB接続・コールドスタート・実回線を含む値ではない。画面の追加修正と実Supabase全E2Eの最終結果は別項へ記録する。
+- 次のアクション: 画面のフィードバックを検証して画像とともに別コミットへまとめ、同じ追加修正PRへ含める。
+
+## 2026-09-09 12:25 JST
+- 変更内容: タッチ時にホバー色を残さず、追加したセット番号・端末保存/未送信/保存完了と次の番号を表示。前のセットの応答で新しいセットを保存済みと表示しないようrevisionを照合する。種目追加をリスト末尾へ、次種目を横並びの小さな枠付きボタンへ、終了を上部の枠付きボタンへ変更。確定BESTを赤色・炎で強調し、終了中の表示と開始の15秒タイムアウト、直近の活動成功後の不要な生存確認の省略を追加した。
+- 目的: ユーザー指摘6点に対応し、保存状態・次の操作を明確にして待ちと操作の迷いを減らす。
+- 影響範囲・関連ファイル: frontend/src/features/session/、frontend/src/features/v2/community.tsx、frontend/src/app/、frontend/tests/e2e/training-feedback.spec.ts、docs/images/training-feedback/、docs/gotore-v2-spec.md、docs/current-state.md、task.md。既存の送信待ち・共有規則を保持。
+- 検証結果: make check成功（backend120件・frontend単体29件、lint/build）。最新APIで実Supabaseを使うmake test-e2e全50件成功（ローカル用のプロキシ除外、PLAYWRIGHT_REUSE_SERVER=1）。2人・2グループの共有・再開・終了・本人メモ・退出後の非再共有、遅延中の連続タップ/番号/色、終了失敗後の再試行、確定前は炎なし・確定後は赤色/炎・訂正後は演出なし、320/390/430pxと文字2倍を確認。新規終了テストの比較行数は前回セットも含むため、今回の保存済みセットを直接検証する形へ修正した。画面2枚の目視、文書リンク、git diff --check成功。
+- 未解決事項: 実機の指操作・OSキーボードと本番の通信時間は未確認。開始時からのnext-env.d.tsを元の内容へ戻し、未追跡資料とともにコミット対象外にした。CIと第三者レビューはPR作成後に確認する。
+- 次のアクション: API性能改善と画面修正の2コミットをpushし、画像と性能比較・残る制約を添えたmain向けPRを作成する。マージは行わない。
+
+## 2026-09-09 12:45 JST
+- 変更内容: PR #64への追加依頼を確認し、未マージの同じブランチで着手。今回のトレーニング一覧のセット別最高記録を本人限定APIで取得し、赤色・炎だけで強調する。BESTの視覚文言と比較の説明行を除き、RMを横へ、次種目を左・次セットを右へ移動。一般的な高速化手法をPsycopg・Supabase・Next.js・PostgreSQLの公式資料で調査し、DB接続プールを比較・適用した。
+- 目的: 説明を減らして一覧でも成果を見つけやすくし、毎回のDB接続確立を減らす。
+- 影響範囲・関連ファイル: backendのdomain/session・sessions API/repository・database_pool・lifespan/dependencies、frontendのsession-screen・community・CSS、関連テスト、scripts/benchmark_connections.py、README・環境サンプル・docs/loading-performance.md・v2仕様・task.md。psycopg-pool 3.3.1だけを追加し既存依存バージョンを保持。追加migrationなし。
+- 検証経緯: 新しいAPI/プールの先行テストは未実装で失敗、UI先行E2Eは説明行が残ることで失敗を確認してから実装。make check成功（backend128件・frontend単体29件・lint/build）。関連E2E9件成功。接続確立120ms・SQL40msを加えた実DB比較では、継続取得167.2→82.6ms、9要求の接続数9→1、初回168.6→210.1ms。初回は生存確認の分だけ増えるため区別して記録した。
+- 未解決事項: 全E2Eを最新API・実Supabaseで実行中。本番の実回線・Auth・コールドスタート込みの改善率と実機操作は未測定。既存のnext-env.d.tsと未追跡資料は維持する。
+- 次のアクション: 全E2E、画像・文書・最終差分の確認を完了し、目的別にコミットしてPR #64を更新する。
+
+## 2026-09-09 12:49 JST
+- 変更内容: 最高記録の一覧表示、BESTの視覚文言削除、比較RMの横配置、次種目を左・次セットを右にする修正を完成。本人限定の最高記録位置APIとrevision照合で、再起動・訂正・未送信分との整合性を保持した。画面3枚と参照仕様・現状・タスクを更新。
+- 目的: 今回のトレーニングでも成果を一目で示し、説明や縦幅を減らす。高速化は別コミットf13ccadの接続プールと合わせてPR #64へ反映する。
+- 影響範囲・関連ファイル: backendのsession domain/repository/schema/routes、frontendのsession-screen/community/API型/CSSと関連E2E、docs/images/training-feedback/、docs/current-state.md・gotore-v2-spec.md、task.md。
+- 検証結果: make check成功（backend128件、frontend単体29件、lint/build）。接続プールを有効にした最新API・実Supabaseで全E2E52件成功（3.6分）。2人・2グループ共有・開始/終了・メモ・退出後の非再共有、最高記録の表示/再起動/訂正/取得失敗、モバイル3幅と文字2倍を確認した。画像を目視し、git diff --checkと文書のリンクを確認。元からのnext-env.d.tsを開始時の内容に復元した。
+- 未解決事項: 本番の速度・実機操作・新コミットのCIと第三者レビュー。接続プールは継続時を改善するが初回の確認コストが増えること、上限がプロセス単位であることをdocs/PRに明記する。
+- 次のアクション: 追加コミットをpushし、PR #64の説明・画像・検証結果を最終内容へ更新する。マージ・本番の設定変更は行わない。

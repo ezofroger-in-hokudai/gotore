@@ -163,16 +163,20 @@ fieldset {
   color: white;
   border: 1px solid var(--accent);
 }
-.primary:hover:not(:disabled) {
-  background: #79141a;
+@media (hover: hover) and (pointer: fine) {
+  .primary:hover:not(:disabled) {
+    background: #79141a;
+  }
 }
 .secondary {
   background: white;
   border: 1px solid var(--line);
   color: var(--text);
 }
-.secondary:hover:not(:disabled) {
-  background: var(--bg);
+@media (hover: hover) and (pointer: fine) {
+  .secondary:hover:not(:disabled) {
+    background: var(--bg);
+  }
 }
 .full {
   width: 100%;

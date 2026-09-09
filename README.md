@@ -171,6 +171,7 @@ chmod 600 backend/.env frontend/.env.local
 | 変数 | 設定先 | 用途・ローカルの値 |
 | --- | --- | --- |
 | `DATABASE_URL` | backend | API用DB接続。標準は `postgresql://postgres:postgres@127.0.0.1:59322/postgres`。パスワードを含む秘密値 |
+| `DATABASE_POOL_MAX_SIZE` | backend | 省略時4、0〜10。プロセスごとのDB接続上限。0なら毎回接続する方式へ戻す。変更後はAPIを再起動する |
 | `SUPABASE_URL` | backend | APIが本人確認に使うAuthのURL。標準は `http://127.0.0.1:59321` |
 | `SUPABASE_ANON_KEY` | backend | 同じローカルSupabaseのanon key。クラウドではPublishable Keyまたはanon key |
 | `NEXT_PUBLIC_SUPABASE_URL` | frontend | ブラウザが接続するAuthのURL。ローカルでは上のURLと同じ |

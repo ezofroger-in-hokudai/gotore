@@ -272,7 +272,13 @@ function Feed({ data }: { data: GroupActivity }) {
               {item.reps}
               <small> 回</small>
             </strong>
-            {item.best && <span className="best-badge">BEST</span>}
+            {item.best && (
+              <span className="best-badge record-celebration">
+                <span role="img" aria-label="最高記録">
+                  🔥
+                </span>
+              </span>
+            )}
           </div>
         </article>
       ))}

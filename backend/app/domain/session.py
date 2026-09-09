@@ -42,6 +42,35 @@ def personal_bests(sets: list[dict]) -> dict:
     return {"best_weight": max(weights, default=None), "best_rm": max(rms, default=None)}
 
 
+def session_best_sets(exercises: list[dict], other_exercises: list[dict]) -> list[dict]:
+    """更新したセットのうち、現在も最高重量またはRMを保つ位置を返す。"""
+    names = {e["name"] for e in exercises}
+    bests = {
+        name: personal_bests([s for e in other_exercises if e["name"] == name for s in e["sets"]])
+        for name in names
+    }
+    candidates = []
+    for ei, exercise in enumerate(exercises):
+        best = bests[exercise["name"]]
+        for si, value in enumerate(exercise["sets"]):
+            weight = float(value["weight"])
+            rm = estimated_rm(weight, value["reps"])
+            improved_weight = best["best_weight"] is not None and weight > best["best_weight"]
+            improved_rm = rm is not None and best["best_rm"] is not None and rm > best["best_rm"]
+            candidates.append(
+                (ei, si, weight if improved_weight else None, rm if improved_rm else None)
+            )
+            best["best_weight"] = max(weight, best["best_weight"] or 0)
+            if rm is not None:
+                best["best_rm"] = max(rm, best["best_rm"] or 0)
+    return [
+        {"exercise_index": ei, "set_index": si}
+        for ei, si, weight, rm in candidates
+        if (weight is not None and weight == bests[exercises[ei]["name"]]["best_weight"])
+        or (rm is not None and rm == bests[exercises[ei]["name"]]["best_rm"])
+    ]
+
+
 def latest_change(before: list[dict], after: list[dict]) -> tuple[int, int, bool] | None:
     """変更したセットの位置と、既存セットを変えない純粋な追加かを返す。"""
     old = [(e["name"], s) for e in before for s in e["sets"]]

@@ -40,6 +40,10 @@ export type ExerciseContext = {
   previous: { id: string; performed_on: string; sets: Exercise["sets"] } | null;
   memo: { content: string; revision: number };
 };
+export type SessionBests = {
+  revision: number;
+  sets: { exercise_index: number; set_index: number }[];
+};
 export type GroupActivity = {
   group_id: string;
   member_count: number;
