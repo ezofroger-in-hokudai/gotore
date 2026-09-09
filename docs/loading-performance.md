@@ -94,3 +94,37 @@ TEST_DATABASE_URL=専用テストDBのURL backend/.venv/bin/python scripts/bench
 | 通常フィード3人 | 9 / 375.5ms | 3 / 125.8ms |
 
 リポジトリ層の比較であり、Auth、DB接続確立、トランザクション制御への追加遅延、コールドスタート、実回線・描画は含まない。本番で同じ改善率になるとはみなさない。BEST表示対象は現在も最高記録か確認するため、該当メンバーごとに履歴取得が1往復加わる。本番の残る待ちはServer-Timingで確認する。
+
+## 一般的な高速化手法の確認と追加適用（PR #64）
+
+2026-09-09のユーザー依頼で公式資料を確認した。今回の選択は以下のとおり。
+
+当初はDBプールを保留していたが、今回の「一般的な方法を調べて適用」の追加指定により、上限を設けたローカル比較を実施して採用した。
+
+| 手法 | このアプリでの扱い |
+| --- | --- |
+| 接続を再利用する | HTTP接続は適用済み。DB接続は毎回作成していたため、今回Psycopgの公式pool拡張を追加 |
+| 通信・SQLの往復を減らす | セッションSQLの集約と不要な履歴取得の省略は本PRの前半で適用済み |
+| キャッシュ・先読み・必要な画面だけ取得 | ユーザーごとの画面内キャッシュと種目候補の先読みを維持。最高記録の一覧判定も一覧を開いたときだけまとめて取得 |
+| 遅いSQLを計測し索引などを調整する | EXPLAINで実行計画を確認する方法を調査。今回、索引不足を根拠なく仮定したmigrationは追加しない |
+
+参照: [Psycopgの接続プール](https://www.psycopg.org/psycopg3/docs/advanced/pool.html)、[Supavisorとアプリ側プールの併用](https://supabase.com/docs/guides/troubleshooting/supavisor-faq-YyP5tI)、[Next.jsの最適化](https://nextjs.org/docs/app/guides/production-checklist)、[PostgreSQLのEXPLAIN](https://www.postgresql.org/docs/current/using-explain.html)。
+
+アプリ起動・終了に合わせてDBプールを開閉する。`DATABASE_POOL_MAX_SIZE`は既定4（プロセスごと、0〜10）、最小0、未使用30秒、最大寿命300秒、待機5秒・最大16要求とする。0にしてAPIを再起動すると毎回接続する従来方式へ戻せる。インスタンス数が増えると合計接続数も増えるため、この値はDB全体の上限ではない。SupabaseのTransaction Poolerの接続文字列を維持し、prepared statementは無効のままとする。
+
+貸出前の生存確認で切断済み接続を交換し、処理後はcommit/rollbackを終えて返却する。本人・グループの認可は要求ごとに実施し、接続へユーザー別の状態を設定しない。実行中の保存失敗は自動再実行せず、既存のrevision付き再送で扱う。上限・待機超過は503と短い再試行案内を返す。`Server-Timing`の`db_connect`にはプールの待機・貸出確認も含む。
+
+専用`_test` DBで次を実行する（SELECTのみ、schema変更なし）。
+
+```bash
+TEST_DATABASE_URL=専用テストDBのURL backend/.venv/bin/python scripts/benchmark_connections.py --samples 8
+```
+
+接続確立に120ms・各SQLに40msを加え、実PostgreSQLの接続取得とSELECT 1を比較した。プールの貸出前チェックもSQL遅延に含む。
+
+| 方式 | 初回 | 継続8回の中央値 | 9要求の接続数 |
+| --- | ---: | ---: | ---: |
+| 毎回接続 | 168.6ms | 167.2ms | 9 |
+| 接続プール | 210.1ms | 82.6ms | 1 |
+
+継続時の取得を減らせるため適用する。初回は生存確認が増える分だけ遅くなる。Auth・実回線・アプリ全体・本番のコールドスタートは含まないため、この約51%減を画面全体や本番の改善率として使わない。遅延なしで確認する場合は`--connect-delay-ms 0 --sql-delay-ms 0`を付ける。

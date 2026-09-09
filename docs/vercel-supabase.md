@@ -34,6 +34,7 @@
 | SUPABASE_URL | 同じProject URL。APIの本人確認用 |
 | SUPABASE_ANON_KEY | 同じ公開キー。APIの本人確認用 |
 | DATABASE_URL | SupabaseのTransaction Poolerの接続文字列。パスワードを含むサーバー用の秘密値 |
+| DATABASE_POOL_MAX_SIZE | 任意。既定4、0〜10。プロセスごとのDB接続上限。0でアプリ側の再利用を無効化 |
 | APP_ENV | production |
 
 Supabaseが案内する `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` という名前をそのまま登録しても、現在のコードは読み取らない。その値を `NEXT_PUBLIC_SUPABASE_ANON_KEY` に設定する。

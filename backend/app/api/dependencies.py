@@ -8,6 +8,7 @@ import psycopg
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from psycopg.rows import dict_row
+from psycopg_pool import PoolTimeout, TooManyRequests
 
 from app.core.config import is_header_token, settings
 from app.core.timing import measure
@@ -61,14 +62,17 @@ def current_user(
         raise HTTPException(401, "ユーザー情報を確認できません") from None
 
 
-def database():
+def database(request: Request):
     if not settings.database_url:
         raise HTTPException(503, "データベースが設定されていません")
     try:
         with ExitStack() as stack:
             with measure("db_connect"):
+                pool = request.app.state.database_pool
                 connection = stack.enter_context(
-                    psycopg.connect(
+                    pool.connection()
+                    if pool is not None
+                    else psycopg.connect(
                         settings.database_url,
                         autocommit=True,
                         row_factory=dict_row,
@@ -78,7 +82,7 @@ def database():
                     )
                 )
             yield connection
-    except psycopg.Error:
+    except (psycopg.Error, PoolTimeout, TooManyRequests):
         raise HTTPException(503, "記録サービスを利用できません。再試行してください") from None
 
 

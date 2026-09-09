@@ -736,3 +736,11 @@
 - 検証結果: make check成功（backend120件・frontend単体29件、lint/build）。最新APIで実Supabaseを使うmake test-e2e全50件成功（ローカル用のプロキシ除外、PLAYWRIGHT_REUSE_SERVER=1）。2人・2グループの共有・再開・終了・本人メモ・退出後の非再共有、遅延中の連続タップ/番号/色、終了失敗後の再試行、確定前は炎なし・確定後は赤色/炎・訂正後は演出なし、320/390/430pxと文字2倍を確認。新規終了テストの比較行数は前回セットも含むため、今回の保存済みセットを直接検証する形へ修正した。画面2枚の目視、文書リンク、git diff --check成功。
 - 未解決事項: 実機の指操作・OSキーボードと本番の通信時間は未確認。開始時からのnext-env.d.tsを元の内容へ戻し、未追跡資料とともにコミット対象外にした。CIと第三者レビューはPR作成後に確認する。
 - 次のアクション: API性能改善と画面修正の2コミットをpushし、画像と性能比較・残る制約を添えたmain向けPRを作成する。マージは行わない。
+
+## 2026-09-09 12:45 JST
+- 変更内容: PR #64への追加依頼を確認し、未マージの同じブランチで着手。今回のトレーニング一覧のセット別最高記録を本人限定APIで取得し、赤色・炎だけで強調する。BESTの視覚文言と比較の説明行を除き、RMを横へ、次種目を左・次セットを右へ移動。一般的な高速化手法をPsycopg・Supabase・Next.js・PostgreSQLの公式資料で調査し、DB接続プールを比較・適用した。
+- 目的: 説明を減らして一覧でも成果を見つけやすくし、毎回のDB接続確立を減らす。
+- 影響範囲・関連ファイル: backendのdomain/session・sessions API/repository・database_pool・lifespan/dependencies、frontendのsession-screen・community・CSS、関連テスト、scripts/benchmark_connections.py、README・環境サンプル・docs/loading-performance.md・v2仕様・task.md。psycopg-pool 3.3.1だけを追加し既存依存バージョンを保持。追加migrationなし。
+- 検証経緯: 新しいAPI/プールの先行テストは未実装で失敗、UI先行E2Eは説明行が残ることで失敗を確認してから実装。make check成功（backend128件・frontend単体29件・lint/build）。関連E2E9件成功。接続確立120ms・SQL40msを加えた実DB比較では、継続取得167.2→82.6ms、9要求の接続数9→1、初回168.6→210.1ms。初回は生存確認の分だけ増えるため区別して記録した。
+- 未解決事項: 全E2Eを最新API・実Supabaseで実行中。本番の実回線・Auth・コールドスタート込みの改善率と実機操作は未測定。既存のnext-env.d.tsと未追跡資料は維持する。
+- 次のアクション: 全E2E、画像・文書・最終差分の確認を完了し、目的別にコミットしてPR #64を更新する。

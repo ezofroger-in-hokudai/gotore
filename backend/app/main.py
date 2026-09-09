@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+from contextlib import ExitStack, asynccontextmanager
 from time import perf_counter
 
 import httpx
@@ -10,15 +10,28 @@ from app.core.config import settings
 from app.core.timing import request_timings
 from app.domain.errors import Conflict, NotFound, ServiceUnavailable
 from app.infrastructure.auth_client import AuthClient
+from app.infrastructure.database_pool import create_database_pool
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    with httpx.Client(
-        timeout=5,
-        limits=httpx.Limits(max_connections=20, max_keepalive_connections=5, keepalive_expiry=30),
-    ) as client:
+    with (
+        ExitStack() as stack,
+        httpx.Client(
+            timeout=5,
+            limits=httpx.Limits(
+                max_connections=20, max_keepalive_connections=5, keepalive_expiry=30
+            ),
+        ) as client,
+    ):
         app.state.auth_client = AuthClient(client)
+        app.state.database_pool = (
+            stack.enter_context(
+                create_database_pool(settings.database_url, settings.database_pool_max_size)
+            )
+            if settings.database_url and settings.database_pool_max_size
+            else None
+        )
         yield
 
 
