@@ -3,7 +3,6 @@ import { mockTraining, navigate, startTraining } from "./mock-training";
 
 async function catalog(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "種目一覧", exact: true }).click();
-  await page.getByText("種目リスト", { exact: true }).click();
 }
 test("種目追加・削除の失敗を再試行でき、削除後も入力を保持する", async ({ page }) => {
   const state = await mockTraining(page);
@@ -44,6 +43,7 @@ test("種目追加・削除の失敗を再試行でき、削除後も入力を�
 test("候補取得失敗から再試行し、空リストにも追加できる", async ({ page }) => {
   const state = await mockTraining(page);
   state.failOptions = true;
+  await page.reload();
   await navigate(page, "記録");
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("通信できません");
@@ -58,7 +58,10 @@ test("候補取得失敗から再試行し、空リストにも追加できる",
   await page.getByRole("button", { name: "追加", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("追加しました");
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
-  await page.getByRole("button", { name: /^新しい種目/ }).click();
+  await page
+    .locator(".v2-rows")
+    .getByRole("button", { name: /^新しい種目/ })
+    .click();
   await expect(page.getByRole("heading", { name: "新しい種目", exact: true })).toBeVisible();
 });
 

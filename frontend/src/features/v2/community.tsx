@@ -14,6 +14,8 @@ export function CommunityHome({
   onDetail,
   refreshKey,
   active,
+  loading = false,
+  failed = false,
 }: {
   groups: Group[];
   selected: string;
@@ -22,10 +24,16 @@ export function CommunityHome({
   onDetail: () => void;
   refreshKey: number;
   active: boolean;
+  loading?: boolean;
+  failed?: boolean;
 }) {
   const carousel = useRef<HTMLDivElement>(null);
   const restored = useRef(false);
   useEffect(() => {
+    if (!active) {
+      restored.current = false;
+      return;
+    }
     if (restored.current || !carousel.current || !groups.length) return;
     const index = Math.max(
       0,
@@ -34,11 +42,13 @@ export function CommunityHome({
     const card = carousel.current.children[index] as HTMLElement | undefined;
     if (card) carousel.current.scrollLeft = card.offsetLeft;
     restored.current = true;
-  }, [groups, selected]);
+  }, [groups, selected, active]);
   const activity = useResource<GroupActivity>(
     selected ? `/groups/${selected}/activity` : null,
     refreshKey,
     active,
+    true,
+    { enabled: active },
   );
   function select(index: number) {
     const element = carousel.current?.children[index] as HTMLElement | undefined;
@@ -57,7 +67,26 @@ export function CommunityHome({
           グループ一覧
         </button>
       </div>
-      {!groups.length ? (
+      {loading ? (
+        <>
+          <div
+            className="community-card"
+            aria-label={failed ? "グループ未取得" : "グループを読み込み中"}
+          >
+            <h2>グループ</h2>
+            <CommunityStats data={null} />
+            <span className="community-total">メンバー —人</span>
+          </div>
+          <div className="carousel-dots" />
+          <div className="section-heading">
+            <h2>みんなの最新記録</h2>
+          </div>
+          <output className="resource-status muted" />
+          <div className="resource-placeholder">
+            {failed ? "グループを取得できませんでした" : "読み込み中…"}
+          </div>
+        </>
+      ) : !groups.length ? (
         <div className="panel empty-community">
           <h2>仲間と、続けよう。</h2>
           <p>グループを作成するか、招待コードで参加しましょう。</p>
@@ -72,7 +101,7 @@ export function CommunityHome({
             ref={carousel}
             onScroll={() => {
               const element = carousel.current;
-              if (!element) return;
+              if (!active || !element?.clientWidth) return;
               const width = (element.firstElementChild as HTMLElement)?.offsetWidth + 12;
               const index = Math.min(
                 groups.length - 1,
@@ -87,6 +116,7 @@ export function CommunityHome({
                 group={group}
                 refreshKey={refreshKey}
                 active={active}
+                selectedActivity={group.id === selected ? activity : undefined}
                 onClick={() => {
                   onSelect(group.id);
                   onDetail();
@@ -109,6 +139,9 @@ export function CommunityHome({
             <h2>みんなの最新記録</h2>
             <span className="muted">{groups.find((group) => group.id === selected)?.name}</span>
           </div>
+          <output className="resource-status muted">
+            {activity.loading && activity.data ? "更新中…" : ""}
+          </output>
           {activity.error ? (
             <p role="alert" className="error">
               {activity.error}
@@ -119,7 +152,7 @@ export function CommunityHome({
           ) : activity.data ? (
             <Feed data={activity.data} />
           ) : (
-            <p className="muted">読み込み中…</p>
+            <div className="resource-placeholder">読み込み中…</div>
           )}
         </>
       )}
@@ -132,8 +165,22 @@ function GroupCard({
   refreshKey,
   active,
   onClick,
-}: { group: Group; refreshKey: number; active: boolean; onClick: () => void }) {
-  const resource = useResource<GroupActivity>(`/groups/${group.id}/activity`, refreshKey, active);
+  selectedActivity,
+}: {
+  group: Group;
+  refreshKey: number;
+  active: boolean;
+  onClick: () => void;
+  selectedActivity?: ReturnType<typeof useResource<GroupActivity>>;
+}) {
+  const own = useResource<GroupActivity>(
+    selectedActivity ? null : `/groups/${group.id}/activity`,
+    refreshKey,
+    active,
+    true,
+    { enabled: active },
+  );
+  const resource = selectedActivity ?? own;
   return (
     <button
       className="community-card"
@@ -239,6 +286,7 @@ export function CommunityScreen({
   groups,
   selected,
   initialDetail,
+  active,
   userId,
   refreshKey,
   onSelect,
@@ -248,6 +296,7 @@ export function CommunityScreen({
   groups: Group[];
   selected: string;
   initialDetail: boolean;
+  active: boolean;
   userId: string;
   refreshKey: number;
   onSelect: (id: string) => void;
@@ -255,6 +304,9 @@ export function CommunityScreen({
   onHome: () => void;
 }) {
   const [mode, setMode] = useState<Mode>(initialDetail ? "detail" : "list");
+  useEffect(() => {
+    if (active) setMode(initialDetail ? "detail" : "list");
+  }, [active, initialDetail]);
   const [value, setValue] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [busy, setBusy] = useState(false);
@@ -278,14 +330,18 @@ export function CommunityScreen({
     return () => window.removeEventListener("popstate", back);
   }, [initialDetail]);
   const detail = useResource<GroupDetail>(
-    selected && mode !== "list" ? `/groups/${selected}` : null,
+    selected ? `/groups/${selected}` : null,
     refreshKey,
     mode === "detail" || mode === "members",
+    true,
+    { enabled: active && mode !== "list", retainOnRefresh: true },
   );
   const activity = useResource<GroupActivity>(
-    selected && mode === "detail" ? `/groups/${selected}/activity` : null,
+    selected ? `/groups/${selected}/activity` : null,
     refreshKey,
     true,
+    true,
+    { enabled: active && mode === "detail" },
   );
   const group = detail.data;
   function change(next: Mode) {
@@ -472,7 +528,14 @@ export function CommunityScreen({
               )}
             </>
           ) : (
-            <p className="muted">読み込み中…</p>
+            <>
+              <h1>{groups.find((item) => item.id === selected)?.name || "グループ"}</h1>
+              <div className="community-card detail-card">
+                <CommunityStats data={null} />
+              </div>
+              <div className="resource-placeholder">読み込み中…</div>
+              {mode === "detail" && <h2>みんなの最新記録</h2>}
+            </>
           )}
         </>
       )}

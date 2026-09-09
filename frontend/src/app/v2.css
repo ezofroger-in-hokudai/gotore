@@ -932,19 +932,6 @@
   min-height: 39px;
   padding: 2px 0;
 }
-.comparison-pages {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 10px;
-  color: var(--muted);
-}
-.recording-view .comparison-pages .text-button {
-  min-width: 44px;
-  font-size: 20px;
-  line-height: 20px;
-  padding: 0;
-}
 .recording-view .set-entry {
   margin: 0;
   padding: 8px 12px;
@@ -952,7 +939,7 @@
 }
 .recording-view .set-entry .section-heading {
   margin: 0;
-  min-height: 24px;
+  min-height: 28px;
 }
 .recording-view .set-entry h2 {
   font-size: 13px;
@@ -992,7 +979,7 @@
   font-size: 10px;
 }
 .recording-view .save-feedback {
-  min-height: 18px;
+  min-height: calc(1.6em + 10px);
   font-size: 11px;
   margin: 0;
 }
@@ -1047,4 +1034,70 @@
 }
 .recording-view .inline-memo textarea {
   min-height: 1.5em;
+}
+
+/* 一覧だけをスクロールし、入力と追加操作を常に画面内へ残す。 */
+.recording-view .entering-sets {
+  height: calc(100dvh - 74px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: 610px;
+}
+.entering-sets > * {
+  flex-shrink: 0;
+}
+.session-context {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 30%;
+  overflow-y: auto;
+}
+.session-context .section-heading {
+  margin: 0;
+}
+.exercise-memo-slot {
+  min-height: 28px;
+}
+.entering-sets .set-comparison {
+  display: flex;
+  flex-direction: column;
+  min-height: 75px;
+  flex: 1 1 0;
+}
+.entering-sets .comparison-table {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  min-height: 0;
+}
+.entering-sets .comparison-labels {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+}
+.session-overview {
+  padding: 12px;
+  background: var(--panel);
+  border-radius: 12px;
+  max-height: 32dvh;
+  overflow-y: auto;
+}
+.session-overview h2,
+.session-overview h3 {
+  margin: 0 0 8px;
+}
+.session-overview ol {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+}
+.resource-status {
+  display: block;
+  min-height: 20px;
+  font-size: 12px;
+}
+.resource-placeholder {
+  min-height: 100px;
+  padding: 20px;
+  background: var(--panel);
+  border-radius: 12px;
+  color: var(--muted);
 }

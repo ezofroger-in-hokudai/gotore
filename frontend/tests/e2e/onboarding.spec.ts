@@ -52,6 +52,9 @@ test("他ユーザーの表示済み状態を使わず、スキップしても�
   await expect(guide).toBeVisible();
   await startTraining(page);
   const key = `gotore:session-input:v2:${state.user.id}:${state.session?.id}`;
+  await expect
+    .poll(() => page.evaluate((value) => localStorage.getItem(value), key))
+    .not.toBeNull();
   const draft = await page.evaluate((value) => localStorage.getItem(value), key);
   await guide.getByRole("button", { name: "スキップ", exact: true }).click();
   await expect(guide).toHaveCount(0);

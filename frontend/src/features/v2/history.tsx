@@ -24,13 +24,13 @@ export function History({
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<string | null>(null);
   const records = useResource<Workout[]>(
-    active ? `/workouts?offset=${page * 50}${date ? `&performed_on=${date}` : ""}` : null,
+    `/workouts?offset=${page * 50}${date ? `&performed_on=${date}` : ""}`,
     refreshKey,
     false,
     true,
+    { enabled: active },
   );
   const current = records.data?.find((record) => record.id === detail);
-  if (!active) return null;
   if (current)
     return (
       <section className="history-detail">
@@ -70,6 +70,7 @@ export function History({
           setPage(0);
         }}
         refreshKey={refreshKey}
+        active={active}
       />
       <div className="section-heading">
         <h2>{date ? dateLabel(date) : "最近のトレーニング"}</h2>
@@ -94,8 +95,9 @@ export function History({
           </button>
         </p>
       )}
-      {records.loading && !records.data && <output className="muted">読み込み中…</output>}
-      {records.refreshing && <output className="muted">更新中…</output>}
+      <output className="resource-status muted">
+        {records.loading ? (records.data ? "更新中…" : "読み込み中…") : ""}
+      </output>
       <div className="v2-rows">
         {records.data?.map((record) => (
           <button

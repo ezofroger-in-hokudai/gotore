@@ -19,6 +19,7 @@ export function Workspace({ session }: { session: Session }) {
   const [groupId, setGroupId] = useState("");
   const [groupDetail, setGroupDetail] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [groupRefreshKey, setGroupRefreshKey] = useState(0);
   const [editing, setEditing] = useState<Workout | null>(null);
   const [copy, setCopy] = useState<Workout | null>(null);
   const [guideReplay, setGuideReplay] = useState(0);
@@ -29,8 +30,10 @@ export function Workspace({ session }: { session: Session }) {
   const preferences = usePreferences(session.user.id);
   const groupList = useResource<Group[]>(
     "/groups",
-    refreshKey,
+    groupRefreshKey,
     view === "home" || view === "groups",
+    true,
+    { enabled: view === "home" || view === "groups", retainOnRefresh: true },
   );
   const groups = groupList.data ?? [];
   const selected = groups.some((group) => group.id === groupId) ? groupId : groups[0]?.id || "";
@@ -96,49 +99,40 @@ export function Workspace({ session }: { session: Session }) {
             </button>
           </p>
         )}
-        {view === "home" && (
-          <>
-            {groupList.data === null ? (
-              <>
-                <h1>ホーム</h1>
-                <output className="muted">
-                  {groupList.error ? "グループを取得できませんでした" : "読み込み中…"}
-                </output>
-              </>
-            ) : (
-              <CommunityHome
-                groups={groups}
-                selected={selected}
-                onSelect={setGroupId}
-                onGroups={() => {
-                  setGroupDetail(false);
-                  navigate("groups");
-                }}
-                onDetail={() => {
-                  setGroupDetail(true);
-                  navigate("groups");
-                }}
-                refreshKey={refreshKey}
-                active
-              />
-            )}
-            <div className="home-training">
-              <p>
-                {training.session
-                  ? `${training.session.exercises.at(-1)?.name || "種目を選択"} · ${training.session.exercises.reduce((count, exercise) => count + exercise.sets.length, 0)}セット${training.pending ? "・同期中" : "保存済み"}`
-                  : "今日も、自分のペースで。"}
-              </p>
-              <button
-                className="primary full"
-                type="button"
-                disabled={!training.ready || training.busy}
-                onClick={() => navigate("record")}
-              >
-                {training.session ? "トレーニングを再開" : "トレーニングを記録"}
-              </button>
-            </div>
-          </>
-        )}
+        <div hidden={view !== "home"}>
+          <CommunityHome
+            groups={groups}
+            loading={groupList.data === null}
+            failed={!!groupList.error}
+            selected={selected}
+            onSelect={setGroupId}
+            onGroups={() => {
+              setGroupDetail(false);
+              navigate("groups");
+            }}
+            onDetail={() => {
+              setGroupDetail(true);
+              navigate("groups");
+            }}
+            refreshKey={refreshKey}
+            active={view === "home"}
+          />
+          <div className="home-training">
+            <p>
+              {training.session
+                ? `${training.session.exercises.at(-1)?.name || "種目を選択"} · ${training.session.exercises.reduce((count, exercise) => count + exercise.sets.length, 0)}セット${training.pending ? "・同期中" : "保存済み"}`
+                : "今日も、自分のペースで。"}
+            </p>
+            <button
+              className="primary full"
+              type="button"
+              disabled={!training.ready || training.busy}
+              onClick={() => navigate("record")}
+            >
+              {training.session ? "トレーニングを再開" : "トレーニングを記録"}
+            </button>
+          </div>
+        </div>
         <div hidden={view !== "record"}>
           <SessionScreen
             controller={training}
@@ -186,18 +180,22 @@ export function Workspace({ session }: { session: Session }) {
             onBack={() => navigate("history")}
           />
         )}
-        {view === "groups" && (
+        <div hidden={view !== "groups"}>
           <CommunityScreen
             groups={groups}
             selected={selected}
             initialDetail={groupDetail}
+            active={view === "groups"}
             userId={session.user.id}
             refreshKey={refreshKey}
             onSelect={setGroupId}
-            onChanged={changed}
+            onChanged={() => {
+              setGroupRefreshKey((key) => key + 1);
+              changed();
+            }}
             onHome={() => navigate("home")}
           />
-        )}
+        </div>
         {view === "settings" && (
           <Preferences
             preferences={preferences}
