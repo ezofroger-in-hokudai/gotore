@@ -760,3 +760,20 @@
 - 検証結果: GitHub APIで3件ともstate=closed・state_reason=completedを確認。残る18件はopenを維持。Issue整理と記録のみのため、先行テストの追加・アプリテストの再実行は行わず、git diff --checkを確認する。
 - 未解決事項: #11は本番相当の計測と目標達成確認、#17はプリセット・目標など、#14は統計・推移、#22はコメント等の仕様整理が残るためクローズしない。実機確認 #23、iPhone PWA #65、前の種目の編集導線 #66なども継続する。既存のnext-env.d.tsと未追跡資料は保持した。
 - 次のアクション: 残ったIssueは各受け入れ条件に沿って対応する。
+
+## 2026-09-09 21:00 JST
+- 変更内容: ライブ感と設定からの画像変更の追加依頼に着手。最新main・週次計画#33・資料・既存プロフィール/LIVE/テストを確認し、Carbon・MDN・Pillow・Supabaseの公式資料を調査。docs/live-presence-avatars.mdとtask.mdへ適用範囲を記録した。
+- 目的: 記録中の仲間と新しいセットを分かりやすくし、本人の画像を設定できるようにする。
+- 影響範囲・関連ファイル: ホーム・グループ・設定、画像専用API/DB、LIVE期限、関連テスト・仕様。元からのnext-env.d.tsと未追跡資料は保持する。
+- テスト方針: 画像の入力制約・認可・更新/削除とLIVE期限のAPIテスト、UIの状態遷移テストを先行追加して失敗を確認する。
+- 未解決事項: 実装・検証中。本番migration・実機確認は未実施。
+- 次のアクション: 小さな画像専用テーブルとAPI、共通アイコン、ライブ表示を実装しmake check・実Supabase E2Eを確認する。
+
+## 2026-09-09 21:18 JST
+- 変更内容: #67の画像APIと専用テーブル、LIVE期限・サーバー観測時刻・画像版IDを追加。画像は本人だけが更新・削除し、本人/同一グループの現在メンバーだけが取得する。Pillow 12.3.0だけを追加して静止画検証・256px正方形への変換・EXIF除去を行い、通常の活動取得へ画像本体を含めない。
+- 目的: 個人の画像を既存の認可内で共有し、通信保留中でもLIVEの期限を判定できるようにする。
+- 影響範囲・関連ファイル: backendのavatar API/domain/infrastructure・session repository/schema、画像migration、関連テスト・lockfile、docs/live-presence-avatars.md。
+- 検証結果: 最終make check成功（backend140件・frontend単体29件・lint/build）。ローカルSupabaseへ未適用migrationだけを追加適用し、make db-lint成功。全migrationを専用gotore_v2_testのトランザクション内へ展開する統合テストで新規構築・画像認可・形式/容量/画素数・EXIF除去・他人の更新との分離・削除・LIVE期限を確認。実Supabaseの別アカウントで画像保存/表示・未認証/退出後の拒否も成功。
+- 検証経緯: API先行テストは未実装importで失敗してから実装。JPEGのis_animated属性差をテストで検出しgetattrに修正。先行UIテストはテストサーバー起動待ちで止まったため一部UI実装を先に進め、Nodeで明示起動して検証した。単独tscは既存bun:test型の解決で失敗したが、共通のmake checkによるTypeScript付きbuildは成功。環境用コマンドの作業ディレクトリ指定とpg_ctlのポート/ソケット指定も修正済み。
+- 未解決事項: 全57件のE2Eを実行中。本番migration・デプロイ・iOS/Android実機の写真選択は未実施。画像の元データは保存せず、ブラウザが読み込めるJPEG/PNG/WebPを対象とする。
+- 次のアクション: UIと全E2Eの最終結果・画面画像を別コミットへまとめ、PRでレビューする。
