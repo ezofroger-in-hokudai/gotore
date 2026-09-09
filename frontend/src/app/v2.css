@@ -684,7 +684,38 @@
   margin: 12px 0;
 }
 .finish-training {
-  margin-top: 24px;
+  margin: 0;
+  flex-shrink: 0;
+}
+.v2-app .finish-training {
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.set-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 106px;
+  gap: 8px;
+}
+.set-actions .primary {
+  flex-direction: column;
+  gap: 2px;
+}
+.set-actions small {
+  font-size: 10px;
+  font-weight: 400;
+}
+.v2-app .next-exercise {
+  padding: 8px 4px;
+  font-size: 12px;
+  border-color: var(--muted);
+}
+.record-celebration {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 800;
 }
 .sharing-caption {
   margin: 10px 0 0;

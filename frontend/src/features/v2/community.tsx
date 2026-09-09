@@ -272,7 +272,11 @@ function Feed({ data }: { data: GroupActivity }) {
               {item.reps}
               <small> 回</small>
             </strong>
-            {item.best && <span className="best-badge">BEST</span>}
+            {item.best && (
+              <span className="best-badge record-celebration">
+                <span aria-hidden="true">🔥 </span>BEST
+              </span>
+            )}
           </div>
         </article>
       ))}

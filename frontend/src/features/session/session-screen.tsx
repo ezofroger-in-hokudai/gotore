@@ -117,6 +117,7 @@ function ActiveTraining({
   const [finishOpen, setFinishOpen] = useState(false);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [submission, setSubmission] = useState<{ revision: number; set: number } | null>(null);
   const [storageWarning, setStorageWarning] = useState(false);
   const [undo, setUndo] = useState<{
     exercises: TrainingSession["exercises"];
@@ -164,7 +165,11 @@ function ActiveTraining({
     };
   }, [persistInput]);
   useEffect(() => {
-    if (controller.saved?.id === session.id)
+    if (
+      submission &&
+      controller.saved?.id === session.id &&
+      controller.saved.revision >= submission.revision
+    )
       setFeedback((current) =>
         current.startsWith("直前")
           ? current
@@ -172,7 +177,7 @@ function ActiveTraining({
             ? "BEST更新！ 保存しました"
             : "保存しました",
       );
-  }, [controller.saved, session.id]);
+  }, [controller.saved, session.id, submission]);
   // 応答だけ失われた保存は、再起動時にサーバーと照合して二重追加を防ぐ。
   useEffect(() => {
     try {
@@ -208,6 +213,7 @@ function ActiveTraining({
       const value = setValue(input.weight, input.reps);
       const exercises = updateSet(session.exercises, input.name, value, input.editing);
       const result = await controller.save(exercises, session.revision);
+      setSubmission({ revision: result.revision, set: (input.editing ?? sets.length) + 1 });
       setUndo({ exercises: session.exercises, revision: result.revision });
       const nextInput = { ...input, revision: result.revision, editing: null, dirty: false };
       setInput(nextInput);
@@ -231,6 +237,8 @@ function ActiveTraining({
   const candidate =
     input.editing === null && bestUpdate(Number(input.weight), Number(input.reps), context.data);
   const rm = estimatedRM(Number(input.weight), Number(input.reps));
+  const awaitingSave = submission && controller.confirmedRevision < submission.revision;
+  const celebrated = feedback.startsWith("BEST") && !awaitingSave;
 
   return (
     <section className={`session-screen${selecting ? "" : " entering-sets"}`}>
@@ -240,7 +248,7 @@ function ActiveTraining({
         </span>
         <button
           type="button"
-          className="text-button finish-training"
+          className="secondary finish-training"
           disabled={controller.busy}
           onClick={() => setFinishOpen(true)}
         >
@@ -260,9 +268,6 @@ function ActiveTraining({
               種目一覧
             </button>
           </div>
-          <button className="secondary full" type="button" onClick={() => setCatalogOpen(true)}>
-            新しい種目を追加
-          </button>
           <section className="session-overview" aria-label="今回のトレーニング">
             <h2>今回のトレーニング</h2>
             {session.exercises.length ? (
@@ -333,6 +338,7 @@ function ActiveTraining({
                     });
                     setSelecting(false);
                     setFeedback("");
+                    setSubmission(null);
                     setUndo(null);
                   }}
                 >
@@ -346,6 +352,9 @@ function ActiveTraining({
           {!names.length && !catalog.loading && (
             <p className="muted">種目一覧から種目を追加してください。</p>
           )}
+          <button className="secondary full" type="button" onClick={() => setCatalogOpen(true)}>
+            新しい種目を追加
+          </button>
         </>
       ) : (
         <>
@@ -584,18 +593,49 @@ function ActiveTraining({
                 1RM <strong>{rm ?? "—"}</strong> kg <span>（1〜10回）</span>
               </p>
               <div className="save-feedback" aria-live="polite">
-                {feedback || (candidate ? <span className="best-badge">BEST更新候補</span> : "")}
+                {feedback ? (
+                  <span className={celebrated ? "record-celebration" : undefined}>
+                    {celebrated && <span aria-hidden="true">🔥 </span>}
+                    {submission && !feedback.startsWith("直前") && (
+                      <span>SET {submission.set} · </span>
+                    )}
+                    <span>
+                      {awaitingSave
+                        ? controller.status === "offline" || controller.status === "conflict"
+                          ? "端末に保存 · 未送信"
+                          : "端末に保存 · 保存中…"
+                        : feedback}
+                    </span>
+                  </span>
+                ) : candidate ? (
+                  <span className="best-badge">BEST更新候補</span>
+                ) : (
+                  ""
+                )}
               </div>
-              <button className="primary full" type="submit">
-                {controller.busy
-                  ? "保存中…"
-                  : input.editing === null
-                    ? "次のセットへ"
-                    : "変更を保存"}
-              </button>
-              <button className="text-button full" type="button" onClick={() => setSelecting(true)}>
-                次の種目へ
-              </button>
+              <div className="set-actions">
+                <button
+                  className="primary"
+                  type="submit"
+                  aria-label={input.editing === null ? "次のセットへ" : "変更を保存"}
+                >
+                  <span>
+                    {controller.busy
+                      ? "保存中…"
+                      : input.editing === null
+                        ? "次のセットへ"
+                        : "変更を保存"}
+                  </span>
+                  <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
+                </button>
+                <button
+                  className="secondary next-exercise"
+                  type="button"
+                  onClick={() => setSelecting(true)}
+                >
+                  次の種目へ<span aria-hidden="true"> ›</span>
+                </button>
+              </div>
             </fieldset>
           </form>
           {error && (
@@ -694,7 +734,7 @@ function ActiveTraining({
               }
             }}
           >
-            終了する
+            {controller.busy ? "終了中…" : "終了する"}
           </button>
         </Sheet>
       )}
