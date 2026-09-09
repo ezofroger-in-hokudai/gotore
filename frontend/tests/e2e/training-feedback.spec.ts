@@ -102,7 +102,7 @@ test("最高記録の赤色と炎はサーバー保存の確定後に表示す�
   await mockTraining(page);
   await startTraining(page);
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("85");
-  await expect(page.getByText("BEST更新候補", { exact: true })).toBeVisible();
+  await expect(page.locator(".record-candidate")).toBeVisible();
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -120,7 +120,7 @@ test("最高記録の赤色と炎はサーバー保存の確定後に表示す�
   }
   const celebration = page.locator(".save-feedback .record-celebration");
   await expect(celebration).toContainText("🔥");
-  await expect(celebration).toContainText("BEST更新！ 保存しました");
+  await expect(celebration).toContainText("保存しました");
   await expect(celebration).toHaveCSS("color", "rgb(211, 47, 47)");
   await page.screenshot({ path: "test-results/session-best-feedback.png", fullPage: true });
   await page.getByRole("button", { name: "セット1を編集", exact: true }).tap();

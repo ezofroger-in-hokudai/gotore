@@ -12,6 +12,16 @@ class SessionResponse(WorkoutResponse):
     best_updated: bool = Field(default=False, validation_alias="feed_best")
 
 
+class BestSetPosition(BaseModel):
+    exercise_index: int
+    set_index: int
+
+
+class SessionBests(BaseModel):
+    revision: int
+    sets: list[BestSetPosition]
+
+
 class InvitePreview(BaseModel):
     id: UUID
     name: str

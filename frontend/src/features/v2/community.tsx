@@ -274,7 +274,9 @@ function Feed({ data }: { data: GroupActivity }) {
             </strong>
             {item.best && (
               <span className="best-badge record-celebration">
-                <span aria-hidden="true">🔥 </span>BEST
+                <span role="img" aria-label="最高記録">
+                  🔥
+                </span>
               </span>
             )}
           </div>

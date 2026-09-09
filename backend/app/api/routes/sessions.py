@@ -7,7 +7,13 @@ from app.api.dependencies import training_service
 from app.domain.session import ExerciseMemoInput, SessionRevision, SessionStart, SessionUpdate
 from app.domain.workout import Name
 from app.infrastructure.sessions import SessionRepository
-from app.schemas.session import ExerciseContext, GroupActivity, InvitePreview, SessionResponse
+from app.schemas.session import (
+    ExerciseContext,
+    GroupActivity,
+    InvitePreview,
+    SessionBests,
+    SessionResponse,
+)
 from app.schemas.training import GroupJoin, WorkoutMemoResponse
 from app.services.training import TrainingService
 
@@ -28,6 +34,11 @@ def active_session(service: Service):
 @router.post("/sessions", response_model=SessionResponse, status_code=201)
 def start_session(data: SessionStart, service: Service):
     return repository(service).start(service.user.id, data.id)
+
+
+@router.get("/sessions/{session_id}/bests", response_model=SessionBests)
+def session_bests(session_id: UUID, service: Service):
+    return repository(service).overview_bests(service.user.id, session_id)
 
 
 @router.patch("/sessions/{session_id}", response_model=SessionResponse)

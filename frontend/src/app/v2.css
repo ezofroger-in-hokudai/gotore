@@ -557,17 +557,11 @@
 .comparison-table {
   margin-bottom: 12px;
 }
-.comparison-labels,
 .comparison-row {
   display: grid;
   grid-template-columns: 27px 1fr 1fr;
   gap: 8px;
   align-items: center;
-}
-.comparison-labels {
-  color: var(--muted);
-  font-size: 10px;
-  padding-bottom: 7px;
 }
 .comparison-row {
   border-top: 1px solid var(--line);
@@ -579,9 +573,22 @@
   color: var(--muted);
 }
 .comparison-row small {
-  display: block;
+  display: inline;
   font-size: 10px;
   color: var(--muted);
+}
+.set-measurement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+}
+.set-measurement > span,
+.set-measurement > small {
+  white-space: nowrap;
+}
+.record-candidate {
+  color: var(--accent);
 }
 .comparison-row button {
   background: transparent;
@@ -694,7 +701,7 @@
 }
 .set-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 106px;
+  grid-template-columns: 106px minmax(0, 1fr);
   gap: 8px;
 }
 .set-actions .primary {
@@ -952,10 +959,6 @@
 .recording-view .comparison-table {
   margin: 0;
 }
-.recording-view .comparison-labels {
-  padding: 0;
-  font-size: 9px;
-}
 .recording-view .comparison-row {
   min-height: 39px;
 }
@@ -1098,11 +1101,6 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
   min-height: 0;
-}
-.entering-sets .comparison-labels {
-  position: sticky;
-  top: 0;
-  background: var(--bg);
 }
 .session-overview {
   padding: 12px;

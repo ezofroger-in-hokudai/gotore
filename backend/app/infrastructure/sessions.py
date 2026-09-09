@@ -9,6 +9,7 @@ from app.domain.session import (
     estimated_rm,
     latest_change,
     personal_bests,
+    session_best_sets,
 )
 from app.infrastructure.training_repository import TrainingRepository
 
@@ -165,6 +166,27 @@ class SessionRepository(TrainingRepository):
         return personal_bests(
             [s for row in rows for e in row["exercises"] if e["name"] == name for s in e["sets"]]
         )
+
+    def overview_bests(self, user_id: UUID, workout_id: UUID):
+        row = self.session(user_id, workout_id)
+        names = list({e["name"] for e in row["exercises"]})
+        others = (
+            self.connection.execute(
+                """SELECT w.exercises FROM public.gotore_workouts w
+            WHERE w.user_id = %s AND w.id != %s
+            AND EXISTS (SELECT 1 FROM jsonb_array_elements(w.exercises) e
+                WHERE e->>'name' = ANY(%s::text[]))""",
+                (user_id, workout_id, names),
+            ).fetchall()
+            if names
+            else []
+        )
+        return {
+            "revision": row["revision"],
+            "sets": session_best_sets(
+                row["exercises"], [e for other in others for e in other["exercises"]]
+            ),
+        }
 
     def preview(self, user_id: UUID, code: str):
         row = self.connection.execute(
