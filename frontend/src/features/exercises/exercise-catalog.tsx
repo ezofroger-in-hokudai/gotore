@@ -7,10 +7,12 @@ export function ExerciseCatalog({
   options,
   disabled,
   onChanged,
+  expanded = false,
 }: {
   options: ExerciseOption[];
   disabled: boolean;
   onChanged: () => void;
+  expanded?: boolean;
 }) {
   const [name, setName] = useState("");
   const [pending, setPending] = useState(false);
@@ -63,7 +65,7 @@ export function ExerciseCatalog({
   }
 
   return (
-    <details className="panel exercise-catalog">
+    <details className="panel exercise-catalog" open={expanded || undefined}>
       <summary>種目リスト</summary>
 
       <form onSubmit={add}>

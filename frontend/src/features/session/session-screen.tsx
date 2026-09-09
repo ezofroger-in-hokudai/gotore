@@ -22,6 +22,9 @@ export function SessionScreen({
   haptic: boolean;
 }) {
   const { session } = controller;
+  const catalog = useResource<ExerciseOption[]>("/exercise-options", 0, false, true);
+  const [starting, setStarting] = useState(false);
+  const [selectedName, setSelectedName] = useState("");
   if (!session)
     return (
       <section className="start-training">
@@ -32,10 +35,34 @@ export function SessionScreen({
           className="primary full"
           type="button"
           disabled={!controller.ready || controller.busy}
-          onClick={() => void controller.start().catch(() => {})}
+          onClick={() => {
+            setStarting(true);
+            void controller.start().catch(() => {});
+          }}
         >
-          トレーニングを開始
+          {controller.busy ? "開始中…" : "トレーニングを開始"}
         </button>
+        {starting && (
+          <div className="v2-rows" aria-label="開始中の種目選択">
+            {catalog.data?.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="v2-row"
+                aria-pressed={selectedName === option.name}
+                onClick={() => setSelectedName(option.name)}
+              >
+                {option.name} {selectedName === option.name ? "✓" : ""}
+              </button>
+            ))}
+            {!catalog.data && <p className="muted">{catalog.error || "種目を読み込み中…"}</p>}
+            {catalog.error && (
+              <button type="button" onClick={catalog.retry}>
+                種目を再試行
+              </button>
+            )}
+          </div>
+        )}
       </section>
     );
   return (
@@ -44,8 +71,14 @@ export function SessionScreen({
       session={session}
       controller={controller}
       userId={userId}
-      onFinished={onFinished}
+      onFinished={() => {
+        setStarting(false);
+        setSelectedName("");
+        onFinished();
+      }}
       haptic={haptic}
+      initialName={selectedName}
+      catalog={catalog}
     />
   );
 }
@@ -56,8 +89,12 @@ function ActiveTraining({
   userId,
   onFinished,
   haptic,
+  initialName,
+  catalog,
 }: {
   session: TrainingSession;
+  initialName: string;
+  catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
   controller: SessionController;
   userId: string;
   onFinished: () => void;
@@ -66,14 +103,15 @@ function ActiveTraining({
   const storageKey = `gotore:session-input:v2:${userId}:${session.id}`;
   const [input, setInput] = useState(() => {
     try {
-      return readSessionInput(localStorage.getItem(storageKey));
+      const saved = readSessionInput(localStorage.getItem(storageKey));
+      return saved.name ? saved : { ...saved, name: initialName };
     } catch {
       return readSessionInput(null);
     }
   });
   const [selecting, setSelecting] = useState(!input.name);
   const [catalogOpen, setCatalogOpen] = useState(false);
-  const [comparison, setComparison] = useState(0);
+  const comparisonTable = useRef<HTMLElement>(null);
   const [conflictOpen, setConflictOpen] = useState(false);
   const adding = useRef(false);
   const [finishOpen, setFinishOpen] = useState(false);
@@ -85,12 +123,14 @@ function ActiveTraining({
     revision: number;
   } | null>(null);
   const [query, setQuery] = useState("");
-  const catalog = useResource<ExerciseOption[]>("/exercise-options");
   const context = useResource<ExerciseContext>(
     input.name
       ? `/exercises/context?name=${encodeURIComponent(input.name)}&session_id=${session.id}`
       : null,
     controller.confirmedRevision,
+    false,
+    true,
+    { retainOnRefresh: true },
   );
   const sets = session.exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
   const previous = context.data?.previous?.sets ?? [];
@@ -176,7 +216,10 @@ function ActiveTraining({
       } catch {
         setStorageWarning(true);
       }
-      setComparison(input.editing ?? sets.length);
+      requestAnimationFrame(() => {
+        const table = comparisonTable.current;
+        if (table && input.editing === null) table.scrollTop = table.scrollHeight;
+      });
       setFeedback(input.editing === null ? "追加しました" : "更新しました");
       if (haptic && typeof navigator.vibrate === "function") navigator.vibrate(15);
     } catch (reason) {
@@ -190,7 +233,7 @@ function ActiveTraining({
   const rm = estimatedRM(Number(input.weight), Number(input.reps));
 
   return (
-    <section className="session-screen">
+    <section className={`session-screen${selecting ? "" : " entering-sets"}`}>
       <div className="section-heading">
         <span className="eyebrow">
           {session.performed_on.replaceAll("-", "/")} · トレーニング中
@@ -217,6 +260,30 @@ function ActiveTraining({
               種目一覧
             </button>
           </div>
+          <button className="secondary full" type="button" onClick={() => setCatalogOpen(true)}>
+            新しい種目を追加
+          </button>
+          <section className="session-overview" aria-label="今回のトレーニング">
+            <h2>今回のトレーニング</h2>
+            {session.exercises.length ? (
+              session.exercises.map((exercise, index) => (
+                <div key={`${exercise.name}-${index}`}>
+                  <h3>
+                    {exercise.name} · {exercise.sets.length}セット
+                  </h3>
+                  <ol>
+                    {exercise.sets.map((value, i) => (
+                      <li key={`set-${i + 1}`}>
+                        {i + 1}: {value.weight}kg × {value.reps}回
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ))
+            ) : (
+              <p className="muted">まだセットがありません</p>
+            )}
+          </section>
           <label className="search-label">
             種目を検索
             <input
@@ -248,6 +315,10 @@ function ActiveTraining({
                       !window.confirm("未保存の入力を破棄して種目を変更しますか？")
                     )
                       return;
+                    if (input.name === name) {
+                      setSelecting(false);
+                      return;
+                    }
                     const latest = session.exercises
                       .filter((e) => e.name === name)
                       .flatMap((e) => e.sets)
@@ -261,7 +332,6 @@ function ActiveTraining({
                       dirty: false,
                     });
                     setSelecting(false);
-                    setComparison(0);
                     setFeedback("");
                     setUndo(null);
                   }}
@@ -279,64 +349,72 @@ function ActiveTraining({
         </>
       ) : (
         <>
-          <div className="section-heading">
-            <h1>{input.name}</h1>
-            <button
-              className="text-button"
-              type="button"
-              disabled={controller.busy}
-              onClick={() => setSelecting(true)}
-            >
-              種目を変更
-            </button>
-            <button type="button" className="text-button" onClick={() => setCatalogOpen(true)}>
-              種目一覧
-            </button>
-          </div>
-          <div className="personal-bests">
-            <div>
-              <span>最高重量</span>
-              <strong>
-                {context.data?.best_weight ?? "—"}
-                <small> kg</small>
-              </strong>
-            </div>
-            <div>
-              <span>1RM</span>
-              <strong>
-                {context.data?.best_rm ?? "—"}
-                <small> kg</small>
-              </strong>
-            </div>
-          </div>
-          {context.data && (
-            <InlineMemo
-              key={input.name}
-              title="種目メモ"
-              path="/exercises/memo"
-              name={input.name}
-              initial={context.data.memo}
-              userId={userId}
-              onSaved={context.retry}
-            />
-          )}
-          {context.data?.previous && (
-            <InlineMemo
-              key={context.data.previous.id}
-              title="前回のメモ"
-              path={`/workouts/${context.data.previous.id}/memo`}
-              userId={userId}
-              omitWhenEmpty
-            />
-          )}
-          {context.error && (
-            <p className="error" role="alert">
-              {context.error}
-              <button type="button" className="text-button" onClick={context.retry}>
-                再試行
+          <div className="session-context">
+            <div className="section-heading">
+              <h1>{input.name}</h1>
+              <button
+                className="text-button"
+                type="button"
+                disabled={controller.busy}
+                onClick={() => setSelecting(true)}
+              >
+                種目を変更
               </button>
-            </p>
-          )}
+              <button type="button" className="text-button" onClick={() => setCatalogOpen(true)}>
+                種目一覧
+              </button>
+            </div>
+            <div className="personal-bests">
+              <div>
+                <span>最高重量</span>
+                <strong>
+                  {context.data?.best_weight ?? "—"}
+                  <small> kg</small>
+                </strong>
+              </div>
+              <div>
+                <span>1RM</span>
+                <strong>
+                  {context.data?.best_rm ?? "—"}
+                  <small> kg</small>
+                </strong>
+              </div>
+            </div>
+            <div className="exercise-memo-slot">
+              {context.data ? (
+                <InlineMemo
+                  key={input.name}
+                  title="種目メモ"
+                  path="/exercises/memo"
+                  name={input.name}
+                  initial={context.data.memo}
+                  userId={userId}
+                  onSaved={context.retry}
+                />
+              ) : (
+                <span className="memo-text muted">
+                  {context.error ? "メモ未取得" : "メモを読み込み中…"}
+                </span>
+              )}
+            </div>
+            {context.data?.previous && (
+              <InlineMemo
+                key={context.data.previous.id}
+                title="前回のメモ"
+                path={`/workouts/${context.data.previous.id}/memo`}
+                userId={userId}
+                omitWhenEmpty
+              />
+            )}
+            {context.error && (
+              <p className="error" role="alert">
+                {context.error}
+                <button type="button" className="text-button" onClick={context.retry}>
+                  再試行
+                </button>
+              </p>
+            )}
+          </div>
           <div className="set-comparison">
             <div className="comparison-heading">
               <h2>
@@ -346,13 +424,13 @@ function ActiveTraining({
                 今回 <small>タップで編集</small>
               </h2>
             </div>
-            <div className="comparison-table">
+            <section className="comparison-table" ref={comparisonTable} aria-label="全セットの比較">
               <div className="comparison-labels">
                 <span>SET</span>
                 <span>重量 × 回数 / RM</span>
                 <span>重量 × 回数 / RM</span>
               </div>
-              {[Math.min(comparison, Math.max(previous.length, sets.length, 1) - 1)].map((i) => (
+              {Array.from({ length: Math.max(previous.length, sets.length, 1) }, (_, i) => (
                 <div className="comparison-row" key={`set-${i + 1}`}>
                   <span>{i + 1}</span>
                   <div>
@@ -393,31 +471,7 @@ function ActiveTraining({
                   </button>
                 </div>
               ))}
-            </div>
-            <div className="comparison-pages">
-              <button
-                type="button"
-                className="text-button"
-                aria-label="前のセットを比較"
-                disabled={comparison <= 0}
-                onClick={() => setComparison((value) => value - 1)}
-              >
-                ‹
-              </button>
-              <span>
-                SET {Math.min(comparison + 1, Math.max(previous.length, sets.length, 1))} /{" "}
-                {Math.max(previous.length, sets.length, 1)}
-              </span>
-              <button
-                type="button"
-                className="text-button"
-                aria-label="次のセットを比較"
-                disabled={comparison >= Math.max(previous.length, sets.length, 1) - 1}
-                onClick={() => setComparison((value) => value + 1)}
-              >
-                ›
-              </button>
-            </div>
+            </section>
           </div>
           <InlineMemo title="今回のメモ" path={`/workouts/${session.id}/memo`} userId={userId} />
           <form
@@ -539,6 +593,9 @@ function ActiveTraining({
                     ? "次のセットへ"
                     : "変更を保存"}
               </button>
+              <button className="text-button full" type="button" onClick={() => setSelecting(true)}>
+                次の種目へ
+              </button>
             </fieldset>
           </form>
           {error && (
@@ -552,6 +609,7 @@ function ActiveTraining({
         <Sheet title="種目一覧" onClose={() => setCatalogOpen(false)}>
           <ExerciseCatalog
             options={catalog.data ?? []}
+            expanded
             disabled={controller.busy}
             onChanged={catalog.retry}
           />

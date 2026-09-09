@@ -6,7 +6,9 @@ export function useResource<T>(
   refreshKey = 0,
   poll = false,
   remember = false,
+  options: { enabled?: boolean; retainOnRefresh?: boolean } = {},
 ) {
+  const { enabled = true, retainOnRefresh = false } = options;
   const cache = useRef({
     version: refreshKey,
     pages: new Map<string, { data: T; savedAt: number }>(),
@@ -23,7 +25,8 @@ export function useResource<T>(
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存後・再試行の操作でも再取得する。
   useEffect(() => {
     // 同じ一覧の再取得では選択状態を保持し、別の共有先のデータは返さない。
-    if (cache.current.version !== refreshKey) {
+    const changed = cache.current.version !== refreshKey;
+    if (changed) {
       cache.current = { version: refreshKey, pages: new Map() };
     }
     const previous = path && remember ? cache.current.pages.get(path) : undefined;
@@ -31,11 +34,11 @@ export function useResource<T>(
       setResult({ path, data: previous.data, version: refreshKey, stale: true });
     } else {
       setResult((current) =>
-        current?.path === path && (!remember || current.version === refreshKey) ? current : null,
+        current?.path === path && (!remember || (changed && retainOnRefresh)) ? current : null,
       );
     }
     setError("");
-    if (!path) {
+    if (!path || !enabled) {
       setLoading(false);
       return;
     }
@@ -83,10 +86,12 @@ export function useResource<T>(
       if (timer) window.clearInterval(timer);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [path, refreshKey, retryKey, poll, remember]);
+  }, [path, refreshKey, retryKey, poll, remember, enabled, retainOnRefresh]);
   return {
     data:
-      result?.path === path && (!remember || result.version === refreshKey) ? result.data : null,
+      result?.path === path && (!remember || retainOnRefresh || result.version === refreshKey)
+        ? result.data
+        : null,
     refreshing: result?.path === path && result.stale,
     error,
     loading,
