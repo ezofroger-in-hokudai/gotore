@@ -8,6 +8,8 @@ v2の画面・共有・セッションの規則は [gotore-v2-spec.md](gotore-v2
 
 ## 実装した機能
 
+追加実装ブランチでは、LIVEの右下の赤丸・ラベル、新着の強調、設定からのプロフィール画像変更を追加。[仕様と反映条件](live-presence-avatars.md)を参照。画像用migration `20260909120000_profile_avatars.sql` をAPIより先に適用する。画像は本人と現在同じグループのメンバーだけが取得できる。
+
 | 機能 | 動作 | 主な配置先 |
 | --- | --- | --- |
 | アカウント | 管理者発行、ログイン・ログアウト。設定で本人の表示名を取得・変更・同期。Auth未設定時はDBの既存名を保持（#29）。APIがトークンと認証設定の形式を検証 | frontend/src/features/settings/、auth-panel.tsx、backend/app/api/dependencies.py |

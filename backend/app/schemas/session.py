@@ -45,6 +45,8 @@ class ExerciseContext(BaseModel):
 class ActivityMember(MemberResponse):
     live: bool
     today: bool
+    live_until: datetime | None = None
+    avatar_version: UUID | None = None
 
 
 class FeedItem(BaseModel):
@@ -60,6 +62,7 @@ class FeedItem(BaseModel):
 
 
 class GroupActivity(BaseModel):
+    observed_at: datetime
     group_id: UUID
     member_count: int
     live_count: int

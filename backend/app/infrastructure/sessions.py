@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 from psycopg.types.json import Jsonb
@@ -264,7 +265,12 @@ class SessionRepository(TrainingRepository):
     def group_activity(self, user_id: UUID, group_id: UUID):
         self.group(user_id, group_id)
         members = self.connection.execute(
-            """SELECT p.id, p.display_name, m.joined_at,
+            """SELECT p.id, p.display_name, m.joined_at, a.version AS avatar_version,
+            clock_timestamp() AS observed_at,
+            (SELECT max(w.last_seen_at) + interval '5 minutes' FROM public.gotore_workouts w
+              JOIN public.gotore_workout_shares s ON s.workout_id = w.id
+              WHERE s.group_id = m.group_id AND w.user_id = m.user_id
+              AND w.started_at IS NOT NULL AND w.ended_at IS NULL) AS live_until,
             EXISTS(SELECT 1 FROM public.gotore_workouts w
               JOIN public.gotore_workout_shares s ON s.workout_id = w.id
               WHERE s.group_id = m.group_id AND w.user_id = m.user_id
@@ -279,6 +285,7 @@ class SessionRepository(TrainingRepository):
                  WHERE s.workout_id = w.id AND s.group_id = m.group_id
                  AND d.day = (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date))) AS today
             FROM public.gotore_group_members m JOIN public.gotore_profiles p ON p.id = m.user_id
+            LEFT JOIN public.gotore_avatars a ON a.user_id = p.id
             WHERE m.group_id = %s ORDER BY live DESC, today DESC, m.joined_at, p.id""",
             (group_id,),
         ).fetchall()
@@ -319,6 +326,7 @@ class SessionRepository(TrainingRepository):
         feed.sort(key=lambda item: item["updated_at"], reverse=True)
         return {
             "group_id": group_id,
+            "observed_at": members[0]["observed_at"] if members else datetime.now(UTC),
             "member_count": len(members),
             "live_count": sum(m["live"] for m in members),
             "today_count": sum(m["today"] for m in members),

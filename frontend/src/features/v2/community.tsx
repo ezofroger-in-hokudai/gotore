@@ -4,6 +4,8 @@ import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
 import { MembershipPanel } from "../training/membership-panel";
 import { useResource } from "../training/use-resource";
+import { Avatar } from "./avatar";
+import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
 import { Sheet } from "./sheet";
 
 export function CommunityHome({
@@ -150,7 +152,12 @@ export function CommunityHome({
               </button>
             </p>
           ) : activity.data ? (
-            <Feed data={activity.data} />
+            <Feed
+              key={activity.data.group_id}
+              data={activity.data}
+              active={active}
+              trusted={!activity.refreshing}
+            />
           ) : (
             <div className="resource-placeholder">読み込み中…</div>
           )}
@@ -192,36 +199,68 @@ function GroupCard({
         <h2>{group.name}</h2>
         <span>›</span>
       </div>
-      {resource.error ? <p>状況を取得できません</p> : <CommunityStats data={resource.data} />}
+      {resource.error ? (
+        <p>状況を取得できません</p>
+      ) : (
+        <CommunityStats data={resource.data} active={active} trusted={!resource.refreshing} />
+      )}
       <span className="community-total">メンバー {resource.data?.member_count ?? "—"}人</span>
     </button>
   );
 }
 
-function CommunityStats({ data }: { data: GroupActivity | null }) {
+function CommunityStats({
+  data,
+  active = false,
+  trusted = true,
+}: {
+  data: GroupActivity | null;
+  active?: boolean;
+  trusted?: boolean;
+}) {
+  const clock = useLiveClock(data, active, trusted);
+  const liveMembers =
+    data?.members.filter((member) => clock.live && memberIsLive(member, clock.now)) ?? [];
   return (
     <div className="community-stats">
       {(["live", "today"] as const).map((kind) => (
         <div key={kind}>
-          <span className="stat-label">
-            {kind === "live" && <i className="live-pulse" />} {kind.toUpperCase()}
+          <span
+            className={`stat-label${kind === "live" && liveMembers.length ? " stat-live" : ""}`}
+          >
+            {kind === "live" && (
+              <span
+                className={liveMembers.length ? "live-pulse" : "live-idle"}
+                aria-hidden="true"
+              />
+            )}
+            {kind.toUpperCase()}
           </span>
           <strong>
-            {data ? (kind === "live" ? data.live_count : data.today_count) : "—"}
+            {data
+              ? kind === "live"
+                ? clock.live
+                  ? liveMembers.length
+                  : "—"
+                : data.today_count
+              : "—"}
             <small>人</small>
           </strong>
           <div className="mini-avatars">
-            {data?.members
-              .filter((member) => member[kind])
+            {(kind === "live"
+              ? liveMembers
+              : (data?.members.filter((member) => member.today) ?? [])
+            )
               .slice(0, 5)
               .map((member) => (
-                <span
+                <Avatar
                   key={member.id}
-                  title={member.display_name}
-                  className={member.live ? "is-live" : ""}
-                >
-                  {Array.from(member.display_name)[0]}
-                </span>
+                  userId={member.id}
+                  name={member.display_name}
+                  version={member.avatar_version}
+                  small
+                  live={clock.live && memberIsLive(member, clock.now)}
+                />
               ))}
           </div>
         </div>
@@ -230,63 +269,105 @@ function CommunityStats({ data }: { data: GroupActivity | null }) {
   );
 }
 
-function Feed({ data }: { data: GroupActivity }) {
+function Feed({
+  data,
+  active,
+  trusted,
+}: { data: GroupActivity; active: boolean; trusted: boolean }) {
+  const clock = useLiveClock(data, active, trusted);
+  const previous = useRef<Map<string, string> | null>(null);
+  const [arrived, setArrived] = useState<string[]>([]);
+  useEffect(() => {
+    if (!active || !trusted) {
+      previous.current = null;
+      setArrived([]);
+      return;
+    }
+    const next = new Map(
+      data.feed.map((item) => [
+        item.user_id,
+        JSON.stringify([item.workout_id, item.updated_at, item.exercise, item.weight, item.reps]),
+      ]),
+    );
+    const changes = previous.current
+      ? Array.from(next.keys()).filter((id) => previous.current?.get(id) !== next.get(id))
+      : [];
+    previous.current = next;
+    setArrived(changes);
+    if (!changes.length) return;
+    const timer = window.setTimeout(() => setArrived([]), 4000);
+    return () => window.clearTimeout(timer);
+  }, [data.feed, active, trusted]);
   return (
     <div className="community-feed">
       {!data.feed.length && (
         <p className="muted feed-empty">まだ記録がありません。最初のセットを残しましょう。</p>
       )}
-      {data.feed.map((item) => (
-        <article className="feed-item" key={item.user_id}>
-          <div className="section-heading">
-            <div className="feed-person">
-              <span
-                className={`avatar ${data.members.find((m) => m.id === item.user_id)?.live ? "is-live" : ""}`}
-              >
-                {Array.from(item.display_name)[0]}
-              </span>
-              <div>
-                <strong>{item.display_name}</strong>
-                <p>{item.exercise}</p>
+      {data.feed.map((item) => {
+        const member = data.members.find((m) => m.id === item.user_id);
+        const live = clock.live && !!member && memberIsLive(member, clock.now);
+        return (
+          <article
+            className={`feed-item${live ? " feed-live" : ""}${arrived.includes(item.user_id) ? " feed-arrived" : ""}`}
+            key={item.user_id}
+          >
+            <div className="section-heading">
+              <div className="feed-person">
+                <Avatar
+                  userId={item.user_id}
+                  name={item.display_name}
+                  version={member?.avatar_version}
+                  live={live}
+                />
+                <div>
+                  <div className="feed-name">
+                    <strong>{item.display_name}</strong>
+                    {live && (
+                      <span className="live-badge" aria-label="トレーニング中">
+                        LIVE
+                      </span>
+                    )}
+                  </div>
+                  <p>{item.exercise}</p>
+                </div>
               </div>
-            </div>
-            <time dateTime={item.updated_at}>
-              {new Date(item.updated_at).toLocaleTimeString("ja-JP", {
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZone: "Asia/Tokyo",
-              })}
-              <small>
-                {new Date(item.updated_at).toLocaleDateString("ja-JP", {
-                  month: "numeric",
-                  day: "numeric",
+              <time
+                dateTime={item.updated_at}
+                title={new Date(item.updated_at).toLocaleString("ja-JP", {
                   timeZone: "Asia/Tokyo",
                 })}
-              </small>
-            </time>
-          </div>
-          <div className="feed-value">
-            <strong>
-              {item.weight}
-              <small> kg × </small>
-              {item.reps}
-              <small> 回</small>
-            </strong>
-            {item.best && (
-              <span className="best-badge record-celebration">
-                <span role="img" aria-label="最高記録">
-                  🔥
+              >
+                {relativeTime(item.updated_at, clock.now)}
+              </time>
+            </div>
+            <div className="feed-value">
+              <strong>
+                {item.weight}
+                <small> kg × </small>
+                {item.reps}
+                <small> 回</small>
+              </strong>
+              {item.best && (
+                <span className="best-badge record-celebration">
+                  <span role="img" aria-label="最高記録">
+                    🔥
+                  </span>
                 </span>
-              </span>
-            )}
-          </div>
-        </article>
-      ))}
+              )}
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }
 
-type Preview = { id: string; name: string; member_count: number; already_member: boolean };
+type Preview = {
+  id: string;
+  name: string;
+  member_count: number;
+  already_member: boolean;
+};
 type Mode = "list" | "detail" | "create" | "join" | "members" | "invite";
 export function CommunityScreen({
   groups,
@@ -354,7 +435,12 @@ export function CommunityScreen({
     const previous = { ...window.history.state };
     previous.gotoreSheet = undefined;
     window.history.pushState(
-      { ...previous, gotoreView: "groups", communityMode: next, groupId: selected },
+      {
+        ...previous,
+        gotoreView: "groups",
+        communityMode: next,
+        groupId: selected,
+      },
       "",
     );
     setMode(next);
@@ -482,7 +568,11 @@ export function CommunityScreen({
                   ) : (
                     <>
                       <div className="community-card detail-card">
-                        <CommunityStats data={activity.data} />
+                        <CommunityStats
+                          data={activity.data}
+                          active={active}
+                          trusted={!activity.refreshing}
+                        />
                         <span className="community-total">メンバー {group.members.length}人</span>
                       </div>
                       <div className="v2-rows">
@@ -494,7 +584,14 @@ export function CommunityScreen({
                         </button>
                       </div>
                       <h2>みんなの最新記録</h2>
-                      {activity.data && <Feed data={activity.data} />}
+                      {activity.data && (
+                        <Feed
+                          key={activity.data.group_id}
+                          data={activity.data}
+                          active={active}
+                          trusted={!activity.refreshing}
+                        />
+                      )}
                     </>
                   )}
                   {group.owner_id === userId && (

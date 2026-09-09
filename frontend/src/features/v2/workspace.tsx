@@ -8,6 +8,7 @@ import { SessionScreen } from "../session/session-screen";
 import { useSession } from "../session/use-session";
 import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
+import { AvatarProvider } from "./avatar";
 import { CommunityHome, CommunityScreen } from "./community";
 import { History } from "./history";
 import { Preferences, usePreferences } from "./settings";
@@ -15,6 +16,14 @@ import { Sheet } from "./sheet";
 
 type View = "home" | "record" | "history" | "settings" | "groups" | "edit";
 export function Workspace({ session }: { session: Session }) {
+  return (
+    <AvatarProvider key={session.user.id}>
+      <WorkspaceContent session={session} />
+    </AvatarProvider>
+  );
+}
+
+function WorkspaceContent({ session }: { session: Session }) {
   const [view, setView] = useState<View>("home");
   const [groupId, setGroupId] = useState("");
   const [groupDetail, setGroupDetail] = useState(false);

@@ -249,35 +249,7 @@
   height: 7px;
   border-radius: 50%;
   background: #ff5357;
-  animation: home-live-pulse 6s infinite;
-}
-@keyframes home-live-pulse {
-  0%,
-  33.33%,
-  100% {
-    opacity: 1;
-    animation-timing-function: ease-in-out;
-  }
-  16.67% {
-    opacity: 0.35;
-    animation-timing-function: ease-in-out;
-  }
-}
-.detail-card .live-pulse {
-  animation: detail-live-pulse 6s ease-in-out infinite;
-}
-@keyframes detail-live-pulse {
-  0%,
-  33.33%,
-  66.67%,
-  100% {
-    opacity: 1;
-  }
-  16.67%,
-  50%,
-  83.33% {
-    opacity: 0.35;
-  }
+  animation: avatar-presence 2s ease-out 2;
 }
 .community-stats strong {
   font-size: 30px;
@@ -303,10 +275,6 @@
   border-radius: 50%;
   background: #41434b;
   font-size: 10px;
-}
-.is-live {
-  outline: 2px solid #e3464b;
-  outline-offset: 2px;
 }
 .community-total {
   display: block;
@@ -359,15 +327,6 @@
   font-size: 12px;
   margin: 0;
   overflow-wrap: anywhere;
-}
-.feed-person .avatar {
-  flex-shrink: 0;
-  width: 29px;
-  height: 29px;
-  background: var(--track);
-  color: var(--text);
-  font-size: 12px;
-  border-radius: 50%;
 }
 .feed-item time {
   color: var(--muted);
@@ -1129,4 +1088,181 @@
   background: var(--panel);
   border-radius: 12px;
   color: var(--muted);
+}
+
+.person-avatar {
+  --avatar-edge: var(--panel);
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--track);
+  color: var(--text);
+  vertical-align: middle;
+}
+.person-avatar img,
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.avatar-initial {
+  font-size: 13px;
+  font-weight: 700;
+}
+.person-avatar.is-live {
+  outline: 2px solid #f04750;
+  outline-offset: 2px;
+}
+.avatar-live-dot {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  right: -3px;
+  bottom: -2px;
+  border: 2px solid var(--avatar-edge);
+  border-radius: 50%;
+  background: #f04750;
+  animation: avatar-presence 2s ease-out 2;
+}
+@keyframes avatar-presence {
+  0% {
+    box-shadow: 0 0 0 0 rgb(240 71 80 / 45%);
+  }
+  100% {
+    box-shadow: 0 0 0 6px rgb(240 71 80 / 0%);
+  }
+}
+.mini-avatars {
+  gap: 9px;
+  min-height: 32px;
+}
+.mini-avatars > .person-avatar {
+  --avatar-edge: #202127;
+  width: 30px;
+  height: 30px;
+  background: #41434b;
+  color: #fff;
+}
+.avatar-small .avatar-live-dot {
+  width: 9px;
+  height: 9px;
+}
+.mini-avatars .avatar-initial {
+  font-size: 11px;
+}
+.stat-label.stat-live {
+  color: #ff8187;
+}
+.live-idle {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #858892;
+}
+.live-pulse,
+.detail-card .live-pulse {
+  animation: avatar-presence 2s ease-out 2;
+}
+.feed-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.feed-name strong {
+  overflow-wrap: anywhere;
+}
+.live-badge {
+  display: inline-flex;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: 0.8px;
+  padding: 2px 4px;
+}
+.feed-live {
+  box-shadow: inset 3px 0 #ef4851;
+}
+.feed-value {
+  padding-left: 48px;
+}
+.feed-arrived {
+  animation: feed-arrival 1.2s ease-out;
+}
+@keyframes feed-arrival {
+  from {
+    background: var(--accent-soft);
+  }
+  to {
+    background: var(--panel);
+  }
+}
+.settings-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.avatar-editor {
+  text-align: center;
+}
+.avatar-preview {
+  display: grid;
+  place-items: center;
+  width: 120px;
+  height: 120px;
+  margin: 8px auto 20px;
+  border-radius: 50%;
+  background: var(--track);
+  color: var(--text);
+  font-size: 36px;
+  font-weight: 700;
+}
+.avatar-file-label {
+  text-align: left;
+  margin-top: 20px;
+}
+.avatar-file-label input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+}
+.avatar-file-hint {
+  font-size: 12px;
+  text-align: left;
+}
+.avatar-save-status {
+  display: block;
+  min-height: 24px;
+  color: var(--accent);
+}
+@media (max-width: 360px) {
+  .mini-avatars {
+    gap: 5px;
+  }
+  .mini-avatars > .person-avatar {
+    width: 23px;
+    height: 23px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-live-dot,
+  .live-pulse,
+  .detail-card .live-pulse,
+  .feed-arrived {
+    animation: none;
+  }
+}
+[hidden] .avatar-live-dot,
+[hidden] .live-pulse {
+  animation-play-state: paused;
 }

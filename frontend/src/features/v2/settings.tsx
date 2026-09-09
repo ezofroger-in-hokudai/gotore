@@ -1,4 +1,6 @@
+import type { AvatarImage } from "@/lib/api";
 import { useEffect, useState } from "react";
+import { AvatarPanel } from "../settings/avatar-panel";
 import { SettingsPanel } from "../settings/settings-panel";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "./sheet";
@@ -48,13 +50,29 @@ export function Preferences({
   onLogout: () => void;
   signingOut: boolean;
 }) {
-  const [sheet, setSheet] = useState<"name" | "theme" | "haptic" | null>(null);
+  const [sheet, setSheet] = useState<"name" | "avatar" | "theme" | "haptic" | null>(null);
   const profile = useResource<{ display_name: string }>("/me");
+  const avatar = useResource<AvatarImage>("/me/avatar");
   return (
     <section className="preferences">
       <h1>設定</h1>
       <h2>アカウント</h2>
       <div className="v2-rows">
+        <button className="v2-row" type="button" onClick={() => setSheet("avatar")}>
+          <span>プロフィール画像</span>
+          <span className="settings-avatar-row">
+            <span className="person-avatar" aria-hidden="true">
+              {avatar.data?.data_url ? (
+                <img src={avatar.data.data_url} alt="" width={256} height={256} />
+              ) : (
+                <span className="avatar-initial">
+                  {Array.from(profile.data?.display_name || "")[0]}
+                </span>
+              )}
+            </span>{" "}
+            ›
+          </span>
+        </button>
         <button className="v2-row" type="button" onClick={() => setSheet("name")}>
           <span>表示名</span>
           <span>{profile.data?.display_name} ›</span>
@@ -93,10 +111,27 @@ export function Preferences({
       )}
       {sheet && (
         <Sheet
-          title={sheet === "name" ? "表示名" : sheet === "theme" ? "外観" : "触覚フィードバック"}
+          title={
+            sheet === "avatar"
+              ? "プロフィール画像"
+              : sheet === "name"
+                ? "表示名"
+                : sheet === "theme"
+                  ? "外観"
+                  : "触覚フィードバック"
+          }
           onClose={() => setSheet(null)}
         >
-          {sheet === "name" ? (
+          {sheet === "avatar" ? (
+            <AvatarPanel
+              name={profile.data?.display_name || ""}
+              onSaved={() => {
+                avatar.retry();
+                onChanged();
+              }}
+              onClose={() => setSheet(null)}
+            />
+          ) : sheet === "name" ? (
             <SettingsPanel
               onSaved={() => {
                 profile.retry();
@@ -114,7 +149,13 @@ export function Preferences({
                   onClick={() => preferences.setTheme(theme)}
                 >
                   <span>
-                    {{ system: "端末に合わせる", light: "ライト", dark: "ダーク" }[theme]}
+                    {
+                      {
+                        system: "端末に合わせる",
+                        light: "ライト",
+                        dark: "ダーク",
+                      }[theme]
+                    }
                   </span>
                   {preferences.theme === theme && <span>✓</span>}
                 </button>

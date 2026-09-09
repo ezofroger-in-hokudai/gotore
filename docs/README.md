@@ -14,6 +14,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 ## 開発用の文書
 
+- [ライブ表示とプロフィール画像](live-presence-avatars.md): 記録中の赤丸・LIVE、新着表示と設定からの画像変更・閲覧範囲。
+
 - [GOTORE v2 実装仕様](gotore-v2-spec.md): 2026-09-09合意の全所属グループ共有、終了・復元、LIVE、記録・BEST・種目メモ。v2実装では旧業務仕様との差分を本書で適用する。
 - [GOTORE v2 引き継ぎ](gotore_v2/GOTORE_v2_Codex_handoff/gotore-v2-handoff/README.md): Figma確定版v2の画面・操作、全33状態、主要9画像、トークン、受け入れ条件。業務ルールには未決定事項を含む。
 - [GOTORE v2 整合性レビュー](gotore-v2-review.md): 現行仕様・実装との照合結果、試作遷移の差分、実装前に必要な判断と推奨案。提案は未承認で、既存業務仕様を上書きしない。
