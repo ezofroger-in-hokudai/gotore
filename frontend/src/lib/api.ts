@@ -9,12 +9,20 @@ export type MonthlyActivity = {
   days: { date: string; set_count: number; workout_count: number }[];
 };
 
-export type Group = { id: string; name: string; owner_id: string; invite_code: string };
+export type Group = {
+  id: string;
+  name: string;
+  owner_id: string;
+  invite_code: string;
+};
 export type GroupDetail = Group & {
   members: { id: string; display_name: string; joined_at: string }[];
 };
 export type ExerciseOption = { id: string; name: string };
-export type Exercise = { name: string; sets: { weight: number; reps: number }[] };
+export type Exercise = {
+  name: string;
+  sets: { weight: number; reps: number }[];
+};
 export type Workout = {
   id: string;
   user_id: string;
@@ -44,12 +52,21 @@ export type SessionBests = {
   revision: number;
   sets: { exercise_index: number; set_index: number }[];
 };
+export type AvatarImage = { version: string | null; data_url: string | null };
 export type GroupActivity = {
+  observed_at?: string;
   group_id: string;
   member_count: number;
   live_count: number;
   today_count: number;
-  members: { id: string; display_name: string; live: boolean; today: boolean }[];
+  members: {
+    id: string;
+    display_name: string;
+    live: boolean;
+    today: boolean;
+    live_until?: string | null;
+    avatar_version?: string | null;
+  }[];
   feed: {
     workout_id: string;
     user_id: string;
