@@ -127,17 +127,17 @@ export function NumberWheel({
       <button
         type="button"
         className="wheel-neighbor"
-        aria-label={`${label}を減らす`}
-        disabled={Number(value) <= min}
+        aria-label={`${label}を増やす`}
+        disabled={Number(value) >= 1000}
         onClick={() => {
           cancelAnimationFrame(frame.current);
-          shift(-1);
+          shift(1);
         }}
       >
         <span className="wheel-arrow" aria-hidden="true">
-          ▾
+          ▴
         </span>{" "}
-        {clamp(Number(value) - 1)}
+        {clamp(Number(value) + 1)}
       </button>
       <input
         ref={field}
@@ -168,17 +168,17 @@ export function NumberWheel({
       <button
         type="button"
         className="wheel-neighbor"
-        aria-label={`${label}を増やす`}
-        disabled={Number(value) >= 1000}
+        aria-label={`${label}を減らす`}
+        disabled={Number(value) <= min}
         onClick={() => {
           cancelAnimationFrame(frame.current);
-          shift(1);
+          shift(-1);
         }}
       >
         <span className="wheel-arrow" aria-hidden="true">
-          ▴
+          ▾
         </span>{" "}
-        {clamp(Number(value) + 1)}
+        {clamp(Number(value) - 1)}
       </button>
     </div>
   );
