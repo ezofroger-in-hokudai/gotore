@@ -866,3 +866,11 @@
 - 検証: make check成功、実Supabaseを含むmake test-e2e全69件成功。git diff --checkとデバッグ出力・一時マーカーの不在を確認。補助tscの既存型不足は前項のとおり。
 - 未解決事項: PRのCIと第三者レビュー。#69の通常の回数Enterは回答待ち、実機・本番の速度は未測定。
 - 次のアクション: PR #85の最新CIを確認し、結果をPR・週次計画へ記録する。検証用Web/APIと今回の一時PostgreSQLは停止済み。ビルドが書き換えたnext-env.d.tsは開始時の内容へ戻し、元の未コミット変更とPDF・画像を保持した。
+
+## 2026-09-10 23:10
+- 変更内容: 補助tscで確認した既存のbun:test型解決不足を後続Issue #86へ切り出した（https://github.com/ezofroger-in-hokudai/gotore/issues/86）。
+- 目的: 標準検証が成功していても、失敗した補助検査を追跡可能にする。
+- 影響範囲: 検証改善のバックログ。型定義・依存・CI設定の変更は行っていない。
+- 関連ファイル: frontend/package.json、frontend/tsconfig.json、frontend/tests/unit/、progress.md、PR #85。
+- 未解決事項: #86の検査範囲・共通コマンドの整備、#69の通常回数Enterの回答。PR #85のbackend・frontend・Vercelは成功し、databaseの最終結果を確認中。
+- 次のアクション: この記録のpush後の最新CI結果をPR #85と週次計画#33へ追記して、レビューへ引き継ぐ。
