@@ -1270,3 +1270,18 @@
 [hidden] .live-pulse {
   animation-play-state: paused;
 }
+
+.feed-detail-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 4px 0 4px 39px;
+}
+.feed-detail-hint {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}

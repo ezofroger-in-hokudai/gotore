@@ -990,3 +990,47 @@
 - 検証: ユーザーがテストなしのpushを明示したため、テストは追加・実行していない。
 - 未解決事項: 既存のPR確認画像には削除前の装飾が残る。
 - 次のアクション: 既存PRブランチへpushする。
+
+## 2026-09-11 02:35
+- 変更内容: #89を次の実装に選び、ユーザー回答「タップした記録」に合わせて仕様とtask.mdを更新した。
+- 目的: 友達の全種目・全セットを共有範囲内で確認できるようにする。
+- 影響範囲: 共有記録の読み取りAPIと詳細シート。
+- 関連ファイル: docs/gotore-v2-spec.md、task.md、backend/app/infrastructure/training_repository.py、frontend/src/features/v2/community.tsx。
+- 未解決事項: 新API・画面・回帰テストはこれから実装する。
+- 次のアクション: 未所属・別共有先・私的メモの非表示を先行テストし、単一記録取得と閲覧シートを実装する。PR #90は未統合のため、最新mainから別ブランチfeat/89-friend-workout-detailsを作成した。元の未コミット変更は保持。
+
+## 2026-09-11 02:48
+- 変更内容: #89の単一共有記録APIと、ホーム／グループのセット部分から開く閲覧専用シートを実装した。記録表示部品の展開状態を本人用操作と分離して再利用する。
+- 目的: タップした記録1件の全種目・全セットを確認できるようにする。
+- 影響範囲: 共有記録のWeb/API。DB migrationなし。既存の本人メモ・編集・共有先は変更しない。
+- 関連ファイル: backend/app/api/routes/training.py、backend/app/services/training.py、backend/app/infrastructure/training_repository.py、backend/tests/test_shared_workout_detail.py、frontend/src/features/v2/shared-workout-detail.tsx、frontend/src/features/v2/community.tsx、frontend/src/features/training/record-list.tsx、frontend/src/app/v2.css、frontend/tests/e2e/shared-workout-detail.spec.ts、frontend/tests/e2e/sharing.spec.ts、docs/images/shared-workout-detail.png。
+- 検証: 先行API6件・ブラウザ1件が未実装で失敗後、実装して成功。未所属・未共有・非公開・削除・退出・空セッション、同日の別記録の除外、他グループIDと本人メモの非表示を確認。開くまでの取得0件、5秒再確認、失敗時の非表示・再試行、非表示タブ／閉じた後の停止、ブラウザの戻るを確認。実Supabaseの2人・2グループも含むmake test-e2e全71件成功。lint・backend146件・frontend29件成功。320/390/430pxの表示と390px画像を確認した。
+- 未解決事項: 最終make checkのビルドとPRのCI・レビュー。PR #90は別ブランチで未統合。
+- 次のアクション: 共通検証完了後に目的別コミットと画像付きPRを作成する。
+
+## 2026-09-11 02:52
+- 変更内容: #89の最終make checkが成功し、画像・差分・共有範囲を確認した。検証用Web/APIと専用の一時PostgreSQLを停止し、next-env.d.tsは作業開始時の内容へ復元した。
+- 目的: タップした記録1件の詳細表示をレビュー可能な状態にする。
+- 影響範囲: #89のAPI・表示・仕様・検証。DB migration、依存追加なし。
+- 関連ファイル: progress.md、docs/images/shared-workout-detail.png、#89の実装・テスト。
+- 検証: make check成功（backend146件、frontend29件、lint、build）、実Supabaseを含む全E2E71件成功、git diff --check成功。
+- 未解決事項: 直近でPR #90のマージを確認したため、最新mainとの統合確認とPRのCI・レビューが残る。
+- 次のアクション: #89をコミット後に最新mainを取り込み、統合後の検証を実行して画像付きPRを作成する。
+
+## 2026-09-11 02:58
+- 変更内容: PR #90が統合された最新mainを取り込み、双方の仕様・作業記録を保持して文書の追記競合を解消。共有詳細の画像を統合後の表示へ更新した。
+- 目的: 保存・矢印・取得改善と共有記録詳細の併用を確認してレビューへ提出する。
+- 影響範囲: #89のWeb/API、仕様・テスト・画像。DB migrationなし。
+- 関連ファイル: docs/gotore-v2-spec.md、docs/images/shared-workout-detail.png、task.md、progress.md、feat/89-friend-workout-details。
+- 検証: 最新main統合後のmake check成功（backend150件、frontend29件、lint・型検査・build）。実Supabaseを含むmake test-e2e全76件成功。390px画像を目視確認し、git diff --checkと送信差分への環境ファイル・既知の秘密情報形式の混入なしを確認。
+- 未解決事項: PRのCIと第三者レビュー。
+- 次のアクション: 画像付きPRをmain向けに作成し、PR・Issue #89・週次計画#33へURLとCI結果を記録する。検証用Web/APIと今回専用の一時DBは停止済み。next-env.d.tsと未追跡PDF・画像など、開始時のユーザー変更を保持した。
+
+## 2026-09-11 03:08
+- 変更内容: PR #91の初回CIで共有E2Eが未送信状態を観測できず失敗したため、通信失敗の準備処理を修正した。
+- 目的: 詳細表示までの共有テストを、読み取りや自動再送のタイミングに依存せず実行する。
+- 影響範囲: 既存共有E2Eの障害注入だけ。アプリの保存処理は変更していない。
+- 関連ファイル: frontend/tests/e2e/sharing.spec.ts、progress.md、https://github.com/ezofroger-in-hokudai/gotore/pull/91。
+- 検証: 初回CIは75件成功・1件失敗。失敗は64行の未送信確認で、実際には同期済みだった。times: 1がGETでも消費されることや自動再送により観測前に復旧できる点を修正し、PATCHだけを未送信確認まで失敗させる。既存CIの失敗を先行証拠とし、変更後の実Supabase共有E2E1件・frontend lint・型検査が成功。
+- 未解決事項: 最新コミットの全CI確認と第三者レビュー。初回CIのbackend・frontend・プレビューは成功。
+- 次のアクション: 修正を同じPRへpushし、全CI結果をPRと週次計画へ記録する。再検証用Web/APIを停止し、next-env.d.tsは開始時の内容へ復元した。
