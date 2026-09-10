@@ -647,7 +647,7 @@ function ActiveTraining({
                   type="button"
                   onClick={() => setSelecting(true)}
                 >
-                  次の種目へ<span aria-hidden="true"> ›</span>
+                  次の種目へ
                 </button>
                 <button
                   className="primary"
