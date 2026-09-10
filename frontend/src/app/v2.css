@@ -617,8 +617,12 @@
   width: 100%;
   background: transparent;
   color: var(--muted);
-  opacity: 0.65;
+  opacity: 1;
   font-size: 19px;
+}
+.wheel-arrow {
+  color: var(--text);
+  font-size: 14px;
 }
 .rm-estimate {
   text-align: center;

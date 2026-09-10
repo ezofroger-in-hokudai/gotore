@@ -596,6 +596,7 @@ function ActiveTraining({
                 <NumberWheel
                   label="回数"
                   inputRef={repsField}
+                  onEnter={() => repsField.current?.form?.requestSubmit()}
                   unit="回"
                   value={input.reps}
                   step={1}
