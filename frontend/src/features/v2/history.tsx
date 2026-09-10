@@ -2,6 +2,7 @@ import type { Workout } from "@/lib/api";
 import { useState } from "react";
 import { ActivityCalendar } from "../activity/activity-calendar";
 import { dateLabel } from "../activity/calendar";
+import { today } from "../training/draft";
 import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
 
@@ -20,6 +21,7 @@ export function History({
   onReuse: (record: Workout) => void;
   onDeleted: () => void;
 }) {
+  const [month, setMonth] = useState(() => today().slice(0, 7));
   const [date, setDate] = useState("");
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<string | null>(null);
@@ -64,6 +66,8 @@ export function History({
     <section className="history-screen">
       <h1>履歴</h1>
       <ActivityCalendar
+        month={month}
+        onMonthChange={setMonth}
         selectedDate={date}
         onSelect={(value) => {
           setDate(value);

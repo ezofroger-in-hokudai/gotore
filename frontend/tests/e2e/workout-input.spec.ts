@@ -62,7 +62,10 @@ test("ホイール・直接入力・行編集・取消を区別し、BESTとRM�
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: `test-results/v2-record-${width}.png`, fullPage: true });
+    await page.screenshot({
+      path: `test-results/v2-record-${width}.png`,
+      fullPage: true,
+    });
   }
 });
 
@@ -106,4 +109,60 @@ test("保存応答を失ったまま再起動しても二重追加せず、古�
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("85");
   await expect(page.getByRole("button", { name: "変更を保存", exact: true })).toBeEnabled();
+});
+
+test("重量Enterは保存せず回数欄へ移動する", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
+  const reps = page.getByRole("spinbutton", { name: "回数", exact: true });
+  await weight.fill("77.5");
+  await weight.press("Enter");
+  await expect(reps).toBeFocused();
+  expect(state.saves).toBe(0);
+  expect(state.session?.exercises).toHaveLength(0);
+});
+
+test("Enterの長押し・IME確定・不正な重量では移動や保存をしない", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
+  const reps = page.getByRole("spinbutton", { name: "回数", exact: true });
+  for (const field of [weight, reps]) {
+    await field.focus();
+    for (const extra of [{ repeat: true }, { isComposing: true }]) {
+      const prevented = await field.evaluate((element, extra) => {
+        const event = new KeyboardEvent("keydown", {
+          key: "Enter",
+          bubbles: true,
+          cancelable: true,
+          ...extra,
+        });
+        element.dispatchEvent(event);
+        return event.defaultPrevented;
+      }, extra);
+      expect(prevented).toBe(true);
+      await expect(field).toBeFocused();
+    }
+  }
+  for (const value of ["", "1001", "77.55"]) {
+    await weight.fill(value);
+    await weight.press("Enter");
+    await expect(weight).toBeFocused();
+  }
+  expect(state.saves).toBe(0);
+  await weight.fill("77.5");
+  await weight.press("Enter");
+  await reps.fill("8");
+  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await expect.poll(() => state.saves).toBe(1);
+  expect(state.session?.exercises[0].sets).toEqual([{ weight: 77.5, reps: 8 }]);
+  await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
+  await weight.fill("80");
+  await weight.press("Enter");
+  await expect(reps).toBeFocused();
+  expect(state.saves).toBe(1);
+  await page.getByRole("button", { name: "変更を保存", exact: true }).click();
+  await expect.poll(() => state.saves).toBe(2);
+  expect(state.session?.exercises[0].sets).toEqual([{ weight: 80, reps: 8 }]);
 });

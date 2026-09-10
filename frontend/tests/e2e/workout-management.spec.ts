@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, openRecord, startTraining } from "./mock-training";
+import { mockTraining, navigate, startTraining } from "./mock-training";
 
 test("編集の競合・キャンセル・保存で新規下書きを保持し、削除を確認する", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -55,7 +55,24 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     .poll(() => page.evaluate((key) => localStorage.getItem(key), draftKey))
     .not.toBeNull();
   const draft = await page.evaluate((key) => localStorage.getItem(key), draftKey);
-  const openRecords = () => openRecord(page);
+  await page.route("**/api/workouts/activity?*", (route) =>
+    route.fulfill({
+      json: {
+        month: new URL(route.request().url()).searchParams.get("month"),
+        metric: "sets",
+        days: removed ? [] : [{ date: record.performed_on, set_count: 1, workout_count: 1 }],
+        total_sets: removed ? 0 : 1,
+        workout_count: removed ? 0 : 1,
+        active_days: removed ? 0 : 1,
+      },
+    }),
+  );
+  const openRecords = async () => {
+    await navigate(page, "履歴");
+    await page.getByLabel("月", { exact: true }).fill("2026-01");
+    await page.getByRole("button", { name: "2026年1月1日、1セット、1件", exact: true }).click();
+    await page.locator(".history-row").click();
+  };
   await openRecords();
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "共有先", exact: true })).toBeDisabled();
@@ -75,6 +92,15 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "更新しました" })).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), draftKey)).toBe(draft);
+  await page.getByRole("button", { name: "‹ 履歴", exact: true }).click();
+  await expect(page.getByLabel("月", { exact: true })).toHaveValue("2026-01");
+  await expect(
+    page.getByRole("button", {
+      name: "2026年1月1日、1セット、1件",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.locator(".history-row").click();
   await page.getByRole("button", { name: "削除", exact: true }).click();
   await page.getByRole("button", { name: "キャンセル", exact: true }).click();
   expect(deletes).toBe(0);
@@ -86,6 +112,13 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   failDelete = false;
   await page.getByRole("button", { name: "削除する", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(0);
+  await expect(page.getByLabel("月", { exact: true })).toHaveValue("2026-01");
+  await expect(
+    page.getByRole("button", {
+      name: "2026年1月1日、0セット、0件",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate((key) => localStorage.getItem(key), draftKey)).toBe(draft);
   await navigate(page, "記録");
   await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();

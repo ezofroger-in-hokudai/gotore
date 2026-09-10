@@ -48,7 +48,9 @@ test("作成後は新グループの招待コードを表示する", async ({ pa
       created = true;
       return route.fulfill({ status: 201, json: group });
     }
-    return route.fulfill({ json: created ? [state.group, group] : [state.group] });
+    return route.fulfill({
+      json: created ? [state.group, group] : [state.group],
+    });
   });
   await page.route("**/api/groups/new-group", (route) =>
     route.fulfill({ json: { ...group, members: [] } }),
@@ -58,6 +60,10 @@ test("作成後は新グループの招待コードを表示する", async ({ pa
   await page.getByLabel("グループ名", { exact: true }).fill(group.name);
   await page.getByRole("button", { name: "作成する", exact: true }).click();
   await expect(page.getByRole("heading", { name: group.name, exact: true })).toBeVisible();
+  await expect(page.getByTestId("invite-code")).toHaveText(group.invite_code);
+  expect(await page.evaluate(() => history.state.groupId)).toBe(group.id);
+  await page.goBack();
+  await page.goForward();
   await expect(page.getByTestId("invite-code")).toHaveText(group.invite_code);
 });
 
@@ -70,7 +76,14 @@ test("グループ切替中は前の共有記録を隠し、戻ったとき選�
     member_count: 3,
     live_count: 1,
     today_count: 2,
-    members: [{ id: state.user.id, display_name: "画面テスト", live: true, today: true }],
+    members: [
+      {
+        id: state.user.id,
+        display_name: "画面テスト",
+        live: true,
+        today: true,
+      },
+    ],
     feed: [
       {
         workout_id: "record",
@@ -112,7 +125,10 @@ test("グループ切替中は前の共有記録を隠し、戻ったとき選�
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: `test-results/v2-home-${width}.png`, fullPage: true });
+    await page.screenshot({
+      path: `test-results/v2-home-${width}.png`,
+      fullPage: true,
+    });
   }
   fail = true;
   await navigate(page, "設定");
@@ -135,4 +151,79 @@ test("ブラウザの戻るでシート・グループ詳細を閉じ、記録�
   await expect(page.getByTestId("invite-code")).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("button", { name: /^メンバー一覧/ })).toBeVisible();
+});
+
+test("一覧で選んだグループを戻る・進むとメンバー・招待画面でも保持する", async ({ page }) => {
+  const state = await mockTraining(page);
+  const second = {
+    ...state.group,
+    id: "second",
+    name: "大学トレ部",
+    invite_code: "123456ABCDEF",
+  };
+  await page.route("**/api/groups", (route) => route.fulfill({ json: [state.group, second] }));
+  await page.route("**/api/groups/second", (route) =>
+    route.fulfill({ json: { ...second, members: [] } }),
+  );
+  await page.reload();
+  await page.route("**/api/groups/second/activity", (route) =>
+    route.fulfill({
+      json: {
+        group_id: second.id,
+        member_count: 0,
+        live_count: 0,
+        today_count: 0,
+        members: [],
+        feed: [],
+      },
+    }),
+  );
+  const length = await page.evaluate(() => history.length);
+  await page.getByRole("button", { name: "大学トレ部を表示", exact: true }).click();
+  expect(await page.evaluate(() => history.length)).toBe(length);
+  await page.getByRole("button", { name: `${state.group.name}を表示`, exact: true }).click();
+  await page.getByRole("button", { name: "グループ一覧", exact: true }).click();
+  await page.getByRole("button", { name: "大学トレ部 ›", exact: true }).click();
+  await expect(page.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "グループ一覧", exact: true })).toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /^メンバー一覧/ }).click();
+  expect(await page.evaluate(() => history.state.groupId)).toBe(second.id);
+  await page.goBack();
+  await page.getByRole("button", { name: /^メンバーを招待/ }).click();
+  await expect(page.getByTestId("invite-code")).toHaveText(second.invite_code);
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
+});
+
+test("新しく参加したグループも戻る・進むで復元する", async ({ page }) => {
+  const state = await mockTraining(page);
+  const joined = { ...state.group, id: "joined", name: "参加先の部活" };
+  let member = false;
+  await page.route("**/api/groups/preview", (route) =>
+    route.fulfill({
+      json: { ...joined, member_count: 3, already_member: false },
+    }),
+  );
+  await page.route("**/api/groups/join", (route) => {
+    member = true;
+    return route.fulfill({ json: joined });
+  });
+  await page.route("**/api/groups", (route) =>
+    route.fulfill({ json: member ? [state.group, joined] : [state.group] }),
+  );
+  await page.route("**/api/groups/joined", (route) =>
+    route.fulfill({ json: { ...joined, members: [] } }),
+  );
+  await page.getByRole("button", { name: "グループ一覧", exact: true }).click();
+  await page.getByRole("button", { name: "招待コードで参加", exact: true }).click();
+  await page.getByLabel("招待コード", { exact: true }).fill("ABCDEF123456");
+  await page.getByRole("button", { name: "グループを確認", exact: true }).click();
+  await page.getByRole("button", { name: "参加する", exact: true }).click();
+  await expect(page.getByRole("heading", { name: joined.name, exact: true })).toBeVisible();
+  await page.goBack();
+  await page.goForward();
+  await expect(page.getByRole("heading", { name: joined.name, exact: true })).toBeVisible();
 });

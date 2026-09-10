@@ -11,11 +11,13 @@ import { bestUpdate, estimatedRM, readSessionInput, setValue, updateSet } from "
 import type { SessionController } from "./use-session";
 
 export function SessionScreen({
+  active,
   controller,
   userId,
   onFinished,
   haptic,
 }: {
+  active: boolean;
   controller: SessionController;
   userId: string;
   onFinished: () => void;
@@ -67,6 +69,7 @@ export function SessionScreen({
     );
   return (
     <ActiveTraining
+      active={active}
       key={session.id}
       session={session}
       controller={controller}
@@ -84,6 +87,7 @@ export function SessionScreen({
 }
 
 function ActiveTraining({
+  active,
   session,
   controller,
   userId,
@@ -92,6 +96,7 @@ function ActiveTraining({
   initialName,
   catalog,
 }: {
+  active: boolean;
   session: TrainingSession;
   initialName: string;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
@@ -112,6 +117,7 @@ function ActiveTraining({
   const [selecting, setSelecting] = useState(!input.name);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const comparisonTable = useRef<HTMLElement>(null);
+  const repsField = useRef<HTMLInputElement>(null);
   const [conflictOpen, setConflictOpen] = useState(false);
   const adding = useRef(false);
   const [finishOpen, setFinishOpen] = useState(false);
@@ -129,7 +135,7 @@ function ActiveTraining({
     controller.confirmedRevision,
     false,
     true,
-    { enabled: selecting && session.exercises.length > 0 },
+    { enabled: active && selecting && session.exercises.length > 0 },
   );
   const bestPositions = new Set(
     overviewBests.data?.revision === session.revision && !controller.pending
@@ -143,7 +149,7 @@ function ActiveTraining({
     controller.confirmedRevision,
     false,
     true,
-    { retainOnRefresh: true },
+    { enabled: active, retainOnRefresh: true },
   );
   const sets = session.exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
   const previous = context.data?.previous?.sets ?? [];
@@ -566,6 +572,10 @@ function ActiveTraining({
               <div className="wheels">
                 <NumberWheel
                   label="重量"
+                  onEnter={() => {
+                    repsField.current?.focus();
+                    repsField.current?.select();
+                  }}
                   unit="kg"
                   value={input.weight}
                   step={2.5}
@@ -585,6 +595,7 @@ function ActiveTraining({
                 />
                 <NumberWheel
                   label="回数"
+                  inputRef={repsField}
                   unit="回"
                   value={input.reps}
                   step={1}

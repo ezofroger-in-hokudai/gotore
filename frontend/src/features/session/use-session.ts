@@ -35,12 +35,24 @@ export function useSession(userId: string, onChanged: () => void) {
   const lastActivity = useRef(0);
   useEffect(() => {
     queue.start();
-    void queue.restore().then(() => queue.sync());
+    let restoring: Promise<void> | null = null;
+    const restore = () => {
+      restoring ??= queue.restore().finally(() => {
+        restoring = null;
+      });
+      return restoring;
+    };
+    void restore().then(() => queue.sync());
     const retry = () => {
-      if (!document.hidden) void queue.sync();
+      if (document.hidden) return;
+      if (queue.getSnapshot().ready) void queue.sync();
+      else
+        void restore().then(() => {
+          if (!document.hidden) void queue.sync();
+        });
     };
     const storage = (event: StorageEvent) => {
-      if (event.key === storageKey) void queue.restore().then(retry);
+      if (event.key === storageKey) void restore().then(retry);
     };
     const timer = window.setInterval(retry, 5000);
     window.addEventListener("online", retry);

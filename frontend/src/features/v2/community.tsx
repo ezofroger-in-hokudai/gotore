@@ -431,7 +431,7 @@ export function CommunityScreen({
     { enabled: active && mode === "detail" },
   );
   const group = detail.data;
-  function change(next: Mode) {
+  function change(next: Mode, groupId = selected) {
     const previous = { ...window.history.state };
     previous.gotoreSheet = undefined;
     window.history.pushState(
@@ -439,7 +439,7 @@ export function CommunityScreen({
         ...previous,
         gotoreView: "groups",
         communityMode: next,
-        groupId: selected,
+        groupId,
       },
       "",
     );
@@ -471,7 +471,7 @@ export function CommunityScreen({
         });
         onSelect(result.id);
         onChanged();
-        change(mode === "create" ? "invite" : "detail");
+        change(mode === "create" ? "invite" : "detail", result.id);
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "操作できませんでした。");
@@ -499,7 +499,7 @@ export function CommunityScreen({
                 key={item.id}
                 onClick={() => {
                   onSelect(item.id);
-                  change("detail");
+                  change("detail", item.id);
                 }}
               >
                 <span>{item.name}</span>

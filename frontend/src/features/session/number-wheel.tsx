@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 
 export function NumberWheel({
   label,
@@ -7,6 +7,8 @@ export function NumberWheel({
   step,
   min,
   onChange,
+  inputRef,
+  onEnter,
 }: {
   label: string;
   unit: string;
@@ -14,6 +16,8 @@ export function NumberWheel({
   step: number;
   min: number;
   onChange: (value: string) => void;
+  inputRef?: RefObject<HTMLInputElement | null>;
+  onEnter?: () => void;
 }) {
   const [offset, setOffset] = useState(0);
   const current = useRef(Number(value) || 0);
@@ -30,7 +34,8 @@ export function NumberWheel({
     moved: boolean;
   } | null>(null);
   const host = useRef<HTMLDivElement>(null);
-  const field = useRef<HTMLInputElement>(null);
+  const ownField = useRef<HTMLInputElement>(null);
+  const field = inputRef ?? ownField;
   const clamp = (n: number) => Math.round(Math.min(1000, Math.max(min, n)) * 10) / 10;
   const change = (n: number) => {
     const next = clamp(n);
@@ -144,7 +149,18 @@ export function NumberWheel({
         value={value}
         style={{ transform: `translateY(${offset}px)` }}
         onChange={(event) => onChange(event.target.value)}
-        onKeyDown={() => cancelAnimationFrame(frame.current)}
+        onKeyDown={(event) => {
+          cancelAnimationFrame(frame.current);
+          if (event.key !== "Enter") return;
+          if (event.nativeEvent.isComposing || event.repeat) {
+            event.preventDefault();
+            return;
+          }
+          if (onEnter) {
+            event.preventDefault();
+            if (event.currentTarget.checkValidity()) onEnter();
+          }
+        }}
       />
       <button
         type="button"
