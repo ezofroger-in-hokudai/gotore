@@ -115,3 +115,5 @@ DB変更時はローカルのSupabaseを起動し、`make db-migrations` → `ma
 
 週次計画はIssueだけで開始できます。Projects・ラベル・Milestoneは必要になった時点で追加します。
 本書の追加だけでは、GitHub上のIssue発行・設定変更・デプロイは実行されません。
+
+`make check` はfrontendのBun単体テスト・E2Eを含むTypeScript型検査も実行します。型検査だけは `make typecheck-frontend`。テストを型検査から除外してエラーを隠さず、依存追加時はlockfileを更新し通常のセットアップでは固定します。

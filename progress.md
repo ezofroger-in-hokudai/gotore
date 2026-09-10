@@ -883,3 +883,20 @@
 - 検証: 公開版のhealthは200。ブラウザへ公開されたSupabase設定を使い、limit=0で既存5表は200、gotore_avatarsだけ404/PGRST205を確認。ユーザーのデータ・認証トークン・秘密キーは取得していない。文書の追記のみなのでテストを先に追加せず、根拠と次の診断を記録した。
 - 未解決事項: ユーザーの利用環境・発生操作は回答待ち。画像用migrationの本番未適用が有力だが、PostgRESTのschema cacheと実DBは未照合。管理者接続がないため本番DBの変更・認証済み復旧確認はできていない。
 - 次のアクション: 対象SupabaseでSELECT to_regclass('public.gotore_avatars') AS avatars_tableを実行して実DBの存在を確認する。NULLの場合だけ既存の画像用migration1件の適用を検討し、存在する場合はキャッシュ・権限・接続先を調べる。db resetは使用しない。
+
+## 2026-09-11 01:22
+- 変更内容: #87についてユーザーから解決済みの報告を受け調査終了。引き続き#74・#78・#86の実装を選定し、task.mdへ記載した。
+- 目的: ユーザーの分析・実装継続依頼に対応する。
+- 影響範囲: Webの取得制御、所属グループ概要の読み取りAPI、開発時の型検査。
+- 関連ファイル: task.md、docs/loading-performance.md、frontend/src/features/training/use-resource.ts、frontend/src/features/v2/community.tsx、backend/app/infrastructure/sessions.py。
+- 未解決事項: #87の実際の復旧方法は未確認で、原因は断定しない。#69の回数Enterは回答待ち。
+- 次のアクション: 先行回帰テスト、1/5/10グループ比較、型検査の失敗再現から進める。
+
+## 2026-09-11 01:40
+- 変更内容: #86のBun型定義を実行環境1.3.9に合わせて追加し、Web・単体テスト・E2Eを対象とするtypecheckをMakefile・CIへ組み込んだ。生成物のない状態でもNextルート型を先に生成する。
+- 目的: bun:testの型解決不足を解消し、ローカルとCIで同じ検査範囲を使う。
+- 影響範囲: 開発用依存・型検査コマンド・手順。実行時依存の更新なし。
+- 関連ファイル: frontend/package.json、frontend/bun.lock、frontend/tsconfig.json、Makefile、.github/workflows/ci.yml、README.md、CONTRIBUTING.md。
+- 検証: 変更前に単体テスト3ファイルのTS2307を再現。追加後は型検査成功。環境ファイル・node_modules・.nextのない一時コピーでもbun install --frozen-lockfileとtypecheck成功。make checkのlint・型検査・backend144件・frontend29件・build成功。構成不具合のため新たなテストを先に書かず、既存検査の失敗再現を先行した。
+- 未解決事項: PRのCI結果と第三者レビュー。
+- 次のアクション: #74・#78のE2E結果と併せてレビューへ提出する。

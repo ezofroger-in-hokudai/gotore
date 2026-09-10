@@ -9,7 +9,8 @@
     "test": "bun test tests/unit",
     "test:e2e": "playwright test",
     "build": "next build",
-    "start": "next start --hostname 0.0.0.0 --port 3000"
+    "start": "next start --hostname 0.0.0.0 --port 3000",
+    "typecheck": "next typegen && tsc --noEmit --incremental false"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@playwright/test": "^1.63.0",
+    "@types/bun": "1.3.9",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
