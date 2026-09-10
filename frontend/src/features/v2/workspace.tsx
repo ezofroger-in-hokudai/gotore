@@ -58,6 +58,11 @@ function WorkspaceContent({ session }: { session: Session }) {
     window.addEventListener("popstate", back);
     return () => window.removeEventListener("popstate", back);
   }, []);
+  useEffect(() => {
+    if (view !== "home" || window.history.state?.gotoreSheet) return;
+    // カード切替は履歴を増やさず、シートから戻る先の選択も更新する。
+    window.history.replaceState({ ...window.history.state, groupId: selected }, "");
+  }, [view, selected]);
   function navigate(next: View) {
     if (next !== view) window.history.pushState({ gotoreView: next, groupId: selected }, "");
     setView(next);
