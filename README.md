@@ -288,6 +288,8 @@ E2EはローカルSupabaseと設定済みの環境ファイルを使い、APIを
 結果・失敗時の画像はGit対象外の `frontend/test-results/` に出力します。
 失敗時のtraceにはテスト用の認証情報も含まれるため、生成物はコミットせず、lintの対象からも除外しています。
 
+TypeScriptの検査にはBunのテスト型も含めます。採用済みランタイムに合わせて開発依存の `@types/bun` を固定し、`make typecheck-frontend`（frontend内では `bun run typecheck`）をローカル・CIで実行します。生成済み `.next` がなくても先にルート型を生成し、検査結果のキャッシュファイルは残しません。[Bunの型定義](https://bun.com/docs/runtime/typescript)を参照。
+
 ### コマンド一覧とCI
 
 | コマンド | 内容 |
@@ -296,10 +298,11 @@ E2EはローカルSupabaseと設定済みの環境ファイルを使い、APIを
 | `make env-local` | 未作成のローカル環境ファイルを準備 |
 | `make lint` | Ruff・Biome |
 | `make test-backend` | pytest（DB統合はTEST_DATABASE_URLが必要） |
+| `make typecheck-frontend` | Next.jsのルート型を生成し、Web・単体テスト・E2EのTypeScriptを検査 |
 | `make test-frontend` | 入力・下書きの単体テスト |
 | `make test-e2e` | 実ブラウザ2人分の結合テスト |
 | `make build-frontend` | Next.jsのビルド |
-| `make check` | lint・backendテスト・frontend単体テスト・build |
+| `make check` | lint・frontend型検査・backendテスト・frontend単体テスト・build |
 | `make db-lint` | ローカルDBのschema検査 |
 
 GitHub Actionsではbackend、frontend、databaseの3ジョブで、DB統合テスト・migration適用・E2Eを含む確認を行います。databaseジョブのresetはCI用の一時Supabaseに対するものです。

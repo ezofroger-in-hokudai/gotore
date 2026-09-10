@@ -51,7 +51,7 @@ export function NumberWheel({
       ref={host}
       className="number-wheel"
       onPointerDown={(event) => {
-        if (event.target instanceof HTMLButtonElement) return;
+        if (event.target instanceof Element && event.target.closest("button")) return;
         cancelAnimationFrame(frame.current);
         gesture.current = {
           y: event.clientY,
@@ -127,14 +127,16 @@ export function NumberWheel({
       <button
         type="button"
         className="wheel-neighbor"
-        aria-label={`${label}を減らす`}
-        disabled={Number(value) <= min}
+        aria-label={`${label}を増やす`}
+        disabled={Number(value) >= 1000}
         onClick={() => {
           cancelAnimationFrame(frame.current);
-          shift(-step);
+          shift(1);
         }}
       >
-        {clamp(Number(value) - step)}
+        <span className="wheel-arrow" aria-hidden="true">
+          ▴
+        </span>
       </button>
       <input
         ref={field}
@@ -165,14 +167,16 @@ export function NumberWheel({
       <button
         type="button"
         className="wheel-neighbor"
-        aria-label={`${label}を増やす`}
-        disabled={Number(value) >= 1000}
+        aria-label={`${label}を減らす`}
+        disabled={Number(value) <= min}
         onClick={() => {
           cancelAnimationFrame(frame.current);
-          shift(step);
+          shift(-1);
         }}
       >
-        {clamp(Number(value) + step)}
+        <span className="wheel-arrow" aria-hidden="true">
+          ▾
+        </span>
       </button>
     </div>
   );

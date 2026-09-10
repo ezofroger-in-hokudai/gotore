@@ -596,6 +596,7 @@ function ActiveTraining({
                 <NumberWheel
                   label="回数"
                   inputRef={repsField}
+                  onEnter={() => repsField.current?.form?.requestSubmit()}
                   unit="回"
                   value={input.reps}
                   step={1}
@@ -646,7 +647,7 @@ function ActiveTraining({
                   type="button"
                   onClick={() => setSelecting(true)}
                 >
-                  次の種目へ<span aria-hidden="true"> ›</span>
+                  次の種目へ
                 </button>
                 <button
                   className="primary"

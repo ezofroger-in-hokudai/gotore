@@ -1,4 +1,4 @@
-.PHONY: frontend backend install install-frontend install-backend env-local check test-backend test-frontend test-e2e build-frontend lint-backend lint-frontend lint db-start db-stop db-migrations db-migrate db-reset db-lint db-new
+.PHONY: frontend backend install install-frontend install-backend env-local check test-backend test-frontend test-e2e build-frontend typecheck-frontend lint-backend lint-frontend lint db-start db-stop db-migrations db-migrate db-reset db-lint db-new
 
 SUPABASE_CLI ?= bunx supabase@2.107.0
 
@@ -28,6 +28,9 @@ test-frontend:
 test-e2e:
 	cd frontend && bun run test:e2e
 
+typecheck-frontend:
+	cd frontend && bun run typecheck
+
 build-frontend:
 	cd frontend && bun run build
 
@@ -39,7 +42,7 @@ lint-frontend:
 
 lint: lint-backend lint-frontend
 
-check: lint test-backend test-frontend build-frontend
+check: lint typecheck-frontend test-backend test-frontend build-frontend
 
 db-start:
 	$(SUPABASE_CLI) start

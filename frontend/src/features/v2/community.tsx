@@ -1,4 +1,10 @@
-import { type Group, type GroupActivity, type GroupDetail, api } from "@/lib/api";
+import {
+  type Group,
+  type GroupActivity,
+  type GroupDetail,
+  type GroupSummary,
+  api,
+} from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
 import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
@@ -52,6 +58,13 @@ export function CommunityHome({
     active,
     true,
     { enabled: active },
+  );
+  const summaries = useResource<GroupSummary[]>(
+    "/groups/activity/summary",
+    refreshKey,
+    active,
+    true,
+    { enabled: active && groups.length > 1 },
   );
   function select(index: number) {
     const element = carousel.current?.children[index] as HTMLElement | undefined;
@@ -117,9 +130,14 @@ export function CommunityHome({
               <GroupCard
                 key={group.id}
                 group={group}
-                refreshKey={refreshKey}
                 active={active}
-                selectedActivity={group.id === selected ? activity : undefined}
+                data={
+                  group.id === selected
+                    ? activity.data
+                    : (summaries.data?.find((item) => item.group_id === group.id) ?? null)
+                }
+                error={group.id === selected ? activity.error : summaries.error}
+                refreshing={group.id === selected ? activity.refreshing : summaries.refreshing}
                 onClick={() => {
                   onSelect(group.id);
                   onDetail();
@@ -127,6 +145,14 @@ export function CommunityHome({
               />
             ))}
           </div>
+          {groups.length > 1 && summaries.error && (
+            <p role="alert" className="error">
+              {summaries.error}
+              <button type="button" className="text-button" onClick={summaries.retry}>
+                グループの状況を再試行
+              </button>
+            </p>
+          )}
           <div className="carousel-dots">
             {groups.map((group, index) => (
               <button
@@ -170,25 +196,19 @@ export function CommunityHome({
 
 function GroupCard({
   group,
-  refreshKey,
+  data,
+  error,
+  refreshing,
   active,
   onClick,
-  selectedActivity,
 }: {
   group: Group;
-  refreshKey: number;
+  data: GroupSummary | null;
+  error: string;
+  refreshing: boolean;
   active: boolean;
   onClick: () => void;
-  selectedActivity?: ReturnType<typeof useResource<GroupActivity>>;
 }) {
-  const own = useResource<GroupActivity>(
-    selectedActivity ? null : `/groups/${group.id}/activity`,
-    refreshKey,
-    active,
-    true,
-    { enabled: active },
-  );
-  const resource = selectedActivity ?? own;
   return (
     <button
       className="community-card"
@@ -200,12 +220,12 @@ function GroupCard({
         <h2>{group.name}</h2>
         <span>›</span>
       </div>
-      {resource.error ? (
+      {error ? (
         <p>状況を取得できません</p>
       ) : (
-        <CommunityStats data={resource.data} active={active} trusted={!resource.refreshing} />
+        <CommunityStats data={data} active={active} trusted={!refreshing} />
       )}
-      <span className="community-total">メンバー {resource.data?.member_count ?? "—"}人</span>
+      <span className="community-total">メンバー {data?.member_count ?? "—"}人</span>
     </button>
   );
 }
@@ -215,7 +235,7 @@ function CommunityStats({
   active = false,
   trusted = true,
 }: {
-  data: GroupActivity | null;
+  data: GroupSummary | null;
   active?: boolean;
   trusted?: boolean;
 }) {
