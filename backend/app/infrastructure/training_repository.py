@@ -212,6 +212,25 @@ class TrainingRepository:
             (user_id, group_id, *values, limit, offset),
         ).fetchall()
 
+    def shared_workout(self, user_id: UUID, group_id: UUID, workout_id: UUID):
+        record = self.connection.execute(
+            """SELECT w.*, p.display_name,
+            ARRAY(SELECT s.group_id FROM public.gotore_workout_shares s
+                  WHERE s.workout_id = w.id AND s.group_id = %s) AS shared_group_ids
+            FROM public.gotore_workouts w
+            JOIN public.gotore_profiles p ON p.id = w.user_id
+            JOIN public.gotore_group_members viewer
+              ON viewer.group_id = %s AND viewer.user_id = %s
+            WHERE w.id = %s AND jsonb_array_length(w.exercises) > 0
+              AND (w.group_id = %s OR EXISTS(
+                SELECT 1 FROM public.gotore_workout_shares s
+                WHERE s.workout_id = w.id AND s.group_id = %s))""",
+            (group_id, group_id, user_id, workout_id, group_id, group_id),
+        ).fetchone()
+        if record is None:
+            raise NotFound("記録を閲覧できません")
+        return record
+
     def lock_workout(self, workout_id: UUID):
         # 行がまだない作成要求も、削除・編集と同じIDで順序付ける。
         self.connection.execute(

@@ -6,6 +6,7 @@ import { MembershipPanel } from "../training/membership-panel";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
+import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
 
 export function CommunityHome({
@@ -275,6 +276,7 @@ function Feed({
   trusted,
 }: { data: GroupActivity; active: boolean; trusted: boolean }) {
   const clock = useLiveClock(data, active, trusted);
+  const [opened, setOpened] = useState<string | null>(null);
   const previous = useRef<Map<string, string> | null>(null);
   const [arrived, setArrived] = useState<string[]>([]);
   useEffect(() => {
@@ -299,66 +301,82 @@ function Feed({
     return () => window.clearTimeout(timer);
   }, [data.feed, active, trusted]);
   return (
-    <div className="community-feed">
-      {!data.feed.length && (
-        <p className="muted feed-empty">まだ記録がありません。最初のセットを残しましょう。</p>
-      )}
-      {data.feed.map((item) => {
-        const member = data.members.find((m) => m.id === item.user_id);
-        const live = clock.live && !!member && memberIsLive(member, clock.now);
-        return (
-          <article
-            className={`feed-item${live ? " feed-live" : ""}${arrived.includes(item.user_id) ? " feed-arrived" : ""}`}
-            key={item.user_id}
-          >
-            <div className="section-heading">
-              <div className="feed-person">
-                <Avatar
-                  userId={item.user_id}
-                  name={item.display_name}
-                  version={member?.avatar_version}
-                  live={live}
-                />
-                <div>
-                  <div className="feed-name">
-                    <strong>{item.display_name}</strong>
-                    {live && (
-                      <span className="live-badge" aria-label="トレーニング中">
-                        LIVE
-                      </span>
-                    )}
+    <>
+      <div className="community-feed">
+        {!data.feed.length && (
+          <p className="muted feed-empty">まだ記録がありません。最初のセットを残しましょう。</p>
+        )}
+        {data.feed.map((item) => {
+          const member = data.members.find((m) => m.id === item.user_id);
+          const live = clock.live && !!member && memberIsLive(member, clock.now);
+          return (
+            <article
+              className={`feed-item${live ? " feed-live" : ""}${arrived.includes(item.user_id) ? " feed-arrived" : ""}`}
+              key={item.user_id}
+            >
+              <div className="section-heading">
+                <div className="feed-person">
+                  <Avatar
+                    userId={item.user_id}
+                    name={item.display_name}
+                    version={member?.avatar_version}
+                    live={live}
+                  />
+                  <div>
+                    <div className="feed-name">
+                      <strong>{item.display_name}</strong>
+                      {live && (
+                        <span className="live-badge" aria-label="トレーニング中">
+                          LIVE
+                        </span>
+                      )}
+                    </div>
+                    <p>{item.exercise}</p>
                   </div>
-                  <p>{item.exercise}</p>
                 </div>
+                <time
+                  dateTime={item.updated_at}
+                  title={new Date(item.updated_at).toLocaleString("ja-JP", {
+                    timeZone: "Asia/Tokyo",
+                  })}
+                >
+                  {relativeTime(item.updated_at, clock.now)}
+                </time>
               </div>
-              <time
-                dateTime={item.updated_at}
-                title={new Date(item.updated_at).toLocaleString("ja-JP", {
-                  timeZone: "Asia/Tokyo",
-                })}
+              <button
+                type="button"
+                className="feed-value feed-detail-button"
+                aria-label={`${item.display_name}の記録詳細を開く`}
+                onClick={() => setOpened(item.workout_id)}
               >
-                {relativeTime(item.updated_at, clock.now)}
-              </time>
-            </div>
-            <div className="feed-value">
-              <strong>
-                {item.weight}
-                <small> kg × </small>
-                {item.reps}
-                <small> 回</small>
-              </strong>
-              {item.best && (
-                <span className="best-badge record-celebration">
-                  <span role="img" aria-label="最高記録">
-                    🔥
+                <strong>
+                  {item.weight}
+                  <small> kg × </small>
+                  {item.reps}
+                  <small> 回</small>
+                </strong>
+                {item.best && (
+                  <span className="best-badge record-celebration">
+                    <span role="img" aria-label="最高記録">
+                      🔥
+                    </span>
                   </span>
-                </span>
-              )}
-            </div>
-          </article>
-        );
-      })}
-    </div>
+                )}
+                <span className="feed-detail-hint">詳細</span>
+              </button>
+            </article>
+          );
+        })}
+      </div>
+      {opened && active && (
+        <SharedWorkoutDetail
+          key={`${data.group_id}:${opened}`}
+          groupId={data.group_id}
+          workoutId={opened}
+          onClose={() => setOpened(null)}
+        />
+      )}
+    </>
   );
 }
 

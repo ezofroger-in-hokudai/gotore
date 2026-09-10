@@ -57,6 +57,9 @@ class TrainingService:
             validate_activity_date(performed_on)
         return self.repository.workouts(self.user.id, group_id, limit, offset, performed_on)
 
+    def shared_workout(self, group_id: UUID, workout_id: UUID):
+        return self.repository.shared_workout(self.user.id, group_id, workout_id)
+
     def update_workout(self, workout_id: UUID, workout: WorkoutUpdate):
         return self.repository.update_workout(self.user.id, workout_id, workout)
 

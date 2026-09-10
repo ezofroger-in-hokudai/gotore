@@ -73,6 +73,11 @@ def group_workouts(group_id: UUID, service: Service, limit: Limit = 50, offset: 
     return service.workouts(group_id, limit, offset)
 
 
+@router.get("/groups/{group_id}/workouts/{workout_id}", response_model=WorkoutResponse)
+def shared_workout(group_id: UUID, workout_id: UUID, service: Service):
+    return service.shared_workout(group_id, workout_id)
+
+
 @router.get("/workouts", response_model=list[WorkoutResponse])
 def workouts(
     service: Service,

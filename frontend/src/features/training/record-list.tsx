@@ -18,13 +18,15 @@ export function RecordList({
   userId,
   empty,
   personal = false,
+  expanded = personal,
   onReuse,
   onEdit,
   onDeleted,
 }: {
   personal?: boolean;
+  expanded?: boolean;
   records: Workout[];
-  userId: string;
+  userId?: string;
   empty: string;
   onReuse?: (record: Workout) => void;
   onEdit?: (record: Workout) => void;
@@ -56,7 +58,7 @@ export function RecordList({
           <h3 className="exercise-summary">
             {record.exercises.map((exercise) => exercise.name).join(" / ")}
           </h3>
-          <details open={personal}>
+          <details open={expanded}>
             <summary>セット詳細</summary>
             <div className="record-details">
               {record.exercises.map((exercise, index) => (

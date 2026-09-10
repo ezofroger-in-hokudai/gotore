@@ -74,6 +74,17 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
       await pageB.getByRole("button", { name: `${name}を表示`, exact: true }).click();
       await expect(pageB.getByRole("article")).toContainText("82.5");
       await expect(pageB.getByRole("article")).toContainText("共有テストA");
+      const detailResponse = pageB.waitForResponse(
+        (response) =>
+          /\/api\/groups\/[^/]+\/workouts\/[^/]+$/.test(response.url()) &&
+          response.request().method() === "GET",
+      );
+      await pageB.getByRole("button", { name: "共有テストAの記録詳細を開く", exact: true }).click();
+      const detail = pageB.getByRole("dialog", { name: "記録の詳細", exact: true });
+      await expect(detail.locator(".record-set")).toHaveCount(1);
+      await expect(detail).toContainText("82.5");
+      expect((await (await detailResponse).json()).shared_group_ids).toHaveLength(1);
+      await detail.getByRole("button", { name: "閉じる", exact: true }).click();
     }
     await pageA.bringToFront();
     await pageA.getByRole("button", { name: "トレーニング終了", exact: true }).click();
@@ -93,6 +104,12 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await expect(pageB.getByRole("article")).toContainText("85");
     await expect(pageB.getByText("本人だけの振り返り")).toHaveCount(0);
     await expect(pageB.getByRole("button", { name: "メモ", exact: true })).toHaveCount(0);
+    await pageB.getByRole("button", { name: "共有テストAの記録詳細を開く", exact: true }).click();
+    const detail = pageB.getByRole("dialog", { name: "記録の詳細", exact: true });
+    await expect(detail.locator(".record-set")).toContainText("85");
+    await expect(detail).not.toContainText("本人だけの振り返り");
+    await expect(detail.getByRole("button", { name: /^(メモ|編集|削除)$/ })).toHaveCount(0);
+    await detail.getByRole("button", { name: "閉じる", exact: true }).click();
     await startTraining(pageB, "スクワット");
     await pageB.getByRole("button", { name: "次のセットへ", exact: true }).click();
     await expect(pageB.getByText("保存しました", { exact: true })).toBeVisible();

@@ -874,3 +874,29 @@
 - 関連ファイル: frontend/package.json、frontend/tsconfig.json、frontend/tests/unit/、progress.md、PR #85。
 - 未解決事項: #86の検査範囲・共通コマンドの整備、#69の通常回数Enterの回答。PR #85のbackend・frontend・Vercelは成功し、databaseの最終結果を確認中。
 - 次のアクション: この記録のpush後の最新CI結果をPR #85と週次計画#33へ追記して、レビューへ引き継ぐ。
+
+## 2026-09-11 02:35
+- 変更内容: #89を次の実装に選び、ユーザー回答「タップした記録」に合わせて仕様とtask.mdを更新した。
+- 目的: 友達の全種目・全セットを共有範囲内で確認できるようにする。
+- 影響範囲: 共有記録の読み取りAPIと詳細シート。
+- 関連ファイル: docs/gotore-v2-spec.md、task.md、backend/app/infrastructure/training_repository.py、frontend/src/features/v2/community.tsx。
+- 未解決事項: 新API・画面・回帰テストはこれから実装する。
+- 次のアクション: 未所属・別共有先・私的メモの非表示を先行テストし、単一記録取得と閲覧シートを実装する。PR #90は未統合のため、最新mainから別ブランチfeat/89-friend-workout-detailsを作成した。元の未コミット変更は保持。
+
+## 2026-09-11 02:48
+- 変更内容: #89の単一共有記録APIと、ホーム／グループのセット部分から開く閲覧専用シートを実装した。記録表示部品の展開状態を本人用操作と分離して再利用する。
+- 目的: タップした記録1件の全種目・全セットを確認できるようにする。
+- 影響範囲: 共有記録のWeb/API。DB migrationなし。既存の本人メモ・編集・共有先は変更しない。
+- 関連ファイル: backend/app/api/routes/training.py、backend/app/services/training.py、backend/app/infrastructure/training_repository.py、backend/tests/test_shared_workout_detail.py、frontend/src/features/v2/shared-workout-detail.tsx、frontend/src/features/v2/community.tsx、frontend/src/features/training/record-list.tsx、frontend/src/app/v2.css、frontend/tests/e2e/shared-workout-detail.spec.ts、frontend/tests/e2e/sharing.spec.ts、docs/images/shared-workout-detail.png。
+- 検証: 先行API6件・ブラウザ1件が未実装で失敗後、実装して成功。未所属・未共有・非公開・削除・退出・空セッション、同日の別記録の除外、他グループIDと本人メモの非表示を確認。開くまでの取得0件、5秒再確認、失敗時の非表示・再試行、非表示タブ／閉じた後の停止、ブラウザの戻るを確認。実Supabaseの2人・2グループも含むmake test-e2e全71件成功。lint・backend146件・frontend29件成功。320/390/430pxの表示と390px画像を確認した。
+- 未解決事項: 最終make checkのビルドとPRのCI・レビュー。PR #90は別ブランチで未統合。
+- 次のアクション: 共通検証完了後に目的別コミットと画像付きPRを作成する。
+
+## 2026-09-11 02:52
+- 変更内容: #89の最終make checkが成功し、画像・差分・共有範囲を確認した。検証用Web/APIと専用の一時PostgreSQLを停止し、next-env.d.tsは作業開始時の内容へ復元した。
+- 目的: タップした記録1件の詳細表示をレビュー可能な状態にする。
+- 影響範囲: #89のAPI・表示・仕様・検証。DB migration、依存追加なし。
+- 関連ファイル: progress.md、docs/images/shared-workout-detail.png、#89の実装・テスト。
+- 検証: make check成功（backend146件、frontend29件、lint、build）、実Supabaseを含む全E2E71件成功、git diff --check成功。
+- 未解決事項: 直近でPR #90のマージを確認したため、最新mainとの統合確認とPRのCI・レビューが残る。
+- 次のアクション: #89をコミット後に最新mainを取り込み、統合後の検証を実行して画像付きPRを作成する。
