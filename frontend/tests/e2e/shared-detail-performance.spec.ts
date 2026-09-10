@@ -4,6 +4,7 @@ import { mockTraining, navigate } from "./mock-training";
 test("表示中の詳細をLIVE優先で先読みし、終了済みは再取得を重ねず即表示する", async ({ page }) => {
   await page.clock.install();
   const state = await mockTraining(page);
+  await navigate(page, "設定");
   const ended = {
     id: "ended",
     user_id: "ended-user",
@@ -89,6 +90,7 @@ test("表示中の詳細をLIVE優先で先読みし、終了済みは再取得�
 
 test("履歴をホームで準備し、再確認待ちでも一覧とカレンダーを表示する", async ({ page }) => {
   const state = await mockTraining(page);
+  await navigate(page, "設定");
   const record = {
     id: "history",
     user_id: state.user.id,
@@ -141,6 +143,7 @@ test("履歴をホームで準備し、再確認待ちでも一覧とカレン�
 
 test("復元通信を待たずホームから記録画面へ進み、未確認中の開始は防ぐ", async ({ page }) => {
   await mockTraining(page);
+  await navigate(page, "設定");
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -168,6 +171,7 @@ for (const target of [0, 2]) {
     page,
   }) => {
     const state = await mockTraining(page);
+    await navigate(page, "設定");
     const stamp = new Date().toISOString();
     const feed = Array.from({ length: 12 }, (_, i) => ({
       workout_id: `record-${i}`,
@@ -232,3 +236,66 @@ for (const target of [0, 2]) {
     }
   });
 }
+
+test("開いた記録が最新フィードから外れた後も、共有解除を再確認して内容を隠す", async ({ page }) => {
+  await page.clock.install();
+  const state = await mockTraining(page);
+  await navigate(page, "設定");
+  const record = {
+    id: "previous",
+    user_id: "friend",
+    display_name: "友達A",
+    group_id: state.group.id,
+    performed_on: "2026-09-11",
+    created_at: new Date().toISOString(),
+    revision: 1,
+    exercises: [{ name: "ベンチプレス", sets: [{ weight: 80, reps: 8 }] }],
+  };
+  let replaced = false;
+  let removed = false;
+  let reads = 0;
+  await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
+    route.fulfill({
+      json: {
+        group_id: state.group.id,
+        member_count: 2,
+        live_count: 0,
+        today_count: 1,
+        members: [],
+        feed: [
+          {
+            workout_id: replaced ? "newer" : record.id,
+            user_id: record.user_id,
+            display_name: record.display_name,
+            exercise: "ベンチプレス",
+            weight: 80,
+            reps: 8,
+            estimated_rm: 101.3,
+            updated_at: record.created_at,
+            best: false,
+          },
+        ],
+      },
+    }),
+  );
+  await page.route(`**/api/groups/${state.group.id}/workouts/*`, (route) => {
+    if (route.request().url().endsWith("/previous")) {
+      reads++;
+      if (removed) return route.fulfill({ status: 404, json: { detail: "記録を閲覧できません" } });
+    }
+    return route.fulfill({ json: record });
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "友達Aの記録詳細を開く", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "記録の詳細", exact: true });
+  await expect(dialog.locator(".record-set")).toHaveCount(1);
+  const before = reads;
+  replaced = true;
+  await page.clock.runFor(5000);
+  await expect.poll(() => reads).toBeGreaterThan(before);
+  await expect(dialog.locator(".record-set")).toHaveCount(1);
+  removed = true;
+  await page.clock.runFor(5000);
+  await expect(dialog.getByRole("alert")).toContainText("記録を閲覧できません");
+  await expect(dialog.locator(".record-set")).toHaveCount(0);
+});

@@ -71,7 +71,8 @@ export function useSharedWorkoutDetails(
       const { activity: current, opened: id } = latest.current;
       const item = current.feed.find((item) => item.workout_id === id);
       const member = current.members.find((member) => member.id === item?.user_id);
-      if (id && member && memberIsLive(member, Date.now())) recheck.current.add(id);
+      // 最新フィードから外れた記録の共有可否は、詳細APIで確認し続ける。
+      if (id && (!item || (member && memberIsLive(member, Date.now())))) recheck.current.add(id);
       notify();
     }, 5000);
     document.addEventListener("visibilitychange", visibility);

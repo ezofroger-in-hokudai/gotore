@@ -10,6 +10,7 @@ try {
   for (let sample = 0; sample < 6; sample++) {
     const page = await browser.newPage({ baseURL, viewport: { width: 390, height: 844 } });
     const state = await mockTraining(page);
+    await navigate(page, "設定");
     const stamp = new Date().toISOString();
     const record = {
       id: "benchmark-record",
