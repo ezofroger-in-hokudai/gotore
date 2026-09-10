@@ -812,3 +812,12 @@
 - 関連ファイル: task.md、docs/gotore-v2-spec.md、docs/activity-heatmap.md、docs/loading-performance.md、frontend/src/features/。
 - 未解決事項: v2の回数欄Enterはユーザー回答待ち。Docker停止を確認し、実Supabase E2Eはローカル準備またはCIが必要。
 - 次のアクション: 再現テストを先に追加して失敗を確認し、目的別に修正・検証する。仕様回答に依存しない修正から進める。
+
+## 2026-09-10 23:02
+- 変更内容: #71の遷移処理へ対象IDを渡し、一覧選択・作成・参加の直後に古いグループIDがブラウザ履歴へ残る問題を修正。
+- 目的: 戻る・進むとメンバー／招待画面の対象を一致させる。
+- 影響範囲: Webのグループ画面。カード切替では履歴を増やさない。
+- 関連ファイル: frontend/src/features/v2/community.tsx、frontend/tests/e2e/community-v2.spec.ts、docs/gotore-v2-spec.md。
+- 検証: 先行テストで選択・作成後の不一致を再現。追加グループの活動応答をテストへ補い、既存と新規のグループ操作6件が成功。make checkはbackend140件・frontend29件・lint・build成功。
+- 未解決事項: 全E2E実行中。開始時のDockerコマンドでは停止を報告したが、E2EではローカルSupabaseの接続確認と実画像共有テストが成功した。外部の起動経緯は未確認。
+- 次のアクション: 他の修正と全E2Eを確認し、PRでレビューを依頼する。
