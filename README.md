@@ -288,6 +288,8 @@ E2EはローカルSupabaseと設定済みの環境ファイルを使い、APIを
 結果・失敗時の画像はGit対象外の `frontend/test-results/` に出力します。
 失敗時のtraceにはテスト用の認証情報も含まれるため、生成物はコミットせず、lintの対象からも除外しています。
 
+TypeScriptの検査にはBunのテスト型も含めます。採用済みランタイムに合わせて開発依存の `@types/bun` を固定し、`make typecheck-frontend`（frontend内では `bun run typecheck`）をローカル・CIで実行します。生成済み `.next` がなくても先にルート型を生成し、検査結果のキャッシュファイルは残しません。[Bunの型定義](https://bun.com/docs/runtime/typescript)を参照。
+
 ### コマンド一覧とCI
 
 | コマンド | 内容 |
@@ -363,5 +365,3 @@ VercelのRoot Directoryはリポジトリのルート（`.`）です。`frontend
 
 SCORE・AI・ランキング・スタンプ・公開環境の運用・ネイティブモバイルアプリは後続です。
 今週の追加・改善は [週次計画テンプレート](.github/ISSUE_TEMPLATE/weekly.md) で選びます。
-
-TypeScriptの検査にはBunのテスト型も含めます。採用済みランタイムに合わせて開発依存の `@types/bun` を固定し、`make typecheck-frontend`（frontend内では `bun run typecheck`）をローカル・CIで実行します。生成済み `.next` がなくても先にルート型を生成し、検査結果のキャッシュファイルは残しません。[Bunの型定義](https://bun.com/docs/runtime/typescript)を参照。
