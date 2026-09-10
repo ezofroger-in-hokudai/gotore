@@ -874,3 +874,119 @@
 - 関連ファイル: frontend/package.json、frontend/tsconfig.json、frontend/tests/unit/、progress.md、PR #85。
 - 未解決事項: #86の検査範囲・共通コマンドの整備、#69の通常回数Enterの回答。PR #85のbackend・frontend・Vercelは成功し、databaseの最終結果を確認中。
 - 次のアクション: この記録のpush後の最新CI結果をPR #85と週次計画#33へ追記して、レビューへ引き継ぐ。
+
+## 2026-09-11 01:14
+- 変更内容: 「記録サービスを利用できません」の報告を調査し、Issue #87へ記録。PR #85のmain統合とProduction 0141d2fへの反映を確認した。
+- 目的: 画面の入力エラーとDB側の障害を切り分け、既存記録を保持した復旧につなげる。
+- 影響範囲: 読み取り調査と記録のみ。アプリコード・公開DB・環境変数は変更していない。
+- 関連ファイル: backend/app/api/dependencies.py、backend/app/infrastructure/sessions.py、supabase/migrations/20260909120000_profile_avatars.sql、docs/live-presence-avatars.md。
+- 検証: 公開版のhealthは200。ブラウザへ公開されたSupabase設定を使い、limit=0で既存5表は200、gotore_avatarsだけ404/PGRST205を確認。ユーザーのデータ・認証トークン・秘密キーは取得していない。文書の追記のみなのでテストを先に追加せず、根拠と次の診断を記録した。
+- 未解決事項: ユーザーの利用環境・発生操作は回答待ち。画像用migrationの本番未適用が有力だが、PostgRESTのschema cacheと実DBは未照合。管理者接続がないため本番DBの変更・認証済み復旧確認はできていない。
+- 次のアクション: 対象SupabaseでSELECT to_regclass('public.gotore_avatars') AS avatars_tableを実行して実DBの存在を確認する。NULLの場合だけ既存の画像用migration1件の適用を検討し、存在する場合はキャッシュ・権限・接続先を調べる。db resetは使用しない。
+
+## 2026-09-11 01:22
+- 変更内容: #87についてユーザーから解決済みの報告を受け調査終了。引き続き#74・#78・#86の実装を選定し、task.mdへ記載した。
+- 目的: ユーザーの分析・実装継続依頼に対応する。
+- 影響範囲: Webの取得制御、所属グループ概要の読み取りAPI、開発時の型検査。
+- 関連ファイル: task.md、docs/loading-performance.md、frontend/src/features/training/use-resource.ts、frontend/src/features/v2/community.tsx、backend/app/infrastructure/sessions.py。
+- 未解決事項: #87の実際の復旧方法は未確認で、原因は断定しない。#69の回数Enterは回答待ち。
+- 次のアクション: 先行回帰テスト、1/5/10グループ比較、型検査の失敗再現から進める。
+
+## 2026-09-11 01:40
+- 変更内容: #86のBun型定義を実行環境1.3.9に合わせて追加し、Web・単体テスト・E2Eを対象とするtypecheckをMakefile・CIへ組み込んだ。生成物のない状態でもNextルート型を先に生成する。
+- 目的: bun:testの型解決不足を解消し、ローカルとCIで同じ検査範囲を使う。
+- 影響範囲: 開発用依存・型検査コマンド・手順。実行時依存の更新なし。
+- 関連ファイル: frontend/package.json、frontend/bun.lock、frontend/tsconfig.json、Makefile、.github/workflows/ci.yml、README.md、CONTRIBUTING.md。
+- 検証: 変更前に単体テスト3ファイルのTS2307を再現。追加後は型検査成功。環境ファイル・node_modules・.nextのない一時コピーでもbun install --frozen-lockfileとtypecheck成功。make checkのlint・型検査・backend144件・frontend29件・build成功。構成不具合のため新たなテストを先に書かず、既存検査の失敗再現を先行した。
+- 未解決事項: PRのCI結果と第三者レビュー。
+- 次のアクション: #74・#78のE2E結果と併せてレビューへ提出する。
+
+## 2026-09-11 01:43
+- 変更内容: #74の読み取り専用要求に15秒の期限と要求ごとの中断制御を追加。認証待ち・本文の読み取りも含め、期限切れ後の遅延応答を無視する。
+- 目的: 読み込み中のまま復旧できない状態を防ぎ、既存の再試行UIへ戻す。
+- 影響範囲: useResourceを利用する画面の読み取り。保存・画像送信・同期キューのAPIには適用しない。
+- 関連ファイル: frontend/src/features/training/resource-request.ts、frontend/src/features/training/use-resource.ts、frontend/tests/e2e/resource-timeout.spec.ts、docs/loading-performance.md。
+- 検証: 先行E2E2件がタイムアウト案内なしで失敗し、修正後に成功。14秒の正常応答、保留中の要求重複防止、15秒後の手動／自動再試行、古い一覧の非表示、遅延応答による上書き防止、画面離脱後の停止を確認。make check成功。
+- 未解決事項: 全E2EとPRのCIを実行中。
+- 次のアクション: #78を併せた記録・共有フローの検証結果を追記する。
+
+## 2026-09-11 01:48
+- 変更内容: #78の所属グループ概要APIと選択中だけのフィード取得を実装。カードの取得を表示部品から分離した。
+- 目的: 表示していないフィード本文とBEST履歴の取得を減らす。
+- 影響範囲: ホームのWeb/API。DB migration不要。所属・LIVE/TODAYの既存判定を共用する。
+- 関連ファイル: backend/app/infrastructure/sessions.py、backend/app/api/routes/sessions.py、backend/app/schemas/session.py、backend/tests/test_group_summaries.py、frontend/src/features/v2/community.tsx、frontend/src/features/v2/live-presence.ts、frontend/src/lib/api.ts、frontend/tests/e2e/group-summaries.spec.ts、frontend/scripts/benchmark-group-loading.ts、docs/loading-performance.md。
+- 検証: 先行API2件とブラウザ1件の失敗を再現後に成功。DB回帰4件で所属・退会・未認証・LIVE失効／復帰・終了・非共有記録・1SQL取得を確認。make check成功。1/5/10グループの初回と10.5秒の要求・JSON量・参考表示時間を比較し、docsへ記録。表示時間の改善は未確認。
+- 未解決事項: 全E2Eの自動サーバー起動が進まないため中断し、明示起動したWeb/APIを再利用して再実行中。ユーザーから#69の回数Enterは保存と回答あり、#88入力矢印と#89友達の詳細を追加依頼された。
+- 次のアクション: 全E2Eを確認し、追加依頼も目的別に実装・記録する。#89の同日複数記録の表示範囲は回答待ち。
+
+## 2026-09-11 01:49
+- 変更内容: #78の既存グループ切替テストへ概要APIのモックを追加した。
+- 目的: 概要APIの未定義による404と、意図した活動APIの権限エラーを区別して検証する。
+- 影響範囲: ブラウザテストのみ。
+- 関連ファイル: frontend/tests/e2e/community-v2.spec.ts。
+- 検証: 初回全E2Eは70成功・2失敗。1件は本モック不足、もう1件は補助E2Eの同時実行によるtraceファイル競合（ENOENT）で、アプリの操作アサーション失敗ではない。同時実行を止めて全件再実行中、グループ切替の再試行は成功。
+- 未解決事項: 単独実行した全E2Eの最終結果。
+- 次のアクション: 今回の追加操作を含む全74件の結果を追記する。
+
+## 2026-09-11 01:50
+- 変更内容: ユーザー回答に基づき、#69の回数Enterをフォームの保存操作へ明示的に接続。#88の隣接値ボタンに矢印を付け、重量1kg・回数1回の増減に変更した。スワイプの刻みと直接入力は維持。
+- 目的: 保存ボタンとEnterの動作を揃え、指で少しだけ数値を調整できるようにする。
+- 影響範囲: v2の記録入力。既存の保存・編集・同期・競合処理を共用する。
+- 関連ファイル: frontend/src/features/session/number-wheel.tsx、frontend/src/features/session/session-screen.tsx、frontend/src/app/v2.css、frontend/tests/e2e/input-controls.spec.ts、frontend/tests/e2e/workout-input.spec.ts、docs/gotore-v2-spec.md、docs/images/input-controls.png、task.md。
+- 検証: 1kg調整の先行テストは77.5→80となり失敗し、変更後は78.5で成功。増減だけでは保存しないこと、小数保持・上下限・320/390/430px・Enterによる追加／編集・無効値／IME／長押し防止を確認。Enterの正常保存は既存でも成立していたため、先行テストは成功し採用仕様を固定した。矢印の子要素を直接タップする確認も成功し、390pxの画像を目視確認。frontend lint・型検査成功。
+- 未解決事項: 全E2Eと最終ビルド、PRのCI・レビュー。#89の詳細の表示範囲は回答待ち。
+- 次のアクション: 全体の検証結果を追記してPR化する。
+
+## 2026-09-11 01:54
+- 変更内容: #69・#74・#78・#86・#88の最終検証を整理し、型検査の説明をREADME／CONTRIBUTINGの検証節へ配置した。
+- 目的: 実装・測定・制約をレビュー可能にする。
+- 影響範囲: 目的別コミット済みのWeb/APIと検証手順。マージ・本番変更は行っていない。
+- 関連ファイル: README.md、CONTRIBUTING.md、docs/loading-performance.md、docs/gotore-v2-spec.md、progress.md。ブランチperf/group-overview-and-request-recovery。
+- 検証: 最終make checkでlint・型検査・backend144件・frontend29件・build成功。単独実行の全E2Eは73成功・1失敗。失敗は入力テストの期待値を広く置換しすぎ、直接入力82.5kgの期待値まで81kgにしていたため。期待値を元に戻した後、記録入力・再起動・競合・編集・Enterの5件すべて成功。実Supabaseの共有と画像認可も全体実行で成功。全74件の一括実行はPRのCIで確認する。git diff --check成功。型検査の説明移動は文書だけなので新規テストを追加せず、リンクと節の配置を確認した。
+- 未解決事項: PRのCI・第三者レビュー。#89の友達の当日詳細は表示範囲の回答待ち。表示速度の本番改善率は未測定。
+- 次のアクション: main向けPRを作成し、URLと最新CI結果をPR・週次計画#33へ記録する。検証用Web/APIを停止し、next-env.d.tsは開始時の内容へ復元。ユーザーのPDF・画像・未コミット変更は保持した。
+
+## 2026-09-11 01:56
+- 変更内容: push前の自動承認審査が、送信先未確認・外部送信の承認未確認を理由に拒否したため、リモートと変更内容を再確認した。
+- 目的: 作業対象外への送信を避け、既存の継続開発の範囲を確認する。
+- 影響範囲: 読み取り確認のみ。拒否されたpushは未実行。
+- 関連ファイル: origin設定、PR #85、今回のコミット差分、progress.md。
+- 検証: originは既存IssueとPR #85と同じezofroger-in-hokudai/gotore。公開リポジトリで現在のアカウントはADMIN。コミットには環境ファイル・秘密鍵を含めず、既知形式の認証情報も検出なし。元のnext-env.d.ts・未追跡PDF／画像は送信対象外。
+- 未解決事項: 確認結果を示したpushの再審査とPRのCI。
+- 次のアクション: 同じリポジトリの継続実装として再審査を受け、許可されなければ具体的な送信内容を示してユーザーへ確認する。
+
+## 2026-09-11 02:07
+- 変更内容: ユーザー依頼によりPR #90本文へ入力補助の確認画像を390px幅で埋め込んだ。
+- 目的: PR内で重量・回数の矢印操作を画像でレビューできるようにする。
+- 影響範囲: PR説明と作業記録のみ。
+- 関連ファイル: docs/images/input-controls.png、progress.md、https://github.com/ezofroger-in-hokudai/gotore/pull/90。
+- 検証: コミット済み画像の存在と、更新後のPR本文に画像タグが含まれることを確認。文書のみのため新規テストを先行せず、git diff --checkを確認した。
+- 未解決事項: #89の友達の当日詳細の表示範囲は引き続き回答待ち。
+- 次のアクション: PRで画像と実装をレビューする。
+
+## 2026-09-11 02:16
+- 変更内容: ユーザーの追加指定により、#88の矢印を上が増加・下が減少となる順へ入れ替え、隣接値・仕様・PR用画像も更新した。
+- 目的: 矢印の方向と配置を一致させ、数値調整を分かりやすくする。
+- 影響範囲: 記録入力のボタン配置と画像。1kg／1回の増減、上下限、保存操作は維持。
+- 関連ファイル: frontend/src/features/session/number-wheel.tsx、docs/gotore-v2-spec.md、docs/images/input-controls.png、progress.md、PR #90。
+- 検証: make check（backend144件・frontend29件・lint・型検査・build）と入力／復元の既存E2E7件が成功。ブラウザ上の座標で「増加ボタン＜入力欄＜減少ボタン」の配置を重量・回数とも確認し、更新画像を目視確認。軽微な配置変更のため新規テストを先行せず、既存操作テストと画像で検証した。初回の共通検証は一時DBの起動引数不足で接続テスト2件が失敗し、元の55439番・/tmpソケットで起動後に全件成功。
+- 未解決事項: この追加コミットのCIはpush後に実行。#89の表示範囲は回答待ち。
+- 次のアクション: PR本文の画像参照を更新版へ切り替える。検証用Web/API/DBは停止し、元の未コミットファイルを保持した。
+
+## 2026-09-11 02:20
+- 変更内容: ユーザー指定により重量・回数の増減ボタンから隣接値を削除し、上下の矢印だけにした。仕様とPR画像も更新。
+- 目的: 数値表示を中央の入力欄へ集約し、調整中の見え方を簡潔にする。
+- 影響範囲: ボタンの表示内容のみ。増減・上下限・アクセシブルなラベルは維持。
+- 関連ファイル: frontend/src/features/session/number-wheel.tsx、docs/gotore-v2-spec.md、docs/images/input-controls.png、progress.md、PR #90。
+- 検証: make check（backend144件・frontend29件・lint・型検査・build）と既存入力E2E2件成功。ブラウザで4ボタンの表示が矢印のみであること、上下配置、矢印タップによる78.5kgへの更新を確認し、画像を目視確認。軽微な表示変更のため新規テストを先行せず、既存操作テストと画像確認を使用。git diff --check成功。
+- 未解決事項: 追加コミットのCIはpush後に実行。#89の表示範囲は回答待ち。
+- 次のアクション: PR本文を新しい画像へ差し替える。検証用Web/API/DBは停止し、元の未コミット変更を保持した。
+
+## 2026-09-11 02:29
+- 変更内容: 「次の種目へ」の末尾の装飾矢印を削除。
+- 目的: ユーザー指定に従いボタン表示を簡潔にする。
+- 影響範囲: ボタン内の装飾のみ。
+- 関連ファイル: frontend/src/features/session/session-screen.tsx、progress.md。
+- 検証: ユーザーがテストなしのpushを明示したため、テストは追加・実行していない。
+- 未解決事項: 既存のPR確認画像には削除前の装飾が残る。
+- 次のアクション: 既存PRブランチへpushする。

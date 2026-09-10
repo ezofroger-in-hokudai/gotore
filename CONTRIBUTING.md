@@ -97,6 +97,8 @@ DB変更時はローカルのSupabaseを起動し、`make db-migrations` → `ma
 `make db-reset` はローカルDBのデータを削除して再作成するため、失ってよい開発データで実施してください。
 共有環境・本番への反映は別の作業として、対象と担当を確認して行います。
 
+`make check` はfrontendのBun単体テスト・E2Eを含むTypeScript型検査も実行します。型検査だけは `make typecheck-frontend`。テストを型検査から除外してエラーを隠さず、依存追加時はlockfileを更新し通常のセットアップでは固定します。
+
 ## 依存関係・環境変数
 
 - Pythonは `backend/.python-version`、Bunは `frontend/package.json` の `packageManager` に合わせます。

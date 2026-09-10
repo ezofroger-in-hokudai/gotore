@@ -53,7 +53,7 @@ export type SessionBests = {
   sets: { exercise_index: number; set_index: number }[];
 };
 export type AvatarImage = { version: string | null; data_url: string | null };
-export type GroupActivity = {
+export type GroupSummary = {
   observed_at?: string;
   group_id: string;
   member_count: number;
@@ -67,6 +67,8 @@ export type GroupActivity = {
     live_until?: string | null;
     avatar_version?: string | null;
   }[];
+};
+export type GroupActivity = GroupSummary & {
   feed: {
     workout_id: string;
     user_id: string;

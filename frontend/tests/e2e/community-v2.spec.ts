@@ -101,6 +101,10 @@ test("グループ切替中は前の共有記録を隠し、戻ったとき選�
   await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
     route.fulfill({ json: activity }),
   );
+  await page.route("**/api/groups/activity/summary", (route) => {
+    const { feed, ...summary } = activity;
+    return route.fulfill({ json: [summary, { ...summary, group_id: second.id }] });
+  });
   let fail = false;
   await page.route("**/api/groups/second/activity", (route) =>
     route.fulfill(

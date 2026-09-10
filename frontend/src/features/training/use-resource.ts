@@ -1,5 +1,5 @@
-import { api } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
+import { resourceRequest } from "./resource-request";
 
 export function useResource<T>(
   path: string | null,
@@ -54,7 +54,7 @@ export function useResource<T>(
       pending = true;
       setLoading(true);
       try {
-        const value = await api<T>(path, { signal: controller.signal });
+        const value = await resourceRequest<T>(path, controller.signal);
         if (!controller.signal.aborted) {
           setResult({ path, data: value, version: refreshKey, stale: false });
           if (remember) {

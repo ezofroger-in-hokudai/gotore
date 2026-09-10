@@ -262,10 +262,9 @@ class SessionRepository(TrainingRepository):
                 (user_id, data.name, data.content, row["revision"] + 1),
             ).fetchone()
 
-    def group_activity(self, user_id: UUID, group_id: UUID):
-        self.group(user_id, group_id)
-        members = self.connection.execute(
-            """SELECT p.id, p.display_name, m.joined_at, a.version AS avatar_version,
+    def activity_members(self, user_id: UUID, group_id: UUID | None = None):
+        return self.connection.execute(
+            """SELECT m.group_id, p.id, p.display_name, m.joined_at, a.version AS avatar_version,
             clock_timestamp() AS observed_at,
             (SELECT max(w.last_seen_at) + interval '5 minutes' FROM public.gotore_workouts w
               JOIN public.gotore_workout_shares s ON s.workout_id = w.id
@@ -286,9 +285,33 @@ class SessionRepository(TrainingRepository):
                  AND d.day = (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date))) AS today
             FROM public.gotore_group_members m JOIN public.gotore_profiles p ON p.id = m.user_id
             LEFT JOIN public.gotore_avatars a ON a.user_id = p.id
-            WHERE m.group_id = %s ORDER BY live DESC, today DESC, m.joined_at, p.id""",
-            (group_id,),
+            JOIN public.gotore_group_members viewer
+              ON viewer.group_id = m.group_id AND viewer.user_id = %s
+            WHERE (%s::uuid IS NULL OR m.group_id = %s)
+            ORDER BY m.group_id, live DESC, today DESC, m.joined_at, p.id""",
+            (user_id, group_id, group_id),
         ).fetchall()
+
+    @staticmethod
+    def activity_summary(group_id: UUID, members: list):
+        return {
+            "group_id": group_id,
+            "observed_at": members[0]["observed_at"] if members else datetime.now(UTC),
+            "member_count": len(members),
+            "live_count": sum(m["live"] for m in members),
+            "today_count": sum(m["today"] for m in members),
+            "members": members,
+        }
+
+    def group_summaries(self, user_id: UUID):
+        groups = {}
+        for member in self.activity_members(user_id):
+            groups.setdefault(member["group_id"], []).append(member)
+        return [self.activity_summary(group_id, members) for group_id, members in groups.items()]
+
+    def group_activity(self, user_id: UUID, group_id: UUID):
+        self.group(user_id, group_id)
+        members = self.activity_members(user_id, group_id)
         latest = self.connection.execute(
             """SELECT DISTINCT ON (w.user_id) w.*, p.display_name
             FROM public.gotore_workouts w JOIN public.gotore_profiles p ON p.id = w.user_id
@@ -324,12 +347,4 @@ class SessionRepository(TrainingRepository):
                 }
             )
         feed.sort(key=lambda item: item["updated_at"], reverse=True)
-        return {
-            "group_id": group_id,
-            "observed_at": members[0]["observed_at"] if members else datetime.now(UTC),
-            "member_count": len(members),
-            "live_count": sum(m["live"] for m in members),
-            "today_count": sum(m["today"] for m in members),
-            "members": members,
-            "feed": feed,
-        }
+        return {**self.activity_summary(group_id, members), "feed": feed}
