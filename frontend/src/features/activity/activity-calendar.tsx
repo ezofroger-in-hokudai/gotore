@@ -1,17 +1,20 @@
 "use client";
 
 import type { MonthlyActivity } from "@/lib/api";
-import { useState } from "react";
 import { today } from "../training/draft";
 import { useResource } from "../training/use-resource";
 import { calendarDays, dateLabel, heatLevel, shiftMonth } from "./calendar";
 
 export function ActivityCalendar({
+  month,
+  onMonthChange,
   selectedDate,
   onSelect,
   refreshKey,
   active = true,
 }: {
+  month: string;
+  onMonthChange: (value: string) => void;
   selectedDate: string;
   onSelect: (value: string) => void;
   refreshKey: number;
@@ -19,7 +22,6 @@ export function ActivityCalendar({
 }) {
   const currentDay = today();
   const currentMonth = currentDay.slice(0, 7);
-  const [month, setMonth] = useState(currentMonth);
   const activity = useResource<MonthlyActivity>(
     `/workouts/activity?month=${month}`,
     refreshKey,
@@ -32,7 +34,7 @@ export function ActivityCalendar({
   function changeMonth(value: string) {
     if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(value) || value < "2000-01" || value > currentMonth)
       return;
-    setMonth(value);
+    onMonthChange(value);
     onSelect("");
   }
 

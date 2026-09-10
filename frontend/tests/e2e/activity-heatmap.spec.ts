@@ -145,3 +145,27 @@ test("日本時間の今日を示し、未来の日付と範囲外の月への�
   await expect(page.getByRole("button", { name: "前の月", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "次の月", exact: true })).toBeEnabled();
 });
+
+test("過去月の詳細から戻っても月・選択日・ページを保持し、月変更で絞り込みを解除する", async ({
+  page,
+}) => {
+  await activityFixture(page);
+  const day = page.getByRole("button", { name: "2024年2月29日、51セット、51件", exact: true });
+  await day.click();
+  await page.getByRole("button", { name: "以前の記録", exact: true }).click();
+  await expect(page.locator(".history-row")).toHaveCount(1);
+  await page.locator(".history-row").click();
+  await expect(page.locator(".history-detail")).toContainText("2024-02-29の種目51");
+  await page.getByRole("button", { name: "‹ 履歴", exact: true }).click();
+  await expect(page.getByLabel("月", { exact: true })).toHaveValue("2024-02");
+  await expect(day).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".history-row")).toContainText("2024-02-29の種目51");
+  await expect(page.getByText("2ページ", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "前の月", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "最近のトレーニング", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("月", { exact: true }).fill("2024-02");
+  await day.click();
+  await expect(page.getByText("1ページ", { exact: true })).toBeVisible();
+});
