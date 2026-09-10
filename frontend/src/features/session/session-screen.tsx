@@ -112,6 +112,7 @@ function ActiveTraining({
   const [selecting, setSelecting] = useState(!input.name);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const comparisonTable = useRef<HTMLElement>(null);
+  const repsField = useRef<HTMLInputElement>(null);
   const [conflictOpen, setConflictOpen] = useState(false);
   const adding = useRef(false);
   const [finishOpen, setFinishOpen] = useState(false);
@@ -566,6 +567,10 @@ function ActiveTraining({
               <div className="wheels">
                 <NumberWheel
                   label="重量"
+                  onEnter={() => {
+                    repsField.current?.focus();
+                    repsField.current?.select();
+                  }}
                   unit="kg"
                   value={input.weight}
                   step={2.5}
@@ -585,6 +590,7 @@ function ActiveTraining({
                 />
                 <NumberWheel
                   label="回数"
+                  inputRef={repsField}
                   unit="回"
                   value={input.reps}
                   step={1}
