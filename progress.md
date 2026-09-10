@@ -1025,3 +1025,12 @@
 - 検証: 最新main統合後のmake check成功（backend150件、frontend29件、lint・型検査・build）。実Supabaseを含むmake test-e2e全76件成功。390px画像を目視確認し、git diff --checkと送信差分への環境ファイル・既知の秘密情報形式の混入なしを確認。
 - 未解決事項: PRのCIと第三者レビュー。
 - 次のアクション: 画像付きPRをmain向けに作成し、PR・Issue #89・週次計画#33へURLとCI結果を記録する。検証用Web/APIと今回専用の一時DBは停止済み。next-env.d.tsと未追跡PDF・画像など、開始時のユーザー変更を保持した。
+
+## 2026-09-11 03:08
+- 変更内容: PR #91の初回CIで共有E2Eが未送信状態を観測できず失敗したため、通信失敗の準備処理を修正した。
+- 目的: 詳細表示までの共有テストを、読み取りや自動再送のタイミングに依存せず実行する。
+- 影響範囲: 既存共有E2Eの障害注入だけ。アプリの保存処理は変更していない。
+- 関連ファイル: frontend/tests/e2e/sharing.spec.ts、progress.md、https://github.com/ezofroger-in-hokudai/gotore/pull/91。
+- 検証: 初回CIは75件成功・1件失敗。失敗は64行の未送信確認で、実際には同期済みだった。times: 1がGETでも消費されることや自動再送により観測前に復旧できる点を修正し、PATCHだけを未送信確認まで失敗させる。既存CIの失敗を先行証拠とし、変更後の実Supabase共有E2E1件・frontend lint・型検査が成功。
+- 未解決事項: 最新コミットの全CI確認と第三者レビュー。初回CIのbackend・frontend・プレビューは成功。
+- 次のアクション: 修正を同じPRへpushし、全CI結果をPRと週次計画へ記録する。再検証用Web/APIを停止し、next-env.d.tsは開始時の内容へ復元した。

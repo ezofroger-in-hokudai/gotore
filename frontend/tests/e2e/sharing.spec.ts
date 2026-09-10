@@ -55,13 +55,13 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await startTraining(pageA, "ベンチプレス");
     await pageA.getByRole("spinbutton", { name: "重量", exact: true }).fill("82.5");
     await pageA.getByRole("spinbutton", { name: "回数", exact: true }).fill("8");
-    await pageA.route(
-      "**/api/sessions/*",
-      (route) => (route.request().method() === "PATCH" ? route.abort() : route.continue()),
-      { times: 1 },
+    let failSave = true;
+    await pageA.route("**/api/sessions/*", (route) =>
+      route.request().method() === "PATCH" && failSave ? route.abort() : route.continue(),
     );
     await pageA.getByRole("button", { name: "次のセットへ", exact: true }).click();
     await expect(pageA.locator(".sync-status")).toContainText("未送信");
+    failSave = false;
     await pageA.getByRole("button", { name: "再送", exact: true }).click();
     await expect(pageA.getByText("保存しました", { exact: true })).toBeVisible();
     await pageA.reload();
