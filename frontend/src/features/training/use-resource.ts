@@ -24,6 +24,11 @@ export function useResource<T>(
   const [retryKey, setRetryKey] = useState(0);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存後・再試行の操作でも再取得する。
   useEffect(() => {
+    // 非表示中の無効化は再訪時に処理し、同じ種目の比較・メモを更新中も保持する。
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     // 同じ一覧の再取得では選択状態を保持し、別の共有先のデータは返さない。
     const changed = cache.current.version !== refreshKey;
     if (changed) {
@@ -38,7 +43,7 @@ export function useResource<T>(
       );
     }
     setError("");
-    if (!path || !enabled) {
+    if (!path) {
       setLoading(false);
       return;
     }

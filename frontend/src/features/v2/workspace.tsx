@@ -144,6 +144,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
+            active={view === "record"}
             controller={training}
             userId={session.user.id}
             haptic={preferences.haptic}

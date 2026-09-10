@@ -848,3 +848,12 @@
 - 検証: 先行テストで重量Enterの誤保存を再現。通常・編集・不正な重量・IME・長押しの追加2件と、既存の入力／編集テストが成功。全E2Eは実Supabase共有を含む69件成功（3.1分）。
 - 未解決事項: 回数欄で通常のEnterを押した場合のv2採用動作はユーザー回答待ち。既存の送信動作は変更せず、#69を完了扱いにしない。
 - 次のアクション: 重量欄の独立した修正をPRへ含め、回答後に回数欄の動作・仕様・テストを仕上げる。
+
+## 2026-09-10 23:06
+- 変更内容: #79の比較・全セットBEST取得を記録画面の表示中に限定し、非表示中のキャッシュ無効化は再訪時に処理する。
+- 目的: 保存後の不要な通信を減らし、戻ったときの比較とメモ入力を保持する。
+- 影響範囲: SessionScreen、Workspace、useResource。同期キュー・生存確認・種目候補の事前取得は継続。
+- 関連ファイル: frontend/src/features/session/session-screen.tsx、frontend/src/features/v2/workspace.tsx、frontend/src/features/training/use-resource.ts、frontend/tests/e2e/session-performance.spec.ts、docs/loading-performance.md。
+- 検証: 先行テストで非表示context取得1回を確認し、修正後はホーム・設定とも0回。応答を保留した再訪でも前の比較とメモ入力を保持し、返却後に更新する3件のテスト成功。全E2E69件・標準make check成功。追加テスト後のfrontend lintも成功。
+- 未解決事項: 本番の表示時間・改善率は未測定。補助的に実行したtsc --noEmitは既存の単体テスト3ファイルのbun:test型解決不足（TS2307）で失敗。該当ファイルは変更しておらず、標準make checkのNext build・Bun単体テストは成功。
+- 次のアクション: PRへ標準検証結果と補助検証の制約を記載し、CIを確認する。
