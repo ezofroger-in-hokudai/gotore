@@ -900,3 +900,12 @@
 - 検証: 変更前に単体テスト3ファイルのTS2307を再現。追加後は型検査成功。環境ファイル・node_modules・.nextのない一時コピーでもbun install --frozen-lockfileとtypecheck成功。make checkのlint・型検査・backend144件・frontend29件・build成功。構成不具合のため新たなテストを先に書かず、既存検査の失敗再現を先行した。
 - 未解決事項: PRのCI結果と第三者レビュー。
 - 次のアクション: #74・#78のE2E結果と併せてレビューへ提出する。
+
+## 2026-09-11 01:43
+- 変更内容: #74の読み取り専用要求に15秒の期限と要求ごとの中断制御を追加。認証待ち・本文の読み取りも含め、期限切れ後の遅延応答を無視する。
+- 目的: 読み込み中のまま復旧できない状態を防ぎ、既存の再試行UIへ戻す。
+- 影響範囲: useResourceを利用する画面の読み取り。保存・画像送信・同期キューのAPIには適用しない。
+- 関連ファイル: frontend/src/features/training/resource-request.ts、frontend/src/features/training/use-resource.ts、frontend/tests/e2e/resource-timeout.spec.ts、docs/loading-performance.md。
+- 検証: 先行E2E2件がタイムアウト案内なしで失敗し、修正後に成功。14秒の正常応答、保留中の要求重複防止、15秒後の手動／自動再試行、古い一覧の非表示、遅延応答による上書き防止、画面離脱後の停止を確認。make check成功。
+- 未解決事項: 全E2EとPRのCIを実行中。
+- 次のアクション: #78を併せた記録・共有フローの検証結果を追記する。
