@@ -874,3 +874,12 @@
 - 関連ファイル: frontend/package.json、frontend/tsconfig.json、frontend/tests/unit/、progress.md、PR #85。
 - 未解決事項: #86の検査範囲・共通コマンドの整備、#69の通常回数Enterの回答。PR #85のbackend・frontend・Vercelは成功し、databaseの最終結果を確認中。
 - 次のアクション: この記録のpush後の最新CI結果をPR #85と週次計画#33へ追記して、レビューへ引き継ぐ。
+
+## 2026-09-11 01:14
+- 変更内容: 「記録サービスを利用できません」の報告を調査し、Issue #87へ記録。PR #85のmain統合とProduction 0141d2fへの反映を確認した。
+- 目的: 画面の入力エラーとDB側の障害を切り分け、既存記録を保持した復旧につなげる。
+- 影響範囲: 読み取り調査と記録のみ。アプリコード・公開DB・環境変数は変更していない。
+- 関連ファイル: backend/app/api/dependencies.py、backend/app/infrastructure/sessions.py、supabase/migrations/20260909120000_profile_avatars.sql、docs/live-presence-avatars.md。
+- 検証: 公開版のhealthは200。ブラウザへ公開されたSupabase設定を使い、limit=0で既存5表は200、gotore_avatarsだけ404/PGRST205を確認。ユーザーのデータ・認証トークン・秘密キーは取得していない。文書の追記のみなのでテストを先に追加せず、根拠と次の診断を記録した。
+- 未解決事項: ユーザーの利用環境・発生操作は回答待ち。画像用migrationの本番未適用が有力だが、PostgRESTのschema cacheと実DBは未照合。管理者接続がないため本番DBの変更・認証済み復旧確認はできていない。
+- 次のアクション: 対象SupabaseでSELECT to_regclass('public.gotore_avatars') AS avatars_tableを実行して実DBの存在を確認する。NULLの場合だけ既存の画像用migration1件の適用を検討し、存在する場合はキャッシュ・権限・接続先を調べる。db resetは使用しない。
