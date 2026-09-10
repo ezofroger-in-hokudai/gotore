@@ -136,8 +136,7 @@ export function NumberWheel({
       >
         <span className="wheel-arrow" aria-hidden="true">
           ▴
-        </span>{" "}
-        {clamp(Number(value) + 1)}
+        </span>
       </button>
       <input
         ref={field}
@@ -177,8 +176,7 @@ export function NumberWheel({
       >
         <span className="wheel-arrow" aria-hidden="true">
           ▾
-        </span>{" "}
-        {clamp(Number(value) - 1)}
+        </span>
       </button>
     </div>
   );
