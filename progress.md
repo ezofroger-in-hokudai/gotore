@@ -1016,3 +1016,12 @@
 - 検証: make check成功（backend146件、frontend29件、lint、build）、実Supabaseを含む全E2E71件成功、git diff --check成功。
 - 未解決事項: 直近でPR #90のマージを確認したため、最新mainとの統合確認とPRのCI・レビューが残る。
 - 次のアクション: #89をコミット後に最新mainを取り込み、統合後の検証を実行して画像付きPRを作成する。
+
+## 2026-09-11 02:58
+- 変更内容: PR #90が統合された最新mainを取り込み、双方の仕様・作業記録を保持して文書の追記競合を解消。共有詳細の画像を統合後の表示へ更新した。
+- 目的: 保存・矢印・取得改善と共有記録詳細の併用を確認してレビューへ提出する。
+- 影響範囲: #89のWeb/API、仕様・テスト・画像。DB migrationなし。
+- 関連ファイル: docs/gotore-v2-spec.md、docs/images/shared-workout-detail.png、task.md、progress.md、feat/89-friend-workout-details。
+- 検証: 最新main統合後のmake check成功（backend150件、frontend29件、lint・型検査・build）。実Supabaseを含むmake test-e2e全76件成功。390px画像を目視確認し、git diff --checkと送信差分への環境ファイル・既知の秘密情報形式の混入なしを確認。
+- 未解決事項: PRのCIと第三者レビュー。
+- 次のアクション: 画像付きPRをmain向けに作成し、PR・Issue #89・週次計画#33へURLとCI結果を記録する。検証用Web/APIと今回専用の一時DBは停止済み。next-env.d.tsと未追跡PDF・画像など、開始時のユーザー変更を保持した。
