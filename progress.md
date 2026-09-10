@@ -1051,3 +1051,22 @@
 - 検証: 先行2件が選択消失で失敗し、変更後は閉じる・戻る・進むを含むグループE2E8件成功。
 - 未解決事項: #93と併せた全体検証・CI・レビュー。
 - 次のアクション: ユーザーが#93を「表示中の仲間の詳細を先読みし、LIVEを優先更新」と指定し、閲覧・記録・履歴の操作待ち削減も追加依頼した。詳細の先読み・再利用、履歴の事前取得、通信待ち中の記録画面への遷移を実装・計測する。
+
+## 2026-09-11 03:56
+- 変更内容: #93の共有詳細先読み・メモリ再利用・LIVE優先更新、履歴とカレンダーの事前取得、復元待ち中の記録画面への遷移を実装した。
+- 目的: 閲覧・記録・履歴の操作後に利用者が待つ時間を減らす。
+- 影響範囲: Webの読み取りと表示。API・DB・保存キュー・共有認可は既存処理を使う。詳細は画面内と120px近傍、最大20件・60秒・同時2件に限定し、タップした詳細を優先する。
+- 関連ファイル: frontend/src/features/v2/use-shared-workout-details.ts、community.tsx、shared-workout-detail.tsx、history.tsx、workspace.tsx、frontend/src/features/training/use-resource.ts、frontend/src/features/activity/activity-calendar.tsx、frontend/tests/e2e/shared-detail-performance.spec.ts、frontend/scripts/benchmark-navigation-loading.ts、docs/loading-performance.md、docs/images/navigation-loading/。
+- 検証: 先行3件の失敗後に成功。先読みの同時上限・重複排除・画面外抑制・タップ優先、再確認失敗時の非表示を追加確認。実Supabaseを含むmake test-e2e全83件成功。lint・backend150件・frontend29件・型検査成功。計測スクリプトの配列型不足は型検査で検出し、明示型を付けて解消した。
+- 比較: 変更前main604dd40と同じLinux/Chromium・390×844・600msの模擬API遅延で、初回を除く各5回の中央値は詳細866→68ms、履歴935→78ms。ホーム表示から2.2秒待った先読み完了後の比較。開く前の詳細／履歴／カレンダー要求は各0→各1、再確認までの合計は各1→各2で、通信総数の減少とは扱わない。本番・実機の改善率は未測定。
+- 未解決事項: 最終make checkのビルド、PRのCI・レビュー。サーバー自体の遅延や大量履歴の計算・未送信キュー容量は既存#80・#77で継続する。
+- 次のアクション: 共通検証を完了し、#92と併せて画像・比較結果付きPRを作成する。比較用の一時チェックアウトとWebは片付け済み。検証用Web/APIは停止した。
+
+## 2026-09-11 03:57
+- 変更内容: #92・#93の最終make checkと全E2E、比較・確認画像を整理した。
+- 目的: ユーザーの使用後改善をレビュー可能にする。
+- 影響範囲: Webのみ。API・DB migration・依存追加なし。
+- 関連ファイル: docs/loading-performance.md、docs/gotore-v2-spec.md、progress.md、fix/92-93-shared-detail-navigation-loading。
+- 検証: 最終make check成功（backend150件、frontend29件、lint・型検査・build）、実Supabaseを含む全E2E83件成功、git diff --check成功。詳細と履歴の確認画像を目視確認。
+- 未解決事項: PRのCIと第三者レビュー。実機・本番の速度改善率は未測定。
+- 次のアクション: 同じリポジトリのmain向けに画像・比較結果付きPRを作り、#92・#93・週次計画#33へURLとCI結果を記録する。検証用Web/API/一時DBは停止し、next-env.d.tsを開始時の内容へ戻した。ユーザーの未コミットPDF・画像などは保持した。

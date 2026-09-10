@@ -58,7 +58,7 @@ test("友達のセットから選んだ記録の全種目・全セットを開�
   await page.reload();
   const open = page.getByRole("button", { name: "友達Aの記録詳細を開く", exact: true });
   await expect(open).toBeVisible();
-  expect(reads).toBe(0);
+  await expect.poll(() => reads).toBeGreaterThan(0);
   await open.click();
   const dialog = page.getByRole("dialog", { name: "記録の詳細", exact: true });
   await expect(dialog).toBeVisible();

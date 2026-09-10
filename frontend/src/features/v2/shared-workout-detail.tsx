@@ -1,14 +1,11 @@
 import type { Workout } from "@/lib/api";
 import { RecordList } from "../training/record-list";
-import { useResource } from "../training/use-resource";
 import { Sheet } from "./sheet";
 
 export function SharedWorkoutDetail({
-  groupId,
-  workoutId,
+  record,
   onClose,
-}: { groupId: string; workoutId: string; onClose: () => void }) {
-  const record = useResource<Workout>(`/groups/${groupId}/workouts/${workoutId}`, 0, true, true);
+}: { record: { data: Workout | null; error: string; retry: () => void }; onClose: () => void }) {
   return (
     <Sheet title="記録の詳細" onClose={onClose}>
       {record.error ? (

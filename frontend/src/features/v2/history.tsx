@@ -9,6 +9,7 @@ import { useResource } from "../training/use-resource";
 export function History({
   userId,
   active,
+  prefetch = false,
   refreshKey,
   onEdit,
   onReuse,
@@ -16,6 +17,7 @@ export function History({
 }: {
   userId: string;
   active: boolean;
+  prefetch?: boolean;
   refreshKey: number;
   onEdit: (record: Workout) => void;
   onReuse: (record: Workout) => void;
@@ -30,7 +32,7 @@ export function History({
     refreshKey,
     false,
     true,
-    { enabled: active },
+    { enabled: active, prefetch, retainOnRefresh: true },
   );
   const current = records.data?.find((record) => record.id === detail);
   if (current)
@@ -75,6 +77,7 @@ export function History({
         }}
         refreshKey={refreshKey}
         active={active}
+        prefetch={prefetch}
       />
       <div className="section-heading">
         <h2>{date ? dateLabel(date) : "最近のトレーニング"}</h2>

@@ -45,6 +45,28 @@ function WorkspaceContent({ session }: { session: Session }) {
     { enabled: view === "home" || view === "groups", retainOnRefresh: true },
   );
   const groups = groupList.data ?? [];
+  const [historyReady, setHistoryReady] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
+  useEffect(() => {
+    const update = () => setPageVisible(!document.hidden);
+    update();
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
+  const prepareHistory =
+    view === "home" &&
+    pageVisible &&
+    groupList.data !== null &&
+    !training.busy &&
+    !training.pending;
+  useEffect(() => {
+    if (!prepareHistory) {
+      setHistoryReady(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setHistoryReady(true), 1000);
+    return () => window.clearTimeout(timer);
+  }, [prepareHistory]);
   const selected = groups.some((group) => group.id === groupId) ? groupId : groups[0]?.id || "";
   useEffect(() => {
     window.history.replaceState({ ...window.history.state, gotoreView: "home" }, "");
@@ -137,12 +159,7 @@ function WorkspaceContent({ session }: { session: Session }) {
                 ? `${training.session.exercises.at(-1)?.name || "種目を選択"} · ${training.session.exercises.reduce((count, exercise) => count + exercise.sets.length, 0)}セット${training.pending ? "・同期中" : "保存済み"}`
                 : "今日も、自分のペースで。"}
             </p>
-            <button
-              className="primary full"
-              type="button"
-              disabled={!training.ready || training.busy}
-              onClick={() => navigate("record")}
-            >
+            <button className="primary full" type="button" onClick={() => navigate("record")}>
               {training.session ? "トレーニングを再開" : "トレーニングを記録"}
             </button>
           </div>
@@ -162,6 +179,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         <div hidden={view !== "history"}>
           <History
             active={view === "history"}
+            prefetch={prepareHistory && historyReady}
             userId={session.user.id}
             refreshKey={refreshKey}
             onEdit={(record) => {
