@@ -10,6 +10,7 @@ from app.infrastructure.sessions import SessionRepository
 from app.schemas.session import (
     ExerciseContext,
     GroupActivity,
+    GroupSummary,
     InvitePreview,
     SessionBests,
     SessionResponse,
@@ -59,6 +60,11 @@ def heartbeat(session_id: UUID, service: Service):
 @router.post("/groups/preview", response_model=InvitePreview)
 def preview_group(data: GroupJoin, service: Service):
     return repository(service).preview(service.user.id, data.invite_code)
+
+
+@router.get("/groups/activity/summary", response_model=list[GroupSummary])
+def group_summaries(service: Service):
+    return repository(service).group_summaries(service.user.id)
 
 
 @router.get("/groups/{group_id}/activity", response_model=GroupActivity)

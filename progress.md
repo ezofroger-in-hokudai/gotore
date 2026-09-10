@@ -909,3 +909,12 @@
 - 検証: 先行E2E2件がタイムアウト案内なしで失敗し、修正後に成功。14秒の正常応答、保留中の要求重複防止、15秒後の手動／自動再試行、古い一覧の非表示、遅延応答による上書き防止、画面離脱後の停止を確認。make check成功。
 - 未解決事項: 全E2EとPRのCIを実行中。
 - 次のアクション: #78を併せた記録・共有フローの検証結果を追記する。
+
+## 2026-09-11 01:48
+- 変更内容: #78の所属グループ概要APIと選択中だけのフィード取得を実装。カードの取得を表示部品から分離した。
+- 目的: 表示していないフィード本文とBEST履歴の取得を減らす。
+- 影響範囲: ホームのWeb/API。DB migration不要。所属・LIVE/TODAYの既存判定を共用する。
+- 関連ファイル: backend/app/infrastructure/sessions.py、backend/app/api/routes/sessions.py、backend/app/schemas/session.py、backend/tests/test_group_summaries.py、frontend/src/features/v2/community.tsx、frontend/src/features/v2/live-presence.ts、frontend/src/lib/api.ts、frontend/tests/e2e/group-summaries.spec.ts、frontend/scripts/benchmark-group-loading.ts、docs/loading-performance.md。
+- 検証: 先行API2件とブラウザ1件の失敗を再現後に成功。DB回帰4件で所属・退会・未認証・LIVE失効／復帰・終了・非共有記録・1SQL取得を確認。make check成功。1/5/10グループの初回と10.5秒の要求・JSON量・参考表示時間を比較し、docsへ記録。表示時間の改善は未確認。
+- 未解決事項: 全E2Eの自動サーバー起動が進まないため中断し、明示起動したWeb/APIを再利用して再実行中。ユーザーから#69の回数Enterは保存と回答あり、#88入力矢印と#89友達の詳細を追加依頼された。
+- 次のアクション: 全E2Eを確認し、追加依頼も目的別に実装・記録する。#89の同日複数記録の表示範囲は回答待ち。

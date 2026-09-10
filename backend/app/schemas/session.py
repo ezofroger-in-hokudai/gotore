@@ -61,11 +61,14 @@ class FeedItem(BaseModel):
     best: bool
 
 
-class GroupActivity(BaseModel):
+class GroupSummary(BaseModel):
     observed_at: datetime
     group_id: UUID
     member_count: int
     live_count: int
     today_count: int
     members: list[ActivityMember]
+
+
+class GroupActivity(GroupSummary):
     feed: list[FeedItem]

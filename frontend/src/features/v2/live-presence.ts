@@ -1,7 +1,7 @@
-import type { GroupActivity } from "@/lib/api";
+import type { GroupSummary } from "@/lib/api";
 import { useEffect, useState } from "react";
 
-export function memberIsLive(member: GroupActivity["members"][number], now: number) {
+export function memberIsLive(member: GroupSummary["members"][number], now: number) {
   return member.live && (!member.live_until || Date.parse(member.live_until) > now);
 }
 
@@ -17,7 +17,7 @@ export function relativeTime(timestamp: string, now: number) {
   });
 }
 
-export function useLiveClock(data: GroupActivity | null, active: boolean, trusted = true) {
+export function useLiveClock(data: GroupSummary | null, active: boolean, trusted = true) {
   const [clock, setClock] = useState({
     now: Date.now(),
     online: true,
