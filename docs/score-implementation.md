@@ -16,7 +16,7 @@
 ## 標準目標とLLM
 
 - ユーザー確認済みの標準条件は「筋トレに当たる種目への取り組み」「目標の指定に沿った種目・セット配分」の2件。標準目標は配分を指定しないため自由な配分を認める。自重・軽い負荷・新種目を理由に減点しない。一般目標なので高得点になりやすく、身体への適性は断定しない。
-- ユーザーは安さ・速さを優先。第一候補はOpenAI GPT-5.6 Luna、推論を省く `reasoning.effort=none` と短い構造化出力を使う。環境変数で指定し、結果には実際のモデル識別子を保存する。採用モデルの実測速度・判定品質は代表例で検証する。
+- ユーザーは安さ・速さを優先。追加指定により既定をOpenAI GPT-5 nanoへ変更し、`reasoning.effort=minimal` と短い構造化出力を使う。環境変数で指定し、結果には実際のモデル識別子を保存する。採用モデルの実測速度・判定品質は代表例で検証する。
 
 ## 検証方針
 
@@ -24,9 +24,16 @@
 
 ## LLMの調査根拠
 
-2026-09-12確認。GPT-5.6 Lunaは低コスト用途向けでStructured Outputs対応、100万トークンあたり入力$0.20・出力$1.20。これはモデル料金であり、このアプリの実測費用・速度・判定品質は未検証。
+2026-09-12確認。ユーザーの「最も安くて早い」追加指定を受け、通常のテキスト生成の単価を優先してGPT-5 nanoを採用する。Responses APIとStructured Outputsに対応し、100万トークンあたり入力$0.05・キャッシュ入力$0.005・出力$0.40。従来のGPT-5.6 Luna（入力$0.20・出力$1.20）に対して通常入力は1/4、出力は1/3の単価。
 
-- [モデル仕様](https://developers.openai.com/api/docs/models/gpt-5.6-luna)
+GPT-5 nanoは推論を完全には無効化できないため、最小の`minimal`を指定する。推論トークンも出力の費用と1,200トークン上限に含まれる。GPT-4.1 nanoは推論段階なしで低遅延だが入力単価は$0.10。このため「最安の単価」と「実際の最速」を同時に保証するものではない。総費用・応答時間・品質はキー設定後に #100 で測定する。
+
+新規採点と目標提案で新モデルを使う。既存の採点済み結果は再生成せず、以前のLunaへ固定済みの失敗再試行は`none`を維持する。Vercelに`SCORE_MODEL`を明示している場合は`gpt-5-nano`へ変更して再デプロイする。
+
+- [GPT-5 nanoのモデル・料金](https://developers.openai.com/api/docs/models/gpt-5-nano)
+- [GPT-4.1 nanoの低遅延と料金](https://developers.openai.com/api/docs/models/gpt-4.1-nano)
+- [従来のGPT-5.6 Lunaの料金](https://developers.openai.com/api/docs/models/gpt-5.6-luna)
+- [推論設定](https://developers.openai.com/api/reference/resources/responses/methods/create/)
 - [構造化出力](https://developers.openai.com/api/docs/guides/structured-outputs)
 - [データの扱い](https://developers.openai.com/api/docs/guides/your-data)
 

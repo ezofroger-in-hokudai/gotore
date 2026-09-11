@@ -95,6 +95,6 @@ FastAPIの `/docs`・`/redoc`・`/openapi.json` は今回の公開経路に含�
 
 ## SCOREの追加設定
 
-API更新前に `20260912010000_workout_scores.sql` と `20260912020000_personal_score_totals.sql` を対象のSupabaseへ適用します。既存データのリセットは不要です。Vercelの対象環境へAPI専用の `OPENAI_API_KEY` をSecretとして登録し、再デプロイしてください。`NEXT_PUBLIC_` を付けません。モデル既定値は `SCORE_MODEL=gpt-5.6-luna`、本人1日あたりの上限は `SCORE_DAILY_LIMIT=30` と `GOAL_PROPOSAL_DAILY_LIMIT=10` です。サンプルは [.env.vercel.example](../.env.vercel.example)。
+API更新前に `20260912010000_workout_scores.sql` と `20260912020000_personal_score_totals.sql` を対象のSupabaseへ適用します。既存データのリセットは不要です。Vercelの対象環境へAPI専用の `OPENAI_API_KEY` をSecretとして登録し、再デプロイしてください。`NEXT_PUBLIC_` を付けません。モデル既定値は `SCORE_MODEL=gpt-5-nano`、本人1日あたりの上限は `SCORE_DAILY_LIMIT=30` と `GOAL_PROPOSAL_DAILY_LIMIT=10` です。サンプルは [.env.vercel.example](../.env.vercel.example)。
 
 終了要求で数値の採点を保存し、画面から別のHTTP要求でAI採点を実行します。終了要求後のプロセス内バックグラウンド処理に依存しません。キー未設定でも記録は保存できます。AI評価の失敗・画面を閉じた場合は、本人の履歴詳細から再試行できます。実モデルの速度と判定品質を確認してからAI機能を公開してください。詳しくは [SCORE仕様](score-implementation.md)。

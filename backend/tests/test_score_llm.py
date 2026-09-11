@@ -62,7 +62,15 @@ def test_invalid_judgments_cannot_be_saved(ratings):
         )
 
 
-def test_openai_request_is_short_structured_and_not_stored():
+@pytest.mark.parametrize(
+    ("requested_model", "effort"),
+    [
+        ("gpt-5-nano", "minimal"),
+        ("gpt-5-nano-2025-08-07", "minimal"),
+        ("gpt-5.6-luna", "none"),
+    ],
+)
+def test_openai_request_is_short_structured_and_not_stored(requested_model, effort):
     calls = []
 
     def handle(request):
@@ -95,12 +103,13 @@ def test_openai_request_is_short_structured_and_not_stored():
         )
 
     with httpx.Client(transport=httpx.MockTransport(handle)) as client:
-        llm = ScoreLLM("test-key", "gpt-5.6-luna", client=client)
+        llm = ScoreLLM("test-key", requested_model, client=client)
         result, model = llm.evaluate(make_goal_input(snapshot()))
     assert model == "selected-snapshot"
     assert result["g"] is None
     assert calls[0]["store"] is False
-    assert calls[0]["reasoning"] == {"effort": "none"}
+    assert calls[0]["model"] == requested_model
+    assert calls[0]["reasoning"] == {"effort": effort}
     assert calls[0]["text"]["format"]["strict"] is True
     assert calls[0]["max_output_tokens"] <= 1200
     assert "tools" not in calls[0]
@@ -118,6 +127,6 @@ def test_refusal_or_incomplete_is_not_a_fake_comment():
             transport=httpx.MockTransport(lambda r: httpx.Response(200, json=response))
         ) as client:
             with pytest.raises(ValueError):
-                ScoreLLM("test-key", "gpt-5.6-luna", client=client).evaluate(
+                ScoreLLM("test-key", "gpt-5-nano", client=client).evaluate(
                     make_goal_input(snapshot())
                 )

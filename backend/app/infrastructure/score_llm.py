@@ -161,6 +161,9 @@ class ScoreLLM:
     def request(self, prompt: str, inputs: dict, schema: dict):
         if not self.key:
             raise ValueError("AIの接続設定を確認してください")
+        # GPT-5 nanoはnone非対応。以前のモデルに固定した再試行は従来の設定を保つ。
+        nano = self.model == "gpt-5-nano" or self.model.startswith("gpt-5-nano-")
+        effort = "minimal" if nano else "none"
         client = self.client or httpx.Client(timeout=15)
         try:
             response = client.post(
@@ -171,7 +174,7 @@ class ScoreLLM:
                     "instructions": prompt,
                     "input": json.dumps(inputs, ensure_ascii=False),
                     "store": False,
-                    "reasoning": {"effort": "none"},
+                    "reasoning": {"effort": effort},
                     "max_output_tokens": 1200,
                     "text": {
                         "format": {
