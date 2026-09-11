@@ -6,6 +6,7 @@ import {
   api,
 } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
+import { AnalyticsPanel } from "../analytics/panel";
 import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
 import { MembershipPanel } from "../training/membership-panel";
@@ -430,6 +431,7 @@ export function CommunityScreen({
   onChanged: () => void;
   onHome: () => void;
 }) {
+  const [analyticsTab, setAnalyticsTab] = useState<"feed" | "graph" | "ranking">("feed");
   const [mode, setMode] = useState<Mode>(initialDetail ? "detail" : "list");
   useEffect(() => {
     if (active) setMode(initialDetail ? "detail" : "list");
@@ -601,39 +603,78 @@ export function CommunityScreen({
               <h1>{group.name}</h1>
               {mode === "detail" && (
                 <>
-                  {activity.error ? (
-                    <p className="error" role="alert">
-                      {activity.error}
-                    </p>
-                  ) : (
-                    <>
-                      <div className="community-card detail-card">
-                        <CommunityStats
-                          data={activity.data}
-                          active={active}
-                          trusted={!activity.refreshing}
-                        />
-                        <span className="community-total">メンバー {group.members.length}人</span>
-                      </div>
-                      <div className="v2-rows">
-                        <button className="v2-row" type="button" onClick={() => change("members")}>
-                          メンバー一覧 <span>{group.members.length}人 ›</span>
-                        </button>
-                        <button className="v2-row" type="button" onClick={() => change("invite")}>
-                          メンバーを招待 <span>›</span>
-                        </button>
-                      </div>
-                      <h2>みんなの最新記録</h2>
-                      {activity.data && (
-                        <Feed
-                          key={activity.data.group_id}
-                          data={activity.data}
-                          active={active}
-                          trusted={!activity.refreshing}
-                        />
-                      )}
-                    </>
-                  )}
+                  <div className="analytics-tabs" aria-label="グループの表示">
+                    <button
+                      type="button"
+                      aria-pressed={analyticsTab === "feed"}
+                      onClick={() => setAnalyticsTab("feed")}
+                    >
+                      最新記録
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={analyticsTab === "graph"}
+                      onClick={() => setAnalyticsTab("graph")}
+                    >
+                      グラフ
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={analyticsTab === "ranking"}
+                      onClick={() => setAnalyticsTab("ranking")}
+                    >
+                      ランキング
+                    </button>
+                  </div>
+                  <div hidden={analyticsTab === "feed"}>
+                    <AnalyticsPanel
+                      key={selected}
+                      scope={`/groups/${selected}`}
+                      active={active && analyticsTab !== "feed"}
+                      prefetch={active}
+                      refreshKey={refreshKey}
+                      ranking={analyticsTab === "ranking"}
+                    />
+                  </div>
+                  <div hidden={analyticsTab !== "feed"}>
+                    {activity.error ? (
+                      <p className="error" role="alert">
+                        {activity.error}
+                      </p>
+                    ) : (
+                      <>
+                        <div className="community-card detail-card">
+                          <CommunityStats
+                            data={activity.data}
+                            active={active}
+                            trusted={!activity.refreshing}
+                          />
+                          <span className="community-total">メンバー {group.members.length}人</span>
+                        </div>
+                        <div className="v2-rows">
+                          <button
+                            className="v2-row"
+                            type="button"
+                            onClick={() => change("members")}
+                          >
+                            メンバー一覧 <span>{group.members.length}人 ›</span>
+                          </button>
+                          <button className="v2-row" type="button" onClick={() => change("invite")}>
+                            メンバーを招待 <span>›</span>
+                          </button>
+                        </div>
+                        <h2>みんなの最新記録</h2>
+                        {activity.data && (
+                          <Feed
+                            key={activity.data.group_id}
+                            data={activity.data}
+                            active={active}
+                            trusted={!activity.refreshing}
+                          />
+                        )}
+                      </>
+                    )}
+                  </div>
                   {group.owner_id === userId && (
                     <details className="group-management">
                       <summary>グループを管理</summary>
