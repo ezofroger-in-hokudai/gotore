@@ -1181,3 +1181,12 @@
 - 関連ファイル: scripts/benchmark_analytics.py、docs/loading-performance.md、docs/current-state.md、docs/images/history-analytics/。
 - 未解決事項: 最終E2EとPRのCI結果の確認。
 - 次のアクション: 画像付きPRを作成し、結果を追記する。
+
+## 2026-09-11 18:04
+- 変更内容: #97 の最終検証を完了。DBテストのセッション日付を固定し、実行日が変わっても集計対象から外れないよう修正。
+- 目的: 検証結果を再現可能にし、公開前の状態と残作業を正確に記録する。
+- 影響範囲: backend/tests/test_analytics_api.py のテスト準備のみ。アプリの最終コードは6ad0973から変更なし。
+- 検証: make check成功（backend160件、frontend37件、lint/型検査/build）。日付固定後の集計API6件も成功。明示起動した最新API/WebとNO_PROXY設定で最終make test-e2e全92件成功（4.5分）。ローカルSupabaseの追加migrationとdb-lint成功、git diff --check成功。
+- 片付け: 今回のAPI/Webと専用_test DBを停止。ユーザー起動のSupabase/Dockerは維持。元からあるnext-env.d.tsの内容を作業前バックアップへ戻し、PDF等の未追跡資料は変更・追加しない。
+- 未解決事項: pushは自動承認により拒否。originが公開リポジトリezofroger-in-hokudai/gotore・ADMIN権限であることと、今回のコード/テスト/資料/テスト用画像のみを含む差分を確認して再試行したが、「今回の全payload公開の明示承認がない」という理由で再度拒否された。push・PR作成・GitHub CI・公開DB適用・デプロイは未実施。
+- 次のアクション: ユーザーへ今回の変更の公開承認を確認し、承認後にpush・画像付きPR作成・CI確認を行う。仕様はdocs/history-analytics.md、画像と計測はdocs/images/history-analytics/README.md。SCOREは #13、既存BESTクエリ全般は #80。

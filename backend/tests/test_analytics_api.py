@@ -150,6 +150,11 @@ def test_active_sets_undo_and_heartbeat_projection(client, connection):
 
     group = create_group(client)
     session = start(client)
+    # セッション開始のDB時刻によらず、このテストの集計対象日へそろえる。
+    connection.execute(
+        "UPDATE public.gotore_workouts SET performed_on = '2026-09-11' WHERE id = %s",
+        (session["id"],),
+    )
     endpoint = f"/api/groups/{group['id']}/analytics?period=all&exercise=ベンチプレス"
     assert client.get(endpoint).json()["totals"]["sets"] == 0
     saved = save_session(client, session, weight=80, reps=8).json()
