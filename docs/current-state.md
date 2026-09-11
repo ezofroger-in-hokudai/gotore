@@ -38,12 +38,12 @@ Vercel Servicesでは1プロジェクトの共通ルートから各サービス�
 
 ## 後続で扱うもの
 
-SCORE、AI、スタンプ、コメント、Push通知、アカウント管理、公開環境へのデプロイ、Android／iOSアプリ。履歴グラフとグループ集計は #97 の範囲を追加（検証・PRの状態はprogress.md）。
+スタンプ、仲間へのコメント、Push通知、アカウント管理、公開環境へのデプロイ、Android／iOSアプリ。履歴グラフとグループ集計は #97 の範囲を追加（検証・PRの状態はprogress.md）。
 
 今週追加するものは、初版を使って確認した結果からIssueにします。
 GitHubのmain保護・レビュー必須設定は、管理者が設定状況を確認してください。
 
-#35（親#14）の追加仕様は [activity-heatmap.md](activity-heatmap.md)。表示する指標はセット数で、当時はSCORE・BEST・種目別推移を後続とした。v2ではBESTを追加し、#97で種目別の重量・推定1RM・セット数・総負荷の推移とグループランキングを追加。SCOREは #13 で算式を検討する。ヒートマップ単独の追加migrationは不要。検証・PRの状態はprogress.mdと週次計画#33で追跡する。
+#35（親#14）の追加仕様は [activity-heatmap.md](activity-heatmap.md)。表示する指標はセット数で、当時はSCORE・BEST・種目別推移を後続とした。v2ではBESTを追加し、#97で種目別の重量・推定1RM・セット数・総負荷の推移とグループランキングを追加。SCOREは #99 で #13 の算式を採用し、記録ごとの点数を追加する。ヒートマップ単独の追加migrationは不要。検証・PRの状態はprogress.mdと週次計画#33で追跡する。
 
 #28の追加仕様は [exercise-options.md](exercise-options.md)。公開前に追加migrationを適用する。候補を削除しても過去記録・下書きは保持する。検証とPRはprogress.md・週次計画#33で追跡する。
 
@@ -73,3 +73,7 @@ PR #64への追加指定では、次種目を左・次セットを右へ変更�
 ## 履歴グラフ・グループ集計
 
 #97 の合意仕様は [history-analytics.md](history-analytics.md)。個人の種目別推移、日/週/月集計、グループの量・活動・最高重量/RM・成長の比較を提供する。集計用の追加migration `20260911090000_workout_statistics.sql` を使用し、保存と同一トランザクションで記録ごとの集計を更新する。ブラウザでは先読みと容量を制限したキャッシュを使い、指標と粒度を通信なしに切り替える。
+
+## SCORE・個人目標・終了後の一言
+
+#99 の実装仕様は [score-implementation.md](score-implementation.md)。開始時の目標を固定し、終了後の内訳・AIの一言・ホームと履歴のスコアを追加。目標はAI提案を本人が確認・編集して保存する。目標・コメントは本人だけに表示する。追加migrationとAPI専用 `OPENAI_API_KEY`（AI利用時）が必要。記録保存と数値の内訳はキーなしでも動く。週月SCOREランキングの集約方法と実モデルの品質・速度検証は後続。検証・PRの状態はprogress.md。

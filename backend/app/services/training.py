@@ -5,6 +5,7 @@ from app.domain.activity import month_bounds, validate_activity_date
 from app.domain.identity import AuthenticatedUser
 from app.domain.workout import WorkoutInput, WorkoutUpdate
 from app.domain.workout_memo import WorkoutMemoInput
+from app.infrastructure.scores import ScoreRepository
 from app.infrastructure.training_repository import TrainingRepository
 from app.schemas.activity import ActivityDay, MonthlyActivity
 
@@ -66,15 +67,21 @@ class TrainingService:
                 raise ValueError("期間の開始日と終了日を正しく指定してください")
             validate_activity_date(date_from)
             validate_activity_date(date_to)
-        return self.repository.workouts(
+        records = self.repository.workouts(
             self.user.id, group_id, limit, offset, performed_on, date_from, date_to
         )
+        return ScoreRepository(self.repository.connection).attach(records, group_id)
 
     def shared_workout(self, group_id: UUID, workout_id: UUID):
-        return self.repository.shared_workout(self.user.id, group_id, workout_id)
+        record = self.repository.shared_workout(self.user.id, group_id, workout_id)
+        return ScoreRepository(self.repository.connection).attach([record], group_id)[0]
 
     def update_workout(self, workout_id: UUID, workout: WorkoutUpdate):
-        return self.repository.update_workout(self.user.id, workout_id, workout)
+        with self.repository.connection.transaction():
+            record = self.repository.update_workout(self.user.id, workout_id, workout)
+            scores = ScoreRepository(self.repository.connection)
+            row = scores.prepare(record, refresh=True)
+            return {**record, "score": scores.present(row, record["revision"])}
 
     def delete_workout(self, workout_id: UUID, expected_revision: int):
         return self.repository.delete_workout(self.user.id, workout_id, expected_revision)

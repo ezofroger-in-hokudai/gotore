@@ -22,7 +22,7 @@ class ScoreWeights(BaseModel):
 
     @model_validator(mode="after")
     def sum_to_100(self):
-        if sum(self.model_dump().values()) != 100:
+        if self.c + self.i + self.v + self.g != 100:
             raise ValueError("配点の合計は100%にしてください")
         return self
 

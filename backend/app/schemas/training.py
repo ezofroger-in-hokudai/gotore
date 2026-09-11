@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.domain.workout import Exercise
+from app.schemas.score import ScoreSummary
 
 
 class GroupCreate(BaseModel):
@@ -49,6 +50,7 @@ class GroupDetail(GroupResponse):
 
 
 class WorkoutResponse(BaseModel):
+    score: ScoreSummary | None = None
     started_at: datetime | None = None
     ended_at: datetime | None = None
     shared_group_ids: list[UUID] = Field(default_factory=list)
