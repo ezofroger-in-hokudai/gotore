@@ -6,9 +6,9 @@ export function useResource<T>(
   refreshKey = 0,
   poll = false,
   remember = false,
-  options: { enabled?: boolean; retainOnRefresh?: boolean } = {},
+  options: { enabled?: boolean; retainOnRefresh?: boolean; prefetch?: boolean } = {},
 ) {
-  const { enabled = true, retainOnRefresh = false } = options;
+  const { enabled = true, retainOnRefresh = false, prefetch = false } = options;
   const cache = useRef({
     version: refreshKey,
     pages: new Map<string, { data: T; savedAt: number }>(),
@@ -25,7 +25,7 @@ export function useResource<T>(
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存後・再試行の操作でも再取得する。
   useEffect(() => {
     // 非表示中の無効化は再訪時に処理し、同じ種目の比較・メモを更新中も保持する。
-    if (!enabled) {
+    if (!enabled && !prefetch) {
       setLoading(false);
       return;
     }
@@ -50,7 +50,7 @@ export function useResource<T>(
     const controller = new AbortController();
     let pending = false;
     const load = async () => {
-      if (pending || (poll && document.hidden)) return;
+      if (pending || ((poll || prefetch) && document.hidden)) return;
       pending = true;
       setLoading(true);
       try {
@@ -91,7 +91,7 @@ export function useResource<T>(
       if (timer) window.clearInterval(timer);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [path, refreshKey, retryKey, poll, remember, enabled, retainOnRefresh]);
+  }, [path, refreshKey, retryKey, poll, remember, enabled, retainOnRefresh, prefetch]);
   return {
     data:
       result?.path === path && (!remember || retainOnRefresh || result.version === refreshKey)

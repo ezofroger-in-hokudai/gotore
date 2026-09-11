@@ -1034,3 +1034,57 @@
 - 検証: 初回CIは75件成功・1件失敗。失敗は64行の未送信確認で、実際には同期済みだった。times: 1がGETでも消費されることや自動再送により観測前に復旧できる点を修正し、PATCHだけを未送信確認まで失敗させる。既存CIの失敗を先行証拠とし、変更後の実Supabase共有E2E1件・frontend lint・型検査が成功。
 - 未解決事項: 最新コミットの全CI確認と第三者レビュー。初回CIのbackend・frontend・プレビューは成功。
 - 次のアクション: 修正を同じPRへpushし、全CI結果をPRと週次計画へ記録する。再検証用Web/APIを停止し、next-env.d.tsは開始時の内容へ復元した。
+
+## 2026-09-11 03:32
+- 変更内容: ユーザーが追加した#92・#93を確認し、最新main 604dd40から修正ブランチを作成した。PR #91はマージ済みで、現在の公開PRは0件。
+- 目的: 共有詳細を閉じた後の表示消失と、詳細の読み込み待ちを改善する。
+- 影響範囲: 共有画面の状態・読み取り。既存の未コミットファイルを保持する。
+- 関連ファイル: task.md、frontend/src/features/v2/workspace.tsx、community.tsx、shared-workout-detail.tsx、sheet.tsx、docs/loading-performance.md。
+- 未解決事項: #92の再現と原因確認、#93の先読み対象の回答待ち。
+- 次のアクション: #92を先行回帰テストで再現して修正し、#93の対象が決まり次第、仕様と取得方式を具体化する。
+
+## 2026-09-11 03:38
+- 変更内容: #92のホーム選択を現在の履歴項目にも反映する修正を実装した。
+- 目的: 詳細を閉じる・戻るで古いグループへ切り替わり、仲間の記録が消える問題を防ぐ。
+- 影響範囲: ホームの履歴状態。履歴項目は増やさない。
+- 関連ファイル: frontend/src/features/v2/workspace.tsx、frontend/tests/e2e/shared-detail-navigation.spec.ts、docs/gotore-v2-spec.md。
+- 検証: 先行2件が選択消失で失敗し、変更後は閉じる・戻る・進むを含むグループE2E8件成功。
+- 未解決事項: #93と併せた全体検証・CI・レビュー。
+- 次のアクション: ユーザーが#93を「表示中の仲間の詳細を先読みし、LIVEを優先更新」と指定し、閲覧・記録・履歴の操作待ち削減も追加依頼した。詳細の先読み・再利用、履歴の事前取得、通信待ち中の記録画面への遷移を実装・計測する。
+
+## 2026-09-11 03:56
+- 変更内容: #93の共有詳細先読み・メモリ再利用・LIVE優先更新、履歴とカレンダーの事前取得、復元待ち中の記録画面への遷移を実装した。
+- 目的: 閲覧・記録・履歴の操作後に利用者が待つ時間を減らす。
+- 影響範囲: Webの読み取りと表示。API・DB・保存キュー・共有認可は既存処理を使う。詳細は画面内と120px近傍、最大20件・60秒・同時2件に限定し、タップした詳細を優先する。
+- 関連ファイル: frontend/src/features/v2/use-shared-workout-details.ts、community.tsx、shared-workout-detail.tsx、history.tsx、workspace.tsx、frontend/src/features/training/use-resource.ts、frontend/src/features/activity/activity-calendar.tsx、frontend/tests/e2e/shared-detail-performance.spec.ts、frontend/scripts/benchmark-navigation-loading.ts、docs/loading-performance.md、docs/images/navigation-loading/。
+- 検証: 先行3件の失敗後に成功。先読みの同時上限・重複排除・画面外抑制・タップ優先、再確認失敗時の非表示を追加確認。実Supabaseを含むmake test-e2e全83件成功。lint・backend150件・frontend29件・型検査成功。計測スクリプトの配列型不足は型検査で検出し、明示型を付けて解消した。
+- 比較: 変更前main604dd40と同じLinux/Chromium・390×844・600msの模擬API遅延で、初回を除く各5回の中央値は詳細866→68ms、履歴935→78ms。ホーム表示から2.2秒待った先読み完了後の比較。開く前の詳細／履歴／カレンダー要求は各0→各1、再確認までの合計は各1→各2で、通信総数の減少とは扱わない。本番・実機の改善率は未測定。
+- 未解決事項: 最終make checkのビルド、PRのCI・レビュー。サーバー自体の遅延や大量履歴の計算・未送信キュー容量は既存#80・#77で継続する。
+- 次のアクション: 共通検証を完了し、#92と併せて画像・比較結果付きPRを作成する。比較用の一時チェックアウトとWebは片付け済み。検証用Web/APIは停止した。
+
+## 2026-09-11 03:57
+- 変更内容: #92・#93の最終make checkと全E2E、比較・確認画像を整理した。
+- 目的: ユーザーの使用後改善をレビュー可能にする。
+- 影響範囲: Webのみ。API・DB migration・依存追加なし。
+- 関連ファイル: docs/loading-performance.md、docs/gotore-v2-spec.md、progress.md、fix/92-93-shared-detail-navigation-loading。
+- 検証: 最終make check成功（backend150件、frontend29件、lint・型検査・build）、実Supabaseを含む全E2E83件成功、git diff --check成功。詳細と履歴の確認画像を目視確認。
+- 未解決事項: PRのCIと第三者レビュー。実機・本番の速度改善率は未測定。
+- 次のアクション: 同じリポジトリのmain向けに画像・比較結果付きPRを作り、#92・#93・週次計画#33へURLとCI結果を記録する。検証用Web/API/一時DBは停止し、next-env.d.tsを開始時の内容へ戻した。ユーザーの未コミットPDF・画像などは保持した。
+
+## 2026-09-11 04:04
+- 変更内容: #93で開いている記録が最新フィードから外れた場合も、詳細APIの5秒再確認を継続するよう補強した。
+- 目的: 仲間が新しいトレーニングを始めた後でも、閲覧中の古い記録の共有解除・削除を検出する。
+- 影響範囲: 最新ではない記録を開いている間の読み取り。通常の終了済み記録はフィード更新で確認する。
+- 関連ファイル: frontend/src/features/v2/use-shared-workout-details.ts、frontend/tests/e2e/shared-detail-performance.spec.ts、frontend/scripts/benchmark-navigation-loading.ts、docs/loading-performance.md、docs/gotore-v2-spec.md。
+- 検証: 先行追加テストで共有解除後も表示が残る失敗を確認し、補強後は成功。再実行中に別の先読み件数テストが揺れ、traceでreload前の旧ページの中断された先読み2件を計数していたことを確認した。モック差替え前に設定画面へ移動して先読みを停止する準備へ変更し、共有詳細・先読み8件すべて成功。比較スクリプトにも同じ準備を適用した。
+- 未解決事項: 補強後のmake check、全84件のCIと第三者レビュー。補強前のローカル全83件は成功。
+- 次のアクション: 最終共通検証後にPR #94へ追加pushし、最新コミットのCIで全件を確認する。再検証用Web/APIは停止した。
+
+## 2026-09-11 04:06
+- 変更内容: #93の共有再確認補強後の標準検証を完了した。
+- 目的: 共有範囲を維持した高速化をPRへ引き継ぐ。
+- 影響範囲: 最新フィードから外れた記録の読み取りとテスト準備。
+- 関連ファイル: progress.md、PR #94。
+- 検証: make check成功（backend150件・frontend29件・lint・型検査・build）。補強前のPR CIは全成功、補強後の共有・先読み8件もローカル成功。
+- 未解決事項: 追加コミットのCIで全84件を確認する。第三者レビューと実機の体感確認。
+- 次のアクション: 補強を同じPRへpushし、最新CI結果をPR・#92・#93・週次#33へ記録する。今回の検証用Web/API/DBを停止し、開始時のnext-env.d.tsを復元した。

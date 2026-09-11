@@ -12,6 +12,7 @@ export function ActivityCalendar({
   onSelect,
   refreshKey,
   active = true,
+  prefetch = false,
 }: {
   month: string;
   onMonthChange: (value: string) => void;
@@ -19,6 +20,7 @@ export function ActivityCalendar({
   onSelect: (value: string) => void;
   refreshKey: number;
   active?: boolean;
+  prefetch?: boolean;
 }) {
   const currentDay = today();
   const currentMonth = currentDay.slice(0, 7);
@@ -27,7 +29,7 @@ export function ActivityCalendar({
     refreshKey,
     false,
     true,
-    { enabled: active },
+    { enabled: active, prefetch, retainOnRefresh: true },
   );
   const days = new Map(activity.data?.days.map((day) => [day.date, day]));
 

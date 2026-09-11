@@ -14,6 +14,7 @@ import { Avatar } from "./avatar";
 import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
+import { useSharedWorkoutDetails } from "./use-shared-workout-details";
 
 export function CommunityHome({
   groups,
@@ -297,6 +298,7 @@ function Feed({
 }: { data: GroupActivity; active: boolean; trusted: boolean }) {
   const clock = useLiveClock(data, active, trusted);
   const [opened, setOpened] = useState<string | null>(null);
+  const details = useSharedWorkoutDetails(data, active && trusted, opened);
   const previous = useRef<Map<string, string> | null>(null);
   const [arrived, setArrived] = useState<string[]>([]);
   useEffect(() => {
@@ -322,7 +324,7 @@ function Feed({
   }, [data.feed, active, trusted]);
   return (
     <>
-      <div className="community-feed">
+      <div className="community-feed" ref={details.root}>
         {!data.feed.length && (
           <p className="muted feed-empty">まだ記録がありません。最初のセットを残しましょう。</p>
         )}
@@ -333,6 +335,7 @@ function Feed({
             <article
               className={`feed-item${live ? " feed-live" : ""}${arrived.includes(item.user_id) ? " feed-arrived" : ""}`}
               key={item.user_id}
+              data-workout-id={item.workout_id}
             >
               <div className="section-heading">
                 <div className="feed-person">
@@ -391,8 +394,7 @@ function Feed({
       {opened && active && (
         <SharedWorkoutDetail
           key={`${data.group_id}:${opened}`}
-          groupId={data.group_id}
-          workoutId={opened}
+          record={details}
           onClose={() => setOpened(null)}
         />
       )}
