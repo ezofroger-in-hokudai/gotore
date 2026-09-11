@@ -27,7 +27,6 @@ TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55439/gotore_recovery_test bac
 | SCOREの保存を含む終了 | 36.45ms | 42.76ms |
 | 保存済み本人スコアの取得 | 4.00ms | 4.64ms |
 | 50記録へのスコア要約付与（採点済み1件） | 0.88ms | 1.25ms |
-
 | 月別最高SCOREの取得 | 0.69ms | 1.31ms |
 
 Repositoryの処理時間であり、HTTP/Auth/LLMの待ち時間と本番の負荷は含まない。実モデルの速度・費用・判定品質はAPIキー未設定のため未測定。
