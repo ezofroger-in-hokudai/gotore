@@ -75,10 +75,10 @@ async function activityFixture(page: Page) {
 test("SCOREヒートマップから日付を選び、日別記録を50件ずつ確認する", async ({ page }) => {
   await activityFixture(page);
   const day = page.getByRole("button", { name: "2024年2月29日、96点、51件", exact: true });
-  await expect(day).toHaveAttribute("data-score-level", "5");
+  await expect(day).toHaveAttribute("data-score", "96");
   await expect(
     page.getByRole("button", { name: "2024年2月1日、70点、2件", exact: true }),
-  ).toHaveAttribute("data-score-level", "3");
+  ).toHaveAttribute("data-score", "70");
   await day.focus();
   await page.keyboard.press("Enter");
   await expect(day).toHaveAttribute("aria-pressed", "true");

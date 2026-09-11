@@ -1,5 +1,6 @@
 import type { ScoreDetail, Workout } from "@/lib/api";
-import { ScoreBreakdown, scoreLevel, scoreText } from "./score-display";
+import { scoreAppearance } from "./score-colors";
+import { ScoreBreakdown, scoreText } from "./score-display";
 
 export function WorkoutResult({
   record,
@@ -24,7 +25,7 @@ export function WorkoutResult({
     <section
       className="workout-result"
       aria-label="トレーニング結果"
-      data-score-level={scoreLevel(score?.status === "stale" ? null : score?.total)}
+      style={scoreAppearance(score?.status === "stale" ? null : score?.total)}
     >
       <p className="result-eyebrow">TRAINING COMPLETE</p>
       <h1>おつかれさまでした。</h1>

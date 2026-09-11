@@ -1,7 +1,7 @@
 "use client";
 
 import type { MonthlyActivity } from "@/lib/api";
-import { scoreLevel } from "../score/score-display";
+import { scoreAppearance, scoreGradient } from "../score/score-colors";
 import { today } from "../training/draft";
 import { useResource } from "../training/use-resource";
 import { calendarDays, dateLabel, shiftMonth } from "./calendar";
@@ -128,7 +128,8 @@ export function ActivityCalendar({
                 key={day}
                 type="button"
                 className="activity-day"
-                data-score-level={future ? 0 : scoreLevel(score)}
+                data-score={future ? "pending" : (score ?? "pending")}
+                style={scoreAppearance(future ? null : score)}
                 data-pending={!!counts && score === null}
                 disabled={future || !activity.data}
                 aria-label={`${dateLabel(day)}、${future ? "未来の日付" : !activity.data ? "未取得" : `${label}、${counts?.workout_count ?? 0}件`}`}
@@ -150,13 +151,19 @@ export function ActivityCalendar({
             );
           })}
         </div>
-        <div className="activity-legend" aria-label="色の凡例（SCORE）">
-          {["未評価", "0〜49", "50〜69", "70〜84", "85〜94", "95〜100"].map((label, level) => (
-            <span key={label}>
-              <span className="heat-swatch" data-score-level={level} aria-hidden="true" />
-              {label}
-            </span>
-          ))}
+        <div className="activity-legend score-legend" aria-label="色の凡例（SCORE）">
+          <span>
+            <span className="heat-swatch" style={scoreAppearance(null)} aria-hidden="true" />
+            未記録・計測中
+          </span>
+          <div className="score-gradient-legend">
+            <span style={{ background: scoreGradient }} aria-hidden="true" />
+            <div>
+              <span>0点</span>
+              <span>50点</span>
+              <span>100点</span>
+            </div>
+          </div>
         </div>
         {activity.data?.workout_count === 0 && <p className="muted">この月は記録なし</p>}
       </>

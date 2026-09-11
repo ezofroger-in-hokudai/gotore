@@ -120,11 +120,11 @@ test("履歴をホームで準備し、再確認待ちでも一覧とカレン�
       json: {
         month: "2026-09",
         metric: "score",
-        best_score: null,
+        best_score: 88,
         total_sets: 1,
         workout_count: 1,
         active_days: 1,
-        days: [{ date: "2026-09-11", set_count: 1, workout_count: 1 }],
+        days: [{ date: "2026-09-11", score: 88, set_count: 1, workout_count: 1 }],
       },
     });
   });
@@ -135,7 +135,7 @@ test("履歴をホームで準備し、再確認待ちでも一覧とカレン�
   try {
     await navigate(page, "履歴");
     await expect(page.locator(".history-row")).toContainText("ベンチプレス");
-    await expect(page.locator(".activity-totals")).toContainText("1セット");
+    await expect(page.locator(".activity-totals")).toContainText("最高SCORE88点");
     await page.screenshot({ path: "test-results/history-prefetch.png", fullPage: true });
   } finally {
     release();

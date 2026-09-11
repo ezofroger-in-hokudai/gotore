@@ -1659,31 +1659,7 @@
   padding-top: 8px;
 }
 
-/* 同じ得点帯をホーム・終了結果・カレンダーで共用する。 */
-[data-score-level="0"] {
-  --score-bg: #e8e9ed;
-  --score-ink: #505564;
-}
-[data-score-level="1"] {
-  --score-bg: #fbe9ea;
-  --score-ink: #7f2332;
-}
-[data-score-level="2"] {
-  --score-bg: #f7c8ce;
-  --score-ink: #7f1b2c;
-}
-[data-score-level="3"] {
-  --score-bg: #ee8a98;
-  --score-ink: #521220;
-}
-[data-score-level="4"] {
-  --score-bg: #cf2947;
-  --score-ink: #ffffff;
-}
-[data-score-level="5"] {
-  --score-bg: #a9082e;
-  --score-ink: #ffffff;
-}
+/* 得点色はscore-colors.tsで共用し、文字は背景に応じて読みやすくする。 */
 .score-badge {
   padding: 3px 7px;
   border-radius: 4px;
@@ -1727,7 +1703,7 @@
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
-.feed-record-row > .score-badge[data-score-level="0"] strong {
+.feed-record-row > .score-badge[data-score="pending"] strong {
   font-size: 12px;
 }
 .result-score {
@@ -1801,4 +1777,23 @@
 .workout-result .result-comment {
   margin-top: 8px;
   padding-top: 8px;
+}
+
+.score-legend {
+  align-items: center;
+  gap: 14px;
+}
+.score-gradient-legend {
+  flex: 1;
+  min-width: 140px;
+}
+.score-gradient-legend > span {
+  display: block;
+  height: 10px;
+  border-radius: 3px;
+}
+.score-gradient-legend > div {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
 }

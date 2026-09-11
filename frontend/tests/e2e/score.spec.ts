@@ -201,7 +201,7 @@ test("確定スコアと一言がスマートフォン幅で読めて、仲間�
   const points = await page.locator(".feed-item .score-badge").boundingBox();
   const entry = await page.locator(".feed-item .feed-value").boundingBox();
   expect(points && entry && points.x > entry.x + entry.width).toBeTruthy();
-  await expect(page.locator(".feed-item .score-badge")).toHaveAttribute("data-score-level", "4");
+  await expect(page.locator(".feed-item .score-badge")).toHaveAttribute("data-score", "88");
   await expect(page.getByText(goal.body, { exact: true })).toHaveCount(0);
   await expect(page.getByText(completed.comment, { exact: true })).toHaveCount(0);
   await page.screenshot({

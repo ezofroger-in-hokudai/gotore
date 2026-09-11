@@ -36,9 +36,18 @@ test("確定総合点・未導入の記録・訂正後の状態を区別する",
   ).toContain("記録変更あり");
 });
 
-test("共通の色は未評価と0点を区別し、固定した得点帯で切り替える", async () => {
-  const { scoreLevel } = await import("../../src/features/score/score-display");
-  expect([null, 0, 49, 50, 69, 70, 84, 85, 94, 95, 100].map(scoreLevel)).toEqual([
-    0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5,
-  ]);
+test("得点色は青から緑・暖色を通って赤へ連続し、未評価は灰色で0点と区別する", async () => {
+  const { scoreAppearance, scoreGradient } = await import("../../src/features/score/score-colors");
+  const background = (value: number | null) =>
+    scoreAppearance(value)["--score-bg" as keyof ReturnType<typeof scoreAppearance>];
+  expect(background(null)).toBe("rgb(232, 233, 237)");
+  expect(background(0)).toBe("rgb(36, 106, 211)");
+  expect(background(100)).toBe("rgb(217, 35, 46)");
+  expect(background(74)).not.toBe(background(75));
+  expect(scoreGradient).toContain("rgb(87, 173, 131)");
+  for (let score = 0; score <= 100; score++) {
+    const channels = String(background(score)).match(/\d+/g)?.map(Number) ?? [];
+    // 紫の主成分である赤・青が同時に緑を大きく上回る色を入れない。
+    expect(channels[0] > channels[1] + 30 && channels[2] > channels[1] + 30).toBe(false);
+  }
 });
