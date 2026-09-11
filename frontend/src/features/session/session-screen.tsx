@@ -1,13 +1,22 @@
 "use client";
 
-import type { ExerciseContext, ExerciseOption, SessionBests, TrainingSession } from "@/lib/api";
+import type { ExerciseOption, SessionBests, TrainingSession } from "@/lib/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
-import { bestUpdate, estimatedRM, readSessionInput, setValue, updateSet } from "./session";
+import {
+  type SessionInput,
+  bestUpdate,
+  emptyInput,
+  estimatedRM,
+  readSessionInput,
+  setValue,
+  updateSet,
+} from "./session";
+import { useExerciseContext } from "./use-exercise-context";
 import type { SessionController } from "./use-session";
 
 export function SessionScreen({
@@ -25,8 +34,9 @@ export function SessionScreen({
 }) {
   const { session } = controller;
   const catalog = useResource<ExerciseOption[]>("/exercise-options", 0, false, true);
-  const [starting, setStarting] = useState(false);
-  const [selectedName, setSelectedName] = useState("");
+  const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
+  const [choosing, setChoosing] = useState(true);
+  const draftReps = useRef<HTMLInputElement>(null);
   if (!session)
     return (
       <section className="start-training">
@@ -38,23 +48,64 @@ export function SessionScreen({
           type="button"
           disabled={!controller.ready || controller.busy}
           onClick={() => {
-            setStarting(true);
             void controller.start().catch(() => {});
           }}
         >
           {controller.busy ? "開始中…" : "トレーニングを開始"}
         </button>
-        {starting && (
-          <div className="v2-rows" aria-label="開始中の種目選択">
+        <p className="muted" aria-live="polite">
+          {controller.busy
+            ? "開始を確認しています。待っている間も入力できます。"
+            : "種目と数値を先に準備できます。"}
+        </p>
+        {draft.name && !choosing ? (
+          <div className="set-entry">
+            <div className="section-heading">
+              <h2>{draft.name}</h2>
+              <button className="text-button" type="button" onClick={() => setChoosing(true)}>
+                種目を変更
+              </button>
+            </div>
+            <div className="wheels">
+              <NumberWheel
+                label="重量"
+                unit="kg"
+                value={draft.weight}
+                step={2.5}
+                min={0}
+                onEnter={() => {
+                  draftReps.current?.focus();
+                  draftReps.current?.select();
+                }}
+                onChange={(weight) => setDraft({ ...draft, weight, dirty: true })}
+              />
+              <NumberWheel
+                label="回数"
+                unit="回"
+                value={draft.reps}
+                step={1}
+                min={1}
+                inputRef={draftReps}
+                onChange={(reps) => setDraft({ ...draft, reps, dirty: true })}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="v2-rows" aria-label="開始前の種目選択">
             {catalog.data?.map((option) => (
               <button
                 key={option.id}
                 type="button"
                 className="v2-row"
-                aria-pressed={selectedName === option.name}
-                onClick={() => setSelectedName(option.name)}
+                aria-pressed={draft.name === option.name}
+                onClick={() => {
+                  setDraft(
+                    draft.name === option.name ? draft : { ...emptyInput, name: option.name },
+                  );
+                  setChoosing(false);
+                }}
               >
-                {option.name} {selectedName === option.name ? "✓" : ""}
+                {option.name} {draft.name === option.name ? "✓" : ""}
               </button>
             ))}
             {!catalog.data && <p className="muted">{catalog.error || "種目を読み込み中…"}</p>}
@@ -75,12 +126,12 @@ export function SessionScreen({
       controller={controller}
       userId={userId}
       onFinished={() => {
-        setStarting(false);
-        setSelectedName("");
+        setDraft({ ...emptyInput });
+        setChoosing(true);
         onFinished();
       }}
       haptic={haptic}
-      initialName={selectedName}
+      initialInput={draft}
       catalog={catalog}
     />
   );
@@ -93,12 +144,12 @@ function ActiveTraining({
   userId,
   onFinished,
   haptic,
-  initialName,
+  initialInput,
   catalog,
 }: {
   active: boolean;
   session: TrainingSession;
-  initialName: string;
+  initialInput: SessionInput;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
   controller: SessionController;
   userId: string;
@@ -109,9 +160,9 @@ function ActiveTraining({
   const [input, setInput] = useState(() => {
     try {
       const saved = readSessionInput(localStorage.getItem(storageKey));
-      return saved.name ? saved : { ...saved, name: initialName };
+      return saved.name ? saved : { ...initialInput, revision: session.revision };
     } catch {
-      return readSessionInput(null);
+      return { ...initialInput, revision: session.revision };
     }
   });
   const [selecting, setSelecting] = useState(!input.name);
@@ -142,20 +193,18 @@ function ActiveTraining({
       ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
       : [],
   );
-  const context = useResource<ExerciseContext>(
-    input.name
-      ? `/exercises/context?name=${encodeURIComponent(input.name)}&session_id=${session.id}`
-      : null,
-    controller.confirmedRevision,
-    false,
-    true,
-    { enabled: active, retainOnRefresh: true },
-  );
-  const sets = session.exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
-  const previous = context.data?.previous?.sets ?? [];
   const names = Array.from(
     new Set([...(catalog.data ?? []).map((e) => e.name), ...session.exercises.map((e) => e.name)]),
   );
+  const context = useExerciseContext(
+    session.id,
+    input.name,
+    names.filter((name) => name !== input.name && (!selecting || name.includes(query.trim()))),
+    controller.confirmedRevision,
+    active,
+  );
+  const sets = session.exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
+  const previous = context.data?.previous?.sets ?? [];
 
   const latestInput = useRef(input);
   latestInput.current = input;

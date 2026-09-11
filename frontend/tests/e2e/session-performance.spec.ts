@@ -13,12 +13,14 @@ for (const destination of ["ホーム", "設定"]) {
     await page.getByRole("button", { name: "種目メモを編集", exact: true }).click();
     await page.getByRole("textbox", { name: "種目メモ", exact: true }).fill("種目の下書き");
     let contexts = 0;
+    let allContexts = 0;
     let releaseContext = () => {};
     const contextGate = new Promise<void>((resolve) => {
       releaseContext = resolve;
     });
     await page.route("**/api/exercises/context?**", async (route) => {
-      contexts++;
+      allContexts++;
+      if (new URL(route.request().url()).searchParams.get("name") === "ベンチプレス") contexts++;
       await contextGate;
       return route.fulfill({
         json: {
@@ -48,7 +50,7 @@ for (const destination of ["ホーム", "設定"]) {
       await expect.poll(() => state.saves).toBe(1);
       await expect(page.locator(".sync-status")).toContainText("同期済み");
       await page.waitForTimeout(250);
-      expect(contexts).toBe(0);
+      expect(allContexts).toBe(0);
       await navigate(page, "記録");
       await expect.poll(() => contexts).toBe(1);
       await expect(page.locator(".personal-bests")).toContainText("80");

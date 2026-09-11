@@ -95,7 +95,9 @@ test("終了を待っていることを表示し、失敗時は保存済みセ�
   await page.getByRole("button", { name: "終了する", exact: true }).tap();
   await expect.poll(() => state.finished.length).toBe(1);
   await navigate(page, "履歴");
-  await expect(page.getByText("ベンチプレス", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.locator(".history-row").getByText("ベンチプレス", { exact: true }),
+  ).toBeVisible();
 });
 
 test("最高記録の赤色と炎はサーバー保存の確定後に表示する", async ({ page }) => {
