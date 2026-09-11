@@ -26,6 +26,7 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
 - [history-analytics.md](history-analytics.md): 種目別の履歴グラフ、グループの推移・ランキングと集計・先読み。
+- [score.md](score.md): SCOREの計算式・基準回・目標・採点保存の設計案。初版への採用と実装状況は [score-implementation.md](score-implementation.md) を参照。
 - [activity-heatmap.md](activity-heatmap.md): セット数の月別ヒートマップと日別記録。
 - [exercise-options.md](exercise-options.md): 本人用の種目リスト、選択入力、追加・削除と履歴保持。
 - [../README.md](../README.md): 初回セットアップ、日々の開発、環境変数、migration、検証の共通手順。
