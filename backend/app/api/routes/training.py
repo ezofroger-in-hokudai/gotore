@@ -84,9 +84,11 @@ def workouts(
     limit: Limit = 50,
     offset: Offset = 0,
     performed_on: date | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
 ):
     try:
-        return service.workouts(None, limit, offset, performed_on)
+        return service.workouts(None, limit, offset, performed_on, date_from, date_to)
     except ValueError as error:
         raise HTTPException(422, str(error)) from None
 

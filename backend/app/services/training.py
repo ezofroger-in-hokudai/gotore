@@ -51,11 +51,24 @@ class TrainingService:
         )
 
     def workouts(
-        self, group_id: UUID | None, limit: int, offset: int, performed_on: date | None = None
+        self,
+        group_id: UUID | None,
+        limit: int,
+        offset: int,
+        performed_on: date | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ):
         if performed_on is not None:
             validate_activity_date(performed_on)
-        return self.repository.workouts(self.user.id, group_id, limit, offset, performed_on)
+        if date_from is not None or date_to is not None:
+            if date_from is None or date_to is None or date_from > date_to or performed_on:
+                raise ValueError("期間の開始日と終了日を正しく指定してください")
+            validate_activity_date(date_from)
+            validate_activity_date(date_to)
+        return self.repository.workouts(
+            self.user.id, group_id, limit, offset, performed_on, date_from, date_to
+        )
 
     def shared_workout(self, group_id: UUID, workout_id: UUID):
         return self.repository.shared_workout(self.user.id, group_id, workout_id)
