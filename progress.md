@@ -1190,3 +1190,12 @@
 - 片付け: 今回のAPI/Webと専用_test DBを停止。ユーザー起動のSupabase/Dockerは維持。元からあるnext-env.d.tsの内容を作業前バックアップへ戻し、PDF等の未追跡資料は変更・追加しない。
 - 未解決事項: pushは自動承認により拒否。originが公開リポジトリezofroger-in-hokudai/gotore・ADMIN権限であることと、今回のコード/テスト/資料/テスト用画像のみを含む差分を確認して再試行したが、「今回の全payload公開の明示承認がない」という理由で再度拒否された。push・PR作成・GitHub CI・公開DB適用・デプロイは未実施。
 - 次のアクション: ユーザーへ今回の変更の公開承認を確認し、承認後にpush・画像付きPR作成・CI確認を行う。仕様はdocs/history-analytics.md、画像と計測はdocs/images/history-analytics/README.md。SCOREは #13、既存BESTクエリ全般は #80。
+
+## 2026-09-11 18:08
+- 変更内容: ユーザーから「prまでお願いします」と、今回の変更のpush・画像付きPR作成の承認を受領。公開待ちを解消し、既存の実装・画像・検証資料をPRへまとめる。
+- 目的: #97 の実装をmain向けのレビュー可能な変更として共有する。
+- 影響範囲: feat/97-history-analyticsの公開とPR。アプリコード・検証済み動作は変更しない。
+- 関連ファイル: progress.md、docs/images/history-analytics/README.md。
+- 検証: 前回のmake check（backend160件、frontend37件）、最終E2E92件の成功を引き継ぐ。今回は履歴追記のみのため新しいアプリテストは追加せず、git diff --checkを確認する。
+- 未解決事項: 作成後のGitHub CIとレビューの確認。マージ・公開DBへのmigration適用・デプロイは今回の依頼範囲に含めない。
+- 次のアクション: push、画像付きPRの作成、CI結果の確認。PR番号と結果はPR・週次計画 #33 にも記録する。
