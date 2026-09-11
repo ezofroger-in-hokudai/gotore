@@ -3,6 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { resourceRequest } from "../training/resource-request";
 import { memberIsLive } from "./live-presence";
 
+function feedVersion(item?: GroupActivity["feed"][number]) {
+  return item ? JSON.stringify([item.updated_at, item.score]) : "";
+}
+
 type Entry = {
   version: string;
   data: Workout | null;
@@ -100,7 +104,7 @@ export function useSharedWorkoutDetails(
         Number(live.has(feed.get(b)?.user_id || "")) - Number(live.has(feed.get(a)?.user_id || "")),
     );
     for (const [id, entry] of entries.current) {
-      if ((!feed.has(id) && id !== opened) || entry.version !== (feed.get(id)?.updated_at || "")) {
+      if ((!feed.has(id) && id !== opened) || entry.version !== feedVersion(feed.get(id))) {
         entry.controller?.abort();
         entries.current.delete(id);
       }
@@ -119,7 +123,7 @@ export function useSharedWorkoutDetails(
       }
     }
     for (const id of ids.slice(0, 20)) {
-      const version = feed.get(id)?.updated_at || "";
+      const version = feedVersion(feed.get(id));
       const previous = entries.current.get(id);
       if (previous?.controller && previous.version === version) continue;
       if (
@@ -182,8 +186,7 @@ export function useSharedWorkoutDetails(
   return {
     root,
     data:
-      current?.version ===
-        (activity.feed.find((item) => item.workout_id === opened)?.updated_at || "") &&
+      current?.version === feedVersion(activity.feed.find((item) => item.workout_id === opened)) &&
       Date.now() - current.savedAt < 60000
         ? current?.data || null
         : null,

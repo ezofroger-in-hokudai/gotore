@@ -1,5 +1,6 @@
-import type { AvatarImage } from "@/lib/api";
+import type { AvatarImage, TrainingGoal } from "@/lib/api";
 import { useEffect, useState } from "react";
+import { GoalPanel } from "../score/goal-panel";
 import { AvatarPanel } from "../settings/avatar-panel";
 import { SettingsPanel } from "../settings/settings-panel";
 import { useResource } from "../training/use-resource";
@@ -38,19 +39,21 @@ export function usePreferences(userId: string) {
 }
 
 export function Preferences({
+  goal,
   preferences,
   onChanged,
   onGuide,
   onLogout,
   signingOut,
 }: {
+  goal: { data: TrainingGoal | null; error: string; retry: () => void };
   preferences: ReturnType<typeof usePreferences>;
   onChanged: () => void;
   onGuide: () => void;
   onLogout: () => void;
   signingOut: boolean;
 }) {
-  const [sheet, setSheet] = useState<"name" | "avatar" | "theme" | "haptic" | null>(null);
+  const [sheet, setSheet] = useState<"name" | "avatar" | "theme" | "haptic" | "goal" | null>(null);
   const profile = useResource<{ display_name: string }>("/me");
   const avatar = useResource<AvatarImage>("/me/avatar");
   return (
@@ -76,6 +79,13 @@ export function Preferences({
         <button className="v2-row" type="button" onClick={() => setSheet("name")}>
           <span>表示名</span>
           <span>{profile.data?.display_name} ›</span>
+        </button>
+      </div>
+      <h2>トレーニング</h2>
+      <div className="v2-rows">
+        <button className="v2-row" type="button" onClick={() => setSheet("goal")}>
+          <span>自分の目標</span>
+          <span>{goal.data?.is_standard ? "標準" : goal.data ? "設定済み" : ""} ›</span>
         </button>
       </div>
       <h2>アプリ</h2>
@@ -112,17 +122,40 @@ export function Preferences({
       {sheet && (
         <Sheet
           title={
-            sheet === "avatar"
-              ? "プロフィール画像"
-              : sheet === "name"
-                ? "表示名"
-                : sheet === "theme"
-                  ? "外観"
-                  : "触覚フィードバック"
+            sheet === "goal"
+              ? "自分の目標"
+              : sheet === "avatar"
+                ? "プロフィール画像"
+                : sheet === "name"
+                  ? "表示名"
+                  : sheet === "theme"
+                    ? "外観"
+                    : "触覚フィードバック"
           }
           onClose={() => setSheet(null)}
         >
-          {sheet === "avatar" ? (
+          {sheet === "goal" ? (
+            goal.data ? (
+              <GoalPanel
+                key={goal.data.version}
+                goal={goal.data}
+                onSaved={() => {
+                  goal.retry();
+                  onChanged();
+                  setSheet(null);
+                }}
+              />
+            ) : goal.error ? (
+              <p className="error" role="alert">
+                {goal.error}
+                <button type="button" onClick={goal.retry}>
+                  再試行
+                </button>
+              </p>
+            ) : (
+              <p className="muted">目標を読み込み中…</p>
+            )
+          ) : sheet === "avatar" ? (
             <AvatarPanel
               name={profile.data?.display_name || ""}
               onSaved={() => {

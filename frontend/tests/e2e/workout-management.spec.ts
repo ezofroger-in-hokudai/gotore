@@ -59,7 +59,8 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     route.fulfill({
       json: {
         month: new URL(route.request().url()).searchParams.get("month"),
-        metric: "sets",
+        metric: "score",
+        best_score: null,
         days: removed ? [] : [{ date: record.performed_on, set_count: 1, workout_count: 1 }],
         total_sets: removed ? 0 : 1,
         workout_count: removed ? 0 : 1,
@@ -70,7 +71,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   const openRecords = async () => {
     await navigate(page, "履歴");
     await page.getByLabel("月", { exact: true }).fill("2026-01");
-    await page.getByRole("button", { name: "2026年1月1日、1セット、1件", exact: true }).click();
+    await page.getByRole("button", { name: "2026年1月1日、計測中、1件", exact: true }).click();
     await page.locator(".history-row").click();
   };
   await openRecords();
@@ -96,7 +97,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await expect(page.getByLabel("月", { exact: true })).toHaveValue("2026-01");
   await expect(
     page.getByRole("button", {
-      name: "2026年1月1日、1セット、1件",
+      name: "2026年1月1日、計測中、1件",
       exact: true,
     }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -115,7 +116,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await expect(page.getByLabel("月", { exact: true })).toHaveValue("2026-01");
   await expect(
     page.getByRole("button", {
-      name: "2026年1月1日、0セット、0件",
+      name: "2026年1月1日、記録なし、0件",
       exact: true,
     }),
   ).toHaveAttribute("aria-pressed", "true");

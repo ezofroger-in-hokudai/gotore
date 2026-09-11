@@ -14,14 +14,6 @@ export function shiftMonth(month: string, offset: number): string {
   return new Date(Date.UTC(year, monthNumber - 1 + offset, 1)).toISOString().slice(0, 7);
 }
 
-export function heatLevel(sets: number): number {
-  if (sets === 0) return 0;
-  if (sets <= 5) return 1;
-  if (sets <= 10) return 2;
-  if (sets <= 20) return 3;
-  return 4;
-}
-
 export function dateLabel(value: string): string {
   const [year, month, day] = value.split("-").map(Number);
   return `${year}年${month}月${day}日`;

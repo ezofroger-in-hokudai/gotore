@@ -53,7 +53,8 @@ def test_session_round_trips_stay_bounded_with_multiple_groups(client, connectio
     assert finished["ended_at"] is not None
     assert finished["revision"] == 3
     assert len(finished["shared_group_ids"]) == 4
-    assert counted.calls <= 3
+    # 終了3往復に、SCOREの根拠一括取得と保存の2往復を加える。
+    assert counted.calls <= 5
 
 
 def test_ordinary_feed_does_not_fetch_each_members_private_history(client, connection):

@@ -177,6 +177,9 @@ chmod 600 backend/.env frontend/.env.local
 | `NEXT_PUBLIC_SUPABASE_URL` | frontend | ブラウザが接続するAuthのURL。ローカルでは上のURLと同じ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | frontend | 同じプロジェクトの公開キー。上のanon keyと同じ |
 | `BACKEND_INTERNAL_URL` | frontend | Next.jsサーバーからAPIへの転送先。通常は `http://localhost:8000`。Vercelでは不要 |
+| `OPENAI_API_KEY` | backend・AI利用時のみ必須 | OpenAIの秘密キー。ブラウザへ公開しない。未設定でも記録・C/I/Vの保存は可能 |
+| `SCORE_MODEL` | backend・任意 | 既定 `gpt-5-nano`。構造化出力を利用。GPT-5 nanoは `minimal`、従来のLunaは `none` で呼ぶ |
+| `SCORE_DAILY_LIMIT` / `GOAL_PROPOSAL_DAILY_LIMIT` | backend・任意 | 1人・JST日単位の呼び出し上限。既定30/10、各1〜1000。失敗・再試行も含む |
 | `APP_NAME` / `APP_VERSION` / `APP_ENV` | backend・任意 | APIの表示情報。既定は `GO TORE API` / `0.1.0` / `development` |
 | `APP_HOST` / `APP_PORT` | backend・任意 | 設定項目はあるが、起動ポートはMakefileのuvicorn引数で指定。ここだけ変えても待受先は変わらない |
 | `TEST_DATABASE_URL` | テスト実行時の環境変数 | `_test` で終わる専用DB。[検証](#検証)のコマンドで渡す。backend/.envに追記しない |
@@ -222,7 +225,7 @@ DBを変更する場合は、最新mainを取り込み、新しいmigrationフ�
 5. BのホームでAの記録を確認する。表示中は5秒ごとに更新する。
 6. Aの「自分の記録」で保存内容を確認する。月別ヒートマップの日付をタップすると、その日の記録に絞り込める。再ログインしても履歴は残る。
 
-活動カレンダーの色は日ごとの合計セット数を示します。仕様は [活動ヒートマップ](docs/activity-heatmap.md) を参照してください。
+活動カレンダーの色は日ごとの最高SCOREを示します。未採点だけの日は計測中として表示します。仕様は [活動ヒートマップ](docs/activity-heatmap.md) を参照してください。
 
 種目リストは本人専用です。初回の8候補も削除でき、リストから削除しても過去記録と下書きは残ります。仕様と公開前の追加migrationは [種目リストの仕様](docs/exercise-options.md) を参照してください。
 
@@ -365,3 +368,9 @@ VercelのRoot Directoryはリポジトリのルート（`.`）です。`frontend
 
 SCORE・AI・ランキング・スタンプ・公開環境の運用・ネイティブモバイルアプリは後続です。
 今週の追加・改善は [週次計画テンプレート](.github/ISSUE_TEMPLATE/weekly.md) で選びます。
+
+## SCOREと目標
+
+トレーニング終了後は実績・採点の内訳を表示し、目標への一言を別の通信で取得します。設定の「自分の目標」ではAIが提案した評価基準を確認・修正して保存できます。目標とコメントは本人専用、スコアは記録の共有範囲に従います。
+
+API更新前に `20260912010000_workout_scores.sql` と `20260912020000_personal_score_totals.sql` を適用してください。ローカルは `make db-migrate` を使い、リセットは不要です。AIを試す場合は `backend/.env` に `OPENAI_API_KEY` を設定してAPIを再起動します。キーをチャット・Issue・Gitへ貼らないでください。計算式、再採点、未評価、利用上限は [SCOREの実装仕様](docs/score-implementation.md) を参照してください。

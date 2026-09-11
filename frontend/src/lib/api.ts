@@ -2,11 +2,12 @@ import { getSupabase } from "./supabase";
 
 export type MonthlyActivity = {
   month: string;
-  metric: "sets";
+  metric: "score";
+  best_score: number | null;
   total_sets: number;
   workout_count: number;
   active_days: number;
-  days: { date: string; set_count: number; workout_count: number }[];
+  days: { date: string; score: number | null; set_count: number; workout_count: number }[];
 };
 
 export type Group = {
@@ -24,6 +25,7 @@ export type Exercise = {
   sets: { weight: number; reps: number }[];
 };
 export type Workout = {
+  score?: ScoreSummary | null;
   id: string;
   user_id: string;
   display_name: string;
@@ -70,6 +72,7 @@ export type GroupSummary = {
 };
 export type GroupActivity = GroupSummary & {
   feed: {
+    score?: ScoreSummary | null;
     workout_id: string;
     user_id: string;
     display_name: string;
@@ -80,6 +83,35 @@ export type GroupActivity = GroupSummary & {
     updated_at: string;
     best: boolean;
   }[];
+};
+
+export type ScoreAxis = "c" | "i" | "v" | "g";
+export type ScoreWeights = Record<ScoreAxis, number>;
+export type TrainingGoal = {
+  id: string;
+  version: number;
+  body: string;
+  is_standard: boolean;
+  criteria: { text: string; observation_days: number }[];
+  created_at: string;
+};
+export type ScoreSummary = {
+  workout_id: string;
+  revision: number;
+  total: number | null;
+  components: Record<ScoreAxis, number | null>;
+  status: "pending" | "processing" | "complete" | "stale";
+  weights: ScoreWeights;
+  weights_version: number;
+  scored_at: string;
+};
+export type ScoreDetail = ScoreSummary & {
+  goal: TrainingGoal;
+  baseline: { id: string; performed_on: string; revision: number } | null;
+  comment: string | null;
+  judgments: { rating: number | null; reason: string }[];
+  formula_version: string;
+  model: string | null;
 };
 
 export class ApiError extends Error {

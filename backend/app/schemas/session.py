@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.domain.workout import WorkoutSet
+from app.schemas.score import ScoreSummary
 from app.schemas.training import MemberResponse, WorkoutMemoResponse, WorkoutResponse
 
 
@@ -50,6 +51,7 @@ class ActivityMember(MemberResponse):
 
 
 class FeedItem(BaseModel):
+    score: ScoreSummary | None = None
     workout_id: UUID
     user_id: UUID
     display_name: str

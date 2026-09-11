@@ -719,25 +719,9 @@
   display: none;
 }
 .history-screen .activity-day {
-  background: var(--track);
-  color: var(--text);
+  background: var(--score-bg);
+  color: var(--score-ink);
   border-radius: 7px;
-}
-.history-screen .activity-day[data-level="1"] {
-  background: #fce0e1;
-  color: #831b20;
-}
-.history-screen .activity-day[data-level="2"] {
-  background: #f6a8ad;
-  color: #721116;
-}
-.history-screen .activity-day[data-level="3"] {
-  background: #e65762;
-  color: #fff;
-}
-.history-screen .activity-day[data-level="4"] {
-  background: #b0202d;
-  color: #fff;
 }
 .history-screen .activity-month {
   margin-bottom: 14px;
@@ -1516,4 +1500,300 @@
   margin-top: 18px;
   font-size: 10px;
   line-height: 1.7;
+}
+
+/* 終了時は保存済みの実績を先に表示し、AIの待ち状態でも高さを保つ。 */
+.score-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: .75rem;
+}
+.score-badge strong {
+  color: var(--accent);
+  font-size: .875rem;
+}
+
+.score-breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 8px;
+}
+.score-breakdown > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.score-breakdown > div > span,
+.score-breakdown small {
+  color: var(--muted);
+  font-size: .75rem;
+}
+.score-breakdown strong {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.score-breakdown strong small {
+  margin-left: 2px;
+}
+.score-track {
+  height: 3px;
+  background: var(--line);
+}
+.score-track span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.workout-result {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 8px 0;
+}
+.result-eyebrow {
+  color: var(--accent);
+  font-size: .75rem;
+  letter-spacing: .12em;
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.workout-result h1 {
+  font-size: 1.125rem;
+  margin: 4px 0;
+}
+.result-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 0 16px;
+}
+.result-score > span {
+  letter-spacing: .12em;
+  font-size: .75rem;
+}
+.result-score strong {
+  font-size: 2rem;
+  line-height: 1.2;
+  color: var(--accent);
+}
+.result-score small {
+  color: var(--muted);
+  font-size: .75rem;
+}
+.result-totals {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 0;
+  border-block: 1px solid var(--line);
+  font-size: .75rem;
+}
+.result-totals strong {
+  font-size: 1rem;
+}
+.result-comment {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  min-height: 104px;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.result-comment h2 {
+  font-size: .875rem;
+  margin: 0 0 8px;
+}
+.result-comment p {
+  margin: 8px 0;
+}
+.score-note {
+  font-size: .75rem;
+}
+.workout-result > button {
+  margin-top: 8px;
+}
+.goal-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+.goal-panel textarea {
+  width: 100%;
+  resize: vertical;
+  font-size: 1rem;
+}
+.goal-criterion {
+  padding: 8px 0;
+  border-block-start: 1px solid var(--line);
+}
+.goal-panel .goal-confirm {
+  flex-direction: row;
+  align-items: center;
+  min-height: 48px;
+}
+.goal-confirm input {
+  width: 20px;
+  height: 20px;
+}
+.goal-panel > button {
+  margin: 8px 0;
+}
+.weight-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.weight-inputs label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.weight-inputs input {
+  width: 100%;
+}
+.record-score {
+  padding-top: 8px;
+}
+
+/* 得点色はscore-colors.tsで共用し、文字は背景に応じて読みやすくする。 */
+.score-badge {
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--score-bg);
+  color: var(--score-ink);
+}
+.score-badge strong {
+  color: inherit;
+}
+.feed-record-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.feed-record-row .feed-value {
+  flex: 1;
+  min-width: 0;
+  padding-left: 0;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 4px;
+}
+.feed-record-row > .score-badge {
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-width: 76px;
+  min-height: 70px;
+  padding: 8px;
+  border-radius: 8px;
+}
+.feed-record-row > .score-badge > span {
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+.feed-record-row > .score-badge strong {
+  font-size: 28px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.feed-record-row > .score-badge[data-score="pending"] strong {
+  font-size: 12px;
+}
+.result-score {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: var(--score-ink);
+  background: linear-gradient(135deg, transparent 35%, #00000012), var(--score-bg);
+  border-radius: 12px;
+  margin: 12px 0 10px;
+  padding: 14px 10px;
+}
+.result-score::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 210px;
+  height: 210px;
+  border: 28px solid currentColor;
+  opacity: 0.06;
+  transform: rotate(-25deg);
+  right: -95px;
+  top: -45px;
+}
+.result-score strong {
+  color: inherit;
+  font-size: 28px;
+  font-weight: 900;
+}
+.result-score.result-scored strong {
+  font-size: 88px;
+  letter-spacing: -.07em;
+  line-height: 1;
+}
+.result-score strong small {
+  font-size: 20px;
+  letter-spacing: 0;
+  margin-left: 8px;
+}
+.result-score small {
+  color: inherit;
+}
+.result-scored {
+  animation: score-reveal .45s ease-out both;
+}
+@keyframes score-reveal {
+  from {
+    opacity: 0.5;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-scored {
+    animation: none;
+  }
+}
+
+.feed-record-row.feed-detail-button {
+  padding: 0;
+}
+.workout-result .result-totals {
+  padding-block: 10px;
+}
+.workout-result .score-breakdown {
+  margin-top: 12px;
+}
+.workout-result .result-comment {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.score-legend {
+  align-items: center;
+  gap: 14px;
+}
+.score-gradient-legend {
+  flex: 1;
+  min-width: 140px;
+}
+.score-gradient-legend > span {
+  display: block;
+  height: 10px;
+  border-radius: 3px;
+}
+.score-gradient-legend > div {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
 }

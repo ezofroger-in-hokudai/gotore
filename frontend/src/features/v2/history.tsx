@@ -4,6 +4,7 @@ import { ActivityCalendar } from "../activity/activity-calendar";
 import { dateLabel } from "../activity/calendar";
 import { dates } from "../analytics/chart";
 import { AnalyticsPanel } from "../analytics/panel";
+import { ScoreBadge } from "../score/score-display";
 import { today } from "../training/draft";
 import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
@@ -154,6 +155,7 @@ export function History({
                     {record.started_at && !record.ended_at ? " · トレーニング中" : ""}
                   </strong>
                   <p>{record.exercises.map((e) => e.name).join(" / ")}</p>
+                  <ScoreBadge score={record.score} />
                 </div>
                 <span>
                   {record.exercises.reduce((count, e) => count + e.sets.length, 0)} SETS ›

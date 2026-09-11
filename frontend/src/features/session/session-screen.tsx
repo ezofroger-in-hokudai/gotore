@@ -29,7 +29,7 @@ export function SessionScreen({
   active: boolean;
   controller: SessionController;
   userId: string;
-  onFinished: () => void;
+  onFinished: (record: TrainingSession) => void;
   haptic: boolean;
 }) {
   const { session } = controller;
@@ -120,10 +120,10 @@ export function SessionScreen({
       session={session}
       controller={controller}
       userId={userId}
-      onFinished={() => {
+      onFinished={(record) => {
         setDraft({ ...emptyInput });
         setChoosing(true);
-        onFinished();
+        onFinished(record);
       }}
       haptic={haptic}
       initialInput={draft}
@@ -151,7 +151,7 @@ function ActiveTraining({
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
   controller: SessionController;
   userId: string;
-  onFinished: () => void;
+  onFinished: (record: TrainingSession) => void;
   haptic: boolean;
 }) {
   const sessionId = session?.id ?? null;
@@ -829,11 +829,16 @@ function ActiveTraining({
             disabled={controller.busy}
             onClick={async () => {
               try {
-                await controller.finish();
+                const finished = await controller.finish(() => {
+                  // 終了で入力画面が消える前に、確認シートの自動「戻る」を解除する。
+                  const state = { ...window.history.state };
+                  state.gotoreSheet = undefined;
+                  window.history.replaceState(state, "");
+                });
                 try {
                   if (storageKey) localStorage.removeItem(storageKey);
                 } catch {}
-                onFinished();
+                onFinished(finished);
               } catch {
                 setFinishOpen(false);
               }

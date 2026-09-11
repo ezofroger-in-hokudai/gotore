@@ -62,8 +62,8 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await pageA.getByRole("button", { name: "次のセットへ", exact: true }).click();
     await expect(pageA.locator(".sync-status")).toContainText("未送信");
     failSave = false;
-    await pageA.getByRole("button", { name: "再送", exact: true }).click();
-    await expect(pageA.getByText("保存しました", { exact: true })).toBeVisible();
+    // 自動再送も許容し、先に同期が完了してボタンが消えても保存結果を確認する。
+    await expect(pageA.locator(".sync-status")).toContainText("同期済み");
     await pageA.reload();
     await navigate(pageA, "記録");
     await expect(pageA.getByRole("button", { name: "セット1を編集", exact: true })).toContainText(

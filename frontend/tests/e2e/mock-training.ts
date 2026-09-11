@@ -168,6 +168,7 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
               ? [
                   {
                     workout_id: latest.id,
+                    score: latest.score,
                     user_id: user.id,
                     display_name: user.user_metadata.display_name,
                     exercise: exercise.name,
@@ -239,7 +240,8 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
       return route.fulfill({
         json: {
           month: new URL(route.request().url()).searchParams.get("month"),
-          metric: "sets",
+          metric: "score",
+          best_score: null,
           total_sets: 0,
           workout_count: 0,
           active_days: 0,

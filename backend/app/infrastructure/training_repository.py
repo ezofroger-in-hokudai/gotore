@@ -170,9 +170,13 @@ class TrainingRepository:
     def activity(self, user_id: UUID, start: date, end: date):
         return self.connection.execute(
             """SELECT w.performed_on AS date, COUNT(*) AS workout_count,
-                SUM((SELECT SUM(jsonb_array_length(e->'sets'))
-                     FROM jsonb_array_elements(w.exercises) e)) AS set_count
+                SUM(f.set_count) AS set_count,
+                MAX(s.personal_total) FILTER (WHERE s.revision = w.revision
+                    AND s.status = 'complete' AND w.ended_at IS NOT NULL) AS score
             FROM public.gotore_workouts w
+            JOIN LATERAL (SELECT SUM(set_count) AS set_count
+                FROM public.gotore_workout_statistics WHERE workout_id = w.id) f ON true
+            LEFT JOIN public.gotore_workout_scores s ON s.workout_id = w.id
             WHERE w.user_id = %s AND w.performed_on >= %s AND w.performed_on < %s
               AND jsonb_array_length(w.exercises) > 0
             GROUP BY w.performed_on ORDER BY w.performed_on""",

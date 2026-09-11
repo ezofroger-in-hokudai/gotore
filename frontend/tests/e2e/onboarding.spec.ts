@@ -16,7 +16,7 @@ test("初回ガイドは完了・再ログイン後に再表示せず、設定�
   await expect(guide).toContainText("1 / 3");
   await guide.getByRole("button", { name: "次へ", exact: true }).click();
   await guide.getByRole("button", { name: "次へ", exact: true }).click();
-  await expect(guide).toContainText("カレンダーはセット数");
+  await expect(guide).toContainText("カレンダーはその日の最高SCORE");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );

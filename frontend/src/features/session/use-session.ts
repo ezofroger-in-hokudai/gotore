@@ -99,13 +99,14 @@ export function useSession(userId: string, onChanged: () => void) {
       document.removeEventListener("visibilitychange", beat);
     };
   }, [sessionId]);
-  async function mutate(operation: () => Promise<TrainingSession>) {
+  async function mutate(operation: () => Promise<TrainingSession>, beforeAccept?: () => void) {
     if (lock.current) throw new Error("処理中です。");
     lock.current = true;
     setBusy(true);
     setError("");
     try {
       const result = await operation();
+      beforeAccept?.();
       lastActivity.current = Date.now();
       await queue.accept(result);
       changed.current();
@@ -155,7 +156,7 @@ export function useSession(userId: string, onChanged: () => void) {
       void queue.sync();
       return result;
     },
-    finish: () =>
+    finish: (beforeAccept?: () => void) =>
       mutate(async () => {
         await queue.sync();
         const current = queue.state;
@@ -169,7 +170,7 @@ export function useSession(userId: string, onChanged: () => void) {
           body: JSON.stringify({ expected_revision: current.session.revision }),
           signal: AbortSignal.timeout(15_000),
         });
-      }),
+      }, beforeAccept),
   };
 }
 export type SessionController = ReturnType<typeof useSession>;

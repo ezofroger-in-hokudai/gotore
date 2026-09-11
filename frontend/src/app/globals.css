@@ -770,25 +770,14 @@ fieldset {
 .activity-day:disabled {
   opacity: 0.4;
 }
-.activity-calendar [data-level="0"] {
-  background: #f1eeeb;
-  color: #504943;
+.activity-day,
+.activity-legend .heat-swatch {
+  background: var(--score-bg);
+  color: var(--score-ink);
 }
-.activity-calendar [data-level="1"] {
-  background: #f3d5d7;
-  color: #702127;
-}
-.activity-calendar [data-level="2"] {
-  background: #e8a5aa;
-  color: #571218;
-}
-.activity-calendar [data-level="3"] {
-  background: #ba4c56;
-  color: #fff;
-}
-.activity-calendar [data-level="4"] {
-  background: #941b22;
-  color: #fff;
+.activity-day[data-pending="true"] {
+  border-color: var(--line);
+  border-style: dashed;
 }
 .activity-legend {
   display: flex;
