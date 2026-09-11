@@ -28,10 +28,12 @@ export function AnalyticsChart({
   const max = Math.max(1, ...points.map((p) => p[metric] ?? 0));
   const x = (i: number) => 50 + (i * 280) / Math.max(1, points.length - 1);
   const y = (value: number) => 175 - (value / max) * 135;
+  const connectGaps = metric === "weight" || metric === "rm";
   const paths: string[] = [];
   let path = "";
   points.forEach((p, i) => {
     if (p[metric] == null) {
+      if (connectGaps) return;
       if (path) paths.push(path);
       path = "";
     } else path += `${path ? " L" : "M"}${x(i)},${y(p[metric])}`;
@@ -58,7 +60,7 @@ export function AnalyticsChart({
         role="img"
         aria-label={`${labels[metric]}の推移`}
       >
-        <title>{labels[metric]}の推移。下のスライダーで期間を選べます。</title>
+        <title>{`${labels[metric]}の推移。下のスライダーで期間を選べます。`}</title>
         {[0, 0.5, 1].map((ratio) => (
           <g key={ratio}>
             <line x1="50" x2="334" y1={y(max * ratio)} y2={y(max * ratio)} className="chart-grid" />
@@ -116,6 +118,9 @@ export function AnalyticsChart({
           </button>
         )}
       </div>
+      {connectGaps && (
+        <p className="analytics-footnote muted">実際の記録点を線でつないでいます。</p>
+      )}
     </div>
   );
 }
