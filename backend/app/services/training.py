@@ -45,6 +45,7 @@ class TrainingService:
         ]
         return MonthlyActivity(
             month=month,
+            best_score=max((day.score for day in days if day.score is not None), default=None),
             total_sets=sum(day.set_count for day in days),
             workout_count=sum(day.workout_count for day in days),
             active_days=len(days),

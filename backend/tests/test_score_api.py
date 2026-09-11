@@ -368,3 +368,85 @@ def test_edit_rescores_only_changed_record_with_original_goal_and_baseline(
     ).json()
     assert changed_menu["score"]["components"]["v"] is None
     assert changed_menu["score"]["components"]["i"] is None
+
+
+def test_score_calendar_uses_daily_max_and_excludes_pending_stale_and_other_users(
+    client, connection
+):
+    records = [finish(client, save(client, start(client))) for _ in range(4)]
+    for record, value in zip(records, [70, 88, 0, 100], strict=True):
+        connection.execute(
+            """UPDATE public.gotore_workout_scores SET personal_total = %s,
+            status = 'complete' WHERE workout_id = %s""",
+            (value, record["id"]),
+        )
+    for record in records[:2]:
+        connection.execute(
+            "UPDATE public.gotore_workouts SET performed_on = '2024-02-01' WHERE id = %s",
+            (record["id"],),
+        )
+    connection.execute(
+        "UPDATE public.gotore_workouts SET performed_on = '2024-02-02' WHERE id = %s",
+        (records[2]["id"],),
+    )
+    connection.execute(
+        """UPDATE public.gotore_workouts SET performed_on = '2024-02-01',
+        revision = revision + 1 WHERE id = %s""",
+        (records[3]["id"],),
+    )
+    month = client.get("/api/workouts/activity?month=2024-02").json()
+    assert month["metric"] == "score"
+    assert month["best_score"] == 88
+    assert [day["score"] for day in month["days"]] == [88, 0]
+    assert (
+        client.get("/api/workouts/activity?month=2024-02", headers={"X-Test-User": "B"}).json()[
+            "best_score"
+        ]
+        is None
+    )
+    assert (
+        client.delete(
+            f"/api/workouts/{records[1]['id']}?expected_revision={records[1]['revision']}"
+        ).status_code
+        == 204
+    )
+    assert client.get("/api/workouts/activity?month=2024-02").json()["days"][0]["score"] == 70
+    connection.execute(
+        "UPDATE public.gotore_workout_scores SET status = 'pending' WHERE workout_id = %s",
+        (records[0]["id"],),
+    )
+    assert client.get("/api/workouts/activity?month=2024-02").json()["days"][0]["score"] is None
+
+
+def test_calendar_total_is_saved_with_evaluation_and_cleared_on_edit(client, connection):
+    from uuid import UUID
+
+    record = finish(client, save(client, start(client)))
+    connection.execute(
+        """UPDATE public.gotore_workout_scores SET components =
+        '{"c":"100","i":"100","v":"100","g":null}' WHERE workout_id = %s""",
+        (record["id"],),
+    )
+    repo = ScoreRepository(connection)
+    claimed = repo.claim(USERS["A"], UUID(record["id"]), "test-model", 30)
+    repo.complete(claimed, {"g": 0, "comment": "記録できました。", "judgments": []}, "test-model")
+    assert score(client, record)["total"] == 90
+    path = f"/api/workouts/activity?month={record['performed_on'][:7]}"
+    assert client.get(path).json()["best_score"] == 90
+    response = client.patch(
+        f"/api/workouts/{record['id']}",
+        json={
+            "expected_revision": record["revision"],
+            "performed_on": record["performed_on"],
+            "exercises": [{"name": "ベンチプレス", "sets": [{"weight": 30, "reps": 8}]}],
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert client.get(path).json()["best_score"] is None
+    assert (
+        connection.execute(
+            "SELECT personal_total FROM public.gotore_workout_scores WHERE workout_id = %s",
+            (record["id"],),
+        ).fetchone()["personal_total"]
+        is None
+    )

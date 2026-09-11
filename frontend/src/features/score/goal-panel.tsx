@@ -135,6 +135,11 @@ export function GoalPanel({
             <div className="goal-criterion" key={criterion.key}>
               <label>
                 条件 {index + 1}
+                {criterion.observation_days > 1 && (
+                  <span className="muted score-note">
+                    直近{criterion.observation_days}日間の取り組みで確認します。
+                  </span>
+                )}
                 <textarea
                   maxLength={240}
                   rows={2}
@@ -147,27 +152,6 @@ export function GoalPanel({
                     setConfirmed(false);
                   }}
                 />
-              </label>
-              <label>
-                確認する期間
-                <select
-                  disabled={busy}
-                  value={criterion.observation_days}
-                  onChange={(e) => {
-                    setCriteria(
-                      criteria.map((c, i) =>
-                        i === index ? { ...c, observation_days: Number(e.target.value) } : c,
-                      ),
-                    );
-                    setConfirmed(false);
-                  }}
-                >
-                  {Array.from({ length: 30 }, (_, i) => i + 1).map((days) => (
-                    <option key={days} value={days}>
-                      {days === 1 ? "今回のトレーニング" : `${days}日間`}
-                    </option>
-                  ))}
-                </select>
               </label>
               {criteria.length > 2 && (
                 <button

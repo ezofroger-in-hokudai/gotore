@@ -43,7 +43,7 @@ Vercel Servicesでは1プロジェクトの共通ルートから各サービス�
 今週追加するものは、初版を使って確認した結果からIssueにします。
 GitHubのmain保護・レビュー必須設定は、管理者が設定状況を確認してください。
 
-#35（親#14）の追加仕様は [activity-heatmap.md](activity-heatmap.md)。表示する指標はセット数で、当時はSCORE・BEST・種目別推移を後続とした。v2ではBESTを追加し、#97で種目別の重量・推定1RM・セット数・総負荷の推移とグループランキングを追加。SCOREは #99 で #13 の算式を採用し、記録ごとの点数を追加する。ヒートマップ単独の追加migrationは不要。検証・PRの状態はprogress.mdと週次計画#33で追跡する。
+#35（親#14）の追加仕様は [activity-heatmap.md](activity-heatmap.md)。当初の指標はセット数で、PR #101への追加指定により日別最高SCOREへ変更する。v2ではBESTを追加し、#97で種目別の重量・推定1RM・セット数・総負荷の推移とグループランキングを追加。SCOREは #99 で #13 の算式を採用し、記録ごとの点数を追加する。ヒートマップ単独の追加migrationは不要。検証・PRの状態はprogress.mdと週次計画#33で追跡する。
 
 #28の追加仕様は [exercise-options.md](exercise-options.md)。公開前に追加migrationを適用する。候補を削除しても過去記録・下書きは保持する。検証とPRはprogress.md・週次計画#33で追跡する。
 
@@ -77,3 +77,5 @@ PR #64への追加指定では、次種目を左・次セットを右へ変更�
 ## SCORE・個人目標・終了後の一言
 
 #99 の実装仕様は [score-implementation.md](score-implementation.md)。開始時の目標を固定し、終了後の内訳・AIの一言・ホームと履歴のスコアを追加。目標はAI提案を本人が確認・編集して保存する。目標・コメントは本人だけに表示する。追加migrationとAPI専用 `OPENAI_API_KEY`（AI利用時）が必要。記録保存と数値の内訳はキーなしでも動く。週月SCOREランキングの集約方法と実モデルの品質・速度検証は後続。検証・PRの状態はprogress.md。
+
+PR #101への追加では、ホーム右側・終了結果の得点を強調し、色を日別最高SCOREヒートマップと統一する。月集計用の確定個人点を追加migration `20260912020000_personal_score_totals.sql` で保持する。目標条件の期間選択欄は省き、期間が必要な条件は文章で確認する。

@@ -1,5 +1,5 @@
 import type { ScoreDetail, Workout } from "@/lib/api";
-import { ScoreBreakdown, scoreText } from "./score-display";
+import { ScoreBreakdown, scoreLevel, scoreText } from "./score-display";
 
 export function WorkoutResult({
   record,
@@ -21,14 +21,34 @@ export function WorkoutResult({
     0,
   );
   return (
-    <section className="workout-result" aria-label="トレーニング結果">
+    <section
+      className="workout-result"
+      aria-label="トレーニング結果"
+      data-score-level={scoreLevel(score?.status === "stale" ? null : score?.total)}
+    >
       <p className="result-eyebrow">TRAINING COMPLETE</p>
       <h1>おつかれさまでした。</h1>
       <p className="muted">{record.performed_on.replaceAll("-", ".")} · 記録を保存しました</p>
-      <div className="result-score" aria-live="polite">
-        <span>SCORE</span>
-        <strong>{score ? scoreText(score) : "—"}</strong>
-        <small>自分の実績への到達度</small>
+      <div
+        className={`result-score${score?.total != null ? " result-scored" : ""}`}
+        aria-live="polite"
+      >
+        <span>TODAY’S SCORE</span>
+        <strong>
+          {score?.total != null && score.status !== "stale" ? (
+            <>
+              {score.total}
+              <small>点</small>
+            </>
+          ) : score ? (
+            scoreText(score)
+          ) : (
+            "—"
+          )}
+        </strong>
+        <small>
+          {score?.total != null ? "今日の積み重ねを、次の自分へ。" : "自分の実績への到達度"}
+        </small>
       </div>
       <div className="result-totals">
         <span>

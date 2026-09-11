@@ -79,7 +79,8 @@ class ScoreRepository(TrainingRepository):
             }
             self.connection.execute(
                 """UPDATE public.gotore_workout_scores s SET components = %s, goal_result = %s,
-                model = %s, status = 'complete', lease_id = NULL, lease_until = NULL,
+                model = %s, personal_total = %s, status = 'complete',
+                lease_id = NULL, lease_until = NULL,
                 updated_at = clock_timestamp() FROM public.gotore_workouts w
                 WHERE s.workout_id = %s AND s.lease_id = %s AND w.id = s.workout_id
                 AND w.revision = s.revision""",
@@ -87,6 +88,10 @@ class ScoreRepository(TrainingRepository):
                     Jsonb(components),
                     Jsonb(json_value(evaluation)),
                     model,
+                    total_score(
+                        {k: Decimal(v) if v is not None else None for k, v in components.items()},
+                        ScoreWeights(),
+                    ),
                     row["workout_id"],
                     row["lease_id"],
                 ),
@@ -200,7 +205,8 @@ class ScoreRepository(TrainingRepository):
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (workout_id) DO UPDATE SET revision = EXCLUDED.revision,
                 components = EXCLUDED.components, snapshot = EXCLUDED.snapshot,
-                status = 'pending', goal_result = NULL, lease_id = NULL, lease_until = NULL,
+                status = 'pending', personal_total = NULL, goal_result = NULL,
+                lease_id = NULL, lease_until = NULL,
                 updated_at = clock_timestamp()
             RETURNING *""",
             (

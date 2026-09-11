@@ -15,10 +15,22 @@ export function scoreText(score: ScoreSummary) {
       : "計測中";
 }
 
+export function scoreLevel(score: number | null | undefined): number {
+  if (score == null) return 0;
+  if (score < 50) return 1;
+  if (score < 70) return 2;
+  if (score < 85) return 3;
+  if (score < 95) return 4;
+  return 5;
+}
+
 export function ScoreBadge({ score }: { score?: ScoreSummary | null }) {
   if (!score) return null;
   return (
-    <span className="score-badge">
+    <span
+      className="score-badge"
+      data-score-level={scoreLevel(score.status === "stale" ? null : score.total)}
+    >
       <span>SCORE</span> <strong>{scoreText(score)}</strong>
     </span>
   );

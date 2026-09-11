@@ -119,7 +119,8 @@ test("履歴をホームで準備し、再確認待ちでも一覧とカレン�
     return route.fulfill({
       json: {
         month: "2026-09",
-        metric: "sets",
+        metric: "score",
+        best_score: null,
         total_sets: 1,
         workout_count: 1,
         active_days: 1,

@@ -441,13 +441,14 @@ def test_activity_uses_all_own_sets_with_month_boundaries_and_daily_pages(client
     assert response.headers["cache-control"] == "no-store"
     assert response.json() == {
         "month": "2024-02",
-        "metric": "sets",
+        "metric": "score",
+        "best_score": None,
         "total_sets": 56,
         "workout_count": 53,
         "active_days": 2,
         "days": [
-            {"date": "2024-02-01", "set_count": 5, "workout_count": 2},
-            {"date": "2024-02-29", "set_count": 51, "workout_count": 51},
+            {"date": "2024-02-01", "set_count": 5, "workout_count": 2, "score": None},
+            {"date": "2024-02-29", "set_count": 51, "workout_count": 51, "score": None},
         ],
     }
     first = client.get("/api/workouts?performed_on=2024-02-29").json()
@@ -472,7 +473,8 @@ def test_activity_empty_month_and_refresh_after_record_changes(client, connectio
     path = "/api/workouts/activity?month=2024-12"
     empty = {
         "month": "2024-12",
-        "metric": "sets",
+        "metric": "score",
+        "best_score": None,
         "total_sets": 0,
         "workout_count": 0,
         "active_days": 0,

@@ -10,6 +10,7 @@ from psycopg import connect
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from app.domain.activity import month_bounds
 from app.domain.session import SessionUpdate
 from app.infrastructure.goals import GoalRepository
 from app.infrastructure.scores import ScoreRepository
@@ -79,6 +80,8 @@ def main():
             )
             records = scores.workouts(user, None, 50, 0, None, None, None)
             report["attach_50_summaries"] = measure(lambda: scores.attach(records), 20)
+            start, end = month_bounds(record["performed_on"].strftime("%Y-%m"))
+            report["score_calendar"] = measure(lambda: scores.activity(user, start, end), 20)
             print(json.dumps(report, ensure_ascii=False, indent=2))
 
 

@@ -1,9 +1,10 @@
 "use client";
 
 import type { MonthlyActivity } from "@/lib/api";
+import { scoreLevel } from "../score/score-display";
 import { today } from "../training/draft";
 import { useResource } from "../training/use-resource";
-import { calendarDays, dateLabel, heatLevel, shiftMonth } from "./calendar";
+import { calendarDays, dateLabel, shiftMonth } from "./calendar";
 
 export function ActivityCalendar({
   month,
@@ -27,7 +28,7 @@ export function ActivityCalendar({
   const activity = useResource<MonthlyActivity>(
     `/workouts/activity?month=${month}`,
     refreshKey,
-    false,
+    active,
     true,
     { enabled: active, prefetch, retainOnRefresh: true },
   );
@@ -42,7 +43,7 @@ export function ActivityCalendar({
 
   return (
     <section className="panel activity-calendar" aria-label="活動カレンダー">
-      <h2>カレンダー</h2>
+      <h2>SCOREカレンダー</h2>
 
       <div className="activity-month">
         <button
@@ -88,10 +89,10 @@ export function ActivityCalendar({
       <>
         <dl className="activity-totals">
           <div>
-            <dt>合計セット</dt>
+            <dt>最高SCORE</dt>
             <dd>
-              {activity.data?.total_sets ?? "—"}
-              <small>セット</small>
+              {activity.data?.best_score ?? "—"}
+              <small>点</small>
             </dd>
           </div>
           <div>
@@ -119,30 +120,40 @@ export function ActivityCalendar({
             // biome-ignore lint/suspicious/noArrayIndexKey: 空白セルは固定の曜日位置を表す。
             if (!day) return <span key={`blank-${index}`} aria-hidden="true" />;
             const counts = days.get(day);
-            const sets = counts?.set_count ?? 0;
+            const score = counts?.score ?? null;
+            const label = score !== null ? `${score}点` : counts ? "計測中" : "記録なし";
             const future = day > currentDay;
             return (
               <button
                 key={day}
                 type="button"
                 className="activity-day"
-                data-level={future ? 0 : heatLevel(sets)}
+                data-score-level={future ? 0 : scoreLevel(score)}
+                data-pending={!!counts && score === null}
                 disabled={future || !activity.data}
-                aria-label={`${dateLabel(day)}、${future ? "未来の日付" : !activity.data ? "未取得" : `${sets}セット、${counts?.workout_count ?? 0}件`}`}
+                aria-label={`${dateLabel(day)}、${future ? "未来の日付" : !activity.data ? "未取得" : `${label}、${counts?.workout_count ?? 0}件`}`}
                 aria-pressed={selectedDate === day}
                 aria-current={day === currentDay ? "date" : undefined}
                 onClick={() => onSelect(day)}
               >
                 <span>{Number(day.slice(-2))}</span>
-                <small>{future || !activity.data ? "—" : `${sets}set`}</small>
+                <small>
+                  {future || !activity.data
+                    ? "—"
+                    : score !== null
+                      ? `${score}点`
+                      : counts
+                        ? "計測中"
+                        : "—"}
+                </small>
               </button>
             );
           })}
         </div>
-        <div className="activity-legend" aria-label="色の凡例（セット数）">
-          {["0", "1〜5", "6〜10", "11〜20", "21以上"].map((label, level) => (
+        <div className="activity-legend" aria-label="色の凡例（SCORE）">
+          {["未評価", "0〜49", "50〜69", "70〜84", "85〜94", "95〜100"].map((label, level) => (
             <span key={label}>
-              <span className="heat-swatch" data-level={level} aria-hidden="true" />
+              <span className="heat-swatch" data-score-level={level} aria-hidden="true" />
               {label}
             </span>
           ))}

@@ -35,3 +35,10 @@ test("確定総合点・未導入の記録・訂正後の状態を区別する",
     renderToStaticMarkup(<ScoreBadge score={{ ...score, total: 88, status: "stale" }} />),
   ).toContain("記録変更あり");
 });
+
+test("共通の色は未評価と0点を区別し、固定した得点帯で切り替える", async () => {
+  const { scoreLevel } = await import("../../src/features/score/score-display");
+  expect([null, 0, 49, 50, 69, 70, 84, 85, 94, 95, 100].map(scoreLevel)).toEqual([
+    0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5,
+  ]);
+});

@@ -76,7 +76,11 @@ test("AIを待たず終了結果を表示し、ホームへ移動しても採点
     await expect(page.locator(".result-score")).toContainText("計測中");
     await expect(page.getByRole("button", { name: "ホームへ", exact: true })).toBeEnabled();
     await expect.poll(() => calls).toBe(1);
-    await page.screenshot({ path: "test-results/score-pending.png", fullPage: true });
+    await page.screenshot({
+      path: "test-results/score-pending.png",
+      fullPage: true,
+      animations: "disabled",
+    });
     await page.getByRole("button", { name: "ホームへ", exact: true }).click();
     await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
   } finally {
@@ -128,8 +132,13 @@ test("目標はAI提案を確認・修正して保存し、途中の提案では
   await page
     .getByRole("textbox", { name: "条件 1", exact: true })
     .fill("背中の種目を少なくとも1つ含める");
+  await expect(page.getByRole("combobox", { name: "確認する期間" })).toHaveCount(0);
   await page.getByRole("checkbox", { name: "この条件で評価することを確認しました" }).check();
-  await page.screenshot({ path: "test-results/score-goal-review.png", fullPage: true });
+  await page.screenshot({
+    path: "test-results/score-goal-review.png",
+    fullPage: true,
+    animations: "disabled",
+  });
   await page.getByRole("button", { name: "この目標で保存" }).click();
   await expect.poll(() => saves).toBe(1);
   expect(current.criteria[0].text).toBe("背中の種目を少なくとも1つ含める");
@@ -173,12 +182,31 @@ test("確定スコアと一言がスマートフォン幅で読めて、仲間�
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     await expect(page.getByRole("button", { name: "ホームへ", exact: true })).toBeInViewport();
-    await page.screenshot({ path: `test-results/score-result-${width}.png`, fullPage: true });
+    const historyButton = await page
+      .getByRole("button", { name: "履歴を見る", exact: true })
+      .boundingBox();
+    const navigation = await page.getByRole("navigation").boundingBox();
+    expect(
+      historyButton && navigation && historyButton.y + historyButton.height <= navigation.y,
+    ).toBeTruthy();
+    await page.screenshot({
+      path: `test-results/score-result-${width}.png`,
+      fullPage: true,
+      animations: "disabled",
+    });
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "ホームへ", exact: true }).click();
   await expect(page.locator(".feed-item .score-badge")).toContainText("88点");
+  const points = await page.locator(".feed-item .score-badge").boundingBox();
+  const entry = await page.locator(".feed-item .feed-value").boundingBox();
+  expect(points && entry && points.x > entry.x + entry.width).toBeTruthy();
+  await expect(page.locator(".feed-item .score-badge")).toHaveAttribute("data-score-level", "4");
   await expect(page.getByText(goal.body, { exact: true })).toHaveCount(0);
   await expect(page.getByText(completed.comment, { exact: true })).toHaveCount(0);
-  await page.screenshot({ path: "test-results/score-home.png", fullPage: true });
+  await page.screenshot({
+    path: "test-results/score-home.png",
+    fullPage: true,
+    animations: "disabled",
+  });
 });

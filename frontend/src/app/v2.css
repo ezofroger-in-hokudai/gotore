@@ -719,25 +719,9 @@
   display: none;
 }
 .history-screen .activity-day {
-  background: var(--track);
-  color: var(--text);
+  background: var(--score-bg);
+  color: var(--score-ink);
   border-radius: 7px;
-}
-.history-screen .activity-day[data-level="1"] {
-  background: #fce0e1;
-  color: #831b20;
-}
-.history-screen .activity-day[data-level="2"] {
-  background: #f6a8ad;
-  color: #721116;
-}
-.history-screen .activity-day[data-level="3"] {
-  background: #e65762;
-  color: #fff;
-}
-.history-screen .activity-day[data-level="4"] {
-  background: #b0202d;
-  color: #fff;
 }
 .history-screen .activity-month {
   margin-bottom: 14px;
@@ -1529,9 +1513,7 @@
   color: var(--accent);
   font-size: .875rem;
 }
-.feed-item > .score-badge {
-  margin-top: 4px;
-}
+
 .score-breakdown {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1568,7 +1550,7 @@
 .workout-result {
   max-width: 480px;
   margin: 0 auto;
-  padding: 12px 0;
+  padding: 8px 0;
 }
 .result-eyebrow {
   color: var(--accent);
@@ -1674,5 +1656,149 @@
   width: 100%;
 }
 .record-score {
+  padding-top: 8px;
+}
+
+/* 同じ得点帯をホーム・終了結果・カレンダーで共用する。 */
+[data-score-level="0"] {
+  --score-bg: #e8e9ed;
+  --score-ink: #505564;
+}
+[data-score-level="1"] {
+  --score-bg: #fbe9ea;
+  --score-ink: #7f2332;
+}
+[data-score-level="2"] {
+  --score-bg: #f7c8ce;
+  --score-ink: #7f1b2c;
+}
+[data-score-level="3"] {
+  --score-bg: #ee8a98;
+  --score-ink: #521220;
+}
+[data-score-level="4"] {
+  --score-bg: #cf2947;
+  --score-ink: #ffffff;
+}
+[data-score-level="5"] {
+  --score-bg: #a9082e;
+  --score-ink: #ffffff;
+}
+.score-badge {
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--score-bg);
+  color: var(--score-ink);
+}
+.score-badge strong {
+  color: inherit;
+}
+.feed-record-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.feed-record-row .feed-value {
+  flex: 1;
+  min-width: 0;
+  padding-left: 0;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 4px;
+}
+.feed-record-row > .score-badge {
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-width: 76px;
+  min-height: 70px;
+  padding: 8px;
+  border-radius: 8px;
+}
+.feed-record-row > .score-badge > span {
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+.feed-record-row > .score-badge strong {
+  font-size: 28px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.feed-record-row > .score-badge[data-score-level="0"] strong {
+  font-size: 12px;
+}
+.result-score {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: var(--score-ink);
+  background: linear-gradient(135deg, transparent 35%, #00000012), var(--score-bg);
+  border-radius: 12px;
+  margin: 12px 0 10px;
+  padding: 14px 10px;
+}
+.result-score::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 210px;
+  height: 210px;
+  border: 28px solid currentColor;
+  opacity: 0.06;
+  transform: rotate(-25deg);
+  right: -95px;
+  top: -45px;
+}
+.result-score strong {
+  color: inherit;
+  font-size: 28px;
+  font-weight: 900;
+}
+.result-score.result-scored strong {
+  font-size: 88px;
+  letter-spacing: -.07em;
+  line-height: 1;
+}
+.result-score strong small {
+  font-size: 20px;
+  letter-spacing: 0;
+  margin-left: 8px;
+}
+.result-score small {
+  color: inherit;
+}
+.result-scored {
+  animation: score-reveal .45s ease-out both;
+}
+@keyframes score-reveal {
+  from {
+    opacity: 0.5;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-scored {
+    animation: none;
+  }
+}
+
+.feed-record-row.feed-detail-button {
+  padding: 0;
+}
+.workout-result .result-totals {
+  padding-block: 10px;
+}
+.workout-result .score-breakdown {
+  margin-top: 12px;
+}
+.workout-result .result-comment {
+  margin-top: 8px;
   padding-top: 8px;
 }

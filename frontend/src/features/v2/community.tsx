@@ -371,26 +371,28 @@ function Feed({
               </div>
               <button
                 type="button"
-                className="feed-value feed-detail-button"
+                className="feed-record-row feed-detail-button"
                 aria-label={`${item.display_name}の記録詳細を開く`}
                 onClick={() => setOpened(item.workout_id)}
               >
-                <strong>
-                  {item.weight}
-                  <small> kg × </small>
-                  {item.reps}
-                  <small> 回</small>
-                </strong>
-                {item.best && (
-                  <span className="best-badge record-celebration">
-                    <span role="img" aria-label="最高記録">
-                      🔥
+                <span className="feed-value">
+                  <strong>
+                    {item.weight}
+                    <small> kg × </small>
+                    {item.reps}
+                    <small> 回</small>
+                  </strong>
+                  {item.best && (
+                    <span className="best-badge record-celebration">
+                      <span role="img" aria-label="最高記録">
+                        🔥
+                      </span>
                     </span>
-                  </span>
-                )}
-                <span className="feed-detail-hint">詳細</span>
+                  )}
+                  <span className="feed-detail-hint">詳細</span>
+                </span>
+                <ScoreBadge score={item.score} />
               </button>
-              <ScoreBadge score={item.score} />
             </article>
           );
         })}
