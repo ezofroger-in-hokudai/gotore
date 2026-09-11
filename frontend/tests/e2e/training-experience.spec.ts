@@ -73,13 +73,13 @@ test("開始応答を待ちながら入力でき、失敗後の再試行でも�
       .fill("42.5", { timeout: 2000 });
     await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("8");
     await page.getByRole("spinbutton", { name: "回数", exact: true }).press("Enter");
-    await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeDisabled();
   } finally {
     release();
   }
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("開始できません");
   fail = false;
-  await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
+  await page.getByRole("button", { name: "開始を再試行", exact: true }).click();
   await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("42.5");
   await expect(page.getByRole("spinbutton", { name: "回数", exact: true })).toHaveValue("8");

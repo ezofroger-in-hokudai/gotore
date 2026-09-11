@@ -120,6 +120,7 @@ export function useSession(userId: string, onChanged: () => void) {
   }
   return {
     ...state,
+    startingId: startId.current,
     busy,
     error: error || (!state.ready ? state.error : ""),
     syncError: state.error,

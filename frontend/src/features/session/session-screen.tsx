@@ -37,7 +37,7 @@ export function SessionScreen({
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
   const [choosing, setChoosing] = useState(true);
   const draftReps = useRef<HTMLInputElement>(null);
-  if (!session)
+  if (!session && !controller.startingId)
     return (
       <section className="start-training">
         <h1>トレーニング</h1>
@@ -53,11 +53,6 @@ export function SessionScreen({
         >
           {controller.busy ? "開始中…" : "トレーニングを開始"}
         </button>
-        <p className="muted" aria-live="polite">
-          {controller.busy
-            ? "開始を確認しています。待っている間も入力できます。"
-            : "種目と数値を先に準備できます。"}
-        </p>
         {draft.name && !choosing ? (
           <div className="set-entry">
             <div className="section-heading">
@@ -121,7 +116,7 @@ export function SessionScreen({
   return (
     <ActiveTraining
       active={active}
-      key={session.id}
+      key={session?.id ?? controller.startingId ?? "preparing"}
       session={session}
       controller={controller}
       userId={userId}
@@ -132,6 +127,7 @@ export function SessionScreen({
       }}
       haptic={haptic}
       initialInput={draft}
+      onPreparingInput={setDraft}
       catalog={catalog}
     />
   );
@@ -145,26 +141,36 @@ function ActiveTraining({
   onFinished,
   haptic,
   initialInput,
+  onPreparingInput,
   catalog,
 }: {
   active: boolean;
-  session: TrainingSession;
+  session: TrainingSession | null;
   initialInput: SessionInput;
+  onPreparingInput: (input: SessionInput) => void;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
   controller: SessionController;
   userId: string;
   onFinished: () => void;
   haptic: boolean;
 }) {
-  const storageKey = `gotore:session-input:v2:${userId}:${session.id}`;
+  const sessionId = session?.id ?? null;
+  const revision = session?.revision;
+  const exercises = session?.exercises ?? [];
+  // 開始確定直後も入力欄を無効化せず、入力中のフォーカスを保つ。
+  const blocking = controller.busy && !controller.startingId;
+  const storageKey = sessionId ? `gotore:session-input:v2:${userId}:${sessionId}` : null;
   const [input, setInput] = useState(() => {
     try {
-      const saved = readSessionInput(localStorage.getItem(storageKey));
-      return saved.name ? saved : { ...initialInput, revision: session.revision };
+      const saved = readSessionInput(storageKey ? localStorage.getItem(storageKey) : null);
+      return saved.name ? saved : { ...initialInput, revision };
     } catch {
-      return { ...initialInput, revision: session.revision };
+      return { ...initialInput, revision };
     }
   });
+  useEffect(() => {
+    if (!sessionId) onPreparingInput(input);
+  }, [input, sessionId, onPreparingInput]);
   const [selecting, setSelecting] = useState(!input.name);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const comparisonTable = useRef<HTMLElement>(null);
@@ -182,33 +188,34 @@ function ActiveTraining({
   } | null>(null);
   const [query, setQuery] = useState("");
   const overviewBests = useResource<SessionBests>(
-    `/sessions/${session.id}/bests`,
+    sessionId ? `/sessions/${sessionId}/bests` : null,
     controller.confirmedRevision,
     false,
     true,
-    { enabled: active && selecting && session.exercises.length > 0 },
+    { enabled: active && selecting && exercises.length > 0 },
   );
   const bestPositions = new Set(
-    overviewBests.data?.revision === session.revision && !controller.pending
+    overviewBests.data && overviewBests.data.revision === revision && !controller.pending
       ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
       : [],
   );
   const names = Array.from(
-    new Set([...(catalog.data ?? []).map((e) => e.name), ...session.exercises.map((e) => e.name)]),
+    new Set([...(catalog.data ?? []).map((e) => e.name), ...exercises.map((e) => e.name)]),
   );
   const context = useExerciseContext(
-    session.id,
+    sessionId,
     input.name,
     names.filter((name) => name !== input.name && (!selecting || name.includes(query.trim()))),
     controller.confirmedRevision,
     active,
   );
-  const sets = session.exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
+  const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
   const previous = context.data?.previous?.sets ?? [];
 
   const latestInput = useRef(input);
   latestInput.current = input;
   const persistInput = useCallback(() => {
+    if (!storageKey) return;
     try {
       localStorage.setItem(storageKey, JSON.stringify(latestInput.current));
     } catch {
@@ -234,24 +241,25 @@ function ActiveTraining({
   useEffect(() => {
     if (
       submission &&
-      controller.saved?.id === session.id &&
+      controller.saved?.id === sessionId &&
       controller.saved.revision >= submission.revision
     )
       setFeedback((current) => (current.startsWith("直前") ? current : "保存しました"));
-  }, [controller.saved, session.id, submission]);
+  }, [controller.saved, sessionId, submission]);
   // 応答だけ失われた保存は、再起動時にサーバーと照合して二重追加を防ぐ。
   useEffect(() => {
+    if (!storageKey) return;
     try {
       const pending = JSON.parse(localStorage.getItem(`${storageKey}:pending`) || "null");
       if (
         pending &&
-        pending.revision + 1 === session.revision &&
-        JSON.stringify(pending.exercises) === JSON.stringify(session.exercises)
+        pending.revision + 1 === revision &&
+        JSON.stringify(pending.exercises) === JSON.stringify(exercises)
       ) {
         localStorage.removeItem(`${storageKey}:pending`);
         setInput((value) => ({
           ...value,
-          revision: session.revision,
+          revision,
           editing: null,
           dirty: false,
         }));
@@ -260,22 +268,22 @@ function ActiveTraining({
     } catch {
       setStorageWarning(true);
     }
-  }, [storageKey, session.revision, session.exercises]);
+  }, [storageKey, revision, exercises]);
   const stale =
     input.revision !== undefined &&
-    input.revision !== session.revision &&
+    input.revision !== revision &&
     (input.dirty || input.editing !== null);
 
   async function save() {
-    if (controller.busy || stale || adding.current) return;
+    if (!session || !storageKey || controller.busy || stale || adding.current) return;
     adding.current = true;
     setError("");
     try {
       const value = setValue(input.weight, input.reps);
-      const exercises = updateSet(session.exercises, input.name, value, input.editing);
-      const result = await controller.save(exercises, session.revision);
+      const nextExercises = updateSet(exercises, input.name, value, input.editing);
+      const result = await controller.save(nextExercises, revision);
       setSubmission({ revision: result.revision, set: (input.editing ?? sets.length) + 1 });
-      setUndo({ exercises: session.exercises, revision: result.revision });
+      setUndo({ exercises: exercises, revision: result.revision });
       const nextInput = { ...input, revision: result.revision, editing: null, dirty: false };
       setInput(nextInput);
       try {
@@ -310,12 +318,16 @@ function ActiveTraining({
     <section className={`session-screen${selecting ? "" : " entering-sets"}`}>
       <div className="section-heading">
         <span className="eyebrow">
-          {session.performed_on.replaceAll("-", "/")} · トレーニング中
+          {session
+            ? `${session.performed_on.replaceAll("-", "/")} · トレーニング中`
+            : controller.busy
+              ? "開始中…"
+              : "開始を再試行してください"}
         </span>
         <button
           type="button"
           className="secondary finish-training"
-          disabled={controller.busy}
+          disabled={!session || controller.busy}
           onClick={() => setFinishOpen(true)}
         >
           トレーニング終了
@@ -336,8 +348,8 @@ function ActiveTraining({
           </div>
           <section className="session-overview" aria-label="今回のトレーニング">
             <h2>今回のトレーニング</h2>
-            {session.exercises.length ? (
-              session.exercises.map((exercise, index) => (
+            {exercises.length ? (
+              exercises.map((exercise, index) => (
                 <div key={`${exercise.name}-${index}`}>
                   <h3>
                     {exercise.name} · {exercise.sets.length}セット
@@ -408,13 +420,13 @@ function ActiveTraining({
                       setSelecting(false);
                       return;
                     }
-                    const latest = session.exercises
+                    const latest = exercises
                       .filter((e) => e.name === name)
                       .flatMap((e) => e.sets)
                       .at(-1);
                     setInput({
                       name,
-                      revision: session.revision,
+                      revision,
                       weight: String(latest?.weight ?? 20),
                       reps: String(latest?.reps ?? 10),
                       editing: null,
@@ -428,7 +440,7 @@ function ActiveTraining({
                 >
                   <span>{name}</span>
                   <span className="muted">
-                    {session.exercises.find((e) => e.name === name)?.sets.length || ""} ›
+                    {exercises.find((e) => e.name === name)?.sets.length || ""} ›
                   </span>
                 </button>
               ))}
@@ -448,7 +460,7 @@ function ActiveTraining({
               <button
                 className="text-button"
                 type="button"
-                disabled={controller.busy}
+                disabled={blocking}
                 onClick={() => setSelecting(true)}
               >
                 種目を変更
@@ -536,7 +548,7 @@ function ActiveTraining({
                     onClick={() => {
                       setInput({
                         ...input,
-                        revision: session.revision,
+                        revision,
                         weight: String(sets[i].weight),
                         reps: String(sets[i].reps),
                         editing: i,
@@ -551,7 +563,11 @@ function ActiveTraining({
               ))}
             </section>
           </div>
-          <InlineMemo title="今回のメモ" path={`/workouts/${session.id}/memo`} userId={userId} />
+          {sessionId ? (
+            <InlineMemo title="今回のメモ" path={`/workouts/${sessionId}/memo`} userId={userId} />
+          ) : (
+            <span className="memo-text muted">メモ</span>
+          )}
           <form
             className="set-entry"
             onSubmit={(e) => {
@@ -565,20 +581,20 @@ function ActiveTraining({
                 <button
                   type="button"
                   className="text-button"
-                  onClick={() => setInput({ ...input, editing: null, revision: session.revision })}
+                  onClick={() => setInput({ ...input, editing: null, revision })}
                 >
                   新しいセットとして入力
                 </button>
               </p>
             )}
-            <fieldset disabled={controller.busy || stale || controller.status === "conflict"}>
+            <fieldset disabled={blocking || stale || controller.status === "conflict"}>
               <div className="section-heading">
                 <h2>
                   {input.editing === null
                     ? `SET ${sets.length + 1}`
                     : `SET ${input.editing + 1} を編集`}
                 </h2>
-                {input.editing === null && undo && undo.revision === session.revision && (
+                {input.editing === null && undo && undo.revision === revision && (
                   <button
                     className="text-button undo-button"
                     type="button"
@@ -608,7 +624,7 @@ function ActiveTraining({
                         ...input,
                         weight: String(sets.at(-1)?.weight ?? 20),
                         reps: String(sets.at(-1)?.reps ?? 10),
-                        revision: session.revision,
+                        revision,
                         editing: null,
                         dirty: false,
                       })
@@ -634,8 +650,8 @@ function ActiveTraining({
                       ...input,
                       revision:
                         input.dirty || input.editing !== null
-                          ? (input.revision ?? session.revision)
-                          : session.revision,
+                          ? (input.revision ?? revision)
+                          : revision,
                       weight,
                       dirty: true,
                     });
@@ -655,8 +671,8 @@ function ActiveTraining({
                       ...input,
                       revision:
                         input.dirty || input.editing !== null
-                          ? (input.revision ?? session.revision)
-                          : session.revision,
+                          ? (input.revision ?? revision)
+                          : revision,
                       reps,
                       dirty: true,
                     });
@@ -701,14 +717,11 @@ function ActiveTraining({
                 <button
                   className="primary"
                   type="submit"
+                  disabled={!session || controller.busy}
                   aria-label={input.editing === null ? "次のセットへ" : "変更を保存"}
                 >
                   <span>
-                    {controller.busy
-                      ? "保存中…"
-                      : input.editing === null
-                        ? "次のセットへ"
-                        : "変更を保存"}
+                    {blocking ? "保存中…" : input.editing === null ? "次のセットへ" : "変更を保存"}
                   </span>
                   <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
                 </button>
@@ -733,9 +746,24 @@ function ActiveTraining({
         </Sheet>
       )}
       <div className="sync-status" aria-live="polite">
-        {controller.pending
-          ? `${controller.pending}件 ${controller.status === "offline" ? "未送信・端末に保持" : controller.status === "conflict" ? "要確認・端末に保持" : "同期中"}`
-          : `同期済み · ${session.shared_group_ids?.length ?? 0}グループに共有`}
+        {!session ? (
+          controller.busy ? (
+            "開始中…"
+          ) : (
+            <button
+              type="button"
+              className="text-button"
+              disabled={!controller.ready}
+              onClick={() => void controller.start().catch(() => {})}
+            >
+              開始を再試行
+            </button>
+          )
+        ) : controller.pending ? (
+          `${controller.pending}件 ${controller.status === "offline" ? "未送信・端末に保持" : controller.status === "conflict" ? "要確認・端末に保持" : "同期中"}`
+        ) : (
+          `同期済み · ${session.shared_group_ids?.length ?? 0}グループに共有`
+        )}
         {controller.status === "offline" && (
           <button type="button" className="text-button" onClick={() => void controller.sync()}>
             再送
@@ -754,7 +782,7 @@ function ActiveTraining({
             aria-label="端末に残っている記録"
             readOnly
             rows={8}
-            value={session.exercises
+            value={exercises
               .map(
                 (exercise) =>
                   `${exercise.name}\n${exercise.sets.map((value, index) => `${index + 1}: ${value.weight}kg × ${value.reps}`).join("\n")}`,
@@ -783,7 +811,7 @@ function ActiveTraining({
           </button>
         </Sheet>
       )}
-      {finishOpen && (
+      {finishOpen && session && (
         <Sheet
           title="トレーニング終了"
           onClose={() => {
@@ -803,7 +831,7 @@ function ActiveTraining({
               try {
                 await controller.finish();
                 try {
-                  localStorage.removeItem(storageKey);
+                  if (storageKey) localStorage.removeItem(storageKey);
                 } catch {}
                 onFinished();
               } catch {

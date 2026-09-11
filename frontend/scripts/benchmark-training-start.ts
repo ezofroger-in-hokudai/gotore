@@ -40,6 +40,7 @@ try {
       await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("62.5");
       await page.screenshot({ path: `${screenshots}/starting.png`, fullPage: true });
     }
+    await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeEnabled();
     await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeEnabled();
     await page.waitForTimeout(800);
     await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
