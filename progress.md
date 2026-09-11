@@ -1173,3 +1173,11 @@
 - 関連ファイル: frontend/src/features/analytics/、frontend/src/features/v2/{history,community}.tsx、frontend/src/app/v2.css、単体/E2Eテスト。
 - 未解決事項: 全92件の最終E2Eは実行中。
 - 次のアクション: 計測・画面画像の資料をまとめてPRへ追加する。
+
+## 2026-09-11 17:55
+- 変更内容: #97 の画像4枚、計測条件/結果、再現スクリプト、現行実装の案内を追加。
+- 目的: 実際の画面と高速化の範囲、保存への負担をPRで確認できるようにする。
+- 影響範囲: 検証資料のみ。計測スクリプトは専用空_test DB内でロールバックする。
+- 関連ファイル: scripts/benchmark_analytics.py、docs/loading-performance.md、docs/current-state.md、docs/images/history-analytics/。
+- 未解決事項: 最終E2EとPRのCI結果の確認。
+- 次のアクション: 画像付きPRを作成し、結果を追記する。

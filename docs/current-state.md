@@ -38,12 +38,12 @@ Vercel Servicesでは1プロジェクトの共通ルートから各サービス�
 
 ## 後続で扱うもの
 
-SCORE、AI、ランキング、スタンプ、コメント、Push通知、詳細な履歴分析、アカウント管理、公開環境へのデプロイ、Android／iOSアプリ。
+SCORE、AI、スタンプ、コメント、Push通知、アカウント管理、公開環境へのデプロイ、Android／iOSアプリ。履歴グラフとグループ集計は #97 の範囲を追加（検証・PRの状態はprogress.md）。
 
 今週追加するものは、初版を使って確認した結果からIssueにします。
 GitHubのmain保護・レビュー必須設定は、管理者が設定状況を確認してください。
 
-#35（親#14）の追加仕様は [activity-heatmap.md](activity-heatmap.md)。表示する指標はセット数で、当時はSCORE・BEST・種目別推移を後続とした。v2ではBESTを追加し、SCORE・種目別推移は後続。ヒートマップ単独の追加migrationは不要。検証・PRの状態はprogress.mdと週次計画#33で追跡する。
+#35（親#14）の追加仕様は [activity-heatmap.md](activity-heatmap.md)。表示する指標はセット数で、当時はSCORE・BEST・種目別推移を後続とした。v2ではBESTを追加し、#97で種目別の重量・推定1RM・セット数・総負荷の推移とグループランキングを追加。SCOREは #13 で算式を検討する。ヒートマップ単独の追加migrationは不要。検証・PRの状態はprogress.mdと週次計画#33で追跡する。
 
 #28の追加仕様は [exercise-options.md](exercise-options.md)。公開前に追加migrationを適用する。候補を削除しても過去記録・下書きは保持する。検証とPRはprogress.md・週次計画#33で追跡する。
 
@@ -69,3 +69,7 @@ GitHubのmain保護・レビュー必須設定は、管理者が設定状況を�
 PR #63後の追加修正では、端末へ追加したセット番号・サーバー同期状態と次の番号を表示し、タッチ後のホバー残留を解消する。種目追加はリスト末尾、次種目は保存の横、終了は上部の枠付きボタンとし、確定BESTを赤色・炎で強調する。開始・保存・終了等のSQL往復削減と比較結果も[読み込み仕様](loading-performance.md)に記載。追加migration・環境変数は不要。
 
 PR #64への追加指定では、次種目を左・次セットを右へ変更し、比較RMを数値の横へ置く。BESTの説明文言は除き、今回のトレーニング一覧も赤色・炎で強調する。本人限定の`GET /sessions/{id}/bests`を追加し、保存済み内容とrevisionを基準に再起動・訂正後も再計算する。API側の接続プールにはPsycopgのpool拡張を追加。依存を`make install`で同期し、任意の`DATABASE_POOL_MAX_SIZE`（既定4・0で無効）を設定できる。追加migrationは不要。
+
+## 履歴グラフ・グループ集計
+
+#97 の合意仕様は [history-analytics.md](history-analytics.md)。個人の種目別推移、日/週/月集計、グループの量・活動・最高重量/RM・成長の比較を提供する。集計用の追加migration `20260911090000_workout_statistics.sql` を使用し、保存と同一トランザクションで記録ごとの集計を更新する。ブラウザでは先読みと容量を制限したキャッシュを使い、指標と粒度を通信なしに切り替える。
