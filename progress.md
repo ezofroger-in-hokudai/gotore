@@ -1199,3 +1199,12 @@
 - 検証: 前回のmake check（backend160件、frontend37件）、最終E2E92件の成功を引き継ぐ。今回は履歴追記のみのため新しいアプリテストは追加せず、git diff --checkを確認する。
 - 未解決事項: 作成後のGitHub CIとレビューの確認。マージ・公開DBへのmigration適用・デプロイは今回の依頼範囲に含めない。
 - 次のアクション: push、画像付きPRの作成、CI結果の確認。PR番号と結果はPR・週次計画 #33 にも記録する。
+
+## 2026-09-11 18:10
+- 変更内容: 承認済みの変更をpushし、main向けの画像付きPR #98（https://github.com/ezofroger-in-hokudai/gotore/pull/98）を作成。
+- 目的: #97 のグラフ・ランキング・高速化を画像、合意仕様、検証結果とともにレビューできるようにする。
+- 影響範囲: PR公開と履歴追記のみ。元からある未コミット変更と未追跡資料は含めない。
+- 関連ファイル: progress.md、docs/history-analytics.md、docs/images/history-analytics/。
+- 検証: pushとPR作成の成功を確認。ローカルのmake check・E2E92件は成功済み。履歴追記のため追加アプリテストは不要、git diff --checkを確認。
+- 未解決事項: GitHub CIは確認中、レビュー待ち。
+- 次のアクション: 最終コミットのCI結果をPRと週次計画 #33 に記録する。マージ・公開DB適用・デプロイは行わない。
