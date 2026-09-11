@@ -7,6 +7,8 @@ import {
 } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
 import { AnalyticsPanel } from "../analytics/panel";
+import { GroupScoreWeights } from "../score/group-score-weights";
+import { ScoreBadge } from "../score/score-display";
 import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
 import { MembershipPanel } from "../training/membership-panel";
@@ -388,6 +390,7 @@ function Feed({
                 )}
                 <span className="feed-detail-hint">詳細</span>
               </button>
+              <ScoreBadge score={item.score} />
             </article>
           );
         })}
@@ -409,7 +412,7 @@ type Preview = {
   member_count: number;
   already_member: boolean;
 };
-type Mode = "list" | "detail" | "create" | "join" | "members" | "invite";
+type Mode = "list" | "detail" | "create" | "join" | "members" | "invite" | "weights";
 export function CommunityScreen({
   groups,
   selected,
@@ -445,7 +448,7 @@ export function CommunityScreen({
       if (event.state?.gotoreView === "groups") {
         const next = event.state.communityMode;
         setMode(
-          ["list", "detail", "create", "join", "members", "invite"].includes(next)
+          ["list", "detail", "create", "join", "members", "invite", "weights"].includes(next)
             ? next
             : initialDetail
               ? "detail"
@@ -601,6 +604,9 @@ export function CommunityScreen({
           ) : group ? (
             <>
               <h1>{group.name}</h1>
+              {mode === "weights" && (
+                <GroupScoreWeights groupId={group.id} editable={group.owner_id === userId} />
+              )}
               {mode === "detail" && (
                 <>
                   <div className="analytics-tabs" aria-label="グループの表示">
@@ -661,6 +667,13 @@ export function CommunityScreen({
                           </button>
                           <button className="v2-row" type="button" onClick={() => change("invite")}>
                             メンバーを招待 <span>›</span>
+                          </button>
+                          <button
+                            className="v2-row"
+                            type="button"
+                            onClick={() => change("weights")}
+                          >
+                            SCOREの配点 <span>›</span>
                           </button>
                         </div>
                         <h2>みんなの最新記録</h2>

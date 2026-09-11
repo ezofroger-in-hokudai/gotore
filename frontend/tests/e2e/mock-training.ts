@@ -168,6 +168,7 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
               ? [
                   {
                     workout_id: latest.id,
+                    score: latest.score,
                     user_id: user.id,
                     display_name: user.user_metadata.display_name,
                     exercise: exercise.name,

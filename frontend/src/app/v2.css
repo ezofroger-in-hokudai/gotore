@@ -1517,3 +1517,162 @@
   font-size: 10px;
   line-height: 1.7;
 }
+
+/* 終了時は保存済みの実績を先に表示し、AIの待ち状態でも高さを保つ。 */
+.score-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: .75rem;
+}
+.score-badge strong {
+  color: var(--accent);
+  font-size: .875rem;
+}
+.feed-item > .score-badge {
+  margin-top: 4px;
+}
+.score-breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 8px;
+}
+.score-breakdown > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.score-breakdown > div > span,
+.score-breakdown small {
+  color: var(--muted);
+  font-size: .75rem;
+}
+.score-breakdown strong {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.score-breakdown strong small {
+  margin-left: 2px;
+}
+.score-track {
+  height: 3px;
+  background: var(--line);
+}
+.score-track span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.workout-result {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 0;
+}
+.result-eyebrow {
+  color: var(--accent);
+  font-size: .75rem;
+  letter-spacing: .12em;
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.workout-result h1 {
+  font-size: 1.125rem;
+  margin: 4px 0;
+}
+.result-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 0 16px;
+}
+.result-score > span {
+  letter-spacing: .12em;
+  font-size: .75rem;
+}
+.result-score strong {
+  font-size: 2rem;
+  line-height: 1.2;
+  color: var(--accent);
+}
+.result-score small {
+  color: var(--muted);
+  font-size: .75rem;
+}
+.result-totals {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 0;
+  border-block: 1px solid var(--line);
+  font-size: .75rem;
+}
+.result-totals strong {
+  font-size: 1rem;
+}
+.result-comment {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  min-height: 104px;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.result-comment h2 {
+  font-size: .875rem;
+  margin: 0 0 8px;
+}
+.result-comment p {
+  margin: 8px 0;
+}
+.score-note {
+  font-size: .75rem;
+}
+.workout-result > button {
+  margin-top: 8px;
+}
+.goal-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+.goal-panel textarea {
+  width: 100%;
+  resize: vertical;
+  font-size: 1rem;
+}
+.goal-criterion {
+  padding: 8px 0;
+  border-block-start: 1px solid var(--line);
+}
+.goal-panel .goal-confirm {
+  flex-direction: row;
+  align-items: center;
+  min-height: 48px;
+}
+.goal-confirm input {
+  width: 20px;
+  height: 20px;
+}
+.goal-panel > button {
+  margin: 8px 0;
+}
+.weight-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.weight-inputs label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.weight-inputs input {
+  width: 100%;
+}
+.record-score {
+  padding-top: 8px;
+}

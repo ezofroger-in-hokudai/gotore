@@ -1,4 +1,6 @@
 import type { Workout } from "@/lib/api";
+import { HistoryScore } from "../score/history-score";
+import { ScoreBadge, ScoreBreakdown } from "../score/score-display";
 import { estimatedRM } from "../session/session";
 import { ReuseWorkout } from "./reuse-workout";
 import { WorkoutActions } from "./workout-actions";
@@ -58,6 +60,15 @@ export function RecordList({
           <h3 className="exercise-summary">
             {record.exercises.map((exercise) => exercise.name).join(" / ")}
           </h3>
+          {record.score && (
+            <div className="record-score">
+              <ScoreBadge score={record.score} />
+              <ScoreBreakdown score={record.score} />
+            </div>
+          )}
+          {record.score && personal && record.user_id === userId && (
+            <HistoryScore record={record} onChanged={onDeleted} />
+          )}
           <details open={expanded}>
             <summary>セット詳細</summary>
             <div className="record-details">
