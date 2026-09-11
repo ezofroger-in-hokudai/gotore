@@ -25,6 +25,7 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
+- [history-analytics.md](history-analytics.md): 種目別の履歴グラフ、グループの推移・ランキングと集計・先読み。
 - [activity-heatmap.md](activity-heatmap.md): セット数の月別ヒートマップと日別記録。
 - [exercise-options.md](exercise-options.md): 本人用の種目リスト、選択入力、追加・削除と履歴保持。
 - [../README.md](../README.md): 初回セットアップ、日々の開発、環境変数、migration、検証の共通手順。

@@ -186,12 +186,17 @@ class TrainingRepository:
         limit: int,
         offset: int,
         performed_on: date | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ):
         if group_id is not None:
             self.group(user_id, group_id)
-            where, value = """(w.group_id = %s OR EXISTS(
+            where, value = (
+                """(w.group_id = %s OR EXISTS(
                 SELECT 1 FROM public.gotore_workout_shares s
-                WHERE s.workout_id = w.id AND s.group_id = %s))""", group_id
+                WHERE s.workout_id = w.id AND s.group_id = %s))""",
+                group_id,
+            )
             order = "w.created_at DESC, w.id"
         else:
             where, value = "w.user_id = %s", user_id
@@ -201,6 +206,9 @@ class TrainingRepository:
         if performed_on is not None:
             where += " AND w.performed_on = %s"
             values.append(performed_on)
+        if date_from is not None and date_to is not None:
+            where += " AND w.performed_on BETWEEN %s AND %s"
+            values.extend([date_from, date_to])
         return self.connection.execute(
             f"""SELECT w.*, p.display_name,
             ARRAY(SELECT s.group_id FROM public.gotore_workout_shares s

@@ -29,7 +29,12 @@ for (const owner of [true, false]) {
       }
       if (new URL(request.url()).pathname === "/api/groups")
         return route.fulfill({ json: ended && !owner ? [] : [group] });
-      if (new URL(request.url()).pathname.endsWith("/activity")) return route.fallback();
+      if (
+        ["/activity", "/analytics"].some((suffix) =>
+          new URL(request.url()).pathname.endsWith(suffix),
+        )
+      )
+        return route.fallback();
       if (new URL(request.url()).pathname.endsWith("/workouts")) return route.fulfill({ json: [] });
       return route.fulfill({ json: { ...group, members: ended ? [self] : [self, other] } });
     });
