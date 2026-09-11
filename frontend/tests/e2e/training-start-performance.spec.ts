@@ -29,6 +29,7 @@ test("開始前に重量と回数を準備でき、開始待ちに保存要求�
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("82.5");
   await expect(page.getByRole("spinbutton", { name: "回数", exact: true })).toHaveValue("6");
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await expect.poll(() => state.saves).toBe(1);
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   expect(state.session?.exercises[0]).toEqual({
     name: "スクワット",
