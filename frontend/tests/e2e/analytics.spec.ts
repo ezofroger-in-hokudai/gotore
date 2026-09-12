@@ -68,6 +68,8 @@ function fixture(url: URL, group = false): Analytics {
           weight: rank.map((r) => ({ ...r, value: 85, rank: 1 })),
           rm: rank.map((r) => ({ ...r, value: 102, rank: 1 })),
           weight_growth: rank.map((r) => ({ ...r, value: 5, rank: 1 })),
+          rm_growth: rank.map((r) => ({ ...r, value: 6, rank: 1 })),
+          rm_percent: rank.map((r) => ({ ...r, value: 6.3, rank: 1 })),
           weight_percent: rank.map((r) => ({ ...r, value: 6.3, rank: 1 })),
         }
       : {},
@@ -77,6 +79,7 @@ function fixture(url: URL, group = false): Analytics {
 async function routes(page: Page) {
   let requests = 0;
   let selectedRequests = 0;
+  let currentGroupRequests = 0;
   let slow = false;
   let forbidden = false;
   await page.route(/\/api\/(groups\/[^/]+\/)?analytics\?/, async (route) => {
@@ -87,6 +90,13 @@ async function routes(page: Page) {
       url.searchParams.get("exercise") === "ベンチプレス"
     )
       selectedRequests++;
+    if (
+      url.pathname.includes("/groups/") &&
+      url.searchParams.get("period") === "week" &&
+      url.searchParams.get("exercise") === "ベンチプレス" &&
+      url.searchParams.get("offset") === "0"
+    )
+      currentGroupRequests++;
     if (slow) await new Promise((resolve) => setTimeout(resolve, 1200));
     await route.fulfill(
       forbidden
@@ -102,6 +112,7 @@ async function routes(page: Page) {
   return {
     count: () => requests,
     selectedCount: () => selectedRequests,
+    currentGroupCount: () => currentGroupRequests,
     slow: () => {
       slow = true;
     },
@@ -123,8 +134,10 @@ test("先読みした履歴グラフを表示し、指標・粒度・期間再�
   await expect(panel.locator(".analytics-summary")).toContainText("23,500");
   state.slow();
   const before = state.selectedCount();
-  await panel.getByRole("button", { name: "最高重量", exact: true }).click();
+  await panel.getByRole("button", { name: "強さ", exact: true }).click();
+  await panel.getByRole("combobox", { name: "指標", exact: true }).selectOption("weight");
   await expect(panel.locator(".analytics-summary")).toContainText("85", { timeout: 500 });
+  await panel.getByText("表示設定", { exact: true }).click();
   await panel.getByRole("button", { name: "週別", exact: true }).click();
   await expect(panel.getByRole("slider")).toHaveAttribute("max", "0", { timeout: 500 });
   expect(state.selectedCount()).toBe(before);
@@ -146,7 +159,7 @@ test("グループのグラフとランキングを共有し、権限喪失後�
   await page.getByRole("button", { name: "ランキング", exact: true }).click();
   const panel = page.getByRole("region", { name: "グループ集計" });
   await expect(panel.getByRole("list")).toContainText("タクミ");
-  await panel.getByRole("button", { name: "セット数", exact: true }).click();
+  await panel.getByRole("combobox", { name: "指標", exact: true }).selectOption("sets");
   await expect(panel.locator(".rank-position")).toHaveText(["1", "1"]);
   await page.getByRole("button", { name: "グラフ", exact: true }).click();
   await expect(panel.getByRole("img")).toBeVisible({ timeout: 500 });
@@ -212,4 +225,79 @@ test("実DBの個人グラフは非公開も集計し、グループのランキ
   await expect(page.locator(".analytics-ranks")).toContainText("800");
   await page.getByRole("button", { name: "グラフ", exact: true }).click();
   await expect(page.locator(".community-screen .analytics-summary")).toContainText("800");
+});
+
+test("量・強さ・継続から選び、必要な指標だけを通信なしで切り替える", async ({ page }) => {
+  await mockTraining(page);
+  const state = await routes(page);
+  await navigate(page, "履歴");
+  await page.getByRole("button", { name: "グラフ", exact: true }).click();
+  const panel = page.getByRole("region", { name: "履歴グラフ" });
+  await expect(panel.getByRole("group", { name: "分析の目的" }).getByRole("button")).toHaveText([
+    "量",
+    "強さ",
+    "継続",
+  ]);
+  await expect(
+    panel.getByRole("combobox", { name: "指標", exact: true }).locator("option"),
+  ).toHaveText(["総負荷", "セット数"]);
+  await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
+  await expect(panel.locator(".analytics-summary")).toBeVisible();
+  state.slow();
+  const before = state.selectedCount();
+  await panel.getByRole("button", { name: "強さ", exact: true }).click();
+  const metric = panel.getByRole("combobox", { name: "指標", exact: true });
+  await expect(metric.locator("option")).toHaveText(["最高重量", "最高推定1RM"]);
+  await metric.selectOption("rm");
+  await expect(panel.locator(".analytics-summary")).toContainText("最高推定1RM");
+  await panel.getByRole("button", { name: "継続", exact: true }).click();
+  await expect(metric.locator("option")).toHaveText(["活動日数"]);
+  expect(state.selectedCount()).toBe(before);
+  await expect(panel.getByText("前期間比", { exact: false })).toBeHidden();
+  await panel.getByText("前期間と比較", { exact: true }).click();
+  await expect(panel.getByText("前期間比", { exact: false })).toBeVisible();
+  await panel.getByText("前期間と比較", { exact: true }).click();
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 720 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+    if (process.env.ANALYTICS_SCREENSHOTS) {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({ path: `../docs/images/analytics-categories/analytics-${width}.png` });
+    }
+  }
+});
+
+test("強さのランキングでRMと成長指標を選び、分類や期間を戻すと選択を復元する", async ({ page }) => {
+  await mockTraining(page);
+  const state = await routes(page);
+  await openGroup(page);
+  await page.getByRole("button", { name: "グラフ", exact: true }).click();
+  const panel = page.getByRole("region", { name: "グループ集計" });
+  await panel.getByRole("button", { name: "強さ", exact: true }).click();
+  await panel.getByRole("button", { name: "ランキングで見る", exact: true }).click();
+  await expect(panel.getByRole("combobox", { name: "指標", exact: true })).toHaveCount(0);
+  await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
+  const metric = panel.getByRole("combobox", { name: "指標", exact: true });
+  await expect(metric.locator("option")).toHaveCount(6);
+  await expect(panel.getByRole("list")).toContainText("タクミ");
+  await expect.poll(state.currentGroupCount).toBe(1);
+  const before = state.currentGroupCount();
+  for (const value of ["rm", "weight_growth", "weight_percent", "rm_growth", "rm_percent"]) {
+    await metric.selectOption(value);
+    await expect(panel.getByRole("list")).toContainText("タクミ", { timeout: 500 });
+  }
+  await panel.getByRole("button", { name: "量", exact: true }).click();
+  await metric.selectOption("sets");
+  await panel.getByRole("button", { name: "強さ", exact: true }).click();
+  await expect(metric).toHaveValue("rm_percent");
+  expect(state.currentGroupCount()).toBe(before);
+  await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("all");
+  await expect(metric.locator("option")).toHaveCount(2);
+  await expect(metric).toHaveValue("weight");
+  await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("week");
+  await expect(metric).toHaveValue("rm_percent");
+  await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("");
+  await expect(metric).toHaveCount(0);
+  await panel.getByRole("button", { name: "量", exact: true }).click();
+  await expect(metric).toHaveValue("sets");
 });
