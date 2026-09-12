@@ -7,6 +7,7 @@ import { AnalyticsPanel } from "../analytics/panel";
 import { ScoreBadge } from "../score/score-display";
 import { today } from "../training/draft";
 import { RecordList } from "../training/record-list";
+import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 
 export function History({
@@ -46,6 +47,7 @@ export function History({
   const current = records.data?.find((record) => record.id === detail);
   const detailView = current ? (
     <section className="history-detail">
+      <ResourceError resource={records} />
       <button type="button" className="text-button back-button" onClick={() => setDetail(null)}>
         ‹ 履歴
       </button>
@@ -134,14 +136,7 @@ export function History({
               </button>
             )}
           </div>
-          {records.error && (
-            <p className="error" role="alert">
-              {records.error}
-              <button className="text-button" type="button" onClick={records.retry}>
-                再試行
-              </button>
-            </p>
-          )}
+          <ResourceError resource={records} />
           <output className="resource-status muted">
             {records.loading ? (records.data ? "更新中…" : "読み込み中…") : ""}
           </output>

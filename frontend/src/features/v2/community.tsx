@@ -12,6 +12,7 @@ import { ScoreBadge } from "../score/score-display";
 import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
 import { MembershipPanel } from "../training/membership-panel";
+import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
@@ -149,13 +150,8 @@ export function CommunityHome({
               />
             ))}
           </div>
-          {groups.length > 1 && summaries.error && (
-            <p role="alert" className="error">
-              {summaries.error}
-              <button type="button" className="text-button" onClick={summaries.retry}>
-                グループの状況を再試行
-              </button>
-            </p>
+          {groups.length > 1 && (
+            <ResourceError resource={summaries} retryLabel="グループの状況を再試行" />
           )}
           <div className="carousel-dots">
             {groups.map((group, index) => (
@@ -175,23 +171,17 @@ export function CommunityHome({
           <output className="resource-status muted">
             {activity.loading && activity.data ? "更新中…" : ""}
           </output>
-          {activity.error ? (
-            <p role="alert" className="error">
-              {activity.error}
-              <button type="button" className="text-button" onClick={activity.retry}>
-                再試行
-              </button>
-            </p>
-          ) : activity.data ? (
+          <ResourceError resource={activity} />
+          {activity.data ? (
             <Feed
               key={activity.data.group_id}
               data={activity.data}
               active={active}
               trusted={!activity.refreshing}
             />
-          ) : (
+          ) : !activity.error ? (
             <div className="resource-placeholder">読み込み中…</div>
-          )}
+          ) : null}
         </>
       )}
     </>
@@ -224,11 +214,8 @@ function GroupCard({
         <h2>{group.name}</h2>
         <span>›</span>
       </div>
-      {error ? (
-        <p>状況を取得できません</p>
-      ) : (
-        <CommunityStats data={data} active={active} trusted={!refreshing} />
-      )}
+      {error && <p>{data ? "更新未確認" : "状況を取得できません"}</p>}
+      {error && !data ? null : <CommunityStats data={data} active={active} trusted={!refreshing} />}
       <span className="community-total">メンバー {data?.member_count ?? "—"}人</span>
     </button>
   );
@@ -596,7 +583,7 @@ export function CommunityScreen({
         </>
       ) : (
         <>
-          {detail.error ? (
+          {detail.error && !group ? (
             <p className="error" role="alert">
               {detail.error}
               <button type="button" className="text-button" onClick={detail.retry}>
@@ -605,6 +592,7 @@ export function CommunityScreen({
             </p>
           ) : group ? (
             <>
+              <ResourceError resource={detail} />
               <h1>{group.name}</h1>
               {mode === "weights" && (
                 <GroupScoreWeights groupId={group.id} editable={group.owner_id === userId} />
@@ -645,11 +633,8 @@ export function CommunityScreen({
                     />
                   </div>
                   <div hidden={analyticsTab !== "feed"}>
-                    {activity.error ? (
-                      <p className="error" role="alert">
-                        {activity.error}
-                      </p>
-                    ) : (
+                    <ResourceError resource={activity} />
+                    {activity.error && !activity.data ? null : (
                       <>
                         <div className="community-card detail-card">
                           <CommunityStats

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { resourceRequest } from "./resource-request";
+import { canRetainResource } from "./retain-resource";
 
 export function useResource<T>(
   path: string | null,
@@ -39,7 +40,7 @@ export function useResource<T>(
       setResult({ path, data: previous.data, version: refreshKey, stale: true });
     } else {
       setResult((current) =>
-        current?.path === path && (!remember || (changed && retainOnRefresh)) ? current : null,
+        current?.path === path && (!changed || retainOnRefresh) ? current : null,
       );
     }
     setError("");
@@ -69,9 +70,11 @@ export function useResource<T>(
         }
       } catch (reason) {
         if (!controller.signal.aborted) {
-          if (remember) {
-            cache.current.pages.delete(path);
+          if (!canRetainResource(reason)) {
+            cache.current.pages.clear();
             setResult(null);
+          } else {
+            setResult((current) => (current?.path === path ? { ...current, stale: true } : null));
           }
           setError(reason instanceof Error ? reason.message : "取得できませんでした。");
         }
