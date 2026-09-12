@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
+import { revealComparisonSet } from "./comparison-scroll";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
 import {
@@ -237,8 +238,7 @@ function ActiveTraining({
         setStorageWarning(true);
       }
       requestAnimationFrame(() => {
-        const table = comparisonTable.current;
-        if (table && input.editing === null) table.scrollTop = table.scrollHeight;
+        if (input.editing === null) revealComparisonSet(comparisonTable.current, sets.length);
       });
       setFeedback(input.editing === null ? "追加しました" : "更新しました");
       if (haptic && typeof navigator.vibrate === "function") navigator.vibrate(15);
