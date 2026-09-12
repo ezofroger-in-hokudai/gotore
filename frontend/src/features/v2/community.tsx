@@ -642,6 +642,7 @@ export function CommunityScreen({
                       prefetch={active}
                       refreshKey={refreshKey}
                       ranking={analyticsTab === "ranking"}
+                      onRanking={() => setAnalyticsTab("ranking")}
                     />
                   </div>
                   <div hidden={analyticsTab !== "feed"}>

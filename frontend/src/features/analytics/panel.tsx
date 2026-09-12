@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnalyticsChart, dates, number } from "./chart";
+import { type MetricCategory, metricCategories, metricCategory } from "./metric-category";
 import { type Grain, type Metric, type Period, type RankMetric, labels, units } from "./types";
 import { useAnalytics } from "./use-analytics";
 
@@ -19,6 +20,7 @@ export function AnalyticsPanel({
   refreshKey,
   ranking = false,
   onRecords,
+  onRanking,
 }: {
   scope?: string;
   active: boolean;
@@ -26,13 +28,23 @@ export function AnalyticsPanel({
   refreshKey: number;
   ranking?: boolean;
   onRecords?: (start: string, end: string) => void;
+  onRanking?: () => void;
 }) {
   const [period, setPeriod] = useState<Period>(scope ? "week" : "month");
   const [offset, setOffset] = useState(0);
   const [exercise, setExercise] = useState("");
   const [exerciseNames, setExerciseNames] = useState<string[]>([]);
-  const [metric, setMetric] = useState<Metric>("volume");
-  const [rankMetric, setRankMetric] = useState<RankMetric>("volume");
+  const [category, setCategory] = useState<MetricCategory>("volume");
+  const [metricsByCategory, setMetricsByCategory] = useState<Record<MetricCategory, Metric>>({
+    volume: "volume",
+    strength: "weight",
+    activity: "days",
+  });
+  const [ranksByCategory, setRanksByCategory] = useState<Record<MetricCategory, RankMetric>>({
+    volume: "volume",
+    strength: "weight",
+    activity: "days",
+  });
   const [grain, setGrain] = useState<Grain>("day");
   const resource = useAnalytics(scope, period, offset, exercise, active, prefetch, refreshKey);
   const data = resource.data;
@@ -43,7 +55,6 @@ export function AnalyticsPanel({
   const metrics: Metric[] = scope
     ? ["volume", "sets", "people"]
     : ["volume", "sets", "days", ...(exercise ? (["weight", "rm"] as const) : [])];
-  const selectedMetric = metrics.includes(metric) ? metric : "volume";
   const rankMetrics: RankMetric[] = [
     "volume",
     "sets",
@@ -53,13 +64,33 @@ export function AnalyticsPanel({
       ? (["weight_growth", "weight_percent", "rm_growth", "rm_percent"] as const)
       : []),
   ];
-  const selectedRank = rankMetrics.includes(rankMetric) ? rankMetric : "volume";
+  const categoryMetrics = metrics.filter((value) => metricCategory(value) === category);
+  const categoryRanks = rankMetrics.filter((value) => metricCategory(value) === category);
+  const selectedMetric = categoryMetrics.includes(metricsByCategory[category])
+    ? metricsByCategory[category]
+    : (categoryMetrics[0] ?? "volume");
+  const selectedRank = categoryRanks.includes(ranksByCategory[category])
+    ? ranksByCategory[category]
+    : (categoryRanks[0] ?? "volume");
+  const choices = ranking ? categoryRanks : categoryMetrics;
   const availableGrains = Object.keys(data?.series ?? {}) as Grain[];
   const selectedGrain = availableGrains.includes(grain) ? grain : (availableGrains[0] ?? "month");
   const selected = ranking ? selectedRank : selectedMetric;
   const entries = data?.rankings[selectedRank] ?? [];
   return (
     <section className="analytics-panel" aria-label={scope ? "グループ集計" : "履歴グラフ"}>
+      <fieldset className="analytics-categories" aria-label="分析の目的">
+        {(Object.keys(metricCategories) as MetricCategory[]).map((value) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={category === value}
+            onClick={() => setCategory(value)}
+          >
+            {metricCategories[value]}
+          </button>
+        ))}
+      </fieldset>
       <div className="analytics-controls">
         <label>
           種目
@@ -116,18 +147,31 @@ export function AnalyticsPanel({
           ›
         </button>
       </div>
-      <div className="analytics-metrics" aria-label="集計指標">
-        {(ranking ? rankMetrics : metrics).map((value) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={selected === value}
-            onClick={() => (ranking ? setRankMetric(value) : setMetric(value as Metric))}
+      {choices.length > 0 && (
+        <label className="analytics-indicator">
+          指標
+          <select
+            value={selected}
+            onChange={(event) =>
+              ranking
+                ? setRanksByCategory({
+                    ...ranksByCategory,
+                    [category]: event.target.value as RankMetric,
+                  })
+                : setMetricsByCategory({
+                    ...metricsByCategory,
+                    [category]: event.target.value as Metric,
+                  })
+            }
           >
-            {labels[value]}
-          </button>
-        ))}
-      </div>
+            {choices.map((value) => (
+              <option key={value} value={value}>
+                {labels[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {resource.error ? (
         <div className="analytics-placeholder">
           <p role="alert" className="error">
@@ -139,6 +183,21 @@ export function AnalyticsPanel({
         </div>
       ) : !data ? (
         <output className="analytics-placeholder">グラフを準備しています…</output>
+      ) : !choices.length ? (
+        <div className="analytics-placeholder">
+          {scope && !ranking ? (
+            <>
+              <p>種目別の強さはランキングで確認できます。</p>
+              {onRanking && (
+                <button type="button" className="secondary" onClick={onRanking}>
+                  ランキングで見る
+                </button>
+              )}
+            </>
+          ) : (
+            <p>種目を選ぶと最高重量・RMを確認できます。</p>
+          )}
+        </div>
       ) : (
         <>
           <div className="analytics-summary">
@@ -155,26 +214,8 @@ export function AnalyticsPanel({
                 : `${data.totals.days}日間の記録${scope ? ` · ${data.totals.people}人が活動` : ""}`}
             </span>
           </div>
-          {!ranking && data.previous_totals && (
-            <p className="analytics-comparison muted">
-              前期間比{" "}
-              {data.totals[selectedMetric] != null && data.previous_totals[selectedMetric] != null
-                ? `${(data.totals[selectedMetric] ?? 0) - (data.previous_totals[selectedMetric] ?? 0) >= 0 ? "+" : ""}${number((data.totals[selectedMetric] ?? 0) - (data.previous_totals[selectedMetric] ?? 0))}${units[selectedMetric]}`
-                : "比較記録なし"}
-            </p>
-          )}
-          {data.window.previous_start && (
-            <p className="analytics-comparison muted">
-              比較元{" "}
-              {dates(
-                data.window.previous_start,
-                data.window.previous_end ?? data.window.previous_start,
-              )}
-            </p>
-          )}
           {ranking ? (
             <>
-              {!exercise && <p className="muted">種目を選ぶと最高重量・RM・成長も比較できます。</p>}
               <ol className="analytics-ranks" aria-label={`${labels[selectedRank]}ランキング`}>
                 {entries.map((entry) => (
                   <li key={entry.user_id}>
@@ -204,32 +245,61 @@ export function AnalyticsPanel({
             </>
           ) : (
             <>
-              <div className="analytics-grains" aria-label="グラフの集計単位">
-                {availableGrains.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={selectedGrain === value}
-                    onClick={() => setGrain(value)}
-                  >
-                    {grains[value]}
-                  </button>
-                ))}
-              </div>
               <AnalyticsChart
                 key={`${period}:${offset}:${exercise}:${selectedGrain}`}
                 points={data.series[selectedGrain] ?? []}
                 metric={selectedMetric}
                 onRecords={onRecords}
               />
+              <details className="analytics-details">
+                <summary>表示設定</summary>
+                <div className="analytics-grains" aria-label="グラフの集計単位">
+                  {availableGrains.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={selectedGrain === value}
+                      onClick={() => setGrain(value)}
+                    >
+                      {grains[value]}
+                    </button>
+                  ))}
+                </div>
+              </details>
               {!data.totals.sets && <p className="muted">この期間は記録がありません。</p>}
             </>
           )}
-          <p className="analytics-footnote muted">
-            {ranking
-              ? "現在グループに共有されている記録で集計します。"
-              : "総負荷 = 重量 × 回数の合計。最高推定1RMは1〜10回の記録から算出します。"}
-          </p>
+          {(data.previous_totals || data.window.previous_start) && (
+            <details className="analytics-details">
+              <summary>前期間と比較</summary>
+              {!ranking && data.previous_totals && (
+                <p className="analytics-comparison muted">
+                  前期間比{" "}
+                  {data.totals[selectedMetric] != null &&
+                  data.previous_totals[selectedMetric] != null
+                    ? `${(data.totals[selectedMetric] ?? 0) - (data.previous_totals[selectedMetric] ?? 0) >= 0 ? "+" : ""}${number((data.totals[selectedMetric] ?? 0) - (data.previous_totals[selectedMetric] ?? 0))}${units[selectedMetric]}`
+                    : "比較記録なし"}
+                </p>
+              )}
+              {data.window.previous_start && (
+                <p className="analytics-comparison muted">
+                  比較元{" "}
+                  {dates(
+                    data.window.previous_start,
+                    data.window.previous_end ?? data.window.previous_start,
+                  )}
+                </p>
+              )}
+            </details>
+          )}
+          <details className="analytics-details">
+            <summary>集計方法</summary>
+            <p className="analytics-footnote muted">
+              {ranking
+                ? "現在グループに共有されている記録で集計します。"
+                : "総負荷 = 重量 × 回数の合計。最高推定1RMは1〜10回の記録から算出します。"}
+            </p>
+          </details>
         </>
       )}
     </section>
