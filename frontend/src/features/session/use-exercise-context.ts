@@ -53,6 +53,7 @@ export function useExerciseContext(
   const entry = cache.read(name);
   return {
     data: entry?.data ?? null,
+    firstPreviousSet: (candidate: string) => cache.read(candidate)?.data?.previous?.sets[0],
     error: entry?.error ?? "",
     retry: () => {
       cache.invalidate(name);
