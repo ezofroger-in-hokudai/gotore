@@ -1,7 +1,13 @@
 import { api } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
 
-type Memo = { content: string; revision: number };
+import {
+  type Memo,
+  type MemoDraftState,
+  memoDraftKey,
+  readMemoDraft,
+  removeMemoDraft,
+} from "../training/memo-draft";
 export function InlineMemo({
   title,
   path,
@@ -9,6 +15,7 @@ export function InlineMemo({
   name,
   userId,
   onSaved,
+  onDraftChange,
   omitWhenEmpty = false,
 }: {
   title: string;
@@ -17,19 +24,13 @@ export function InlineMemo({
   name?: string;
   userId: string;
   onSaved?: () => void;
+  onDraftChange?: (state: MemoDraftState) => void;
   omitWhenEmpty?: boolean;
 }) {
-  const key = `gotore:memo-input:v1:${userId}:${name ?? path}`;
-  const [draft] = useState<Memo | null>(() => {
-    try {
-      const value = JSON.parse(localStorage.getItem(key) || "null");
-      return value && typeof value.content === "string" && Number.isInteger(value.revision)
-        ? value
-        : null;
-    } catch {
-      return null;
-    }
-  });
+  const key = memoDraftKey(userId, name ?? path);
+  const [draft] = useState(() => readMemoDraft(key));
+  const [draftState, setDraftState] = useState<MemoDraftState>(draft ? "stored" : "saved");
+  useEffect(() => onDraftChange?.(draftState), [onDraftChange, draftState]);
   const [memo, setMemo] = useState<Memo | null>(draft ?? initial ?? null);
   const [content, setContent] = useState(draft?.content ?? initial?.content ?? "");
   const dirty = useRef(!!draft);
@@ -75,8 +76,8 @@ export function InlineMemo({
       setMemo(value);
       setContent(value.content);
       dirty.current = false;
-      localStorage.removeItem(key);
-      setError("");
+      setDraftState("saved");
+      setError(removeMemoDraft(key) ? "" : "読み直しましたが、端末の下書きを消去できません。");
     } catch {
       setError("メモを取得できません");
     } finally {
@@ -104,7 +105,8 @@ export function InlineMemo({
           });
           setMemo(saved);
           dirty.current = false;
-          localStorage.removeItem(key);
+          setDraftState("saved");
+          if (!removeMemoDraft(key)) setError("保存しましたが、端末の下書きを消去できません。");
           setEditing(false);
           onSaved?.();
         } catch (reason) {
@@ -143,7 +145,9 @@ export function InlineMemo({
                   key,
                   JSON.stringify({ content: event.target.value, revision: memo?.revision ?? 0 }),
                 );
+                setDraftState("stored");
               } catch {
+                setDraftState("memory");
                 setError("端末へ保持できません。メモを保存してください。");
               }
             }}

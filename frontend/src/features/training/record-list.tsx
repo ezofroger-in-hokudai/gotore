@@ -104,7 +104,9 @@ export function RecordList({
             <WorkoutActions record={record} onEdit={onEdit} onDeleted={onDeleted} />
           )}
 
-          {personal && record.user_id === userId && <WorkoutMemo workoutId={record.id} />}
+          {personal && record.user_id === userId && (
+            <WorkoutMemo workoutId={record.id} userId={userId} />
+          )}
         </article>
       ))}
     </div>

@@ -3,6 +3,7 @@
 import type { ExerciseOption, SessionBests, TrainingSession } from "@/lib/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
+import { type MemoDraftState, memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
 import { revealComparisonSet } from "./comparison-scroll";
@@ -124,6 +125,11 @@ function ActiveTraining({
   const [conflictOpen, setConflictOpen] = useState(false);
   const adding = useRef(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [memoDraftState, setMemoDraftState] = useState<MemoDraftState>(() =>
+    sessionId && readMemoDraft(memoDraftKey(userId, `/workouts/${sessionId}/memo`))
+      ? "stored"
+      : "saved",
+  );
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
   const [submission, setSubmission] = useState<{ revision: number; set: number } | null>(null);
@@ -543,7 +549,12 @@ function ActiveTraining({
             </section>
           </div>
           {sessionId ? (
-            <InlineMemo title="今回のメモ" path={`/workouts/${sessionId}/memo`} userId={userId} />
+            <InlineMemo
+              title="今回のメモ"
+              path={`/workouts/${sessionId}/memo`}
+              userId={userId}
+              onDraftChange={setMemoDraftState}
+            />
           ) : (
             <span className="memo-text muted">メモ</span>
           )}
@@ -802,6 +813,13 @@ function ActiveTraining({
               ? "未保存の入力があります。保存済みのセットだけを残して終了しますか？"
               : "おつかれさまでした。保存したセットは履歴で確認できます。"}
           </p>
+          {memoDraftState !== "saved" && (
+            <output>
+              {memoDraftState === "stored"
+                ? "未保存のメモがあります。この端末に残し、終了後は履歴から保存できます。"
+                : "未保存のメモを端末に保持できていません。閉じるで戻ってメモを保存してください。"}
+            </output>
+          )}
           <button
             className="primary full"
             type="button"

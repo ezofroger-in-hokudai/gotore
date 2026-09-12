@@ -15,6 +15,12 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     revision: 1,
     exercises: [{ name: "ベンチプレス", sets: [{ weight: 60, reps: 8 }] }],
   };
+  const memoKey = `gotore:memo-input:v1:${user.id}:/workouts/${record.id}/memo`;
+  await page.evaluate(
+    (key) =>
+      localStorage.setItem(key, JSON.stringify({ content: "削除するまで残す", revision: 0 })),
+    memoKey,
+  );
   let removed = false;
   let conflict = true;
   let failDelete = true;
@@ -110,9 +116,11 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await page.getByRole("button", { name: "削除する", exact: true }).click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText("通信できません");
   await expect(page.getByRole("article")).toHaveCount(1);
+  expect(await page.evaluate((key) => localStorage.getItem(key), memoKey)).not.toBeNull();
   failDelete = false;
   await page.getByRole("button", { name: "削除する", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(0);
+  expect(await page.evaluate((key) => localStorage.getItem(key), memoKey)).toBeNull();
   await expect(page.getByLabel("月", { exact: true })).toHaveValue("2026-01");
   await expect(
     page.getByRole("button", {
