@@ -77,7 +77,7 @@ export function NumberWheel({
         frame.current = requestAnimationFrame(() => {
           const distance = active.y - y;
           const steps = Math.round(distance / 18);
-          change(active.start + steps * step);
+          change(active.start - steps * step);
           setOffset(Math.max(-9, Math.min(9, steps * 18 - distance)));
         });
       }}
@@ -87,7 +87,7 @@ export function NumberWheel({
         gesture.current = null;
         cancelAnimationFrame(frame.current);
         const distance = active.y - event.clientY;
-        change(active.start + Math.round(distance / 18) * step);
+        change(active.start - Math.round(distance / 18) * step);
         setOffset(0);
         if (!active.moved) {
           field.current?.focus();
@@ -107,7 +107,7 @@ export function NumberWheel({
           velocity *= Math.exp(-elapsed / 65);
           const steps = Math.trunc(remaining / 18);
           if (steps) {
-            shift(steps * step);
+            shift(-steps * step);
             remaining -= steps * 18;
           }
           if (Math.abs(velocity) > 0.04) frame.current = requestAnimationFrame(coast);
