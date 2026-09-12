@@ -145,6 +145,7 @@ function ActiveTraining({
       ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
       : [],
   );
+  const recordedNames = Array.from(new Set(exercises.map((exercise) => exercise.name)));
   const names = Array.from(
     new Set([...(catalog.data ?? []).map((e) => e.name), ...exercises.map((e) => e.name)]),
   );
@@ -248,6 +249,38 @@ function ActiveTraining({
       adding.current = false;
     }
   }
+  function selectExercise(name: string) {
+    if (
+      input.dirty &&
+      input.name !== name &&
+      !window.confirm("未保存の入力を破棄して種目を変更しますか？")
+    )
+      return;
+    const recorded = exercises
+      .filter((exercise) => exercise.name === name)
+      .flatMap((exercise) => exercise.sets);
+    if (input.name !== name) {
+      const latest = recorded.at(-1);
+      setInput({
+        name,
+        revision,
+        weight: String(latest?.weight ?? 20),
+        reps: String(latest?.reps ?? 10),
+        editing: null,
+        dirty: false,
+      });
+      setFeedback("");
+      setSubmission(null);
+      setUndo(null);
+    }
+    setSelecting(false);
+    requestAnimationFrame(() =>
+      revealComparisonSet(
+        comparisonTable.current,
+        input.name === name && input.editing !== null ? input.editing : recorded.length - 1,
+      ),
+    );
+  }
   const candidate =
     input.editing === null && bestUpdate(Number(input.weight), Number(input.reps), context.data);
   const rm = estimatedRM(Number(input.weight), Number(input.reps));
@@ -294,30 +327,58 @@ function ActiveTraining({
           <section className="session-overview" aria-label="今回のトレーニング">
             <h2>今回のトレーニング</h2>
             {exercises.length ? (
-              exercises.map((exercise, index) => (
-                <div key={`${exercise.name}-${index}`}>
-                  <h3>
-                    {exercise.name} · {exercise.sets.length}セット
-                  </h3>
-                  <ol>
-                    {exercise.sets.map((value, i) => (
-                      <li
-                        key={`set-${i + 1}`}
-                        className={
-                          bestPositions.has(`${index}:${i}`) ? "record-celebration" : undefined
-                        }
-                      >
-                        {bestPositions.has(`${index}:${i}`) && (
-                          <span role="img" aria-label="最高記録">
-                            🔥{" "}
-                          </span>
-                        )}
-                        {i + 1}: {value.weight}kg × {value.reps}回
-                      </li>
-                    ))}
-                  </ol>
+              <>
+                <div className="recorded-exercise-list">
+                  {recordedNames.map((name) => (
+                    <button
+                      type="button"
+                      className="v2-row"
+                      key={name}
+                      aria-label={`${name}の記録に戻る`}
+                      aria-current={input.name === name ? "true" : undefined}
+                      onClick={() => selectExercise(name)}
+                    >
+                      <span>
+                        {name}
+                        {input.name === name && <small> · 入力中</small>}
+                      </span>
+                      <span>
+                        {exercises
+                          .filter((exercise) => exercise.name === name)
+                          .reduce((total, exercise) => total + exercise.sets.length, 0)}
+                        セット ›
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              ))
+                <details className="overview-details">
+                  <summary>全セットを見る</summary>
+                  {exercises.map((exercise, index) => (
+                    <div key={`${exercise.name}-${index}`}>
+                      <h3>
+                        {exercise.name} · {exercise.sets.length}セット
+                      </h3>
+                      <ol>
+                        {exercise.sets.map((value, i) => (
+                          <li
+                            key={`set-${i + 1}`}
+                            className={
+                              bestPositions.has(`${index}:${i}`) ? "record-celebration" : undefined
+                            }
+                          >
+                            {bestPositions.has(`${index}:${i}`) && (
+                              <span role="img" aria-label="最高記録">
+                                🔥{" "}
+                              </span>
+                            )}
+                            {i + 1}: {value.weight}kg × {value.reps}回
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ))}
+                </details>
+              </>
             ) : (
               <p className="muted">まだセットがありません</p>
             )}
@@ -348,40 +409,13 @@ function ActiveTraining({
           )}
           <div className="v2-rows">
             {names
-              .filter((name) => name.includes(query.trim()))
+              .filter((name) => !recordedNames.includes(name) && name.includes(query.trim()))
               .map((name) => (
                 <button
                   type="button"
                   className="v2-row"
                   key={name}
-                  onClick={() => {
-                    if (
-                      input.dirty &&
-                      input.name !== name &&
-                      !window.confirm("未保存の入力を破棄して種目を変更しますか？")
-                    )
-                      return;
-                    if (input.name === name) {
-                      setSelecting(false);
-                      return;
-                    }
-                    const latest = exercises
-                      .filter((e) => e.name === name)
-                      .flatMap((e) => e.sets)
-                      .at(-1);
-                    setInput({
-                      name,
-                      revision,
-                      weight: String(latest?.weight ?? 20),
-                      reps: String(latest?.reps ?? 10),
-                      editing: null,
-                      dirty: false,
-                    });
-                    setSelecting(false);
-                    setFeedback("");
-                    setSubmission(null);
-                    setUndo(null);
-                  }}
+                  onClick={() => selectExercise(name)}
                 >
                   <span>{name}</span>
                   <span className="muted">

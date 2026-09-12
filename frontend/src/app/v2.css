@@ -1845,3 +1845,21 @@
   font-size: 9px;
   fill: var(--muted);
 }
+
+.recorded-exercise-list .v2-row {
+  width: 100%;
+  min-height: 48px;
+  gap: 8px;
+  text-align: left;
+}
+.recorded-exercise-list [aria-current="true"] {
+  color: var(--accent);
+}
+.recorded-exercise-list small {
+  font-size: .75rem;
+}
+.overview-details > summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}
