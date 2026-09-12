@@ -41,6 +41,7 @@ for (const ongoing of [false, true]) {
         .click();
       await page.getByRole("button", { name: "コピーしたセットを保存", exact: true }).click();
       await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(page.locator(".sync-status")).toContainText("同期済み");
       expect(state.session?.exercises).toEqual(original.exercises);
       expect(state.session?.shared_group_ids).toEqual([state.group.id]);
       expect(state.session?.id).not.toBe(original.id);
