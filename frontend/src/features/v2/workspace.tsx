@@ -1,4 +1,5 @@
 "use client";
+
 import type { Group, TrainingGoal, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
@@ -8,6 +9,7 @@ import { useScoring } from "../score/use-scoring";
 import { WorkoutResult } from "../score/workout-result";
 import { SessionScreen } from "../session/session-screen";
 import { useSession } from "../session/use-session";
+import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
@@ -140,14 +142,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             </button>
           </div>
         )}
-        {groupList.error && (
-          <p className="error" role="alert">
-            {groupList.error}
-            <button className="text-button" type="button" onClick={groupList.retry}>
-              再試行
-            </button>
-          </p>
-        )}
+        <ResourceError resource={groupList} />
         <div hidden={view !== "home"}>
           <CommunityHome
             groups={groups}
