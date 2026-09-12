@@ -59,6 +59,8 @@ test("開始前の振り返りと履歴は先読みを共用し、取得待ち�
       });
     }
     await page.getByRole("button", { name: "履歴・グラフを見る ›", exact: true }).click();
+    await expect(page.locator(".history-row")).toHaveCount(3);
+    await page.getByRole("button", { name: "もっと見る", exact: true }).click();
     await expect(page.locator(".history-row")).toHaveCount(4);
     expect(reads).toBe(2);
     await navigate(page, "記録");
