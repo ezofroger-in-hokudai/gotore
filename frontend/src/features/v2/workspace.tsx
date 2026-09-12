@@ -71,6 +71,11 @@ function WorkspaceContent({ session }: { session: Session }) {
     const timer = window.setTimeout(() => setHistoryReady(true), 1000);
     return () => window.clearTimeout(timer);
   }, [prepareHistory]);
+  const recentRecords = useResource<Workout[]>("/workouts?offset=0", refreshKey, false, true, {
+    enabled: view === "history" || (view === "record" && !training.session && !training.startingId),
+    prefetch: prepareHistory && historyReady,
+    retainOnRefresh: true,
+  });
   const selected = groups.some((group) => group.id === groupId) ? groupId : groups[0]?.id || "";
   const goal = useResource<TrainingGoal>("/me/goal", 0, false, true, {
     enabled: view === "settings",
@@ -178,6 +183,8 @@ function WorkspaceContent({ session }: { session: Session }) {
             controller={training}
             userId={session.user.id}
             haptic={preferences.haptic}
+            recent={recentRecords}
+            onHistory={() => navigate("history")}
             onFinished={(record) => {
               setFinished(record);
               window.history.replaceState({ gotoreView: "result", groupId: selected }, "");
@@ -199,6 +206,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         )}
         <div hidden={view !== "history"}>
           <History
+            recent={recentRecords}
             active={view === "history"}
             prefetch={prepareHistory && historyReady}
             userId={session.user.id}

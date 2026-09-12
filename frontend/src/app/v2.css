@@ -1797,3 +1797,51 @@
   justify-content: space-between;
   margin-top: 4px;
 }
+
+.training-overview {
+  margin-top: 24px;
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+.training-overview .muted {
+  margin-bottom: 8px;
+}
+.training-overview .section-heading {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.training-overview h2 {
+  font-size: 15px;
+}
+.training-overview-total strong {
+  font-size: 26px;
+}
+.training-overview-exercises > div {
+  margin-top: 12px;
+}
+.training-overview-exercises dt {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.training-overview-exercises dd {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.training-volume-trend {
+  margin: 20px 0 8px;
+}
+.training-volume-trend figcaption {
+  font-size: 12px;
+  font-weight: 700;
+}
+.training-volume-trend svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.training-volume-trend text {
+  font-size: 9px;
+  fill: var(--muted);
+}

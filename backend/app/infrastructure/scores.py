@@ -10,6 +10,7 @@ from app.domain.errors import Conflict, NotFound
 from app.domain.score import (
     FORMULA_VERSION,
     ScoreWeights,
+    apply_initial_benchmark,
     consistency_score,
     intensity_score,
     summarize_exercises,
@@ -195,6 +196,12 @@ class ScoreRepository(TrainingRepository):
             ),
             "g": None,
         }
+        # 訂正時も元の算式を維持し、既存の採点結果を一括変更しない。
+        formula_version = prior["formula_version"] if prior else FORMULA_VERSION
+        if formula_version == "score-v2":
+            components, snapshot["initial_axes"] = apply_initial_benchmark(
+                components, workout["exercises"]
+            )
         snapshot["statistics"] = json_value({n: asdict(s) for n, s in stats.items()})
         snapshot["llm_input"] = make_goal_input(snapshot)
         snapshot["llm_prompt"] = prior["snapshot"]["llm_prompt"] if prior else EVALUATION_PROMPT
@@ -216,7 +223,7 @@ class ScoreRepository(TrainingRepository):
                 pinned["id"],
                 Jsonb(json_value(components)),
                 Jsonb(snapshot),
-                FORMULA_VERSION,
+                formula_version,
                 PROMPT_VERSION,
             ),
         ).fetchone()
@@ -263,6 +270,9 @@ class ScoreRepository(TrainingRepository):
             "weights": weights.model_dump(),
             "weights_version": version,
             "scored_at": row["created_at"],
+            "initial_axes": (
+                [] if stale else snapshot.get("initial_axes", row.get("initial_axes")) or []
+            ),
         }
         if private:
             result.update(
@@ -294,7 +304,8 @@ class ScoreRepository(TrainingRepository):
             return records
         scores = self.connection.execute(
             """SELECT s.workout_id, s.revision, s.components, s.status, s.created_at,
-                s.snapshot->>'performed_on' AS performed_on, to_jsonb(w) AS group_weights
+                s.snapshot->>'performed_on' AS performed_on,
+                s.snapshot->'initial_axes' AS initial_axes, to_jsonb(w) AS group_weights
             FROM public.gotore_workout_scores s LEFT JOIN LATERAL (
                 SELECT c, i, v, g, version FROM public.gotore_group_score_weights
                 WHERE group_id = %s AND effective_on <= (s.snapshot->>'performed_on')::date
