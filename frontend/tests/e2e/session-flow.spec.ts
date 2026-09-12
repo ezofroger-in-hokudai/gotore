@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test("保存の応答待ちでも連続追加・編集でき、順序通り同期する", async ({ page }) => {
   const state = await mockTraining(page);
@@ -54,7 +54,7 @@ test("未送信の複数セットは再起動後も残り、再送できる", as
   }
   await expect(page.locator(".sync-status")).toContainText("未送信");
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.getByRole("heading", { name: "SET 3", exact: true })).toBeVisible();
   expect(state.saves).toBe(0);
   state.failSave = false;
@@ -115,7 +115,7 @@ test("常時表示の種目メモは再起動しても下書きと競合元revis
   await field.fill("足の位置を確認する");
   memo = { content: "別端末で修正", revision: 2 };
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(field).toHaveValue("足の位置を確認する");
   await page.getByRole("button", { name: "種目メモを保存", exact: true }).click();
   await expect(page.locator(".inline-memo").getByRole("alert")).toContainText("変更済み");
@@ -205,7 +205,7 @@ test("メモは本文だけを表示してタッチで編集し、空の前回�
   await expect(exercise).toHaveText("呼吸を整える");
   previousMemo = { content: "   ", revision: 2 };
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(exercise).toBeVisible();
   await expect(previous).toHaveCount(0);
 });

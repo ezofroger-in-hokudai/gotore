@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate } from "./mock-training";
+import { mockTraining, navigate, openTraining } from "./mock-training";
 
 test("開始前の振り返りと履歴は先読みを共用し、取得待ちでも開始できる", async ({ page }) => {
   const state = await mockTraining(page);
@@ -38,14 +38,14 @@ test("開始前の振り返りと履歴は先読みを共用し、取得待ち�
   await expect(page.locator(".training-overview-total")).toContainText("1,720");
   hold = true;
   try {
-    await navigate(page, "記録");
+    await page.getByText("前回を振り返る", { exact: true }).click();
     const overview = page.getByRole("region", { name: "これまでのトレーニング", exact: true });
     await expect(overview).toContainText("前回のトレーニング");
     await expect(overview).toContainText("推定1RM 80kg");
     await expect(overview.getByRole("img")).toBeVisible();
     await expect(page.getByRole("spinbutton")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^スクワット/ })).toHaveCount(0);
-    await expect.poll(() => reads).toBe(2);
+    expect(reads).toBe(1);
     for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
@@ -60,8 +60,8 @@ test("開始前の振り返りと履歴は先読みを共用し、取得待ち�
     }
     await page.getByRole("button", { name: "履歴・グラフを見る ›", exact: true }).click();
     await expect(page.locator(".history-row")).toHaveCount(4);
-    expect(reads).toBe(2);
-    await navigate(page, "記録");
+    await expect.poll(() => reads).toBe(2);
+    await openTraining(page);
     await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
     await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toBeVisible();
   } finally {
@@ -71,7 +71,8 @@ test("開始前の振り返りと履歴は先読みを共用し、取得待ち�
 
 test("振り返りの空状態と取得失敗を分け、再試行で表示を戻す", async ({ page }) => {
   await mockTraining(page);
-  await navigate(page, "記録");
+  await openTraining(page);
+  await page.getByText("前回を振り返る", { exact: true }).click();
   const overview = page.getByRole("region", { name: "これまでのトレーニング", exact: true });
   await expect(overview).toContainText("最初のトレーニングを記録してみましょう。");
   let fail = true;
@@ -79,7 +80,7 @@ test("振り返りの空状態と取得失敗を分け、再試行で表示を�
     fail ? route.abort() : route.fulfill({ json: [] }),
   );
   await navigate(page, "設定");
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(overview.getByRole("alert")).toBeVisible();
   await expect(overview).not.toContainText("最初のトレーニングを記録してみましょう。");
   await expect(page.getByRole("button", { name: "トレーニングを開始", exact: true })).toBeEnabled();

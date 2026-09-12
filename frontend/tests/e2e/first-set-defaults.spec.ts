@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, startTraining } from "./mock-training";
+import { mockTraining, openTraining, startTraining } from "./mock-training";
 
 test("前回の最初の重量・回数を初期値にし、入力だけでは保存しない", async ({ page }) => {
   const state = await mockTraining(page);
@@ -102,7 +102,7 @@ for (const edited of [false, true]) {
         .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), key))
         .toMatchObject({ awaitingPrevious: false, weight: edited ? "91.5" : "62.5" });
       await page.reload();
-      await page.getByRole("navigation").getByRole("button", { name: "記録", exact: true }).click();
+      await openTraining(page);
       await expect(weight).toHaveValue(edited ? "91.5" : "62.5");
     } finally {
       release();
@@ -131,7 +131,7 @@ test("以前保存した端末入力は前回値で置き換えない", async ({
     { user: state.user.id, session: state.session?.id },
   );
   await page.reload();
-  await page.getByRole("navigation").getByRole("button", { name: "記録", exact: true }).click();
+  await openTraining(page);
   await expect(page.locator(".comparison-table")).toContainText("80");
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("42.5");
   await expect(page.getByRole("spinbutton", { name: "回数", exact: true })).toHaveValue("6");

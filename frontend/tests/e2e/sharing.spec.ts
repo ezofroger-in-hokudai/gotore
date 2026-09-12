@@ -1,6 +1,6 @@
 import { type Page, expect, test } from "@playwright/test";
 import { createTestUser, testPassword } from "./local-auth";
-import { navigate, startTraining } from "./mock-training";
+import { navigate, openTraining, startTraining } from "./mock-training";
 
 async function login(page: Page, name: string, email: string) {
   await createTestUser(name, email);
@@ -65,7 +65,7 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     // 自動再送も許容し、先に同期が完了してボタンが消えても保存結果を確認する。
     await expect(pageA.locator(".sync-status")).toContainText("同期済み");
     await pageA.reload();
-    await navigate(pageA, "記録");
+    await openTraining(pageA);
     await expect(pageA.getByRole("button", { name: "セット1を編集", exact: true })).toContainText(
       "82.5",
     );

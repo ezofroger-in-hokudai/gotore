@@ -1,10 +1,10 @@
 import { type ElementHandle, expect, test } from "@playwright/test";
-import { mockTraining, navigate } from "./mock-training";
+import { mockTraining, navigate, openTraining } from "./mock-training";
 
 test("開始前は入力を出さず、開始待ちの種目選択と入力で保存要求を出さない", async ({ page }) => {
   const state = await mockTraining(page);
   let focusedField: ElementHandle<HTMLElement | SVGElement> | null = null;
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.getByRole("button", { name: /^スクワット/ })).toHaveCount(0);
   await expect(page.getByRole("spinbutton")).toHaveCount(0);
   let release = () => {};
@@ -62,7 +62,7 @@ test("種目をタップする前に比較を取得し、選択と再選択で�
   page,
 }) => {
   await mockTraining(page);
-  await navigate(page, "記録");
+  await openTraining(page);
   const reads: string[] = [];
   await page.route("**/api/exercises/context?*", (route) => {
     const url = new URL(route.request().url());
@@ -85,7 +85,7 @@ test("種目をタップする前に比較を取得し、選択と再選択で�
 
 test("非表示中の候補取得を止め、復帰後の失敗では古い比較を隠す", async ({ page }) => {
   await mockTraining(page);
-  await navigate(page, "記録");
+  await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   await page.getByRole("button", { name: /^ベンチプレス/ }).click();
   await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeEnabled();
@@ -124,7 +124,7 @@ for (const savedInput of [true, false]) {
     page,
   }) => {
     const state = await mockTraining(page);
-    await navigate(page, "記録");
+    await openTraining(page);
     await expect(
       page.getByRole("button", { name: "トレーニングを開始", exact: true }),
     ).toBeEnabled();

@@ -270,8 +270,13 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
 export async function navigate(page: Page, name: string) {
   await page.getByRole("navigation").getByRole("button", { name, exact: true }).click();
 }
+export async function openTraining(page: Page) {
+  await navigate(page, "ホーム");
+  const resume = page.getByRole("button", { name: "トレーニングを再開", exact: true });
+  if (await resume.count()) await resume.click();
+}
 export async function startTraining(page: Page, name = "ベンチプレス") {
-  await navigate(page, "記録");
+  await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   await page.getByRole("button", { name: new RegExp(`^${name}`) }).click();
 }
