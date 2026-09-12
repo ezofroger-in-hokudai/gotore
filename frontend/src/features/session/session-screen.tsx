@@ -237,7 +237,13 @@ function ActiveTraining({
       const result = await controller.save(nextExercises, revision);
       setSubmission({ revision: result.revision, set: (input.editing ?? sets.length) + 1 });
       setUndo({ exercises: exercises, revision: result.revision });
-      const nextInput = { ...input, revision: result.revision, editing: null, dirty: false };
+      // 端末保存の待機中に進んだ入力・種目選択は、保存開始時の値で戻さない。
+      const currentInput = latestInput.current;
+      const nextInput =
+        currentInput === input
+          ? { ...input, revision: result.revision, editing: null, dirty: false }
+          : { ...currentInput, revision: result.revision };
+      latestInput.current = nextInput;
       setInput(nextInput);
       try {
         localStorage.setItem(storageKey, JSON.stringify(nextInput));
