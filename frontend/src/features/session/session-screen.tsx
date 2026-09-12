@@ -164,6 +164,22 @@ function ActiveTraining({
   );
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
   const previous = context.data?.previous?.sets ?? [];
+  useEffect(() => {
+    if (!input.awaitingPrevious) return;
+    const untouched = !input.dirty && input.editing === null && sets.length === 0;
+    if (untouched && !context.data) return;
+    const first = untouched ? context.data?.previous?.sets[0] : undefined;
+    // 遅い比較応答で手入力や今回の実績を戻さない。初期値の反映は選択ごとに一度だけ行う。
+    setInput((current) =>
+      current === input
+        ? {
+            ...current,
+            ...(first ? { weight: String(first.weight), reps: String(first.reps) } : {}),
+            awaitingPrevious: false,
+          }
+        : current,
+    );
+  }, [input, context.data, sets.length]);
 
   const latestInput = useRef(input);
   latestInput.current = input;
@@ -272,12 +288,13 @@ function ActiveTraining({
       .filter((exercise) => exercise.name === name)
       .flatMap((exercise) => exercise.sets);
     if (input.name !== name) {
-      const latest = recorded.at(-1);
+      const first = recorded.at(-1) ?? context.firstPreviousSet(name);
       setInput({
         name,
         revision,
-        weight: String(latest?.weight ?? 20),
-        reps: String(latest?.reps ?? 10),
+        weight: String(first?.weight ?? 20),
+        reps: String(first?.reps ?? 10),
+        awaitingPrevious: !first,
         editing: null,
         dirty: false,
       });

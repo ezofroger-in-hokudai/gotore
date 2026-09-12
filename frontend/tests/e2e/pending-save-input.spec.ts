@@ -19,7 +19,7 @@ test("端末保存を待つ間に入力した次セットの値を保持する",
     .toBe(true);
   await weight.fill("82.5");
   await page.evaluate(() => window.dispatchEvent(new Event("release-test-store")));
-  await expect.poll(() => state.session?.exercises[0]?.sets).toEqual([{ weight: 60, reps: 10 }]);
+  await expect.poll(() => state.session?.exercises[0]?.sets).toEqual([{ weight: 60, reps: 8 }]);
   await expect(weight).toHaveValue("82.5");
   const inputKey = `gotore:session-input:v2:${state.user.id}:${state.session?.id}`;
   await expect
@@ -32,8 +32,8 @@ test("端末保存を待つ間に入力した次セットの値を保持する",
   await expect
     .poll(() => state.session?.exercises[0]?.sets)
     .toEqual([
-      { weight: 60, reps: 10 },
-      { weight: 82.5, reps: 10 },
+      { weight: 60, reps: 8 },
+      { weight: 82.5, reps: 8 },
     ]);
 });
 

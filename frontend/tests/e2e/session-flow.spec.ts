@@ -35,8 +35,8 @@ test("保存の応答待ちでも連続追加・編集でき、順序通り同�
     await expect
       .poll(() => state.session?.exercises[0]?.sets)
       .toEqual([
-        { weight: 70, reps: 10 },
-        { weight: 77.5, reps: 10 },
+        { weight: 70, reps: 8 },
+        { weight: 77.5, reps: 8 },
       ]);
     await expect(page.locator(".sync-status")).toContainText("同期済み");
   } finally {

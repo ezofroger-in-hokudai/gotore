@@ -35,5 +35,5 @@ test("記録済み種目から1タップで復帰し、未保存入力は確認�
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect.poll(() => state.session?.exercises[0].sets.length).toBe(2);
-  expect(state.session?.exercises[1].sets).toEqual([{ weight: 80, reps: 10 }]);
+  expect(state.session?.exercises[1].sets).toEqual([{ weight: 80, reps: 8 }]);
 });
