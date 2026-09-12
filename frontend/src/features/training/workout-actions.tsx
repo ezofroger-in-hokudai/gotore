@@ -1,6 +1,7 @@
 "use client";
 import { type Workout, api } from "@/lib/api";
 import { useState } from "react";
+import { memoDraftKey, removeMemoDraft } from "./memo-draft";
 export function WorkoutActions({
   record,
   onEdit,
@@ -20,6 +21,7 @@ export function WorkoutActions({
       await api(`/workouts/${record.id}?expected_revision=${record.revision}`, {
         method: "DELETE",
       });
+      removeMemoDraft(memoDraftKey(record.user_id, `/workouts/${record.id}/memo`));
       onDeleted();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "削除できませんでした。");
