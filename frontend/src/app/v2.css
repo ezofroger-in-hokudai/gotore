@@ -703,20 +703,30 @@
   font-size: 13px;
 }
 .history-row p {
-  font-size: 11px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.75rem;
   color: var(--muted);
   margin: 3px 0 0;
 }
 .history-row > span {
   white-space: nowrap;
-  font-size: 10px;
+  font-size: 0.75rem;
   color: var(--muted);
+}
+.history-expand {
+  margin: 12px 0;
+}
+.history-record-heading {
+  scroll-margin-top: 16px;
 }
 .history-screen .activity-calendar {
   padding: 16px;
 }
 .history-screen .activity-calendar > h2 {
-  display: none;
+  font-size: 1rem;
 }
 .history-screen .activity-day {
   background: var(--score-bg);
