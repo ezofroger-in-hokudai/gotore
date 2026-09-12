@@ -31,6 +31,9 @@ test("圧縮保存が実APIへ届き、応答を失っても再送で二重追�
   const saved: TrainingSession = await seeded.json();
   await page.reload();
   await navigate(page, "記録");
+  await expect(page.getByRole("button", { name: "セット20を編集", exact: true })).toContainText(
+    "82.5",
+  );
   const payloads: unknown[] = [];
   await page.route(`**/api/sessions/${session.id}`, async (route) => {
     if (route.request().method() !== "PATCH") return route.continue();
@@ -83,6 +86,9 @@ for (const unsupported of ["browser", "api"] as const) {
     state.session.revision++;
     await page.reload();
     await navigate(page, "記録");
+    await expect(page.getByRole("button", { name: "セット20を編集", exact: true })).toContainText(
+      "82.5",
+    );
     const encodings: (string | undefined)[] = [];
     await page.route(`**/api/sessions/${state.session.id}`, async (route) => {
       if (route.request().method() !== "PATCH") return route.fallback();
