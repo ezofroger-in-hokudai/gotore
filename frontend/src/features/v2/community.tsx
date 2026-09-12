@@ -108,8 +108,7 @@ export function CommunityHome({
         </>
       ) : !groups.length ? (
         <div className="panel empty-community">
-          <h2>仲間と、続けよう。</h2>
-          <p>グループを作成するか、招待コードで参加しましょう。</p>
+          <h2>グループはありません</h2>
           <button className="primary full" type="button" onClick={onGroups}>
             作成・参加
           </button>
@@ -328,9 +327,7 @@ function Feed({
   return (
     <>
       <div className="community-feed" ref={details.root}>
-        {!data.feed.length && (
-          <p className="muted feed-empty">まだ記録がありません。最初のセットを残しましょう。</p>
-        )}
+        {!data.feed.length && <p className="muted feed-empty">まだ記録がありません。</p>}
         {data.feed.map((item) => {
           const member = data.members.find((m) => m.id === item.user_id);
           const live = clock.live && !!member && memberIsLive(member, clock.now);

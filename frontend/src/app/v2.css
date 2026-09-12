@@ -1501,6 +1501,16 @@
   font-size: 10px;
   line-height: 1.7;
 }
+.analytics-help {
+  margin-top: 12px;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.analytics-help > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  cursor: pointer;
+}
 
 /* 終了時は保存済みの実績を先に表示し、AIの待ち状態でも高さを保つ。 */
 .score-badge {
