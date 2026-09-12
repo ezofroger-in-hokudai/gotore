@@ -226,9 +226,13 @@ test("新しく参加したグループも戻る・進むで復元する", async
   await page.getByLabel("招待コード", { exact: true }).fill("ABCDEF123456");
   await page.getByRole("button", { name: "グループを確認", exact: true }).click();
   await page.getByRole("button", { name: "参加する", exact: true }).click();
-  await expect(page.getByRole("heading", { name: joined.name, exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: joined.name, level: 1, exact: true }),
+  ).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("heading", { name: "招待コードで参加", exact: true })).toBeVisible();
   await page.goForward();
-  await expect(page.getByRole("heading", { name: joined.name, exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: joined.name, level: 1, exact: true }),
+  ).toBeVisible();
 });
