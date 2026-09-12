@@ -49,6 +49,17 @@ def session_best_sets(exercises: list[dict], other_exercises: list[dict]) -> lis
         name: personal_bests([s for e in other_exercises if e["name"] == name for s in e["sets"]])
         for name in names
     }
+    return session_best_sets_from_bests(exercises, bests)
+
+
+def session_best_sets_from_bests(
+    exercises: list[dict], previous_bests: dict[str, dict]
+) -> list[dict]:
+    """過去の集計値を基準に今回の更新位置を判定し、渡された集計値は変えない。"""
+    bests = {
+        name: dict(previous_bests.get(name, {"best_weight": None, "best_rm": None}))
+        for name in {e["name"] for e in exercises}
+    }
     candidates = []
     for ei, exercise in enumerate(exercises):
         best = bests[exercise["name"]]

@@ -22,6 +22,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [design-system.md](design-system.md): スマホアプリを見据えた色・文字・余白・操作と共通部品の基準。[画面見本](design-preview.html)。
 
+- [performance-best-history.md](performance-best-history.md): BEST・前回比較の履歴件数別計測と既存集計の利用。
+
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
