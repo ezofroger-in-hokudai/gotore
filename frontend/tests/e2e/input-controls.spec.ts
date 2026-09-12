@@ -73,3 +73,32 @@ test("回数Enterは追加と編集を保存ボタンと同じく確定し、無
   await expect.poll(() => state.saves).toBe(2);
   expect(state.session?.exercises[0].sets).toEqual([{ weight: 77.5, reps: 9 }]);
 });
+
+test("ホイールは下に引くと増え、上に引くと減り、指を離しても値を戻さない", async ({ page }) => {
+  const state = await mockTraining(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await startTraining(page);
+  for (const [label, initial, increased] of [
+    ["重量", "80", "85"],
+    ["回数", "8", "10"],
+  ]) {
+    const field = page.getByRole("spinbutton", { name: label, exact: true });
+    await field.fill(initial);
+    for (const [distance, expected] of [
+      [36, increased],
+      [-36, initial],
+    ] as const) {
+      const box = await field.boundingBox();
+      if (!box) throw new Error("入力欄がありません");
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x, y + distance, { steps: 4 });
+      await expect(field).toHaveValue(expected);
+      await page.mouse.up();
+      await expect(field).toHaveValue(expected);
+    }
+  }
+  expect(state.saves).toBe(0);
+});

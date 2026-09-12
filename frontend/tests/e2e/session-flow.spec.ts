@@ -83,12 +83,13 @@ test("メモと保存がスクロールなしで見え、指を離す前に重�
     await page.screenshot({ path: `test-results/session-compact-${width}.png`, fullPage: true });
   }
   const field = page.getByRole("spinbutton", { name: "重量", exact: true });
+  const before = Number(await field.inputValue());
   const box = await field.boundingBox();
   if (!box) throw new Error("重量入力がありません");
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2, box.y - 75, { steps: 8 });
-  await expect.poll(async () => Number(await field.inputValue())).toBeGreaterThan(25);
+  await expect.poll(async () => Number(await field.inputValue())).toBeLessThan(before);
   await page.mouse.up();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "test-results/session-compact.png", fullPage: true });
