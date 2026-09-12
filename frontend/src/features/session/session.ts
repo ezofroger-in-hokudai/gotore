@@ -80,6 +80,7 @@ export type SessionInput = {
   editing: number | null;
   dirty: boolean;
   revision?: number;
+  awaitingPrevious?: boolean;
 };
 export const emptyInput: SessionInput = {
   name: "",
@@ -99,7 +100,11 @@ export function readSessionInput(raw: string | null): SessionInput {
       typeof value.reps === "string" &&
       (value.editing === null || (Number.isInteger(value.editing) && value.editing >= 0))
     ) {
-      return { ...value, dirty: value.dirty === true };
+      return {
+        ...value,
+        dirty: value.dirty === true,
+        awaitingPrevious: value.awaitingPrevious === true,
+      };
     }
   } catch {
     /* 壊れた端末内データはサーバーの記録に影響させない。 */
