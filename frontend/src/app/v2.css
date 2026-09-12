@@ -358,15 +358,6 @@
   font-weight: 700;
   letter-spacing: .6px;
 }
-.home-training {
-  margin-top: 24px;
-}
-.home-training p {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 7px;
-  text-align: center;
-}
 .feed-empty {
   padding: 18px 0;
   font-size: 12px;
@@ -1844,4 +1835,47 @@
 .training-volume-trend text {
   font-size: 9px;
   fill: var(--muted);
+}
+
+.home-training {
+  margin: 0 0 20px;
+}
+.home-training > .primary {
+  min-height: 52px;
+  font-size: 1.125rem;
+  letter-spacing: 0.06em;
+}
+.home-training > p {
+  margin: 8px 0;
+  font-size: 0.75rem;
+  text-align: center;
+}
+.home-review > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.has-training-shortcut .main-content {
+  padding-bottom: calc(170px + env(safe-area-inset-bottom));
+}
+.floating-training {
+  position: fixed;
+  z-index: 20;
+  right: max(16px, calc((100vw - 480px) / 2 + 16px));
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  min-width: 112px;
+  min-height: 52px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 28px;
+  color: white;
+  background: var(--accent);
+  box-shadow: 0 4px 16px #0003;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.v2-app:has(dialog[open], input:focus, textarea:focus, [contenteditable="true"]:focus)
+  .floating-training {
+  display: none;
 }
