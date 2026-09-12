@@ -1,13 +1,12 @@
 import { type ElementHandle, expect, test } from "@playwright/test";
 import { mockTraining, navigate } from "./mock-training";
 
-test("開始前に重量と回数を準備でき、開始待ちに保存要求を出さない", async ({ page }) => {
+test("開始前は入力を出さず、開始待ちの種目選択と入力で保存要求を出さない", async ({ page }) => {
   const state = await mockTraining(page);
   let focusedField: ElementHandle<HTMLElement | SVGElement> | null = null;
   await navigate(page, "記録");
-  await page.getByRole("button", { name: /^スクワット/ }).click();
-  await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("80");
-  await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("6");
+  await expect(page.getByRole("button", { name: /^スクワット/ })).toHaveCount(0);
+  await expect(page.getByRole("spinbutton")).toHaveCount(0);
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -23,6 +22,11 @@ test("開始前に重量と回数を準備でき、開始待ちに保存要求�
   });
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   try {
+    await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toBeVisible({
+      timeout: 2000,
+    });
+    await page.getByRole("button", { name: /^スクワット/ }).click();
+    await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("6");
     await expect(page.locator(".session-screen.entering-sets")).toBeVisible({ timeout: 2000 });
     await expect(page.getByRole("region", { name: "全セットの比較", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeDisabled();
@@ -124,8 +128,6 @@ for (const savedInput of [true, false]) {
     await expect(
       page.getByRole("button", { name: "トレーニングを開始", exact: true }),
     ).toBeEnabled();
-    await page.getByRole("button", { name: /^スクワット/ }).click();
-    await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("80");
     const id = "00000000-0000-0000-0000-000000000099";
     state.session = {
       id,
@@ -167,6 +169,7 @@ for (const savedInput of [true, false]) {
     });
     await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
     try {
+      await page.getByRole("button", { name: /^スクワット/ }).click();
       await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("82.5");
       await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("7");
     } finally {

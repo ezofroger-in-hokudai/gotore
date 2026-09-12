@@ -16,6 +16,7 @@ import {
   setValue,
   updateSet,
 } from "./session";
+import { TrainingOverview } from "./training-overview";
 import { useExerciseContext } from "./use-exercise-context";
 import type { SessionController } from "./use-session";
 
@@ -23,25 +24,27 @@ export function SessionScreen({
   active,
   controller,
   userId,
+  recent,
+  onHistory,
   onFinished,
   haptic,
 }: {
   active: boolean;
   controller: SessionController;
   userId: string;
+  recent: Parameters<typeof TrainingOverview>[0]["resource"];
+  onHistory: () => void;
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
 }) {
   const { session } = controller;
   const catalog = useResource<ExerciseOption[]>("/exercise-options", 0, false, true);
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
-  const [choosing, setChoosing] = useState(true);
-  const draftReps = useRef<HTMLInputElement>(null);
   if (!session && !controller.startingId)
     return (
       <section className="start-training">
         <h1>トレーニング</h1>
-        <p>種目を選んで、今日の1セットを。</p>
+        <p>今日も、自分のペースで。</p>
         <p className="muted">開始時の全所属グループに共有します。メモは自分だけに保存されます。</p>
         <button
           className="primary full"
@@ -53,64 +56,7 @@ export function SessionScreen({
         >
           {controller.busy ? "開始中…" : "トレーニングを開始"}
         </button>
-        {draft.name && !choosing ? (
-          <div className="set-entry">
-            <div className="section-heading">
-              <h2>{draft.name}</h2>
-              <button className="text-button" type="button" onClick={() => setChoosing(true)}>
-                種目を変更
-              </button>
-            </div>
-            <div className="wheels">
-              <NumberWheel
-                label="重量"
-                unit="kg"
-                value={draft.weight}
-                step={2.5}
-                min={0}
-                onEnter={() => {
-                  draftReps.current?.focus();
-                  draftReps.current?.select();
-                }}
-                onChange={(weight) => setDraft({ ...draft, weight, dirty: true })}
-              />
-              <NumberWheel
-                label="回数"
-                unit="回"
-                value={draft.reps}
-                step={1}
-                min={1}
-                inputRef={draftReps}
-                onChange={(reps) => setDraft({ ...draft, reps, dirty: true })}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="v2-rows" aria-label="開始前の種目選択">
-            {catalog.data?.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className="v2-row"
-                aria-pressed={draft.name === option.name}
-                onClick={() => {
-                  setDraft(
-                    draft.name === option.name ? draft : { ...emptyInput, name: option.name },
-                  );
-                  setChoosing(false);
-                }}
-              >
-                {option.name} {draft.name === option.name ? "✓" : ""}
-              </button>
-            ))}
-            {!catalog.data && <p className="muted">{catalog.error || "種目を読み込み中…"}</p>}
-            {catalog.error && (
-              <button type="button" onClick={catalog.retry}>
-                種目を再試行
-              </button>
-            )}
-          </div>
-        )}
+        <TrainingOverview resource={recent} onHistory={onHistory} />
       </section>
     );
   return (
@@ -122,7 +68,6 @@ export function SessionScreen({
       userId={userId}
       onFinished={(record) => {
         setDraft({ ...emptyInput });
-        setChoosing(true);
         onFinished(record);
       }}
       haptic={haptic}

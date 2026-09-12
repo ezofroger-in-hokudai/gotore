@@ -11,6 +11,7 @@ import { useResource } from "../training/use-resource";
 
 export function History({
   userId,
+  recent,
   active,
   prefetch = false,
   refreshKey,
@@ -19,6 +20,7 @@ export function History({
   onDeleted,
 }: {
   userId: string;
+  recent: ReturnType<typeof useResource<Workout[]>>;
   active: boolean;
   prefetch?: boolean;
   refreshKey: number;
@@ -32,13 +34,15 @@ export function History({
   const [date, setDate] = useState("");
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<string | null>(null);
-  const records = useResource<Workout[]>(
+  const useRecent = page === 0 && !date && !range;
+  const filteredRecords = useResource<Workout[]>(
     `/workouts?offset=${page * 50}${date ? `&performed_on=${date}` : range ? `&date_from=${range.start}&date_to=${range.end}` : ""}`,
     refreshKey,
     false,
     true,
-    { enabled: active, prefetch, retainOnRefresh: true },
+    { enabled: active && !useRecent, prefetch: prefetch && !useRecent, retainOnRefresh: true },
   );
+  const records = useRecent ? recent : filteredRecords;
   const current = records.data?.find((record) => record.id === detail);
   const detailView = current ? (
     <section className="history-detail">
