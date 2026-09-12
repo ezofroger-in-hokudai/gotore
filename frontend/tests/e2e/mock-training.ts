@@ -1,3 +1,4 @@
+import { gunzipSync } from "node:zlib";
 import { type Page, expect } from "@playwright/test";
 import type { TrainingSession } from "../../src/lib/api";
 
@@ -84,7 +85,10 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     if (path.startsWith("/api/sessions/")) {
       if (path.endsWith("/heartbeat")) return route.fulfill({ status: 204 });
       if (!state.session) return route.fulfill({ status: 409, json: { detail: "終了済み" } });
-      const body = route.request().postDataJSON();
+      const body =
+        route.request().headers()["content-encoding"] === "gzip"
+          ? JSON.parse(gunzipSync(route.request().postDataBuffer() ?? Buffer.alloc(0)).toString())
+          : route.request().postDataJSON();
       if (state.failSave) return route.abort();
       if (
         body.expected_revision + 1 === state.session.revision &&
