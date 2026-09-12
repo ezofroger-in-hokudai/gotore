@@ -16,6 +16,7 @@ import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
+import { GROUP_REFRESH_MS, activityRefreshMs, summaryRefreshMs } from "./refresh-interval";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
 import { useSharedWorkoutDetails } from "./use-shared-workout-details";
@@ -60,14 +61,14 @@ export function CommunityHome({
   const activity = useResource<GroupActivity>(
     selected ? `/groups/${selected}/activity` : null,
     refreshKey,
-    active,
+    activityRefreshMs,
     true,
     { enabled: active },
   );
   const summaries = useResource<GroupSummary[]>(
     "/groups/activity/summary",
     refreshKey,
-    active,
+    summaryRefreshMs,
     true,
     { enabled: active && groups.length > 1 },
   );
@@ -453,16 +454,16 @@ export function CommunityScreen({
   const detail = useResource<GroupDetail>(
     selected ? `/groups/${selected}` : null,
     refreshKey,
-    mode === "detail" || mode === "members",
+    GROUP_REFRESH_MS,
     true,
     { enabled: active && mode !== "list", retainOnRefresh: true },
   );
   const activity = useResource<GroupActivity>(
     selected ? `/groups/${selected}/activity` : null,
     refreshKey,
+    activityRefreshMs,
     true,
-    true,
-    { enabled: active && mode === "detail" },
+    { enabled: active && mode === "detail" && analyticsTab === "feed" },
   );
   const group = detail.data;
   function change(next: Mode, groupId = selected) {

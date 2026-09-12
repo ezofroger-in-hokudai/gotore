@@ -57,7 +57,7 @@ test("複数グループは概要をまとめ、選択中のフィードだけ�
   await expect(page.locator(".community-total").filter({ hasText: "2人" })).toHaveCount(5);
   expect(feeds.every((id) => id === state.group.id)).toBe(true);
   const before = { summaries, feeds: feeds.length };
-  await page.clock.runFor(10_500);
+  await page.clock.runFor(30_500);
   expect(summaries - before.summaries).toBe(2);
   expect(feeds.length - before.feeds).toBe(2);
   await page.getByRole("button", { name: "部活0を表示", exact: true }).click();
@@ -65,7 +65,7 @@ test("複数グループは概要をまとめ、選択中のフィードだけ�
   await expect(page.getByRole("article")).not.toContainText("最初の記録");
   expect(feeds.at(-1)).toBe("group-0");
   fail = true;
-  await page.clock.runFor(5000);
+  await page.clock.runFor(15_000);
   await expect(
     page.getByRole("button", { name: "グループの状況を再試行", exact: true }),
   ).toBeVisible();
@@ -75,10 +75,10 @@ test("複数グループは概要をまとめ、選択中のフィードだけ�
   fail = false;
   visible = groups.slice(1);
   await page.getByRole("button", { name: "グループの状況を再試行", exact: true }).click();
-  await page.clock.runFor(5000);
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect(page.locator(".group-carousel .community-card")).toHaveCount(4);
   await navigate(page, "設定");
   const stopped = { summaries, feeds: feeds.length };
-  await page.clock.runFor(10_500);
+  await page.clock.runFor(30_500);
   expect({ summaries, feeds: feeds.length }).toEqual(stopped);
 });

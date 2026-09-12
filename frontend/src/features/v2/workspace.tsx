@@ -15,6 +15,7 @@ import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
 import { CommunityHome, CommunityScreen } from "./community";
 import { History } from "./history";
+import { GROUP_REFRESH_MS } from "./refresh-interval";
 import { Preferences, usePreferences } from "./settings";
 import { Sheet } from "./sheet";
 
@@ -43,13 +44,10 @@ function WorkspaceContent({ session }: { session: Session }) {
   const [finished, setFinished] = useState<Workout | null>(null);
   const training = useSession(session.user.id, changed);
   const preferences = usePreferences(session.user.id);
-  const groupList = useResource<Group[]>(
-    "/groups",
-    groupRefreshKey,
-    view === "home" || view === "groups",
-    true,
-    { enabled: view === "home" || view === "groups", retainOnRefresh: true },
-  );
+  const groupList = useResource<Group[]>("/groups", groupRefreshKey, GROUP_REFRESH_MS, true, {
+    enabled: view === "home" || view === "groups",
+    retainOnRefresh: true,
+  });
   const groups = groupList.data ?? [];
   const [historyReady, setHistoryReady] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
