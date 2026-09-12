@@ -38,9 +38,19 @@ test("圧縮非対応・失敗・圧縮しても短くならない場合は元�
     }
   } as unknown as typeof CompressionStream;
   expect(await sessionBody(json, signal())).toEqual({ body: json });
-  globalThis.CompressionStream =
-    class extends TransformStream {} as unknown as typeof CompressionStream;
+  let transformed = false;
+  globalThis.CompressionStream = class extends TransformStream {
+    constructor() {
+      super({
+        transform(chunk, controller) {
+          transformed = true;
+          controller.enqueue(chunk);
+        },
+      });
+    }
+  } as typeof CompressionStream;
   expect(await sessionBody(json, signal())).toEqual({ body: json });
+  expect(transformed).toBe(true);
 });
 
 test("旧API拒否時だけ同じrevisionで1度再試行し、以降は通常送信する", async () => {
