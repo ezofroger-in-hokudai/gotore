@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ResourceError } from "../training/resource-error";
 import { AnalyticsChart, dates, number } from "./chart";
 import { type Grain, type Metric, type Period, type RankMetric, labels, units } from "./types";
 import { useAnalytics } from "./use-analytics";
@@ -128,16 +129,8 @@ export function AnalyticsPanel({
           </button>
         ))}
       </div>
-      {resource.error ? (
-        <div className="analytics-placeholder">
-          <p role="alert" className="error">
-            {resource.error}
-          </p>
-          <button type="button" className="secondary" onClick={resource.retry}>
-            再試行
-          </button>
-        </div>
-      ) : !data ? (
+      <ResourceError resource={resource} />
+      {resource.error && !data ? null : !data ? (
         <output className="analytics-placeholder">グラフを準備しています…</output>
       ) : (
         <>

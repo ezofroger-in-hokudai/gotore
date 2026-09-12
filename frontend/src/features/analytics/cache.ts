@@ -1,3 +1,5 @@
+import { canRetainResource } from "../training/retain-resource";
+
 type Entry<T> = { data?: T; error?: string; savedAt: number; loading: boolean };
 type Job = { path: string; selected: boolean; controller: AbortController };
 
@@ -32,7 +34,13 @@ export class AnalyticsCache<T> {
       return;
     }
     const entry = this.entries.get(path);
-    if (!force && entry?.data !== undefined && this.now() - entry.savedAt < this.ttl) return;
+    if (
+      !force &&
+      !entry?.error &&
+      entry?.data !== undefined &&
+      this.now() - entry.savedAt < this.ttl
+    )
+      return;
     if (this.jobs.size >= 2) {
       if (!selected) return;
       const victim = [...this.jobs.values()].find((job) => !job.selected);
@@ -57,18 +65,14 @@ export class AnalyticsCache<T> {
       })
       .catch((error: unknown) => {
         if (job.controller.signal.aborted) return;
-        if (
-          error &&
-          typeof error === "object" &&
-          "status" in error &&
-          [401, 403, 404].includes(Number(error.status))
-        ) {
+        const retain = canRetainResource(error);
+        if (!retain) {
           this.clear();
         }
-        // 共有解除や認証切れの後に、以前の集計を表示し続けない。
         this.entries.set(path, {
+          data: retain ? entry?.data : undefined,
           error: error instanceof Error ? error.message : "取得できませんでした。",
-          savedAt: 0,
+          savedAt: retain ? (entry?.savedAt ?? 0) : 0,
           loading: false,
         });
         this.emit();

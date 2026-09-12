@@ -1,4 +1,5 @@
 "use client";
+
 import type { Group, TrainingGoal, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
@@ -8,11 +9,13 @@ import { useScoring } from "../score/use-scoring";
 import { WorkoutResult } from "../score/workout-result";
 import { SessionScreen } from "../session/session-screen";
 import { useSession } from "../session/use-session";
+import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
 import { CommunityHome, CommunityScreen } from "./community";
 import { History } from "./history";
+import { GROUP_REFRESH_MS } from "./refresh-interval";
 import { Preferences, usePreferences } from "./settings";
 import { Sheet } from "./sheet";
 
@@ -41,13 +44,10 @@ function WorkspaceContent({ session }: { session: Session }) {
   const [finished, setFinished] = useState<Workout | null>(null);
   const training = useSession(session.user.id, changed);
   const preferences = usePreferences(session.user.id);
-  const groupList = useResource<Group[]>(
-    "/groups",
-    groupRefreshKey,
-    view === "home" || view === "groups",
-    true,
-    { enabled: view === "home" || view === "groups", retainOnRefresh: true },
-  );
+  const groupList = useResource<Group[]>("/groups", groupRefreshKey, GROUP_REFRESH_MS, true, {
+    enabled: view === "home" || view === "groups",
+    retainOnRefresh: true,
+  });
   const groups = groupList.data ?? [];
   const [historyReady, setHistoryReady] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
@@ -140,14 +140,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             </button>
           </div>
         )}
-        {groupList.error && (
-          <p className="error" role="alert">
-            {groupList.error}
-            <button className="text-button" type="button" onClick={groupList.retry}>
-              再試行
-            </button>
-          </p>
-        )}
+        <ResourceError resource={groupList} />
         <div hidden={view !== "home"}>
           <CommunityHome
             groups={groups}

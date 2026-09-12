@@ -213,3 +213,26 @@ test("実DBの個人グラフは非公開も集計し、グループのランキ
   await page.getByRole("button", { name: "グラフ", exact: true }).click();
   await expect(page.locator(".community-screen .analytics-summary")).toContainText("800");
 });
+
+test("グループの集計を60秒保持し、グラフとランキングの切替で再取得しない", async ({ page }) => {
+  await page.clock.install();
+  await mockTraining(page);
+  const state = await routes(page);
+  await openGroup(page);
+  await page.getByRole("button", { name: "グラフ", exact: true }).click();
+  const panel = page.getByRole("region", { name: "グループ集計" });
+  await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("month");
+  await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
+  await expect(panel.locator(".analytics-summary")).toContainText("23,500");
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+  const before = state.selectedCount();
+  await page.clock.runFor(5000);
+  expect(state.selectedCount()).toBe(before);
+  await page.getByRole("button", { name: "ランキング", exact: true }).click();
+  await expect(panel.locator(".analytics-ranks")).toContainText("タクミ");
+  await page.getByRole("button", { name: "グラフ", exact: true }).click();
+  await expect(panel.locator(".analytics-summary")).toContainText("23,500");
+  expect(state.selectedCount()).toBe(before);
+  await page.clock.runFor(55_000);
+  await expect.poll(state.selectedCount).toBe(before + 1);
+});

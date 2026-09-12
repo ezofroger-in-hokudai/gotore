@@ -125,7 +125,7 @@ test("LIVEは右下の丸とラベルで示し、新着だけ強調して期限�
   await expect(card.getByText("LIVE", { exact: true })).toHaveCount(0);
 });
 
-test("LIVE期限は次の取得が保留中でも切れ、取得失敗で古い表示を隠す", async ({ page }) => {
+test("LIVE期限は次の取得が保留中でも切れ、一時失敗後は記録だけを保持する", async ({ page }) => {
   const state = await mockTraining(page);
   const started = Date.now();
   let requests = 0;
@@ -182,8 +182,11 @@ test("LIVE期限は次の取得が保留中でも切れ、取得失敗で古い�
     });
     await expect(page.getByRole("article")).toContainText("80");
     release();
-    await expect(page.getByRole("article")).toHaveCount(0);
-    await expect(page.locator(".v2-app").getByRole("alert")).toContainText("状況を取得できません");
+    await expect(page.getByRole("article")).toContainText("80");
+    await expect(page.getByRole("article").locator(".avatar-live-dot")).toHaveCount(0);
+    await expect(page.locator(".v2-app").getByRole("alert")).toContainText(
+      "更新できませんでした。前回の内容を表示しています。",
+    );
   } finally {
     release();
   }

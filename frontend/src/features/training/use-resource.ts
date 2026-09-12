@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { resourceRequest } from "./resource-request";
+import { canRetainResource } from "./retain-resource";
 
 export function useResource<T>(
   path: string | null,
   refreshKey = 0,
-  poll = false,
+  poll: boolean | number | ((data: T | undefined) => number) = false,
   remember = false,
   options: { enabled?: boolean; retainOnRefresh?: boolean; prefetch?: boolean } = {},
 ) {
@@ -39,7 +40,7 @@ export function useResource<T>(
       setResult({ path, data: previous.data, version: refreshKey, stale: true });
     } else {
       setResult((current) =>
-        current?.path === path && (!remember || (changed && retainOnRefresh)) ? current : null,
+        current?.path === path && (!changed || retainOnRefresh) ? current : null,
       );
     }
     setError("");
@@ -49,13 +50,22 @@ export function useResource<T>(
     }
     const controller = new AbortController();
     let pending = false;
+    let latest = previous?.data;
+    let timer: number | undefined;
+    const schedule = () => {
+      if (!poll || controller.signal.aborted || document.hidden) return;
+      const delay = typeof poll === "function" ? poll(latest) : poll === true ? 5000 : poll;
+      timer = window.setTimeout(() => void load(), delay);
+    };
     const load = async () => {
       if (pending || ((poll || prefetch) && document.hidden)) return;
+      window.clearTimeout(timer);
       pending = true;
       setLoading(true);
       try {
         const value = await resourceRequest<T>(path, controller.signal);
         if (!controller.signal.aborted) {
+          latest = value;
           setResult({ path, data: value, version: refreshKey, stale: false });
           if (remember) {
             cache.current.pages.delete(path);
@@ -69,26 +79,29 @@ export function useResource<T>(
         }
       } catch (reason) {
         if (!controller.signal.aborted) {
-          if (remember) {
-            cache.current.pages.delete(path);
+          if (!canRetainResource(reason)) {
+            cache.current.pages.clear();
             setResult(null);
+          } else {
+            setResult((current) => (current?.path === path ? { ...current, stale: true } : null));
           }
           setError(reason instanceof Error ? reason.message : "取得できませんでした。");
         }
       } finally {
         pending = false;
         if (!controller.signal.aborted) setLoading(false);
+        schedule();
       }
     };
     void load();
-    const timer = poll ? window.setInterval(() => void load(), 5000) : undefined;
     const visible = () => {
-      if (!document.hidden) void load();
+      if (document.hidden) window.clearTimeout(timer);
+      else void load();
     };
     if (poll) document.addEventListener("visibilitychange", visible);
     return () => {
       controller.abort();
-      if (timer) window.clearInterval(timer);
+      window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", visible);
     };
   }, [path, refreshKey, retryKey, poll, remember, enabled, retainOnRefresh, prefetch]);

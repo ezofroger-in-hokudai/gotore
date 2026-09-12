@@ -44,7 +44,7 @@ test("選択中を優先し、破棄後の遅い応答はキャッシュへ戻�
 test("容量を制限し、失敗時には以前の集計を消して再試行できる", async () => {
   let fail = false;
   const cache = new AnalyticsCache(async (path) => {
-    if (fail) throw new Error("参加していません");
+    if (fail) throw Object.assign(new Error("参加していません"), { status: 403 });
     return path;
   });
   for (let i = 0; i < 9; i++) {
@@ -78,5 +78,29 @@ test("権限エラーで別期間も消し、無効化後の再取得へ古い�
   await tick();
   expect(cache.read("week")).toBeUndefined();
   expect(cache.read("month")?.error).toBe("参加していません");
+  cache.clear();
+});
+
+test("一時的な再取得失敗では同じ期間の集計を保持し、再試行で最新へ置き換える", async () => {
+  let failure: Error | null = null;
+  let total = 10;
+  const cache = new AnalyticsCache(async () => {
+    if (failure) throw failure;
+    return total;
+  });
+  cache.request("month");
+  await tick();
+  failure = Object.assign(new Error("サービスを利用できません"), { status: 503 });
+  cache.request("month", true, true);
+  await tick();
+  expect(cache.read("month")?.data).toBe(10);
+  expect(cache.read("month")?.error).toBe("サービスを利用できません");
+  expect(cache.read("week")).toBeUndefined();
+  failure = null;
+  total = 20;
+  cache.request("month", true);
+  await tick();
+  expect(cache.read("month")?.data).toBe(20);
+  expect(cache.read("month")?.error).toBeUndefined();
   cache.clear();
 });
