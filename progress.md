@@ -1364,3 +1364,10 @@
 - 影響範囲・関連ファイル: backend/app/domain/score.py、infrastructure/scores.py、schemas/score.py、frontend/src/features/score/score-display.tsx、lib/api.ts、関連テスト・score-implementation.md。
 - 検証: 最終make checkと表示調整後のscore E2E成功。詳細は前項。既存得点の一括再採点やDB migrationはない。
 - 未解決事項・次のアクション: 画像をPRへ掲載しCIでDocker依存の検証を補完する。#100/#104は後続。
+
+## 2026-09-12 12:27
+- 変更内容: 開始前の振り返り、初回100点の終了画面、共有ホームの画像をdocs/images/training-entry/へ追加した。
+- 目的: PRでスマートフォン表示を具体的にレビューできるようにする。
+- 影響範囲・関連ファイル: 画像と再現手順のみ。実ユーザー情報を含まない固定テストデータで、AIコメントも固定応答である。
+- 検証: PNGを目視確認し、320/390/430pxのE2Eで横幅と操作ボタンの表示を検証。文書・画像のみの追加のため新しい先行テストは不要。
+- 未解決事項・次のアクション: PR作成とCIの結果確認。
