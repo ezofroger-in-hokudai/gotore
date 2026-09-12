@@ -510,9 +510,7 @@ function ActiveTraining({
               <h2>
                 前回 <small>{context.data?.previous?.performed_on.replaceAll("-", "/")}</small>
               </h2>
-              <h2>
-                今回 <small>タップで編集</small>
-              </h2>
+              <h2>今回</h2>
             </div>
             <section className="comparison-table" ref={comparisonTable} aria-label="全セットの比較">
               {Array.from({ length: Math.max(previous.length, sets.length, 1) }, (_, i) => (
@@ -584,6 +582,12 @@ function ActiveTraining({
                     ? `SET ${sets.length + 1}`
                     : `SET ${input.editing + 1} を編集`}
                 </h2>
+                <p
+                  className={`rm-estimate${candidate ? " record-candidate" : ""}`}
+                  title="1〜10回のセットから推定"
+                >
+                  1RM <strong>{rm ?? "—"}</strong> kg
+                </p>
                 {input.editing === null && undo && undo.revision === revision && (
                   <button
                     className="text-button undo-button"
@@ -670,9 +674,6 @@ function ActiveTraining({
                   }}
                 />
               </div>
-              <p className={`rm-estimate${candidate ? " record-candidate" : ""}`}>
-                1RM <strong>{rm ?? "—"}</strong> kg <span>（1〜10回）</span>
-              </p>
               <div className="save-feedback" aria-live="polite">
                 {feedback ? (
                   <span className={celebrated ? "record-celebration" : undefined}>
@@ -713,7 +714,6 @@ function ActiveTraining({
                   <span>
                     {blocking ? "保存中…" : input.editing === null ? "次のセットへ" : "変更を保存"}
                   </span>
-                  <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
                 </button>
               </div>
             </fieldset>
