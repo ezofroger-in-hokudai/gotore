@@ -26,6 +26,7 @@ class ScoreSummary(BaseModel):
     weights: ScoreWeights
     weights_version: int
     scored_at: datetime
+    initial_axes: list[Literal["c", "i", "v"]] = Field(default_factory=list)
 
 
 class CriterionJudgment(BaseModel):

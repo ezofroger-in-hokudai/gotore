@@ -145,13 +145,15 @@ test("目標はAI提案を確認・修正して保存し、途中の提案では
   await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
 });
 
-test("確定スコアと一言がスマートフォン幅で読めて、仲間の画面へ共有される", async ({ page }) => {
+test("初回スコアと一言がスマートフォン幅で読めて、仲間の画面へ共有される", async ({ page }) => {
   const state = await mockTraining(page);
   const completed = {
     ...pending,
     status: "complete" as const,
-    total: 88,
-    components: { ...pending.components, g: 75 },
+    total: 100,
+    components: { c: 100, i: 100, v: 100, g: 100 },
+    initial_axes: ["c", "i", "v"] as ("c" | "i" | "v")[],
+    formula_version: "score-v2",
     comment: "今日も目標に向けて一歩進めました。",
   };
   await page.route("**/api/me/goal", (route) => route.fulfill({ json: goal }));
@@ -172,12 +174,16 @@ test("確定スコアと一言がスマートフォン幅で読めて、仲間�
     await route.fulfill({ json: ended });
   });
   await startTraining(page);
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("10");
+  for (let set = 0; set < 3; set++) {
+    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await expect(page.locator(".sync-status")).toContainText("同期済み");
+  }
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
   await page.getByRole("button", { name: "終了する", exact: true }).click();
-  await expect(page.locator(".result-score")).toContainText("88点");
+  await expect(page.locator(".result-score")).toContainText("100点");
   await expect(page.getByText(completed.comment, { exact: true })).toBeVisible();
+  await expect(page.getByText("初回基準", { exact: true })).toHaveCount(3);
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
@@ -197,11 +203,11 @@ test("確定スコアと一言がスマートフォン幅で読めて、仲間�
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "ホームへ", exact: true }).click();
-  await expect(page.locator(".feed-item .score-badge")).toContainText("88点");
+  await expect(page.locator(".feed-item .score-badge")).toContainText("100点");
   const points = await page.locator(".feed-item .score-badge").boundingBox();
   const entry = await page.locator(".feed-item .feed-value").boundingBox();
   expect(points && entry && points.x > entry.x + entry.width).toBeTruthy();
-  await expect(page.locator(".feed-item .score-badge")).toHaveAttribute("data-score", "88");
+  await expect(page.locator(".feed-item .score-badge")).toHaveAttribute("data-score", "100");
   await expect(page.getByText(goal.body, { exact: true })).toHaveCount(0);
   await expect(page.getByText(completed.comment, { exact: true })).toHaveCount(0);
   await page.screenshot({

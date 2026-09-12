@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.domain.session import estimated_rm
 
-FORMULA_VERSION = "score-v1"
+FORMULA_VERSION = "score-v2"
 HUNDRED = Decimal(100)
 REACH = Decimal("0.95")
 Percentage = Annotated[int, Field(strict=True, ge=0, le=100)]
@@ -108,3 +108,26 @@ def total_score(components: dict[str, Decimal | None], weights: ScoreWeights) ->
                 raise ValueError("点数の範囲を確認してください")
             total += value * weight / HUNDRED
     return int(total.quantize(Decimal(1), rounding=ROUND_HALF_UP))
+
+
+def apply_initial_benchmark(
+    components: dict[str, Decimal | None], exercises: list[dict]
+) -> tuple[dict[str, Decimal | None], list[str]]:
+    """比較できない項目だけ、合意した初回基準で補う。目標判定は補わない。"""
+    reps: dict[str, int] = {}
+    for exercise in exercises:
+        if exercise["sets"]:
+            name = exercise["name"].strip()
+            reps[name] = reps.get(name, 0) + sum(s["reps"] for s in exercise["sets"])
+    result = dict(components)
+    if not reps:
+        return result, []
+    initial_axes = [axis for axis in ("c", "i", "v") if result[axis] is None]
+    for axis in initial_axes:
+        result[axis] = (
+            sum((min(HUNDRED, HUNDRED * count / 30) for count in reps.values()), Decimal(0))
+            / len(reps)
+            if axis == "v"
+            else HUNDRED
+        )
+    return result, initial_axes

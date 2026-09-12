@@ -118,3 +118,38 @@ def test_total_example_rounds_at_end_and_never_renormalizes():
 def test_weights_require_integer_percentages_totaling_100(weights):
     with pytest.raises(ValidationError):
         ScoreWeights(**weights)
+
+
+def test_initial_benchmark_caps_each_exercise_and_merges_same_names():
+    from app.domain.score import apply_initial_benchmark
+
+    exercises = [
+        {"name": " ベンチ ", "sets": [{"weight": 60, "reps": 10}] * 3},
+        {"name": "ベンチ", "sets": [{"weight": 60, "reps": 30}]},
+        {"name": "自重", "sets": [{"weight": 0, "reps": 15}]},
+    ]
+    values, axes = apply_initial_benchmark(dict.fromkeys(("c", "i", "v", "g")), exercises)
+    assert values == {"c": 100, "i": 100, "v": 75, "g": None}
+    assert axes == ["c", "i", "v"]
+    assert total_score({**values, "g": Decimal(100)}, ScoreWeights()) == 90
+
+
+def test_initial_benchmark_preserves_comparable_scores_including_zero():
+    from app.domain.score import apply_initial_benchmark
+
+    original = {"c": Decimal(0), "i": Decimal(70), "v": Decimal(80), "g": None}
+    values, axes = apply_initial_benchmark(original, [{"name": "a", "sets": []}])
+    assert values == original
+    assert axes == []
+    assert apply_initial_benchmark(dict.fromkeys(original), []) == (dict.fromkeys(original), [])
+
+
+@pytest.mark.parametrize("reps,expected", [(10, Decimal(100) / 3), (30, 100), (60, 100)])
+def test_initial_benchmark_uses_total_thirty_reps(reps, expected):
+    from app.domain.score import apply_initial_benchmark
+
+    values, _ = apply_initial_benchmark(
+        dict.fromkeys(("c", "i", "v", "g")),
+        [{"name": "ベンチ", "sets": [{"weight": 60, "reps": reps}]}],
+    )
+    assert values["v"] == expected

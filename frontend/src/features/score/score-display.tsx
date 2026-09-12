@@ -51,6 +51,17 @@ export function ScoreBreakdown({ score }: { score: ScoreSummary }) {
                   : "計測中"
                 : `配点 ${score.weights[axis]}%`}
             </small>
+            {score.initial_axes?.some((initial) => initial === axis) && (
+              <small
+                title={
+                  axis === "v"
+                    ? "各種目の合計30回を100点として評価"
+                    : "比較できる履歴が揃うまでは100点"
+                }
+              >
+                初回基準
+              </small>
+            )}
           </div>
         );
       })}

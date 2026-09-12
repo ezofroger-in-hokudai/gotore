@@ -79,7 +79,8 @@ def test_goal_changes_apply_to_next_start_and_preserve_scored_snapshot(client):
     assert before["goal"]["version"] == 1
     assert before["goal"]["is_standard"] is True
     assert before["total"] is None
-    assert before["components"]["c"] is None
+    assert before["components"]["c"] == 100
+    assert before["initial_axes"] == ["c", "i", "v"]
     assert before["status"] == "pending"
     assert client.put("/api/me/goal", json=goal_input()).json()["version"] == 2
     assert client.put("/api/me/goal", json=goal_input(text="別の変更")).status_code == 409
@@ -140,6 +141,7 @@ def test_scores_share_only_public_fields_and_follow_membership_and_deletion(clie
     assert "comment" not in response.json()
     assert "非公開" not in response.text
     assert "baseline" not in response.json()
+    assert response.json()["initial_axes"] == ["c", "i", "v"]
     assert client.get(shared_path, headers={"X-Test-User": "C"}).status_code == 404
     assert (
         client.delete(
@@ -194,6 +196,16 @@ def test_llm_runs_once_with_frozen_input_and_no_connection_during_wait(
         assert response.status_code == 200, response.text
         assert response.json()["components"]["g"] == 100
         assert response.json()["comment"] == "今日も積み重ねられました。"
+    assert response.json()["total"] == 71
+    assert response.json()["formula_version"] == "score-v2"
+    public = client.get("/api/workouts").json()[0]["score"]
+    assert public["total"] == 71
+    assert public["initial_axes"] == ["c", "i", "v"]
+    stored = connection.execute(
+        "SELECT personal_total FROM public.gotore_workout_scores WHERE workout_id = %s",
+        (record["id"],),
+    ).fetchone()
+    assert stored["personal_total"] == 71
     assert len(calls) == 1
     assert score(client, record)["model"] == "test-snapshot"
     assert client.post(endpoint, headers={"X-Test-User": "B"}).status_code == 404
@@ -366,8 +378,8 @@ def test_edit_rescores_only_changed_record_with_original_goal_and_baseline(
             "exercises": [{"name": "スクワット", "sets": [{"weight": 30, "reps": 8}]}],
         },
     ).json()
-    assert changed_menu["score"]["components"]["v"] is None
-    assert changed_menu["score"]["components"]["i"] is None
+    assert changed_menu["score"]["components"]["v"] == pytest.approx(100 * 8 / 30)
+    assert changed_menu["score"]["components"]["i"] == 100
 
 
 def test_score_calendar_uses_daily_max_and_excludes_pending_stale_and_other_users(
@@ -450,3 +462,41 @@ def test_calendar_total_is_saved_with_evaluation_and_cleared_on_edit(client, con
         ).fetchone()["personal_total"]
         is None
     )
+
+
+def test_v1_score_keeps_original_formula_when_edited(client, connection):
+    record = finish(client, save(client, start(client)))
+    connection.execute(
+        """UPDATE public.gotore_workout_scores SET formula_version = 'score-v1',
+        snapshot = snapshot - 'initial_axes', components =
+        '{"c": null, "i": null, "v": null, "g": null}' WHERE workout_id = %s""",
+        (record["id"],),
+    )
+    response = client.patch(
+        f"/api/workouts/{record['id']}",
+        json={
+            "expected_revision": record["revision"],
+            "performed_on": record["performed_on"],
+            "exercises": [{"name": "ベンチプレス", "sets": [{"weight": 50, "reps": 10}]}],
+        },
+    )
+    assert response.status_code == 200, response.text
+    result = score(client, response.json())
+    assert result["formula_version"] == "score-v1"
+    assert result["initial_axes"] == []
+    assert result["components"]["v"] is None
+
+
+def test_first_thirty_reps_reaches_full_benchmark(client):
+    record = start(client)
+    response = client.patch(
+        f"/api/sessions/{record['id']}",
+        json={
+            "expected_revision": record["revision"],
+            "exercises": [{"name": "ベンチプレス", "sets": [{"weight": 60, "reps": 10}] * 3}],
+        },
+    )
+    assert response.status_code == 200, response.text
+    result = score(client, finish(client, response.json()))
+    assert result["components"] == {"c": 100, "i": 100, "v": 100, "g": None}
+    assert result["total"] is None

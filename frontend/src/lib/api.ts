@@ -96,6 +96,7 @@ export type TrainingGoal = {
   created_at: string;
 };
 export type ScoreSummary = {
+  initial_axes?: Exclude<ScoreAxis, "g">[];
   workout_id: string;
   revision: number;
   total: number | null;

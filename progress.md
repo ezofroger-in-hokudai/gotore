@@ -1357,3 +1357,10 @@
 - 関連ファイル: docs/images/training-entry/、score-display.tsx、関連テスト。
 - 未解決事項: ローカルDockerが必要な4件とCI、実モデル評価 #100。一言表示は後続 #104。
 - 次のアクション: 開始導線、初回採点、画像の目的別コミットをpushし、画像付きPRを作成してCIを確認する。マージは行わない。
+
+## 2026-09-12 12:26
+- 変更内容: 初回採点をscore-v2として分離し、比較不能C/I/Vだけ初回基準を適用。公開用の軽量な初回項目情報と内訳表示、v1訂正時の算式保持を実装した。
+- 目的: 合意した30回基準で新規記録を採点し、通常の過去比較と区別して説明する。
+- 影響範囲・関連ファイル: backend/app/domain/score.py、infrastructure/scores.py、schemas/score.py、frontend/src/features/score/score-display.tsx、lib/api.ts、関連テスト・score-implementation.md。
+- 検証: 最終make checkと表示調整後のscore E2E成功。詳細は前項。既存得点の一括再採点やDB migrationはない。
+- 未解決事項・次のアクション: 画像をPRへ掲載しCIでDocker依存の検証を補完する。#100/#104は後続。
