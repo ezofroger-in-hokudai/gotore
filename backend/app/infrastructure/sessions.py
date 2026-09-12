@@ -10,8 +10,7 @@ from app.domain.session import (
     SessionUpdate,
     estimated_rm,
     latest_change,
-    personal_bests,
-    session_best_sets,
+    session_best_sets_from_bests,
 )
 from app.infrastructure.scores import ScoreRepository
 from app.infrastructure.training_repository import TrainingRepository
@@ -186,24 +185,53 @@ class SessionRepository(TrainingRepository):
             )
 
     def bests(self, user_id: UUID, name: str):
-        rows = self.connection.execute(
-            """SELECT exercises FROM public.gotore_workouts
-            WHERE user_id = %s AND exercises @> %s""",
-            (user_id, Jsonb([{"name": name}])),
+        return self.connection.execute(
+            """SELECT max(s.best_weight)::double precision AS best_weight,
+                max(s.best_rm)::double precision AS best_rm
+            FROM public.gotore_workout_statistics s
+            JOIN public.gotore_workouts w ON w.id = s.workout_id
+            WHERE w.user_id = %s AND s.exercise_name = %s""",
+            (user_id, name),
+        ).fetchone()
+
+    def feed_bests(self, rows: list):
+        targets = [
+            {
+                "user_id": str(row["user_id"]),
+                "name": row["exercises"][
+                    row["feed_exercise"] if row["feed_exercise"] is not None else -1
+                ]["name"],
+            }
+            for row in rows
+            if row["feed_best"]
+        ]
+        if not targets:
+            return {}
+        # 共有を確認したフィードの対象だけを集計し、私的な履歴本文を取得しない。
+        bests = self.connection.execute(
+            """SELECT t.user_id, t.name,
+                max(s.best_weight)::double precision AS best_weight,
+                max(s.best_rm)::double precision AS best_rm
+            FROM jsonb_to_recordset(%s) AS t(user_id uuid, name text)
+            JOIN public.gotore_workouts w ON w.user_id = t.user_id
+            JOIN public.gotore_workout_statistics s
+                ON s.workout_id = w.id AND s.exercise_name = t.name
+            GROUP BY t.user_id, t.name""",
+            (Jsonb(targets),),
         ).fetchall()
-        return personal_bests(
-            [s for row in rows for e in row["exercises"] if e["name"] == name for s in e["sets"]]
-        )
+        return {(row["user_id"], row["name"]): row for row in bests}
 
     def overview_bests(self, user_id: UUID, workout_id: UUID):
         row = self.session(user_id, workout_id)
         names = list({e["name"] for e in row["exercises"]})
         others = (
             self.connection.execute(
-                """SELECT w.exercises FROM public.gotore_workouts w
-            WHERE w.user_id = %s AND w.id != %s
-            AND EXISTS (SELECT 1 FROM jsonb_array_elements(w.exercises) e
-                WHERE e->>'name' = ANY(%s::text[]))""",
+                """SELECT s.exercise_name, max(s.best_weight)::double precision AS best_weight,
+                    max(s.best_rm)::double precision AS best_rm
+                FROM public.gotore_workout_statistics s
+                JOIN public.gotore_workouts w ON w.id = s.workout_id
+                WHERE w.user_id = %s AND w.id != %s AND s.exercise_name = ANY(%s::text[])
+                GROUP BY s.exercise_name""",
                 (user_id, workout_id, names),
             ).fetchall()
             if names
@@ -211,8 +239,8 @@ class SessionRepository(TrainingRepository):
         )
         return {
             "revision": row["revision"],
-            "sets": session_best_sets(
-                row["exercises"], [e for other in others for e in other["exercises"]]
+            "sets": session_best_sets_from_bests(
+                row["exercises"], {other["exercise_name"]: other for other in others}
             ),
         }
 
@@ -235,34 +263,54 @@ class SessionRepository(TrainingRepository):
             current = self.owned_workout(user_id, session_id)
             if current is None:
                 raise NotFound("記録が見つかりません")
-        rows = self.connection.execute(
-            """SELECT w.id, w.performed_on, COALESCE(w.started_at, w.created_at) AS ordered_at,
-                w.exercises FROM public.gotore_workouts w
-            WHERE w.user_id = %s AND w.exercises @> %s
-            ORDER BY w.performed_on DESC, COALESCE(w.started_at, w.created_at) DESC, w.id DESC""",
-            (user_id, Jsonb([{"name": name}])),
-        ).fetchall()
-        sets = [s for row in rows for e in row["exercises"] if e["name"] == name for s in e["sets"]]
-        previous = None
-        for row in rows:
-            if current and (row["performed_on"], row["ordered_at"], row["id"]) >= (
-                current["performed_on"],
-                current["started_at"] or current["created_at"],
-                current["id"],
-            ):
-                continue
-            previous = {
-                "id": row["id"],
-                "performed_on": row["performed_on"],
-                "sets": [s for e in row["exercises"] if e["name"] == name for s in e["sets"]],
-            }
-            break
+        order = (
+            (current["performed_on"], current["started_at"] or current["created_at"], current["id"])
+            if current
+            else (None, None, None)
+        )
+        row = self.connection.execute(
+            """SELECT b.*, p.id, p.performed_on, p.sets
+            FROM (
+                SELECT max(s.best_weight)::double precision AS best_weight,
+                    max(s.best_rm)::double precision AS best_rm
+                FROM public.gotore_workout_statistics s
+                JOIN public.gotore_workouts w ON w.id = s.workout_id
+                WHERE w.user_id = %s AND s.exercise_name = %s
+            ) b
+            LEFT JOIN LATERAL (
+                SELECT w.id, w.performed_on, (
+                    SELECT jsonb_agg(s.value ORDER BY e.position, s.position)
+                    FROM jsonb_array_elements(w.exercises) WITH ORDINALITY e(value, position)
+                    CROSS JOIN LATERAL jsonb_array_elements(e.value->'sets')
+                        WITH ORDINALITY s(value, position)
+                    WHERE e.value->>'name' = %s
+                ) AS sets
+                FROM public.gotore_workouts w
+                WHERE w.user_id = %s AND w.exercises @> %s
+                    AND (%s::uuid IS NULL OR
+                        (w.performed_on, COALESCE(w.started_at, w.created_at), w.id)
+                        < (%s::date, %s::timestamptz, %s::uuid))
+                ORDER BY w.performed_on DESC, COALESCE(w.started_at, w.created_at) DESC, w.id DESC
+                LIMIT 1
+            ) p ON true""",
+            (user_id, name, name, user_id, Jsonb([{"name": name}]), session_id, *order),
+        ).fetchone()
+        previous = (
+            {"id": row["id"], "performed_on": row["performed_on"], "sets": row["sets"]}
+            if row["id"] is not None
+            else None
+        )
         memo = self.connection.execute(
             """SELECT content, revision FROM public.gotore_exercise_memos
             WHERE user_id = %s AND name = %s""",
             (user_id, name),
         ).fetchone() or {"content": "", "revision": 0}
-        return {**personal_bests(sets), "previous": previous, "memo": memo}
+        return {
+            "best_weight": row["best_weight"],
+            "best_rm": row["best_rm"],
+            "previous": previous,
+            "memo": memo,
+        }
 
     def save_exercise_memo(self, user_id: UUID, data: ExerciseMemoInput):
         with self.connection.transaction():
@@ -349,13 +397,14 @@ class SessionRepository(TrainingRepository):
             (group_id, group_id),
         ).fetchall()
         latest = ScoreRepository(self.connection).attach(latest, group_id)
+        bests = self.feed_bests(latest)
         feed = []
         for row in latest:
             exercise = row["exercises"][
                 row["feed_exercise"] if row["feed_exercise"] is not None else -1
             ]
             s = exercise["sets"][row["feed_set"] if row["feed_set"] is not None else -1]
-            best = self.bests(row["user_id"], exercise["name"]) if row["feed_best"] else None
+            best = bests.get((row["user_id"], exercise["name"])) if row["feed_best"] else None
             rm = estimated_rm(s["weight"], s["reps"])
             feed.append(
                 {
