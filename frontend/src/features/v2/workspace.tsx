@@ -122,7 +122,6 @@ function WorkspaceContent({ session }: { session: Session }) {
         <button className="wordmark" type="button" onClick={() => navigate("home")}>
           GO <span>TORE</span>
         </button>
-        <span className="header-caption">日々の積み重ねを、仲間と。</span>
       </header>
       <main className="main-content">
         <OnboardingGuide userId={session.user.id} replay={guideReplay} />

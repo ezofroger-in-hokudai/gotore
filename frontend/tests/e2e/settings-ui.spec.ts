@@ -55,10 +55,10 @@ test("プロフィール取得失敗から再試行できる", async ({ page }) 
   );
 });
 
-test("外観と触覚を端末に保持し、通知は未接続のスイッチを出さない", async ({ page }) => {
+test("外観と触覚を端末に保持し、未提供の通知項目を省く", async ({ page }) => {
   await mockTraining(page);
   await navigate(page, "設定");
-  await expect(page.getByText("準備中", { exact: true })).toBeVisible();
+  await expect(page.getByText("通知", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: /^外観/ }).click();
   await page.getByRole("button", { name: "ダーク", exact: true }).click();
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
