@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LoadingState } from "../loading/loading-state";
 import { ResourceError } from "../training/resource-error";
 import { AnalyticsChart, dates, number } from "./chart";
 import { type Grain, type Metric, type Period, type RankMetric, labels, units } from "./types";
@@ -131,7 +132,7 @@ export function AnalyticsPanel({
       </div>
       <ResourceError resource={resource} />
       {resource.error && !data ? null : !data ? (
-        <output className="analytics-placeholder">グラフを準備しています…</output>
+        <LoadingState label={ranking ? "ランキングを読み込み中" : "グラフを読み込み中"} />
       ) : (
         <>
           <section

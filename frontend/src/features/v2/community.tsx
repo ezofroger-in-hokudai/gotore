@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 import { AnalyticsPanel } from "../analytics/panel";
+import { LoadingState } from "../loading/loading-state";
 import { BestFlame } from "../training/best-flame";
 import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
@@ -133,9 +134,11 @@ export function CommunityHome({
             <h2>みんなの最新記録</h2>
           </div>
           <output className="resource-status muted" />
-          <div className="resource-placeholder">
-            {failed ? "グループを取得できませんでした" : "読み込み中…"}
-          </div>
+          {failed ? (
+            <div className="resource-placeholder">グループを取得できませんでした</div>
+          ) : (
+            <LoadingState label="グループを読み込み中" />
+          )}
         </>
       ) : !groups.length ? (
         <div className="panel empty-community">
@@ -224,7 +227,7 @@ export function CommunityHome({
               trusted={!activity.refreshing}
             />
           ) : !activity.error ? (
-            <div className="resource-placeholder">読み込み中…</div>
+            <LoadingState label="グループの記録を読み込み中" />
           ) : null}
         </>
       )}
@@ -780,8 +783,7 @@ export function CommunityScreen({
               <div className="community-card detail-card">
                 <CommunityStats data={null} />
               </div>
-              <div className="resource-placeholder">読み込み中…</div>
-              {mode === "detail" && <h2>みんなの最新記録</h2>}
+              <LoadingState label="グループの記録を読み込み中" />
             </>
           )}
         </>

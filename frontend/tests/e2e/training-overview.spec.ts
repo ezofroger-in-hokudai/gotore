@@ -74,7 +74,7 @@ test("振り返りの空状態と取得失敗を分け、再試行で表示を�
   await openTraining(page);
   await page.getByText("前回を振り返る", { exact: true }).click();
   const overview = page.getByRole("region", { name: "これまでのトレーニング", exact: true });
-  await expect(overview).toContainText("最初のトレーニングを記録してみましょう。");
+  await expect(overview).toContainText("記録はありません");
   let fail = true;
   await page.route("**/api/workouts?*", (route) =>
     fail ? route.abort() : route.fulfill({ json: [] }),
@@ -82,10 +82,10 @@ test("振り返りの空状態と取得失敗を分け、再試行で表示を�
   await navigate(page, "設定");
   await openTraining(page);
   await expect(overview.getByRole("alert")).toBeVisible();
-  await expect(overview).not.toContainText("最初のトレーニングを記録してみましょう。");
+  await expect(overview).not.toContainText("記録はありません");
   await expect(page.getByRole("button", { name: "トレーニングを開始", exact: true })).toBeEnabled();
   fail = false;
   await overview.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(overview.getByRole("alert")).toHaveCount(0);
-  await expect(overview).toContainText("最初のトレーニングを記録してみましょう。");
+  await expect(overview).toContainText("記録はありません");
 });

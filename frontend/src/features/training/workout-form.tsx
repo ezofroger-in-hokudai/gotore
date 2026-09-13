@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "../loading/loading-state";
+
 import { type ExerciseOption, type Group, type Workout, api } from "@/lib/api";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { groupExercises } from "../exercises/body-parts";
@@ -199,7 +201,9 @@ export function WorkoutForm({
 
       {source && <p className="notice">{source.performed_on}からコピー</p>}
 
-      {catalog.loading && <output className="loading">読み込み中…</output>}
+      {catalog.loading && !catalog.data && !catalog.error && (
+        <LoadingState label="種目を読み込み中" compact />
+      )}
       {catalog.error && (
         <div className="error" role="alert">
           {catalog.error}
