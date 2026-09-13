@@ -231,7 +231,7 @@ test("長押しを閉じた後のキーボード操作と、未取得時の保�
   await page.route("**/api/groups", (route) =>
     route.fulfill({ status: 403, json: { detail: "アクセスできません" } }),
   );
-  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   const sheet = page.getByRole("dialog");
   await expect(sheet.getByRole("button", { name: "完了", exact: true })).toBeDisabled();
   expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();

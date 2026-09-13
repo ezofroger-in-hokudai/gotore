@@ -2,7 +2,7 @@ import { gunzipSync } from "node:zlib";
 import { expect, test } from "@playwright/test";
 import type { TrainingSession } from "../../src/lib/api";
 import { createTestUser, testPassword } from "./local-auth";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, startTraining } from "./mock-training";
 
 const exercises = [
   { name: "ベンチプレス", sets: Array.from({ length: 20 }, () => ({ weight: 82.5, reps: 8 })) },
@@ -30,7 +30,7 @@ test("圧縮保存が実APIへ届き、応答を失っても再送で二重追�
   expect(seeded.status()).toBe(200);
   const saved: TrainingSession = await seeded.json();
   await page.reload();
-  await navigate(page, "記録");
+  await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
   await expect(page.getByRole("button", { name: "セット20を編集", exact: true })).toContainText(
     "82.5",
   );
@@ -67,7 +67,7 @@ test("圧縮保存が実APIへ届き、応答を失っても再送で二重追�
     exercises[1],
   ]);
   await page.reload();
-  await navigate(page, "記録");
+  await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
   await expect(page.getByRole("button", { name: "セット21を編集", exact: true })).toContainText(
     "87.5",
   );
@@ -85,7 +85,7 @@ for (const unsupported of ["browser", "api"] as const) {
     state.session.exercises = structuredClone(exercises);
     state.session.revision++;
     await page.reload();
-    await navigate(page, "記録");
+    await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
     await expect(page.getByRole("button", { name: "セット20を編集", exact: true })).toContainText(
       "82.5",
     );
