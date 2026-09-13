@@ -8,6 +8,7 @@ test("種目追加・削除の失敗を再試行でき、削除後も入力を�
   const state = await mockTraining(page);
   await startTraining(page, "スクワット");
   await catalog(page);
+  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   const name = page.getByLabel("新しい種目", { exact: true });
   await name.fill(" ケーブルロウ ");
   state.failOptionWrite = true;
@@ -69,6 +70,7 @@ test("空白・長すぎる名前を送信せず、種目ごとにセットを�
   const state = await mockTraining(page);
   await startTraining(page);
   await catalog(page);
+  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   for (const value of ["   ", "長".repeat(61)]) {
     await page.getByLabel("新しい種目", { exact: true }).fill(value);
     await page.getByRole("button", { name: "追加", exact: true }).click();

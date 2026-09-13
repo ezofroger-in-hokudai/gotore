@@ -3,6 +3,7 @@ import type { Group, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
+import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { OnboardingGuide } from "../onboarding/onboarding-guide";
 import { SessionScreen } from "../session/session-screen";
 import { TrainingOverview } from "../session/training-overview";
@@ -44,6 +45,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   const [finished, setFinished] = useState<Workout | null>(null);
   const training = useSession(session.user.id, changed);
   const preferences = usePreferences(session.user.id);
+  const catalog = useExerciseCatalog(changed);
   const groupList = useResource<Group[]>("/groups", groupRefreshKey, GROUP_REFRESH_MS, true, {
     enabled: view === "home" || view === "groups",
     retainOnRefresh: true,
@@ -200,6 +202,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
+            catalog={catalog}
             active={view === "record"}
             controller={training}
             userId={session.user.id}
@@ -246,6 +249,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         {view === "edit" && editing && (
           <WorkoutForm
+            exerciseCatalog={catalog}
             editing={editing}
             groups={groups}
             selectedGroup={selected}
@@ -277,6 +281,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         {view === "settings" && (
           <Preferences
+            catalog={catalog}
             preferences={preferences}
             onChanged={changed}
             onGuide={() => setGuideReplay((value) => value + 1)}

@@ -50,10 +50,11 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     return route.fulfill({ json: removed ? [] : [record] });
   });
   await startTraining(page, "スクワット");
+  await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("92.5");
   const draftKey = `gotore:session-input:v2:${user.id}:${state.session?.id}`;
   await expect
-    .poll(() => page.evaluate((key) => localStorage.getItem(key), draftKey))
-    .not.toBeNull();
+    .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), draftKey))
+    .toMatchObject({ name: "スクワット", weight: "92.5", dirty: true });
   const draft = await page.evaluate((key) => localStorage.getItem(key), draftKey);
   const volume = () =>
     record.exercises.reduce(

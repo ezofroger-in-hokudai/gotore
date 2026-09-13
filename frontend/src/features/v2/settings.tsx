@@ -1,5 +1,7 @@
 import type { AvatarImage } from "@/lib/api";
 import { useEffect, useState } from "react";
+import { CatalogPanel } from "../exercises/catalog-panel";
+import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { AvatarPanel } from "../settings/avatar-panel";
 import { SettingsPanel } from "../settings/settings-panel";
 import { useResource } from "../training/use-resource";
@@ -38,19 +40,23 @@ export function usePreferences(userId: string) {
 }
 
 export function Preferences({
+  catalog,
   preferences,
   onChanged,
   onGuide,
   onLogout,
   signingOut,
 }: {
+  catalog: ReturnType<typeof useExerciseCatalog>;
   preferences: ReturnType<typeof usePreferences>;
   onChanged: () => void;
   onGuide: () => void;
   onLogout: () => void;
   signingOut: boolean;
 }) {
-  const [sheet, setSheet] = useState<"name" | "avatar" | "theme" | "haptic" | null>(null);
+  const [sheet, setSheet] = useState<"name" | "avatar" | "theme" | "haptic" | "exercises" | null>(
+    null,
+  );
   const profile = useResource<{ display_name: string }>("/me");
   const avatar = useResource<AvatarImage>("/me/avatar");
   return (
@@ -76,6 +82,18 @@ export function Preferences({
         <button className="v2-row" type="button" onClick={() => setSheet("name")}>
           <span>表示名</span>
           <span>{profile.data?.display_name} ›</span>
+        </button>
+      </div>
+      <h2>トレーニング</h2>
+      <div className="v2-rows">
+        <button
+          className="v2-row"
+          type="button"
+          aria-label="種目を管理"
+          onClick={() => setSheet("exercises")}
+        >
+          <span>種目</span>
+          <span aria-hidden="true">›</span>
         </button>
       </div>
       <h2>アプリ</h2>
@@ -108,17 +126,21 @@ export function Preferences({
       {sheet && (
         <Sheet
           title={
-            sheet === "avatar"
-              ? "プロフィール画像"
-              : sheet === "name"
-                ? "表示名"
-                : sheet === "theme"
-                  ? "外観"
-                  : "触覚フィードバック"
+            sheet === "exercises"
+              ? "種目一覧"
+              : sheet === "avatar"
+                ? "プロフィール画像"
+                : sheet === "name"
+                  ? "表示名"
+                  : sheet === "theme"
+                    ? "外観"
+                    : "触覚フィードバック"
           }
           onClose={() => setSheet(null)}
         >
-          {sheet === "avatar" ? (
+          {sheet === "exercises" ? (
+            <CatalogPanel catalog={catalog} />
+          ) : sheet === "avatar" ? (
             <AvatarPanel
               name={profile.data?.display_name || ""}
               onSaved={() => {

@@ -1,9 +1,10 @@
 "use client";
 
 import { ApiError, type BodyPartSelection, type ExerciseOption, api } from "@/lib/api";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { BodyPartFields, BodyPartTags } from "./body-part-fields";
-import { optionParts } from "./body-parts";
+import { type BodyPartFilter, PART_FILTERS, filterExercises, optionParts } from "./body-parts";
+import type { CatalogChange } from "./use-exercise-catalog";
 
 const emptyParts: BodyPartSelection = { primary_body_part: "other", secondary_body_parts: [] };
 
@@ -12,12 +13,19 @@ export function ExerciseCatalog({
   disabled,
   onChanged,
   expanded = false,
+  startAdding = false,
 }: {
   options: ExerciseOption[];
   disabled: boolean;
-  onChanged: () => void;
+  onChanged: (change?: CatalogChange) => void;
   expanded?: boolean;
+  startAdding?: boolean;
 }) {
+  const [adding, setAdding] = useState(startAdding || options.length === 0);
+  const [query, setQuery] = useState("");
+  const [part, setPart] = useState<BodyPartFilter>("all");
+  const formId = useId();
+  const visible = filterExercises(options, part, query);
   const [name, setName] = useState("");
   const [parts, setParts] = useState<BodyPartSelection>(emptyParts);
   const [editing, setEditing] = useState<ExerciseOption | null>(null);
@@ -41,14 +49,15 @@ export function ExerciseCatalog({
     setError("");
     setNotice("");
     try {
-      await api<ExerciseOption>("/exercise-options", {
+      const saved = await api<ExerciseOption>("/exercise-options", {
         method: "POST",
         body: JSON.stringify({ name: normalized, ...parts }),
       });
       setName("");
       setParts(emptyParts);
       setNotice("追加しました。");
-      onChanged();
+      setAdding(false);
+      onChanged({ saved });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "種目を追加できませんでした。");
     } finally {
@@ -65,7 +74,7 @@ export function ExerciseCatalog({
       await api<void>(`/exercise-options/${deleting.id}`, { method: "DELETE" });
       setNotice("削除しました。");
       setDeleting(null);
-      onChanged();
+      onChanged({ deleted: deleting.id });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "種目を削除できませんでした。");
     } finally {
@@ -94,7 +103,7 @@ export function ExerciseCatalog({
           "この種目はリストから削除されています。編集を閉じて一覧を読み直してください。",
         );
       edit(found);
-      onChanged();
+      onChanged({ saved: found });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "部位を読み込めませんでした。");
     } finally {
@@ -108,13 +117,13 @@ export function ExerciseCatalog({
     setPending(true);
     setError("");
     try {
-      await api<ExerciseOption>(`/exercise-options/${editing.id}`, {
+      const saved = await api<ExerciseOption>(`/exercise-options/${editing.id}`, {
         method: "PATCH",
         body: JSON.stringify({ ...editParts, expected_revision: editing.revision }),
       });
       setEditing(null);
       setNotice("部位を保存しました。");
-      onChanged();
+      onChanged({ saved });
     } catch (reason) {
       setConflict(reason instanceof ApiError && (reason.status === 409 || reason.status === 404));
       setError(reason instanceof Error ? reason.message : "部位を保存できませんでした。");
@@ -169,20 +178,64 @@ export function ExerciseCatalog({
     <details className="panel exercise-catalog" open={expanded || undefined} aria-label="種目一覧">
       <summary hidden={expanded}>種目リスト</summary>
 
-      <form onSubmit={add}>
-        <fieldset disabled={busy}>
-          <label>
-            新しい種目
-            <input required value={name} onChange={(event) => setName(event.target.value)} />
-          </label>
-          <BodyPartFields value={parts} onChange={setParts} />
-          <button className="secondary" type="submit">
-            追加
+      <div className="catalog-toolbar">
+        <input
+          type="search"
+          aria-label="種目名で検索"
+          placeholder="種目名で検索"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setDeleting(null);
+          }}
+        />
+        <button
+          type="button"
+          className="secondary"
+          disabled={busy}
+          aria-expanded={adding}
+          aria-controls={formId}
+          onClick={() => setAdding((value) => !value)}
+        >
+          種目を追加
+        </button>
+      </div>
+      {adding && (
+        <form id={formId} onSubmit={add}>
+          <fieldset disabled={busy}>
+            <label>
+              新しい種目
+              <input required value={name} onChange={(event) => setName(event.target.value)} />
+            </label>
+            <BodyPartFields value={parts} onChange={setParts} />
+            <button className="secondary" type="submit">
+              追加
+            </button>
+          </fieldset>
+        </form>
+      )}
+      <fieldset className="body-part-chips catalog-filters" aria-label="部位で絞り込み">
+        {PART_FILTERS.map((filter) => (
+          <button
+            key={filter.value}
+            type="button"
+            aria-pressed={part === filter.value}
+            onClick={() => {
+              setPart(filter.value);
+              setDeleting(null);
+            }}
+          >
+            {filter.label}
           </button>
-        </fieldset>
-      </form>
+        ))}
+      </fieldset>
+      {visible.length === 0 && (
+        <p className="muted">
+          {options.length ? "条件に合う種目がありません。" : "種目はありません。"}
+        </p>
+      )}
       <ul className="exercise-options">
-        {options.map((option) => (
+        {visible.map((option) => (
           <li key={option.id}>
             <div className="exercise-option-name">
               <strong>{option.name}</strong>
@@ -195,7 +248,7 @@ export function ExerciseCatalog({
               aria-label={`${option.name}の部位を編集`}
               onClick={() => edit(option)}
             >
-              部位を編集
+              編集
             </button>
             <button
               type="button"
@@ -210,28 +263,28 @@ export function ExerciseCatalog({
             >
               削除
             </button>
+            {deleting?.id === option.id && (
+              <fieldset className="notice" aria-label="種目リストからの削除確認">
+                <p>「{deleting.name}」をリストから削除しますか？ 履歴は残ります。</p>
+                <button type="button" className="secondary" disabled={busy} onClick={remove}>
+                  削除する
+                </button>
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() => {
+                    setDeleting(null);
+                    setError("");
+                  }}
+                >
+                  キャンセル
+                </button>
+              </fieldset>
+            )}
           </li>
         ))}
       </ul>
-      {deleting && (
-        <fieldset className="notice" aria-label="種目リストからの削除確認">
-          <p>「{deleting.name}」をリストから削除しますか？</p>
-          <button type="button" className="secondary" disabled={busy} onClick={remove}>
-            削除する
-          </button>
-          <button
-            type="button"
-            className="text-button"
-            disabled={busy}
-            onClick={() => {
-              setDeleting(null);
-              setError("");
-            }}
-          >
-            キャンセル
-          </button>
-        </fieldset>
-      )}
       {error && (
         <p className="error" role="alert">
           {error}
