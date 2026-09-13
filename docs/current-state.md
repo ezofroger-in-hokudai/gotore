@@ -16,7 +16,7 @@ v2の画面・共有・セッションの規則は [gotore-v2-spec.md](gotore-v2
 | グループ | 作成・招待参加・一覧・メンバー表示。名称変更・招待コード再発行・退出・メンバー除外。退出・除外後は本人の履歴を残して共有解除 | features/v2/community.tsx、group-name-form.tsx、backend/app/services/training.py |
 | 記録 | 本人用の種目リストから選択し、候補の追加・削除も可能（#28）。v2では1セットずつ端末へ即時追加し、DBへ順序付きでバックグラウンド保存。連続ホイール・直接入力・全セット一覧の前回比較・RM・BEST・常時表示のメモ。明示終了まで継続し、未保存入力は同じ端末で復元。旧記録の編集フォームは維持 | features/session/、workout-form.tsx、backend/app/domain/session.py |
 | 共有 | v2は開始時の全所属グループへ保存済みセットを共有。旧記録の共有範囲は維持。メンバー限定のLIVE/TODAYと最新記録 | backend/app/infrastructure/training_repository.py、record-list.tsx |
-| 自分の記録 | 本人の編集・削除・コピー・非共有メモ。日別最高SCOREの月間ヒートマップと日付タップによる絞り込み。実記録を50件ずつ閲覧 | frontend/src/features/activity/、training/training-app.tsx |
+| 自分の記録 | 本人の編集・削除・コピー・非共有メモ。日別総負荷量の月間ヒートマップと日付タップによる絞り込み。実記録を50件ずつ閲覧 | frontend/src/features/activity/、training/training-app.tsx |
 | 使い方 | 初回ガイドと設定からの再表示。通常画面は短い文言へ統一（#48） | frontend/src/features/onboarding/ |
 | ホーム画面起動 | Web manifest、standalone設定、PNGアイコン、安全領域。オンライン利用が前提 | frontend/src/app/manifest.ts、apple-icon.tsx、layout.tsx |
 | DB・設定 | migration、RLS、外部キー・一意制約、ローカル設定の生成 | supabase/migrations/、scripts/configure_local.py |
@@ -74,7 +74,13 @@ PR #64への追加指定では、次種目を左・次セットを右へ変更�
 
 #97 の合意仕様は [history-analytics.md](history-analytics.md)。個人の種目別推移、日/週/月集計、グループの量・活動・最高重量/RM・成長の比較を提供する。集計用の追加migration `20260911090000_workout_statistics.sql` を使用し、保存と同一トランザクションで記録ごとの集計を更新する。ブラウザでは先読みと容量を制限したキャッシュを使い、指標と粒度を通信なしに切り替える。
 
-## SCORE・個人目標・終了後の一言
+## SCOREの一時停止と総負荷量（#130）
+
+2026-09-13の依頼で採点/AIコメント・目標設定・グループ配点を停止。ホーム・履歴・共有詳細から得点を外し、終了画面は総負荷kgと種目数・セット数を表示する。月間ヒートマップは同日の本人の全記録の総負荷合計へ変更し、既存統計表と先読み/キャッシュを利用する。追加migration `20260913010000_pause_score_observation.sql` で採点専用トリガーを停止する。既存の得点/目標データ・RLSは保持する。詳しくは [活動ヒートマップ](activity-heatmap.md)。
+
+### 以下は停止前の経緯
+
+## SCORE・個人目標・終了後の一言（停止中）
 
 #99 の実装仕様は [score-implementation.md](score-implementation.md)。開始時の目標を固定し、終了後の内訳・AIの一言・ホームと履歴のスコアを追加。目標はAI提案を本人が確認・編集して保存する。目標・コメントは本人だけに表示する。追加migrationとAPI専用 `OPENAI_API_KEY`（AI利用時）が必要。記録保存と数値の内訳はキーなしでも動く。週月SCOREランキングの集約方法と実モデルの品質・速度検証は後続。検証・PRの状態はprogress.md。
 

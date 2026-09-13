@@ -4,7 +4,6 @@ from uuid import UUID
 from psycopg.types.json import Jsonb
 
 from app.domain.errors import Conflict, NotFound
-from app.domain.goal import STANDARD_CRITERIA, STANDARD_GOAL
 from app.domain.session import (
     ExerciseMemoInput,
     SessionUpdate,
@@ -13,7 +12,6 @@ from app.domain.session import (
     personal_bests,
     session_best_sets,
 )
-from app.infrastructure.scores import ScoreRepository
 from app.infrastructure.training_repository import TrainingRepository
 
 
@@ -68,31 +66,17 @@ class SessionRepository(TrainingRepository):
             group_ids = [membership["group_id"] for membership in memberships]
             # 所属の行ロックを保持したまま、開始・共有・当日の活動を一括で保存する。
             row = self.connection.execute(
-                """WITH default_goal AS (INSERT INTO public.gotore_goal_versions
-                    (user_id, version, body, is_standard, criteria)
-                    SELECT %s, 1, %s, true, %s WHERE NOT EXISTS
-                        (SELECT 1 FROM public.gotore_goal_versions WHERE user_id = %s)
-                    RETURNING id),
-                started AS (INSERT INTO public.gotore_workouts
+                """WITH started AS (INSERT INTO public.gotore_workouts
                 (id, user_id, performed_on, exercises, started_at, last_seen_at)
                 VALUES (%s, %s, (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date,
                 '[]', clock_timestamp(), clock_timestamp()) RETURNING *),
                 shared AS (INSERT INTO public.gotore_workout_shares (workout_id, group_id, user_id)
                     SELECT s.id, g.id, s.user_id FROM started s, unnest(%s::uuid[]) AS g(id)),
                 activity AS (INSERT INTO public.gotore_session_days (workout_id, day)
-                    SELECT id, performed_on FROM started),
-                pinned AS (INSERT INTO public.gotore_workout_goals (workout_id, user_id, goal_id)
-                    SELECT s.id, s.user_id, COALESCE(
-                        (SELECT g.id FROM public.gotore_goal_versions g WHERE g.user_id = s.user_id
-                         ORDER BY g.version DESC LIMIT 1), (SELECT id FROM default_goal))
-                    FROM started s)
+                    SELECT id, performed_on FROM started)
                 SELECT s.*, p.display_name FROM started s
                 JOIN public.gotore_profiles p ON p.id = s.user_id""",
                 (
-                    user_id,
-                    STANDARD_GOAL,
-                    Jsonb(STANDARD_CRITERIA),
-                    user_id,
                     workout_id,
                     user_id,
                     group_ids,
@@ -154,11 +138,7 @@ class SessionRepository(TrainingRepository):
             self.lock_workout(workout_id)
             row = self.session(user_id, workout_id)
             if row["ended_at"] is not None and row["revision"] == revision + 1:
-                repo = ScoreRepository(self.connection)
-                return {
-                    **self.with_shares(row),
-                    "score": repo.present(repo.prepare(row), row["revision"]),
-                }
+                return self.with_shares(row)
             if row["revision"] != revision or row["ended_at"] is not None:
                 raise Conflict("別の更新があります。保存済みを読み直してください")
             updated = self.connection.execute(
@@ -167,9 +147,7 @@ class SessionRepository(TrainingRepository):
                 (workout_id,),
             ).fetchone()
             result = {**row, **updated}
-            repo = ScoreRepository(self.connection)
-            scored = repo.prepare(result)
-            return {**result, "score": repo.present(scored, result["revision"])}
+            return self.with_shares(result)
 
     def heartbeat(self, user_id: UUID, workout_id: UUID):
         with self.connection.transaction():
@@ -348,7 +326,6 @@ class SessionRepository(TrainingRepository):
             ORDER BY w.user_id, w.updated_at DESC, w.created_at DESC, w.id""",
             (group_id, group_id),
         ).fetchall()
-        latest = ScoreRepository(self.connection).attach(latest, group_id)
         feed = []
         for row in latest:
             exercise = row["exercises"][
@@ -367,7 +344,6 @@ class SessionRepository(TrainingRepository):
                     "reps": s["reps"],
                     "estimated_rm": rm,
                     "updated_at": row["updated_at"],
-                    "score": row["score"],
                     "best": best is not None
                     and (
                         (float(s["weight"]) > 0 and float(s["weight"]) == best["best_weight"])

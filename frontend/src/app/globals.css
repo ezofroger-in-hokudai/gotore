@@ -772,8 +772,8 @@ fieldset {
 }
 .activity-day,
 .activity-legend .heat-swatch {
-  background: var(--score-bg);
-  color: var(--score-ink);
+  background: var(--activity-bg);
+  color: var(--activity-ink);
 }
 .activity-day[data-pending="true"] {
   border-color: var(--line);
