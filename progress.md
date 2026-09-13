@@ -1672,3 +1672,12 @@
 - 関連ファイル: docs/previews/heatmap-body-parts.html、docs/heatmap-body-part-proposals.md、docs/images/heatmap-body-parts/。
 - 未解決事項: A/B/Cの採用待ち。ローカル閲覧用にdocs/previewsだけを127.0.0.1:8765で配信中。実アプリのAPI/DB・共有・保存は変更していない。
 - 次のアクション: ユーザーが画面を選んだ後、部位集計と過去記録への適用条件を確定して実装する。
+
+## 2026-09-13 16:14
+- 変更内容: 追加指定の修正版を別HTMLで作成。日付に部位名と複数部位の件数、フィルターを横一列・横スクロールに変更し、総負荷カレンダー見出しを削除。
+- 目的: 日付のマスから部位を読み取り、折り返しや重複見出しで縦幅を増やさない。
+- 影響範囲: 画面試作。初期3案は比較履歴として保持。実アプリ接続はユーザー回答を受けて#138で着手。
+- 関連ファイル: docs/previews/heatmap-body-parts-refined.html、docs/images/heatmap-body-parts/refined-*.png、docs/heatmap-body-part-proposals.md。
+- 検証: Chromiumで320/390/430px、横はみ出しなし、全フィルターの同じ行位置、横スクロール先の未分類選択を確認。元リポジトリの同じdocsパスにも配置。
+- 未解決事項: 実データでの検証は#138で継続。
+- 次のアクション: PR #137の画像を更新し、#138の実装・検証を進める。
