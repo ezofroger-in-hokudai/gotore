@@ -1,0 +1,11 @@
+# 読み込みキャラクター（#146）
+
+実装コミット58a9b8bの画面。Playwrightの架空データでAPI応答を待機させて撮影した。公開環境の記録や認証情報は含まない。
+
+- [ホーム390px](loading-home-390.png)
+- [共有詳細390px](loading-shared-390.png)
+- カレンダー: [320px](loading-calendar-320.png) / [390px](loading-calendar-390.png) / [430px](loading-calendar-430.png) / [ダーク](loading-calendar-dark.png)
+
+アプリではハムスターが1.6秒周期でダンベルを上げ下げする。取得完了ですぐ消え、キャッシュ更新中は既存内容を表示する。動き低減では静止する。SVG/CSSで実装し、動画ファイルや追加ライブラリを読み込まない。
+
+写真はループの一瞬なので、手やダンベルの高さは画像ごとに異なる。仕様は[デザイン基準](../../design-system.md#読み込みキャラクター146)。
