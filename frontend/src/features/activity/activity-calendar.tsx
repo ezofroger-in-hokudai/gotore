@@ -65,7 +65,11 @@ export function ActivityCalendar({
 
   return (
     <section className="panel activity-calendar" aria-label="活動カレンダー">
-      <fieldset className="activity-part-filters" aria-label="カレンダーの部位">
+      <fieldset
+        className="activity-part-filters"
+        data-tour="calendar"
+        aria-label="カレンダーの部位"
+      >
         {PART_FILTERS.map((entry) => (
           <button
             type="button"

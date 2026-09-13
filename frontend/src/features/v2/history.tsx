@@ -1,5 +1,5 @@
 import type { Workout } from "@/lib/api";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityCalendar } from "../activity/activity-calendar";
 import { dateLabel } from "../activity/calendar";
 import { dates } from "../analytics/chart";
@@ -12,6 +12,7 @@ import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 
 export function History({
+  guideTarget,
   userId,
   recent,
   active,
@@ -21,6 +22,7 @@ export function History({
   onReuse,
   onDeleted,
 }: {
+  guideTarget?: { target: string } | null;
   userId: string;
   recent: ReturnType<typeof useResource<Workout[]>>;
   active: boolean;
@@ -36,6 +38,11 @@ export function History({
   const [date, setDate] = useState("");
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<string | null>(null);
+  useEffect(() => {
+    if (guideTarget?.target !== "calendar" && guideTarget?.target !== "graph") return;
+    setDetail(null);
+    setTab(guideTarget.target === "graph" ? "graph" : "records");
+  }, [guideTarget]);
   const useRecent = page === 0 && !date && !range;
   const filteredRecords = useResource<Workout[]>(
     `/workouts?offset=${page * 50}${date ? `&performed_on=${date}` : range ? `&date_from=${range.start}&date_to=${range.end}` : ""}`,
@@ -75,7 +82,12 @@ export function History({
           <button type="button" aria-pressed={tab === "records"} onClick={() => setTab("records")}>
             記録
           </button>
-          <button type="button" aria-pressed={tab === "graph"} onClick={() => setTab("graph")}>
+          <button
+            data-tour="graph"
+            type="button"
+            aria-pressed={tab === "graph"}
+            onClick={() => setTab("graph")}
+          >
             グラフ
           </button>
         </div>

@@ -90,6 +90,7 @@ export function Preferences({
           className="v2-row"
           type="button"
           aria-label="種目を管理"
+          data-tour="exercises"
           onClick={() => setSheet("exercises")}
         >
           <span>種目</span>
@@ -111,7 +112,7 @@ export function Preferences({
       </div>
       <h2>サポート</h2>
       <div className="v2-rows">
-        <button className="v2-row" type="button" onClick={onGuide}>
+        <button className="v2-row" type="button" data-tour="replay" onClick={onGuide}>
           使い方 <span>›</span>
         </button>
         <button className="v2-row" type="button" disabled={signingOut} onClick={onLogout}>

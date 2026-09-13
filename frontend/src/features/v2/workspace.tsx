@@ -39,6 +39,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   const [editing, setEditing] = useState<Workout | null>(null);
   const [copy, setCopy] = useState<Workout | null>(null);
   const [guideReplay, setGuideReplay] = useState(0);
+  const [guideTarget, setGuideTarget] = useState<{ target: string } | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [notice, setNotice] = useState("");
   const changed = () => setRefreshKey((key) => key + 1);
@@ -143,7 +144,20 @@ function WorkspaceContent({ session }: { session: Session }) {
         </button>
       </header>
       <main className="main-content">
-        <OnboardingGuide userId={session.user.id} replay={guideReplay} />
+        <OnboardingGuide
+          userId={session.user.id}
+          replay={guideReplay}
+          onVisit={(next, target) => {
+            setGuideTarget({ target });
+            setGroupDetail(false);
+            setView(next);
+            window.history.replaceState(
+              { gotoreView: next, groupId: selected, communityMode: "list" },
+              "",
+            );
+            window.scrollTo({ top: 0 });
+          }}
+        />
         {notice && <output className="notice">{notice}</output>}
         {training.error && (
           <div className="error" role="alert">
@@ -225,6 +239,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         )}
         <div hidden={view !== "history"}>
           <History
+            guideTarget={guideTarget}
             recent={recentRecords}
             active={view === "history"}
             prefetch={prepareHistory && historyReady}
@@ -264,6 +279,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         )}
         <div hidden={view !== "groups"}>
           <CommunityScreen
+            guideTarget={guideTarget}
             groups={groups}
             selected={selected}
             initialDetail={groupDetail}
@@ -336,6 +352,7 @@ function WorkspaceContent({ session }: { session: Session }) {
           type="button"
           className="floating-training"
           data-testid="floating-training"
+          data-tour="start"
           aria-label={resumable ? "トレーニングを再開" : "トレーニングを開始"}
           disabled={!canStart}
           onClick={startOrResume}
