@@ -1,5 +1,5 @@
 import { type Page, expect } from "@playwright/test";
-import type { TrainingSession } from "../../src/lib/api";
+import type { ExerciseOption, TrainingSession } from "../../src/lib/api";
 
 // UI単独の検証用。実際の認証・DB・共有検証はsharing.spec.tsで行う。
 export async function mockTraining(page: Page, owner = true, showGuide = false) {
@@ -27,7 +27,7 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     options: [
       { id: "option-bench", name: "ベンチプレス" },
       { id: "option-squat", name: "スクワット" },
-    ],
+    ] as ExerciseOption[],
     failOptions: false,
     failOptionWrite: false,
     authUpdates: 0,
@@ -192,6 +192,9 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
         const option = state.options.find((item) => item.name === name) ?? {
           id: crypto.randomUUID(),
           name,
+          primary_body_part: route.request().postDataJSON().primary_body_part ?? null,
+          secondary_body_parts: route.request().postDataJSON().secondary_body_parts ?? [],
+          revision: 1,
         };
         if (!state.options.includes(option)) state.options.push(option);
         return route.fulfill({ status: 201, json: option });
@@ -201,6 +204,23 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     }
     if (path.startsWith("/api/exercise-options/")) {
       if (state.failOptionWrite) return route.abort();
+      if (route.request().method() === "PATCH") {
+        const option = state.options.find((item) => item.id === path.split("/").at(-1));
+        if (!option)
+          return route.fulfill({ status: 404, json: { detail: "種目が見つかりません" } });
+        const body = route.request().postDataJSON();
+        if (option.revision === undefined || body.expected_revision !== option.revision)
+          return route.fulfill({
+            status: 409,
+            json: { detail: "別の更新があります。最新の部位を読み直してください" },
+          });
+        Object.assign(option, {
+          primary_body_part: body.primary_body_part,
+          secondary_body_parts: body.secondary_body_parts,
+          revision: option.revision + 1,
+        });
+        return route.fulfill({ json: option });
+      }
       state.options = state.options.filter((item) => item.id !== path.split("/").at(-1));
       return route.fulfill({ status: 204 });
     }

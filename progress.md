@@ -1562,3 +1562,52 @@
 - 変更内容・目的: テストを現行仕様へ揃え、編集・削除後も総負荷と日付選択・未保存下書きを維持することを確認した。画像付きPR #131を作成。導入時は採点専用トリガー停止migrationを適用し、既存データを保持する。
 - 影響範囲・関連ファイル: workout-management.spec.ts、task.md、progress.md。make check成功後の追加APIテスト3件も成功済み（backend総数194相当）。変更した相対文書リンク・git diff --checkを確認。docs/README.mdが従来から参照するユーザー未追跡PDF等は元の作業ディレクトリに保持し、PRへ混ぜない。
 - 未解決事項・次のアクション: 最終CIの結果をPRへ反映してレビュー依頼。実機Safari/PWAと本番migrationは未実施。色の基準は月内相対の暫定案として画面に明記する。
+
+## 2026-09-13 11:49
+- 変更内容・目的: ユーザーの部位保存・選択依頼を#132として登録し、主な部位＋任意の補助部位を本人の種目リストへ持たせるAPI/DBの準備を実施。標準8候補の編集可能な初期分類、独自種目の未分類、分類更新のrevision/再送/競合・本人限定を定義した。
+- 検証: 先行APIテストが部位フィールド欠落で失敗することを確認後に実装。既存種目リスト・部位保存/制約/本人限定/履歴保持の対象25件成功。標準チェック・全E2Eは未実施。
+- 方針変更: 追加依頼「画面が大事なので提案しながら」に従い、アプリUIへの反映前に操作できるA/B案と部位編集シートの見本を作成。Aは一覧の部位絞り込み、Bは部位選択から種目一覧へ遷移する。ユーザーが画面を選ぶまで本番UIへの接続は進めない。
+- 影響範囲・関連ファイル: exercise_catalog domain/service/repository/API/schema、追加migration、test_exercise_body_parts、docs/exercise-body-parts.md、docs/previews/exercise-body-parts.html。
+- 未解決事項・次のアクション: 主/補部位の持ち方は任意確認に未回答の推奨案。画面構成と部位の粒度をユーザーと確認し、採用案を実装・標準検証・画像付きPRまで進める。worktreeは/tmp/gotore-body-parts、既存ユーザー変更は保持。
+
+## 2026-09-13 11:53
+- 変更内容・検証: 部位選択A/B案と編集シートのHTML見本・390px画像を作成。Chromiumで部位＋検索、部位→種目、編集シート、390pxの横はみ出しなしを確認した。バックエンドの変更箇所はruff成功、git diff --check成功。
+- 目的・影響範囲: 画面を重視する追加依頼に応え、実装前に操作・情報量・遷移を比較できる状態にした。実アプリのフロントエンドは未変更、見本からDBへは送信しない。
+- 関連ファイル: docs/previews/exercise-body-parts.html、docs/images/exercise-body-parts/。
+- 未解決事項・次のアクション: A/Bの採用・分類の粒度をユーザーと相談してUIへ接続する。API準備と仕様は作業ブランチに保持、機能全体の完了・PR提出は未実施。
+
+## 2026-09-13 13:51
+- 変更内容: ユーザーが画面を含めたA案を承認。#132の部位絞り込み、分類の追加・編集、入力画面の表示を実装へ進める。
+- 目的: 部位から素早く探し、既存の記録・下書きを保ったまま選択できるようにする。
+- 影響範囲: 本人用種目リスト、種目選択、履歴編集。共有の記録形式は維持。
+- 関連ファイル: docs/exercise-body-parts.md、frontend/src/features/exercises/、frontend/src/features/session/session-screen.tsx。
+- 検証: 主/補部位と名前検索・未分類・履歴用分類の単体テストを先に追加し、未実装で失敗することを確認。
+- 未解決事項: UI実装と全体検証は継続中。
+- 次のアクション: A案を実画面へ反映し、モバイル画像と検証結果をPRへ載せる。
+
+## 2026-09-13 13:55
+- 変更内容: #132の部位保存API・schema・追加migrationを実装。標準8種目へ初期分類を付け、独自種目・削除済み候補・記録スナップショットを維持。
+- 目的: 本人の分類を端末間で共有し、編集の再送や別端末との競合で上書きしないようにする。
+- 影響範囲: gotore_exercise_optionsと本人用API。既存の認証・RLS・記録の共有範囲は維持。
+- 関連ファイル: backend/app/*/exercise_catalog.py、backend/tests/test_exercise_body_parts.py、supabase/migrations/20260913020000_exercise_body_parts.sql、docs/exercise-body-parts.md。
+- 検証: 先行APIテストは未実装時にprimary_body_part不足で失敗、その後成功。部位API/移行/DB制約16件成功。make check成功（backend210件・frontend単体58件・lint・型検査・build）。型検査で見つかったテストモックのrevision省略を修正済み。ローカルDBへ未適用2件を追加適用し、db lint成功。DBリセットは行っていない。
+- 未解決事項: 記録・共有E2Eは実行中。本番migration・実機確認・レビューは未実施。
+- 次のアクション: A案の画面と既存フローを検証し、画像付きPRを提出する。
+
+## 2026-09-13 13:56
+- 変更内容: A案の部位ボタンと検索、主/補タグ、分類追加・編集画面、今回の種目への復帰、履歴編集の部位別選択を実装。本人用候補は再取得失敗でも保持する。
+- 目的: 表示済みデータで部位をすぐ切り替え、入力・履歴を保ったまま種目を選べるようにする。
+- 影響範囲: 種目一覧、記録中の選択・入力、履歴訂正フォーム。分類や検索で一覧の追加通信を行わず、既存の前回比較先読みを表示候補へ絞る。
+- 関連ファイル: frontend/src/features/exercises/、frontend/src/features/session/session-screen.tsx、frontend/src/features/training/workout-form.tsx、docs/images/exercise-body-parts/、docs/previews/exercise-body-parts.html。
+- 検証: 320/390/430pxの画像と記録中表示を確認。分類の保存失敗・競合・未分類・削除済み候補・未保存入力の保護・再取得失敗からの復帰のE2E4件成功。選択欄の読み上げ名を明示してE2Eの操作対象を安定させた。make check成功。全121件のE2Eは継続中。
+- 未解決事項: 本番migration、実機での操作感、PRレビューは未実施。
+- 次のアクション: 画像付きドラフトPRを作り、全体E2E・CIが成功したらレビュー待ちへ進める。
+
+## 2026-09-13 14:07
+- 変更内容: #132のA案を画像付きPR #133へ提出し、全体検証を完了した。
+- 目的: 画面と保存・共有を確認できる状態でレビューへ渡す。
+- 影響範囲: 検証記録・タスク状態のみ。
+- 関連ファイル: task.md、docs/images/exercise-body-parts/。PR: https://github.com/ezofroger-in-hokudai/gotore/pull/133 。
+- 検証: make check成功（backend210件、frontend単体58件、lint・型・build）。ローカル全体E2Eは120件成功、実Supabase共有1件で記録開始前にChromiumのタブがクラッシュ。コード変更なしの単独再実行は成功（29.9秒）。CI run 34739116903はbackend/frontend/databaseの全ジョブ成功し、独立した環境でE2E121件すべて成功（4.9分）。DBの新規適用・lintもCI成功。
+- 未解決事項: 本番migrationと実機の操作感は未確認。公開前に20260913020000_exercise_body_parts.sqlをAPIより先に適用する。
+- 次のアクション: PR #133をレビュー待ちへ進める。追加依頼の最高重量/RMの炎・赤字表示は別Issue・変更として着手する。

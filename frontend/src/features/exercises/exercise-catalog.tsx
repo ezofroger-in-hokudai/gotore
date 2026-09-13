@@ -1,7 +1,10 @@
 "use client";
 
-import { type ExerciseOption, api } from "@/lib/api";
+import { ApiError, type BodyPartSelection, type ExerciseOption, api } from "@/lib/api";
 import { type FormEvent, useState } from "react";
+import { BodyPartFields, BodyPartTags } from "./body-part-fields";
+
+const emptyParts: BodyPartSelection = { primary_body_part: null, secondary_body_parts: [] };
 
 export function ExerciseCatalog({
   options,
@@ -15,6 +18,10 @@ export function ExerciseCatalog({
   expanded?: boolean;
 }) {
   const [name, setName] = useState("");
+  const [parts, setParts] = useState<BodyPartSelection>(emptyParts);
+  const [editing, setEditing] = useState<ExerciseOption | null>(null);
+  const [editParts, setEditParts] = useState<BodyPartSelection>(emptyParts);
+  const [conflict, setConflict] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -35,9 +42,10 @@ export function ExerciseCatalog({
     try {
       await api<ExerciseOption>("/exercise-options", {
         method: "POST",
-        body: JSON.stringify({ name: normalized }),
+        body: JSON.stringify({ name: normalized, ...parts }),
       });
       setName("");
+      setParts(emptyParts);
       setNotice("追加しました。");
       onChanged();
     } catch (reason) {
@@ -64,6 +72,102 @@ export function ExerciseCatalog({
     }
   }
 
+  function edit(option: ExerciseOption) {
+    setEditing(option);
+    setEditParts({
+      primary_body_part: option.primary_body_part ?? null,
+      secondary_body_parts: option.secondary_body_parts ?? [],
+    });
+    setError("");
+    setNotice("");
+    setConflict(false);
+    setDeleting(null);
+  }
+
+  async function reloadParts() {
+    if (!editing || busy) return;
+    setPending(true);
+    setError("");
+    try {
+      const latest = await api<ExerciseOption[]>("/exercise-options");
+      const found = latest.find((option) => option.id === editing.id);
+      if (!found)
+        throw new Error(
+          "この種目はリストから削除されています。編集を閉じて一覧を読み直してください。",
+        );
+      edit(found);
+      onChanged();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "部位を読み込めませんでした。");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function saveParts(event: FormEvent) {
+    event.preventDefault();
+    if (!editing || busy || conflict || editing.revision === undefined) return;
+    setPending(true);
+    setError("");
+    try {
+      await api<ExerciseOption>(`/exercise-options/${editing.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ ...editParts, expected_revision: editing.revision }),
+      });
+      setEditing(null);
+      setNotice("部位を保存しました。");
+      onChanged();
+    } catch (reason) {
+      setConflict(reason instanceof ApiError && (reason.status === 409 || reason.status === 404));
+      setError(reason instanceof Error ? reason.message : "部位を保存できませんでした。");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  if (editing)
+    return (
+      <section className="body-part-editor" aria-label="部位を編集">
+        <h3>{editing.name}</h3>
+        <p className="muted">部位を編集</p>
+        <form onSubmit={saveParts}>
+          <fieldset disabled={busy}>
+            <BodyPartFields value={editParts} onChange={setEditParts} />
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            {(conflict || editing.revision === undefined) && (
+              <div className="notice">
+                <p>入力中の部位を置き換えて、最新の分類を読み直します。</p>
+                <button type="button" className="secondary full" onClick={reloadParts}>
+                  最新の部位を読み直す
+                </button>
+              </div>
+            )}
+            <button
+              type="submit"
+              className="primary full"
+              disabled={conflict || editing.revision === undefined}
+            >
+              {pending ? "保存中…" : "保存する"}
+            </button>
+            <button
+              type="button"
+              className="text-button full"
+              onClick={() => {
+                setEditing(null);
+                setError("");
+              }}
+            >
+              キャンセル
+            </button>
+          </fieldset>
+        </form>
+      </section>
+    );
+
   return (
     <details className="panel exercise-catalog" open={expanded || undefined}>
       <summary>種目リスト</summary>
@@ -74,6 +178,7 @@ export function ExerciseCatalog({
             新しい種目
             <input required value={name} onChange={(event) => setName(event.target.value)} />
           </label>
+          <BodyPartFields value={parts} onChange={setParts} />
           <button className="secondary" type="submit">
             追加
           </button>
@@ -82,7 +187,19 @@ export function ExerciseCatalog({
       <ul className="exercise-options">
         {options.map((option) => (
           <li key={option.id}>
-            <span>{option.name}</span>
+            <div className="exercise-option-name">
+              <strong>{option.name}</strong>
+              <BodyPartTags option={option} />
+            </div>
+            <button
+              type="button"
+              className="text-button"
+              disabled={busy}
+              aria-label={`${option.name}の部位を編集`}
+              onClick={() => edit(option)}
+            >
+              部位を編集
+            </button>
             <button
               type="button"
               className="text-button"
