@@ -8,12 +8,14 @@ import { SessionScreen } from "../session/session-screen";
 import { TrainingOverview } from "../session/training-overview";
 import { useSession } from "../session/use-session";
 import { WorkoutResult } from "../session/workout-result";
+import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
 import { CommunityHome, CommunityScreen } from "./community";
 import { GroupOrderSheet } from "./group-order-sheet";
 import { History } from "./history";
+import { GROUP_REFRESH_MS } from "./refresh-interval";
 import { Preferences, usePreferences } from "./settings";
 import { Sheet } from "./sheet";
 import { useGroupOrder } from "./use-group-order";
@@ -42,13 +44,10 @@ function WorkspaceContent({ session }: { session: Session }) {
   const [finished, setFinished] = useState<Workout | null>(null);
   const training = useSession(session.user.id, changed);
   const preferences = usePreferences(session.user.id);
-  const groupList = useResource<Group[]>(
-    "/groups",
-    groupRefreshKey,
-    view === "home" || view === "groups",
-    true,
-    { enabled: view === "home" || view === "groups", retainOnRefresh: true },
-  );
+  const groupList = useResource<Group[]>("/groups", groupRefreshKey, GROUP_REFRESH_MS, true, {
+    enabled: view === "home" || view === "groups",
+    retainOnRefresh: true,
+  });
   const groupOrder = useGroupOrder(session.user.id, groupList.data);
   const groups = groupOrder.groups;
   const [orderingGroups, setOrderingGroups] = useState(false);
@@ -157,14 +156,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             </button>
           </div>
         )}
-        {groupList.error && (
-          <p className="error" role="alert">
-            {groupList.error}
-            <button className="text-button" type="button" onClick={groupList.retry}>
-              再試行
-            </button>
-          </p>
-        )}
+        <ResourceError resource={groupList} />
         <div hidden={view !== "home"}>
           <CommunityHome
             groups={groups}

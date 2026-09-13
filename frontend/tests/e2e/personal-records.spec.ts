@@ -7,6 +7,7 @@ const flags = [
 ];
 
 test("履歴一覧・本人詳細・共有詳細で最高重量とRMを別々に強調する", async ({ page }) => {
+  await page.clock.install();
   const state = await mockTraining(page);
   state.finished = [
     {
@@ -93,6 +94,7 @@ test("履歴一覧・本人詳細・共有詳細で最高重量とRMを別々に
   await page.screenshot({ path: "test-results/personal-record-shared.png", fullPage: true });
   celebrate = false;
   state.finished[0].best_sets = [];
+  await page.clock.runFor(15_000);
   await expect(page.getByRole("dialog").locator(".record-set").getByRole("img")).toHaveCount(0);
   await expect(page.getByRole("dialog").locator(".record-set")).toHaveCount(3);
   expect(bestRequests).toBe(0);

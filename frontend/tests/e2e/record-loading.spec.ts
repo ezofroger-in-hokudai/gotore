@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate } from "./mock-training";
 
-test("履歴は再訪時の表示を保持し、更新失敗時は古い記録を隠す", async ({ page }) => {
+test("履歴は再訪時の表示を保持し、認証エラー時は古い記録を隠す", async ({ page }) => {
   const state = await mockTraining(page);
   const record = {
     id: "record",

@@ -35,9 +35,16 @@ def session_best_sets(exercises: list[dict], other_exercises: list[dict]) -> lis
         name: personal_bests([s for e in other_exercises if e["name"] == name for s in e["sets"]])
         for name in names
     }
+    return session_best_sets_from_bests(exercises, baseline)
+
+
+def session_best_sets_from_bests(
+    exercises: list[dict], previous_bests: dict[str, dict]
+) -> list[dict]:
+    """現在の最高記録判定を共用し、旧形式の更新位置だけを返す。"""
     return [
         {"exercise_index": value["exercise_index"], "set_index": value["set_index"]}
-        for value in record_best_sets(exercises, baseline)
+        for value in record_best_sets(exercises, previous_bests)
     ]
 
 

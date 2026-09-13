@@ -43,9 +43,11 @@ test("応答が止まった履歴は15秒で再試行でき、古い応答で上
   try {
     await page.clock.runFor(15_001);
     await expect(
-      page.getByRole("alert").filter({ hasText: "読み込みに時間がかかっています" }),
+      page
+        .getByRole("alert")
+        .filter({ hasText: "更新できませんでした。前回の内容を表示しています。" }),
     ).toBeVisible();
-    await expect(page.locator(".history-row")).toHaveCount(0);
+    await expect(page.locator(".history-row")).toContainText("保存済み");
     hold = false;
     await page.getByRole("button", { name: "再試行", exact: true }).click();
     await expect(page.locator(".history-row")).toContainText("保存済み");
@@ -90,22 +92,26 @@ test("活動取得は遅い正常応答を待ち、期限切れ後も多重取�
     await page.clock.runFor(14_000);
     expect(reads).toBe(first);
     await expect(
-      page.getByRole("alert").filter({ hasText: "読み込みに時間がかかっています" }),
+      page
+        .getByRole("alert")
+        .filter({ hasText: "更新できませんでした。前回の内容を表示しています。" }),
     ).toHaveCount(0);
     release();
     await expect(page.locator(".community-total").first()).toContainText("1人");
     gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    await page.clock.runFor(1000);
+    await page.clock.runFor(15_000);
     await expect.poll(() => reads).toBe(first + 1);
     await page.clock.runFor(15_001);
     await expect(
-      page.getByRole("alert").filter({ hasText: "読み込みに時間がかかっています" }),
+      page
+        .getByRole("alert")
+        .filter({ hasText: "更新できませんでした。前回の内容を表示しています。" }),
     ).toBeVisible();
     expect(reads).toBe(first + 1);
     hold = false;
-    await page.clock.runFor(5000);
+    await page.clock.runFor(15_000);
     await expect(page.locator(".community-total").first()).toContainText("1人");
     expect(reads).toBe(first + 2);
     await navigate(page, "設定");

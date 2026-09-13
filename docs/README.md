@@ -24,6 +24,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [design-system.md](design-system.md): スマホアプリを見据えた色・文字・余白・操作と共通部品の基準。[画面見本](design-preview.html)。
 
+- [performance-best-history.md](performance-best-history.md): BEST・前回比較の履歴件数別計測と既存集計の利用。
+
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
@@ -63,3 +65,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 元のPDFを暗黙に読み替えません。新しい文書の追加・適用範囲の確定に合わせて、この一覧も更新します。
 
 送信待ち保存形式と旧データの互換性は [差分保存](queue-storage.md) を参照。
+
+- [セット保存の通信量](session-transfer.md): gzip送信の互換性・制約・ローカル比較（#77）。
