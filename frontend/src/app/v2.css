@@ -722,19 +722,6 @@
 .history-screen .activity-legend {
   flex-wrap: wrap;
 }
-.history-detail .record-top {
-  display: none;
-}
-.history-detail .exercise-summary {
-  font-size: 16px;
-}
-.history-detail .record-details {
-  margin-top: 14px;
-}
-.history-detail .record-set {
-  border-bottom: 1px solid var(--line);
-  padding: 9px 0;
-}
 .v2-app .notice {
   background: var(--accent-soft);
   color: var(--text);
@@ -2196,7 +2183,124 @@
   font-size: 16px;
 }
 
-/* 展開した個人詳細では各種目の見出しを使い、閉じたときだけ要約を戻す。 */
-.history-detail .record:has(> details[open]) > .exercise-summary {
-  display: none;
+/* 本人履歴と共有詳細は、同じ列構成で全セットを読めるようにする。 */
+.record-review {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  min-width: 0;
+}
+.record-heading h2 {
+  font-size: 1.25rem;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.record-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+.record-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin: 16px 0 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.record-overview dt {
+  color: var(--muted);
+  font-size: .75rem;
+}
+.record-overview dd {
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.record-overview strong {
+  font-size: 1.5rem;
+  overflow-wrap: anywhere;
+}
+.record-overview small {
+  margin-left: 3px;
+  font-size: .75rem;
+  color: var(--muted);
+}
+.record-review .record-details {
+  border: 0;
+  padding: 0;
+}
+.record-exercise {
+  margin: 0 0 24px;
+  min-width: 0;
+}
+.record-exercise h3 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+.record-table-scroll {
+  overflow-x: auto;
+}
+.record-table-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.record-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 15rem;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+}
+.record-table th,
+.record-table td {
+  text-align: right;
+  padding: 10px 4px;
+}
+.record-table thead th {
+  font-size: .75rem;
+  font-weight: 400;
+  color: var(--muted);
+  vertical-align: bottom;
+}
+.record-table thead small {
+  font-size: inherit;
+}
+.record-table th:first-child {
+  width: 22%;
+  text-align: left;
+}
+.record-table th:last-child {
+  width: 31%;
+}
+.record-table tbody th {
+  font-size: .75rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.record-table td {
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.record-table td b:not(.personal-best-value) {
+  font-weight: inherit;
+}
+.record-table .record-set {
+  display: table-row;
+  border-bottom: 1px solid var(--line);
+}
+.record-table .record-set.has-personal-best {
+  border-radius: 0;
+  background: transparent;
+}
+.record-table .best-flame {
+  font-size: .875rem;
+}
+.record-sharing {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: .75rem;
 }

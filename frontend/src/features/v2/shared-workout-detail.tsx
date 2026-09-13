@@ -16,7 +16,7 @@ export function SharedWorkoutDetail({
           </button>
         </p>
       ) : record.data ? (
-        <RecordList records={[record.data]} empty="" expanded />
+        <RecordList records={[record.data]} empty="" />
       ) : (
         <output className="muted">読み込み中…</output>
       )}
