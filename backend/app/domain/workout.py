@@ -53,3 +53,11 @@ class WorkoutInput(WorkoutContent):
 
 class WorkoutUpdate(WorkoutContent):
     expected_revision: int = Field(ge=1, strict=True)
+
+
+def workout_summary(exercises: list[dict]) -> dict[str, int]:
+    recorded = [exercise for exercise in exercises if exercise["sets"]]
+    return {
+        "exercise_count": len({exercise["name"] for exercise in recorded}),
+        "set_count": sum(len(exercise["sets"]) for exercise in recorded),
+    }

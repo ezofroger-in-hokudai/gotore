@@ -2074,3 +2074,16 @@
 - 影響範囲・関連ファイル: ExerciseCatalog/CatalogPanel/useExerciseCatalog、useResource、設定・記録・履歴編集、関連E2E、docs/exercise-body-parts.md、docs/images/exercise-management/。DB/API変更なし。
 - 未解決事項: お気に入り・並べ替え・一括分類・種目名の変更/統合は今回含めない。サーバー応答前の保存完了表示や端末への記録永続保存は追加していない。
 - 次のアクション: #148の画像付きPRを作成してCI/レビューへ進む。週次#149で後続の#104共有要約を追跡。独立PR #115は最新mainとの競合解消と記録修正をpush済みで、backend/frontend/database/Vercelがすべて成功した。mainへのマージは未実施。
+
+## 2026-09-14 03:16
+- 変更内容・目的: 継続依頼を受け、#104の共有要約に着手。PR #150はマージ/CI成功済みのため最新mainから専用ブランチを作成。初回機能紹介の充実依頼も受け、別Issue/PRへ分ける。
+- 影響範囲・関連ファイル: docs/shared-workout-summary.md、task.md。共有要約は既存応答への種目数/セット数追加だけとし、部位や非公開情報を混ぜない。
+- 検証・次のアクション: API集計と既存SQL回数の先行テストを追加して実装。共有E2Eと実画面を確認する。初回案内は現行3段階を用途ごとの短い画面見本へ拡充する。
+
+## 2026-09-14 03:27
+- 変更内容・目的: #104の共有要約を実装。ホーム/グループの各記録に種目数・保存済みセット数を表示し、全体の取り組みをひと目で分かるようにした。
+- 影響範囲: 既存フィードAPIへsummaryを追加。既存取得内容からドメイン関数で集計し、追加SQL/HTTP/LLMなし。DB migration不要。旧応答では要約を隠す。
+- 検証: 先行テストでsummary未実装の失敗を確認後、make check成功（backend240件/frontend75件、lint・型・build）。共有詳細先読みを含む関連E2E9件、全E2E149件が成功（5.5分）。保存/終了/訂正/削除・非公開記録・同名種目/0kg・SQL要求数を検証。320/390/430pxとダークの実画面画像を確認。
+- 検証中の修正: テストの訂正APIを実際のPATCHへ、削除APIをexpected_revision付きへ修正。仕様の変更ではない。
+- 関連ファイル: domain/workout.py、schemas/session.py、infrastructure/sessions.py、community.tsx、api.ts、v2.css、関連テスト、docs/shared-workout-summary.md、docs/images/shared-summary/。
+- 未解決事項・次のアクション: 画像付きPRとCI/レビューへ進む。部位・個人メモ・目標・AIコメントの共有は追加していない。#151の実画面案内は別ブランチで検証中。
