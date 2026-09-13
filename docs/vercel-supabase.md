@@ -65,6 +65,16 @@ Config／Secretと反映タイミングは [Vercel環境変数](https://vercel.c
 
 ## 検証と公開時チェック
 
+### ヒートマップ・種目一覧だけが503になる場合（#143）
+
+2026-09-14、Productionのテストアカウントでヒートマップと種目一覧の503を再現した。履歴一覧・分析は200。対象DBの列だけを0件取得で確認し、`gotore_exercise_options` の `primary_body_part`・`secondary_body_parts`・`revision` が存在しないSQLSTATE `42703` を確認した。
+
+部位追加の `20260913020000_exercise_body_parts.sql`、続けて8分類統一の `20260913080000_fixed_body_parts.sql` が必要。対象DBの適用履歴と列を照合し、[共有DBへの適用手順](../supabase/README.md#共有dbへの適用担当者向け)で未適用分を反映する。Vercelの再デプロイだけでは列は追加されない。ユーザーが適用を担当し、適用後の公開画面で復旧を確認する。記録本文を消すresetは不要。
+
+APIはDBエラー時に `database_failure phase=… error=… sqlstate=… route=…` を出力する。`connect` は接続取得、`query` はAPI処理中、`release` は接続返却。`42703` は列不足、`42P01` はテーブル不足、`57014` はSQLキャンセル（タイムアウト等）。`PoolTimeout` / `TooManyRequests` は接続プールの待機・上限を調べる。分類だけで原因を断定せず、対象環境の設定・schemaと照合する。
+
+例外本文・SQL・接続文字列・ユーザーID・実URL・認証情報はこの診断ログへ含めない。ログの有無は診断追加を含むAPIの公開後に確認する。診断ログの追加自体はDB列不足を修復しない。
+
 ローカルでは `make check` と `make test-e2e`。DB統合テストにはREADMEの `TEST_DATABASE_URL` を使う。
 `make test-e2e` は同じfrontendディレクトリに別のNext.js開発サーバーが動いていると起動ロックで失敗するため、通常の `make frontend` を終了してから実行する。DBとAPIのデータは削除しない。
 Services設定のテストは `frontend/tests/unit/deployment.test.mjs` にあり、`make check` と既存CIのfrontendテストに含まれる。
