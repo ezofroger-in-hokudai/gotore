@@ -5,7 +5,7 @@ import {
   type GroupSummary,
   api,
 } from "@/lib/api";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { AnalyticsPanel } from "../analytics/panel";
 import { GroupScoreWeights } from "../score/group-score-weights";
 import { ScoreBadge } from "../score/score-display";
@@ -29,6 +29,7 @@ export function CommunityHome({
   active,
   loading = false,
   failed = false,
+  trainingAction,
 }: {
   groups: Group[];
   selected: string;
@@ -39,6 +40,7 @@ export function CommunityHome({
   active: boolean;
   loading?: boolean;
   failed?: boolean;
+  trainingAction?: ReactNode;
 }) {
   const carousel = useRef<HTMLDivElement>(null);
   const restored = useRef(false);
@@ -87,6 +89,7 @@ export function CommunityHome({
           グループ一覧
         </button>
       </div>
+      {trainingAction}
       {loading ? (
         <>
           <div
@@ -439,7 +442,16 @@ export function CommunityScreen({
   const [analyticsTab, setAnalyticsTab] = useState<"feed" | "graph" | "ranking">("feed");
   const [mode, setMode] = useState<Mode>(initialDetail ? "detail" : "list");
   useEffect(() => {
-    if (active) setMode(initialDetail ? "detail" : "list");
+    if (active) {
+      const restoredMode = window.history.state?.communityMode;
+      setMode(
+        ["list", "detail", "members", "invite", "weights", "create", "join"].includes(restoredMode)
+          ? restoredMode
+          : initialDetail
+            ? "detail"
+            : "list",
+      );
+    }
   }, [active, initialDetail]);
   const [value, setValue] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);

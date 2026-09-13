@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test("未保存入力と保存済みセットをタブ切替・再起動後も復元し、明示終了する", async ({ page }) => {
   const state = await mockTraining(page);
@@ -11,7 +11,7 @@ test("未保存入力と保存済みセットをタブ切替・再起動後も�
   await navigate(page, "ホーム");
   expect(state.saves).toBe(0);
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(weight).toHaveValue("60.5");
   state.failSave = true;
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
@@ -24,7 +24,7 @@ test("未保存入力と保存済みセットをタブ切替・再起動後も�
   await navigate(page, "ホーム");
   await expect(page.getByRole("article")).toContainText("60.5");
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.getByRole("button", { name: "セット1を編集", exact: true })).toContainText(
     "60.5",
   );
@@ -93,7 +93,7 @@ test("保存応答を失ったまま再起動しても二重追加せず、古�
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("未送信");
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   expect(state.session?.exercises[0].sets).toHaveLength(1);
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
@@ -105,7 +105,7 @@ test("保存応答を失ったまま再起動しても二重追加せず、古�
       exercises: [{ name: "ベンチプレス", sets: [{ weight: 85, reps: 10 }] }],
     };
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("82.5");
   await expect(page.getByRole("button", { name: "変更を保存", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();

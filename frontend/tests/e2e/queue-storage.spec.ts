@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, openTraining, startTraining } from "./mock-training";
 
 test("旧形式の未送信セットを保持して差分へ移行し、再起動後も順序どおり保存する", async ({
   page,
@@ -35,7 +35,7 @@ test("旧形式の未送信セットを保持して差分へ移行し、再起�
     { key, legacy },
   );
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.getByRole("button", { name: "セット3を編集", exact: true })).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBe(legacy);
   await weight.fill("87.5");
@@ -46,7 +46,7 @@ test("旧形式の未送信セットを保持して差分へ移行し、再起�
     )
     .toBe(2);
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.getByRole("button", { name: "セット4を編集", exact: true })).toBeVisible();
   state.failSave = false;
   await page.evaluate(() => window.dispatchEvent(new Event("online")));

@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, openGroup, openRecord, startTraining } from "./mock-training";
+import {
+  mockTraining,
+  navigate,
+  openGroup,
+  openRecord,
+  openTraining,
+  startTraining,
+} from "./mock-training";
 
 for (const owner of [true, false]) {
   test(owner
@@ -73,7 +80,7 @@ for (const owner of [true, false]) {
       await expect(page.getByRole("status").filter({ hasText: "除外しました" })).toBeVisible();
     } else {
       await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
-      await navigate(page, "記録");
+      await openTraining(page);
       await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeEnabled();
     }

@@ -16,7 +16,6 @@ import {
   setValue,
   updateSet,
 } from "./session";
-import { TrainingOverview } from "./training-overview";
 import { useExerciseContext } from "./use-exercise-context";
 import type { SessionController } from "./use-session";
 
@@ -24,16 +23,12 @@ export function SessionScreen({
   active,
   controller,
   userId,
-  recent,
-  onHistory,
   onFinished,
   haptic,
 }: {
   active: boolean;
   controller: SessionController;
   userId: string;
-  recent: Parameters<typeof TrainingOverview>[0]["resource"];
-  onHistory: () => void;
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
 }) {
@@ -56,7 +51,6 @@ export function SessionScreen({
         >
           {controller.busy ? "開始中…" : "トレーニングを開始"}
         </button>
-        <TrainingOverview resource={recent} onHistory={onHistory} />
       </section>
     );
   return (
