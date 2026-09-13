@@ -1,13 +1,13 @@
 "use client";
 
-import type { MonthlyActivity } from "@/lib/api";
+import type { BodyPart, MonthlyActivity } from "@/lib/api";
 import { useState } from "react";
-import { type BodyPartFilter, PART_FILTERS } from "../exercises/body-parts";
+import { PART_FILTERS } from "../exercises/body-parts";
 import { today } from "../training/draft";
 import { useResource } from "../training/use-resource";
-import { activityForPart, orderedParts } from "./body-parts";
+import { activityForParts, orderedParts, toggleActivityPart } from "./body-parts";
 import { calendarDays, dateLabel, shiftMonth } from "./calendar";
-import { volumeAppearance, volumeGradient } from "./volume-colors";
+import { volumeAppearance } from "./volume-colors";
 
 export function ActivityCalendar({
   month,
@@ -26,7 +26,7 @@ export function ActivityCalendar({
   active?: boolean;
   prefetch?: boolean;
 }) {
-  const [part, setPart] = useState<BodyPartFilter>("all");
+  const [parts, setParts] = useState<BodyPart[]>([]);
   const currentDay = today();
   const currentMonth = currentDay.slice(0, 7);
   const activity = useResource<MonthlyActivity>(
@@ -41,9 +41,13 @@ export function ActivityCalendar({
       !day.body_parts ||
       day.body_parts.some((entry) => !entry.body_part || entry.body_part === "full_body"),
   );
-  const selectedPart = hasParts ? part : "all";
-  const data = activity.data ? activityForPart(activity.data, selectedPart) : null;
-  const partLabel = PART_FILTERS.find((entry) => entry.value === selectedPart)?.label ?? "すべて";
+  const selectedParts = hasParts ? parts : [];
+  const data = activity.data ? activityForParts(activity.data, selectedParts) : null;
+  const partLabel = PART_FILTERS.filter(
+    (entry) => entry.value !== "all" && selectedParts.includes(entry.value),
+  )
+    .map((entry) => entry.label)
+    .join("・");
   const maximum = Math.max(0, ...(data?.days.map((day) => day.volume) ?? []));
   const selected = activity.data?.days.find((day) => day.date === selectedDate);
   const format = (value: number) => value.toLocaleString("ja-JP", { maximumFractionDigits: 1 });
@@ -63,10 +67,12 @@ export function ActivityCalendar({
           <button
             type="button"
             key={entry.value}
-            aria-pressed={selectedPart === entry.value}
+            aria-pressed={
+              entry.value === "all" ? !selectedParts.length : selectedParts.includes(entry.value)
+            }
             disabled={entry.value !== "all" && (!activity.data || !hasParts)}
-            onClick={(event) => {
-              setPart(entry.value);
+            onClick={() => {
+              setParts(toggleActivityPart(selectedParts, entry.value));
               onSelect("");
             }}
           >
@@ -116,9 +122,9 @@ export function ActivityCalendar({
         {activity.loading ? (activity.data ? "更新中…" : "読み込み中…") : ""}
       </output>
       <>
-        <dl className="activity-totals">
+        <dl className="activity-totals" aria-label={`${partLabel || "すべて"}の月間集計`}>
           <div>
-            <dt>{selectedPart === "all" ? "月の総負荷" : `${partLabel}の総負荷`}</dt>
+            <dt>総負荷</dt>
             <dd>
               {data ? format(data.total_volume) : "—"}
               <small>kg</small>
@@ -161,7 +167,7 @@ export function ActivityCalendar({
                 data-volume={future ? undefined : (volume ?? undefined)}
                 style={volumeAppearance(future ? null : volume, maximum)}
                 disabled={future || !activity.data}
-                aria-label={`${dateLabel(day)}、${future ? "未来の日付" : !activity.data ? "未取得" : `${label}、${counts?.workout_count ?? 0}件${bodyParts.length ? `、${bodyParts.map((item) => item.label).join("・")}` : ""}`}`}
+                aria-label={`${dateLabel(day)}、${future ? "未来の日付" : !activity.data ? "未取得" : `${label}、${counts?.workout_count === null ? "件数未取得" : `${counts?.workout_count ?? 0}件`}${bodyParts.length ? `、${bodyParts.map((item) => item.label).join("・")}` : ""}`}`}
                 aria-pressed={selectedDate === day}
                 aria-current={day === currentDay ? "date" : undefined}
                 onClick={() => onSelect(day)}
@@ -186,34 +192,9 @@ export function ActivityCalendar({
             );
           })}
         </div>
-        <div
-          className="activity-legend volume-legend"
-          aria-label="色の凡例（総負荷kg・月内の相対表示）"
-        >
-          <span>
-            <span
-              className="heat-swatch"
-              style={volumeAppearance(null, maximum)}
-              aria-hidden="true"
-            />
-            未記録
-          </span>
-          <div className="volume-gradient-legend">
-            <span style={{ background: volumeGradient }} aria-hidden="true" />
-            <div>
-              <span>0kg</span>
-              <span>{format(maximum / 2)}kg</span>
-              <span>{format(maximum)}kg</span>
-            </div>
-          </div>
-        </div>
-        <p className="muted">
-          重量×回数の合計（kg）。1k＝1,000kg。色は{selectedPart === "all" ? "全体" : partLabel}
-          の月内最大値が基準。
-        </p>
-        {data?.workout_count === 0 && (
+        {data?.active_days === 0 && (
           <p className="muted">
-            {selectedPart === "all" ? "この月は記録なし" : `この月の${partLabel}は記録なし`}
+            {!selectedParts.length ? "この月は記録なし" : `この月の${partLabel}は記録なし`}
           </p>
         )}
         {!!selected?.body_parts?.length && (
@@ -221,7 +202,6 @@ export function ActivityCalendar({
             className="activity-part-breakdown"
             aria-label={`${dateLabel(selected.date)}の部位内訳`}
           >
-            <p className="muted">主部位の内訳</p>
             <dl>
               {orderedParts(selected.body_parts).map((entry) => (
                 <div key={entry.body_part}>

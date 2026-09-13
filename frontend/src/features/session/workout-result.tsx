@@ -16,16 +16,14 @@ export function WorkoutResult({
   );
   return (
     <section className="workout-result" aria-label="トレーニング結果">
-      <p className="result-eyebrow">TRAINING COMPLETE</p>
       <h1>おつかれさまでした。</h1>
-      <p className="muted">{record.performed_on.replaceAll("-", ".")} · 記録を保存しました</p>
+      <p className="muted">{record.performed_on.replaceAll("-", ".")} · 保存済み</p>
       <div className="result-volume" aria-label="総負荷量">
-        <span>TOTAL VOLUME</span>
+        <span>総負荷</span>
         <strong>
           {volume.toLocaleString("ja-JP", { maximumFractionDigits: 1 })}
           <small>kg</small>
         </strong>
-        <small>今日の積み重ねを、次の自分へ。</small>
       </div>
       <div className="result-totals">
         <span>
@@ -36,10 +34,10 @@ export function WorkoutResult({
         </span>
       </div>
       <button type="button" className="primary full" onClick={onHome}>
-        ホームへ
+        ホーム
       </button>
       <button type="button" className="text-button full" onClick={onHistory}>
-        履歴を確認する
+        履歴
       </button>
     </section>
   );

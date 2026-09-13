@@ -14,6 +14,7 @@ test("採点APIを使わず終了結果・履歴・ホーム・設定を表示�
   await page.getByRole("button", { name: "終了する", exact: true }).click();
   const result = page.getByRole("region", { name: "トレーニング結果" });
   await expect(result).toBeVisible();
+  await expect(result).not.toContainText(/TRAINING COMPLETE|今日の積み重ね/);
   await expect(result.locator(".result-volume")).toContainText("640kg");
   await expect(result.locator(".result-totals")).toContainText("1 セット");
   await expect(result).not.toContainText(/SCORE|採点|目標への一言|計測中/);
@@ -28,10 +29,16 @@ test("採点APIを使わず終了結果・履歴・ホーム・設定を表示�
     path: "test-results/volume-result-mobile.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "履歴を確認する", exact: true }).click();
+  await result.getByRole("button", { name: "履歴", exact: true }).click();
   await expect(page.locator(".history-row")).toHaveCount(1);
   await page.locator(".history-row").click();
   await expect(page.locator(".history-detail")).toBeVisible();
+  const detail = page.locator(".history-detail");
+  await expect(detail.locator(".exercise-summary")).toBeHidden();
+  await detail.locator("summary").filter({ hasText: "セット詳細" }).click();
+  await expect(detail.locator(".exercise-summary")).toBeVisible();
+  await detail.locator("summary").filter({ hasText: "セット詳細" }).click();
+  await page.screenshot({ path: "test-results/ui-copy-history-detail.png", fullPage: true });
   await expect(page.locator(".history-detail")).not.toContainText(/SCORE|スコア/);
   await navigate(page, "ホーム");
   await expect(page.locator(".feed-item")).toBeVisible();

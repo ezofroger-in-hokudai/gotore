@@ -50,6 +50,10 @@ def test_current_primary_is_private_and_not_double_counted(client):
     assert data["total_volume"] == 800
     assert data["total_sets"] == 4
     assert data["workout_count"] == 2
+    assert data["days"][0]["workout_groups"] == [
+        {"body_parts": ["arms", "chest"], "workout_count": 1},
+        {"body_parts": ["chest"], "workout_count": 1},
+    ]
     parts = by_part(data["days"][0])
     assert parts["chest"] == {
         "body_part": "chest",
@@ -71,6 +75,9 @@ def test_reclassification_and_deleted_options_apply_to_old_records_without_mutat
     )
     assert changed.status_code == 200
     assert set(by_part(activity(client)["days"][0])) == {"back"}
+    assert activity(client)["days"][0]["workout_groups"] == [
+        {"body_parts": ["back"], "workout_count": 1}
+    ]
     assert client.delete(path).status_code == 204
     assert set(by_part(activity(client)["days"][0])) == {"other"}
     current = client.get("/api/workouts?performed_on=2024-02-29").json()[0]

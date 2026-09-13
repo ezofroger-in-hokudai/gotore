@@ -742,7 +742,6 @@ export function CommunityScreen({
                             メンバーを招待 <span>›</span>
                           </button>
                         </div>
-                        <h2>みんなの最新記録</h2>
                         {activity.data && (
                           <Feed
                             key={activity.data.group_id}
@@ -778,7 +777,6 @@ export function CommunityScreen({
               {mode === "invite" && (
                 <>
                   <h2>招待コード</h2>
-                  <p className="muted">このコードを仲間に伝えてください。</p>
                   <InviteCodePanel
                     group={group}
                     owner={group.owner_id === userId}

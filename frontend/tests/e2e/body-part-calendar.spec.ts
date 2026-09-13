@@ -4,6 +4,10 @@ import { mockTraining, navigate } from "./mock-training";
 test.use({ locale: "ja-JP" });
 
 test("日付の部位・横一列の絞り込み・日別内訳を追加通信なしで表示する", async ({ page }) => {
+  // 定期更新タイマーが作られる前に止め、部位操作による通信だけを数える。
+  const clockTime = new Date();
+  await page.clock.install({ time: clockTime });
+  await page.clock.pauseAt(clockTime);
   const state = await mockTraining(page);
   state.finished = [
     {
@@ -20,7 +24,7 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
         { name: "ベンチプレス", sets: Array.from({ length: 3 }, () => ({ weight: 65, reps: 10 })) },
         { name: "ペックフライ", sets: Array.from({ length: 3 }, () => ({ weight: 40, reps: 12 })) },
         {
-          name: "ダンベルカール",
+          name: "ショルダープレス",
           sets: Array.from({ length: 3 }, () => ({ weight: 12, reps: 10 })),
         },
       ],
@@ -73,9 +77,10 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
                       volume: 3750,
                       set_count: 9,
                       workout_count: 1,
+                      workout_groups: [{ body_parts: ["chest", "shoulders"], workout_count: 1 }],
                       body_parts: [
                         { body_part: "chest", volume: 3390, set_count: 6, workout_count: 1 },
-                        { body_part: "arms", volume: 360, set_count: 3, workout_count: 1 },
+                        { body_part: "shoulders", volume: 360, set_count: 3, workout_count: 1 },
                       ],
                     },
                     {
@@ -83,6 +88,7 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
                       volume: 0,
                       set_count: 3,
                       workout_count: 1,
+                      workout_groups: [{ body_parts: ["other"], workout_count: 1 }],
                       body_parts: [
                         { body_part: "other", volume: 0, set_count: 3, workout_count: 1 },
                       ],
@@ -96,7 +102,7 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
   const calendar = page.getByRole("region", { name: "活動カレンダー", exact: true });
   await calendar.getByLabel("月", { exact: true }).fill("2024-02");
   const day = calendar.getByRole("button", {
-    name: "2024年2月13日、総負荷3,750kg、1件、胸・腕",
+    name: "2024年2月13日、総負荷3,750kg、1件、胸・肩",
     exact: true,
   });
   await expect(day.locator(".activity-day-part")).toHaveText("胸+1");
@@ -142,15 +148,47 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
   await expect(detail).toContainText("6セット · 3,390kg");
   await expect(detail).toContainText("3セット · 360kg");
   await page.screenshot({ path: "test-results/body-part-calendar-detail.png", fullPage: true });
-  await page.clock.install();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
   const before = requests;
-  await filters.getByRole("button", { name: "腕", exact: true }).click();
+  await filters.getByRole("button", { name: "肩", exact: true }).click();
   await expect(calendar.locator(".activity-totals")).toContainText("360");
   await expect(detail).toHaveCount(0);
   await expect(
     calendar.getByRole("button", { name: /2024年2月13日、/ }).locator(".activity-day-part"),
-  ).toHaveText("腕");
+  ).toHaveText("肩");
+  await filters.getByRole("button", { name: "胸", exact: true }).click();
+  await expect(filters.getByRole("button", { name: "胸", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(filters.getByRole("button", { name: "肩", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(filters.getByRole("button", { name: "すべて", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(calendar.locator(".activity-totals")).toContainText("3,750kg活動日数1日記録件数1件");
+  await expect(day).toBeVisible();
+  await expect(calendar.locator(".activity-legend")).toHaveCount(0);
+  await expect(calendar.getByText("主部位の内訳", { exact: true })).toHaveCount(0);
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    const positions = await filters
+      .getByRole("button")
+      .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().top));
+    expect(new Set(positions).size).toBe(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+    await page.screenshot({ path: `test-results/calendar-multi-${width}.png`, fullPage: true });
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await filters.getByRole("button", { name: "胸", exact: true }).click();
+  await expect(calendar.locator(".activity-totals")).toContainText("360kg");
+  await filters.getByRole("button", { name: "肩", exact: true }).click();
+  await expect(filters.getByRole("button", { name: "すべて", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await filters.getByRole("button", { name: "その他", exact: true }).click();
   await expect(filters.getByRole("button", { name: "その他", exact: true })).toBeInViewport();
   const zero = calendar.getByRole("button", {
@@ -159,6 +197,7 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
   });
   await expect(zero).toHaveAttribute("data-volume", "0");
   await expect(calendar.locator(".activity-totals")).toContainText("1日");
+  await filters.getByRole("button", { name: "すべて", exact: true }).click();
   await filters.getByRole("button", { name: "背中", exact: true }).click();
   await expect(calendar.getByText("この月の背中は記録なし", { exact: true })).toBeVisible();
   await filters.getByRole("button", { name: "すべて", exact: true }).click();
@@ -211,7 +250,7 @@ test("内訳のない旧応答へ切り替わったとき、0件にせず全体�
   await calendar.getByLabel("月", { exact: true }).fill("2024-02");
   const filters = calendar.getByRole("group", { name: "カレンダーの部位", exact: true });
   await filters.getByRole("button", { name: "胸", exact: true }).click();
-  await expect(calendar.locator(".activity-totals")).toContainText("胸の総負荷");
+  await expect(calendar.locator(".activity-totals")).toContainText("総負荷");
   legacy = true;
   await expect(filters.getByRole("button", { name: "胸", exact: true })).toBeDisabled();
   await expect(filters.getByRole("button", { name: "すべて", exact: true })).toHaveAttribute(
@@ -219,5 +258,5 @@ test("内訳のない旧応答へ切り替わったとき、0件にせず全体�
     "true",
   );
   await expect(calendar.locator(".activity-totals")).toContainText("600");
-  await expect(calendar.locator(".activity-totals")).toContainText("月の総負荷");
+  await expect(calendar.locator(".activity-totals")).toContainText("総負荷");
 });

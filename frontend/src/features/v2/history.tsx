@@ -51,12 +51,12 @@ export function History({
       </button>
       <h1>{dateLabel(current.performed_on)}</h1>
       <p className="muted">
-        {current.exercises.reduce((total, exercise) => total + exercise.sets.length, 0)}セット ·{" "}
+        {current.exercises.reduce((total, exercise) => total + exercise.sets.length, 0)}セット
         {current.started_at && current.ended_at
-          ? `${Math.max(0, Math.floor((Date.parse(current.ended_at) - Date.parse(current.started_at)) / 60000))}分`
+          ? ` · ${Math.max(0, Math.floor((Date.parse(current.ended_at) - Date.parse(current.started_at)) / 60000))}分`
           : current.started_at
-            ? "トレーニング中"
-            : "時間未計測"}
+            ? " · トレーニング中"
+            : ""}
       </p>
       <RecordList
         records={[current]}
@@ -113,13 +113,7 @@ export function History({
             prefetch={prefetch}
           />
           <div className="section-heading">
-            <h2>
-              {date
-                ? dateLabel(date)
-                : range
-                  ? dates(range.start, range.end)
-                  : "最近のトレーニング"}
-            </h2>
+            <h2>{date ? dateLabel(date) : range ? dates(range.start, range.end) : "最近の記録"}</h2>
             {(date || range) && (
               <button
                 className="text-button"
@@ -154,10 +148,14 @@ export function History({
                 onClick={() => setDetail(record.id)}
               >
                 <div>
-                  <strong>
-                    {record.performed_on.replaceAll("-", "/")}
-                    {record.started_at && !record.ended_at ? " · トレーニング中" : ""}
-                  </strong>
+                  {(!date || (record.started_at && !record.ended_at)) && (
+                    <strong>
+                      {!date && record.performed_on.replaceAll("-", "/")}
+                      {record.started_at && !record.ended_at
+                        ? `${date ? "" : " · "}トレーニング中`
+                        : ""}
+                    </strong>
+                  )}
                   <p>{record.exercises.map((e) => e.name).join(" / ")}</p>
                 </div>
                 <span className="history-best-meta">

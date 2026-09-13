@@ -27,6 +27,7 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
+- [画面文言の再棚卸し](ui-copy-review-2026-09-13.md): 削減候補37件と今回採用する範囲。
 - [history-analytics.md](history-analytics.md): 種目別の履歴グラフ、グループの推移・ランキングと集計・先読み。
 - [score.md](score.md): SCOREの計算式・基準回・目標・採点保存の設計案。初版への採用と実装状況は [score-implementation.md](score-implementation.md) を参照。
 - [activity-heatmap.md](activity-heatmap.md): 日別総負荷量の月別ヒートマップと日別記録。

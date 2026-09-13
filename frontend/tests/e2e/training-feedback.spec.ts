@@ -20,12 +20,12 @@ test("タップ後も色が戻り、受付セットと次の番号・保存待�
   try {
     await expect(page.locator(".save-feedback")).toContainText("SET 1");
     await expect(page.locator(".save-feedback")).toContainText("保存中");
-    await expect(next).toContainText("SET 2を記録");
+    await expect(page.getByRole("heading", { name: "SET 2", exact: true })).toBeVisible();
     await expect(next).toBeEnabled();
     await expect(next).toHaveCSS("background-color", color);
     await expect(page.locator(".record-celebration")).toHaveCount(0);
     await next.tap();
-    await expect(next).toContainText("SET 3を記録");
+    await expect(page.getByRole("heading", { name: "SET 3", exact: true })).toBeVisible();
     await expect(page.locator(".comparison-row")).toHaveCount(2);
   } finally {
     release();

@@ -114,7 +114,7 @@ export function AnalyticsChart({
             className="text-button"
             onClick={() => onRecords(point.start, point.end)}
           >
-            この期間の記録を見る ›
+            記録を見る
           </button>
         )}
       </div>

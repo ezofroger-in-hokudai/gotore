@@ -127,7 +127,6 @@ export function ExerciseCatalog({
     return (
       <section className="body-part-editor" aria-label="部位を編集">
         <h3>{editing.name}</h3>
-        <p className="muted">部位を編集</p>
         <form onSubmit={saveParts}>
           <fieldset disabled={busy}>
             <BodyPartFields value={editParts} onChange={setEditParts} />
@@ -149,7 +148,7 @@ export function ExerciseCatalog({
               className="primary full"
               disabled={conflict || editing.revision === undefined}
             >
-              {pending ? "保存中…" : "保存する"}
+              {pending ? "保存中…" : "保存"}
             </button>
             <button
               type="button"
@@ -167,8 +166,8 @@ export function ExerciseCatalog({
     );
 
   return (
-    <details className="panel exercise-catalog" open={expanded || undefined}>
-      <summary>種目リスト</summary>
+    <details className="panel exercise-catalog" open={expanded || undefined} aria-label="種目一覧">
+      <summary hidden={expanded}>種目リスト</summary>
 
       <form onSubmit={add}>
         <fieldset disabled={busy}>

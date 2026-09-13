@@ -111,7 +111,7 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
   await page.getByLabel("主な部位", { exact: true }).selectOption("shoulders");
   await page.screenshot({ path: "test-results/body-parts-edit-390.png", fullPage: true });
   state.failOptionWrite = true;
-  await page.getByRole("button", { name: "保存する", exact: true }).click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("通信できません");
   await expect(page.getByLabel("主な部位", { exact: true })).toHaveValue("shoulders");
   state.failOptionWrite = false;
@@ -121,14 +121,14 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
     secondary_body_parts: ["glutes"],
     revision: 2,
   });
-  await page.getByRole("button", { name: "保存する", exact: true }).click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("別の更新");
   await expect(page.getByLabel("主な部位", { exact: true })).toHaveValue("shoulders");
-  await expect(page.getByRole("button", { name: "保存する", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "保存", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "最新の部位を読み直す", exact: true }).click();
   await expect(page.getByLabel("主な部位", { exact: true })).toHaveValue("legs");
   await page.getByLabel("主な部位", { exact: true }).selectOption("back");
-  await page.getByRole("button", { name: "保存する", exact: true }).click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("部位を保存しました");
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
   await page.reload();

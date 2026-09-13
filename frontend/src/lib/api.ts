@@ -12,6 +12,7 @@ export type ActivityDay = {
   set_count: number;
   workout_count: number;
   body_parts?: ActivityBodyPart[];
+  workout_groups?: { body_parts: BodyPart[]; workout_count: number }[];
 };
 export type MonthlyActivity = {
   month: string;

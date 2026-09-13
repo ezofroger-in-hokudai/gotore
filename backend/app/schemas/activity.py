@@ -13,8 +13,14 @@ class ActivityBodyPart(BaseModel):
     workout_count: int
 
 
+class ActivityWorkoutGroup(BaseModel):
+    body_parts: list[BodyPart]
+    workout_count: int
+
+
 class ActivityDay(BaseModel):
     date: date
+    workout_groups: list[ActivityWorkoutGroup] = Field(default_factory=list)
     body_parts: list[ActivityBodyPart] = Field(default_factory=list)
     volume: float
     set_count: int

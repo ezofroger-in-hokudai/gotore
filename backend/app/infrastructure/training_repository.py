@@ -174,18 +174,35 @@ class TrainingRepository:
     def activity(self, user_id: UUID, start: date, end: date):
         part = "COALESCE(NULLIF(o.primary_body_part, 'full_body'), 'other')"
         rows = self.connection.execute(
-            f"""SELECT w.performed_on AS date, {part} AS body_part,
-                GROUPING({part}) AS is_total,
-                COUNT(DISTINCT w.id) AS workout_count,
-                SUM(s.set_count) AS set_count, SUM(s.volume) AS volume
-            FROM public.gotore_workouts w
-            JOIN public.gotore_workout_statistics s ON s.workout_id = w.id
-            LEFT JOIN public.gotore_exercise_options o
-                ON o.user_id = w.user_id AND o.name = s.exercise_name
-            WHERE w.user_id = %s AND w.performed_on >= %s AND w.performed_on < %s
-              AND jsonb_array_length(w.exercises) > 0
-            GROUP BY GROUPING SETS ((w.performed_on), (w.performed_on, {part}))
-            ORDER BY w.performed_on, is_total DESC, {part}""",
+            f"""WITH entries AS (
+                SELECT w.id, w.performed_on AS date, {part} AS body_part,
+                    s.set_count, s.volume
+                FROM public.gotore_workouts w
+                JOIN public.gotore_workout_statistics s ON s.workout_id = w.id
+                LEFT JOIN public.gotore_exercise_options o
+                    ON o.user_id = w.user_id AND o.name = s.exercise_name
+                WHERE w.user_id = %s AND w.performed_on >= %s AND w.performed_on < %s
+                  AND jsonb_array_length(w.exercises) > 0
+            ), workout_parts AS (
+                SELECT date, id, array_agg(DISTINCT body_part ORDER BY body_part) AS body_parts
+                FROM entries GROUP BY date, id
+            ), combinations AS (
+                SELECT date, body_parts, COUNT(*) AS workout_count
+                FROM workout_parts GROUP BY date, body_parts
+            ), day_groups AS (
+                SELECT date, jsonb_agg(jsonb_build_object(
+                    'body_parts', body_parts, 'workout_count', workout_count
+                ) ORDER BY body_parts) AS workout_groups
+                FROM combinations GROUP BY date
+            ), totals AS (
+                SELECT date, body_part, GROUPING(body_part) AS is_total,
+                    COUNT(DISTINCT id) AS workout_count,
+                    SUM(set_count) AS set_count, SUM(volume) AS volume
+                FROM entries GROUP BY GROUPING SETS ((date), (date, body_part))
+            )
+            SELECT t.*, g.workout_groups FROM totals t
+            LEFT JOIN day_groups g ON g.date = t.date AND t.is_total = 1
+            ORDER BY t.date, t.is_total DESC, t.body_part""",
             (user_id, start, end),
         ).fetchall()
         metrics = ("volume", "set_count", "workout_count")
@@ -194,6 +211,7 @@ class TrainingRepository:
                 "date": row["date"],
                 **{key: row[key] for key in metrics},
                 "body_parts": [],
+                "workout_groups": row["workout_groups"],
             }
             for row in rows
             if row["is_total"]
