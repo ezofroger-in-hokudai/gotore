@@ -19,7 +19,26 @@ export type Group = {
 export type GroupDetail = Group & {
   members: { id: string; display_name: string; joined_at: string }[];
 };
-export type ExerciseOption = { id: string; name: string };
+export type BodyPart =
+  | "chest"
+  | "back"
+  | "shoulders"
+  | "arms"
+  | "legs"
+  | "glutes"
+  | "abs"
+  | "full_body"
+  | "other";
+export type BodyPartSelection = {
+  primary_body_part: BodyPart | null;
+  secondary_body_parts: BodyPart[];
+};
+// 旧応答・キャッシュの分類省略は未分類として扱う。
+export type ExerciseOption = {
+  id: string;
+  name: string;
+  revision?: number;
+} & Partial<BodyPartSelection>;
 export type Exercise = {
   name: string;
   sets: { weight: number; reps: number }[];

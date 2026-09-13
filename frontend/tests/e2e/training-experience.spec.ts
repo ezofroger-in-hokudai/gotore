@@ -29,6 +29,7 @@ test("全セットを一覧で確認し、追加操作を表示したまま次�
   await expect(page.getByRole("region", { name: "今回のトレーニング" }).locator("li")).toHaveCount(
     8,
   );
+  await page.getByText("セットの詳細", { exact: true }).click();
   await page.screenshot({ path: "test-results/session-overview.png", fullPage: true });
   await page.getByRole("button", { name: /^スクワット/ }).click();
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();

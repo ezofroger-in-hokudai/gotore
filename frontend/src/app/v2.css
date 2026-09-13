@@ -2005,3 +2005,145 @@
 .activity-totals dd {
   overflow-wrap: anywhere;
 }
+
+.body-part-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.body-part-chips button {
+  min-height: 44px;
+  padding: 8px 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.body-part-chips button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--cta);
+  border-color: var(--cta);
+}
+.body-part-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.body-part-tag {
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  white-space: nowrap;
+}
+.body-part-tag.unclassified {
+  color: var(--muted);
+  background: var(--track);
+}
+.body-part-secondary {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.exercise-option-name {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.exercise-picker-list .v2-row {
+  min-height: 76px;
+  padding: 13px 15px;
+  text-align: left;
+}
+.exercise-picker-list .v2-row > span:last-child {
+  font-size: 22px;
+}
+.exercise-filter-heading,
+.session-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.exercise-filter-heading h2,
+.session-overview .session-overview-heading h2 {
+  margin: 0;
+}
+.exercise-filter-heading > span,
+.session-overview-heading > span {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.session-exercise-shortcuts {
+  display: flex;
+  flex-direction: column;
+}
+.session-exercise-shortcuts button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  min-height: 44px;
+  padding: 5px 0;
+  overflow-wrap: anywhere;
+}
+.session-exercise-shortcuts button span {
+  white-space: nowrap;
+  font-size: 12px;
+}
+.session-overview-details > summary {
+  min-height: 32px;
+  padding: 7px 0;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.session-overview-details[open] > summary {
+  margin-bottom: 8px;
+}
+.exercise-add-button {
+  border-style: dashed;
+  color: var(--accent);
+}
+.body-part-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.secondary-parts > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 10px 0;
+  font-weight: 700;
+  font-size: 14px;
+}
+.secondary-parts > summary small {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 6px;
+}
+.body-part-editor h3 {
+  font-size: 22px;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+.exercise-options li {
+  flex-wrap: wrap;
+  gap: 0 8px;
+  padding: 10px 0;
+}
+.exercise-options .exercise-option-name {
+  flex: 1 1 150px;
+}

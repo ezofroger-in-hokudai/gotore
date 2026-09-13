@@ -1593,3 +1593,12 @@
 - 検証: 先行APIテストは未実装時にprimary_body_part不足で失敗、その後成功。部位API/移行/DB制約16件成功。make check成功（backend210件・frontend単体58件・lint・型検査・build）。型検査で見つかったテストモックのrevision省略を修正済み。ローカルDBへ未適用2件を追加適用し、db lint成功。DBリセットは行っていない。
 - 未解決事項: 記録・共有E2Eは実行中。本番migration・実機確認・レビューは未実施。
 - 次のアクション: A案の画面と既存フローを検証し、画像付きPRを提出する。
+
+## 2026-09-13 13:56
+- 変更内容: A案の部位ボタンと検索、主/補タグ、分類追加・編集画面、今回の種目への復帰、履歴編集の部位別選択を実装。本人用候補は再取得失敗でも保持する。
+- 目的: 表示済みデータで部位をすぐ切り替え、入力・履歴を保ったまま種目を選べるようにする。
+- 影響範囲: 種目一覧、記録中の選択・入力、履歴訂正フォーム。分類や検索で一覧の追加通信を行わず、既存の前回比較先読みを表示候補へ絞る。
+- 関連ファイル: frontend/src/features/exercises/、frontend/src/features/session/session-screen.tsx、frontend/src/features/training/workout-form.tsx、docs/images/exercise-body-parts/、docs/previews/exercise-body-parts.html。
+- 検証: 320/390/430pxの画像と記録中表示を確認。分類の保存失敗・競合・未分類・削除済み候補・未保存入力の保護・再取得失敗からの復帰のE2E4件成功。選択欄の読み上げ名を明示してE2Eの操作対象を安定させた。make check成功。全121件のE2Eは継続中。
+- 未解決事項: 本番migration、実機での操作感、PRレビューは未実施。
+- 次のアクション: 画像付きドラフトPRを作り、全体E2E・CIが成功したらレビュー待ちへ進める。

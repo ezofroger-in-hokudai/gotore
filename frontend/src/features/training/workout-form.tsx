@@ -2,6 +2,7 @@
 
 import { type ExerciseOption, type Group, type Workout, api } from "@/lib/api";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { groupExercises } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import {
   type Draft,
@@ -288,10 +289,14 @@ export function WorkoutForm({
                     {exercise.name && !options.some((option) => option.name === exercise.name) && (
                       <option value={exercise.name}>{exercise.name}（保存済み）</option>
                     )}
-                    {options.map((option) => (
-                      <option key={option.id} value={option.name}>
-                        {option.name}
-                      </option>
+                    {groupExercises(options).map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.options.map((option) => (
+                          <option key={option.id} value={option.name}>
+                            {option.name}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </label>
