@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 for (const resume of [false, true]) {
   test(`初回復元失敗からオンラインで${resume ? "同じセッションを再開" : "開始可能に復帰"}し、多重取得しない`, async ({
@@ -26,7 +26,7 @@ for (const resume of [false, true]) {
       return route.fulfill({ json: state.session });
     });
     await page.reload();
-    await navigate(page, "記録");
+    await openTraining(page);
     await expect(
       page.getByRole("button", { name: "トレーニングを開始", exact: true }),
     ).toBeDisabled();
@@ -42,6 +42,7 @@ for (const resume of [false, true]) {
       expect(loads).toBe(failedLoads + 1);
       release();
       if (resume) {
+        await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
         await expect(
           page.getByRole("button", { name: "トレーニング終了", exact: true }),
         ).toBeVisible();
@@ -68,7 +69,7 @@ test("初回復元の再試行は非表示中に止まり、表示復帰と定�
     return fail ? route.abort() : route.fulfill({ json: null });
   });
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.getByRole("alert").filter({ hasText: "通信できません" })).toBeVisible();
   const before = loads;
   await page.evaluate(() => {
@@ -109,7 +110,7 @@ test("壊れた送信待ちデータを通信復帰で消さない", async ({ pa
     return route.fulfill({ json: null });
   });
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(
     page.getByRole("button", { name: "トレーニングを開始", exact: true }),
   ).toBeDisabled();

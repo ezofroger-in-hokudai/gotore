@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test("編集の競合・キャンセル・保存で新規下書きを保持し、削除を確認する", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -121,7 +121,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     }),
   ).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate((key) => localStorage.getItem(key), draftKey)).toBe(draft);
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

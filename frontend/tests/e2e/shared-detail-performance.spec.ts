@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate } from "./mock-training";
+import { mockTraining, navigate, openTraining } from "./mock-training";
 
 test("表示中の詳細をLIVE優先で先読みし、終了済みは再取得を重ねず即表示する", async ({ page }) => {
   await page.clock.install();
@@ -82,7 +82,7 @@ test("表示中の詳細をLIVE優先で先読みし、終了済みは再取得�
   await expect(dialog.getByRole("alert")).toContainText("記録を閲覧できません");
   await expect(dialog.locator(".record-set")).toHaveCount(0);
   await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
-  await navigate(page, "記録");
+  await navigate(page, "設定");
   const stopped = requests.length;
   await page.clock.runFor(10000);
   expect(requests).toHaveLength(stopped);
@@ -142,7 +142,7 @@ test("履歴をホームで準備し、再確認待ちでも一覧とカレン�
   }
 });
 
-test("復元通信を待たずホームから記録画面へ進み、未確認中の開始は防ぐ", async ({ page }) => {
+test("復元確認中もホームのSTARTを表示し、未確認の開始は防ぐ", async ({ page }) => {
   await mockTraining(page);
   await navigate(page, "設定");
   let release = () => {};
@@ -155,10 +155,8 @@ test("復元通信を待たずホームから記録画面へ進み、未確認�
   });
   await page.reload();
   try {
-    await page
-      .getByRole("button", { name: "トレーニングを記録", exact: true })
-      .click({ timeout: 2000 });
-    await expect(page.getByRole("heading", { name: "トレーニング", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
+    await expect(page.getByTestId("floating-training")).toBeDisabled();
     await expect(
       page.getByRole("button", { name: "トレーニングを開始", exact: true }),
     ).toBeDisabled();
