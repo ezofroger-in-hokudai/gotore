@@ -2339,6 +2339,23 @@
   overflow-wrap: anywhere;
 }
 
+.feed-record-row.feed-detail-button:has(.feed-summary) {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.feed-summary {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: left;
+}
+.feed-summary strong {
+  color: var(--text);
+  font-size: 17px;
+  margin-right: 2px;
+}
+
 .tour-layer {
   position: fixed;
   inset: 0;

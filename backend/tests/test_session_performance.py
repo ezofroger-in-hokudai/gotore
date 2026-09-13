@@ -83,6 +83,9 @@ def test_ordinary_feed_does_not_fetch_each_members_private_history(client, conne
     activity = repo.group_activity(USERS["A"], group["id"])
     assert len(activity["feed"]) == 3
     assert all(not item["best"] for item in activity["feed"])
+    assert all(
+        item["summary"] == {"exercise_count": 1, "set_count": 1} for item in activity["feed"]
+    )
     assert counted.calls <= 4
 
 
