@@ -25,7 +25,7 @@ const data = {
       volume: 0,
       set_count: 1,
       workout_count: 1,
-      body_parts: [{ body_part: null, volume: 0, set_count: 1, workout_count: 1 }],
+      body_parts: [{ body_part: "other", volume: 0, set_count: 1, workout_count: 1 }],
     },
   ],
 } satisfies MonthlyActivity;
@@ -41,18 +41,18 @@ test("部位変更は元の月データを保持し、全体件数は部位数�
   expect(activityForPart(data, "all").workout_count).toBe(2);
 });
 
-test("未分類0kgは活動日として保ち、該当なしと区別する", () => {
-  expect(activityForPart(data, "unclassified").active_days).toBe(1);
-  expect(activityForPart(data, "unclassified").total_volume).toBe(0);
+test("その他0kgは活動日として保ち、該当なしと区別する", () => {
+  expect(activityForPart(data, "other").active_days).toBe(1);
+  expect(activityForPart(data, "other").total_volume).toBe(0);
   expect(activityForPart(data, "back").days).toEqual([]);
   expect(
     activityForPart({ ...data, days: [{ ...data.days[0], body_parts: undefined }] }, "arms").days,
   ).toEqual([]);
 });
 
-test("部位名は現在の分類順に並び、未分類を末尾にする", () => {
+test("部位名は現在の分類順に並び、その他を末尾にする", () => {
   expect(
     orderedParts([data.days[1].body_parts[0], ...data.days[0].body_parts]).map((x) => x.label),
-  ).toEqual(["胸", "腕", "未分類"]);
+  ).toEqual(["胸", "腕", "その他"]);
   expect(data.days[0].body_parts[0].body_part).toBe("arms");
 });

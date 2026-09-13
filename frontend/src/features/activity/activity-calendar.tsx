@@ -1,7 +1,7 @@
 "use client";
 
 import type { MonthlyActivity } from "@/lib/api";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { type BodyPartFilter, PART_FILTERS } from "../exercises/body-parts";
 import { today } from "../training/draft";
 import { useResource } from "../training/use-resource";
@@ -27,7 +27,6 @@ export function ActivityCalendar({
   prefetch?: boolean;
 }) {
   const [part, setPart] = useState<BodyPartFilter>("all");
-  const filters = useRef<HTMLFieldSetElement>(null);
   const currentDay = today();
   const currentMonth = currentDay.slice(0, 7);
   const activity = useResource<MonthlyActivity>(
@@ -37,7 +36,11 @@ export function ActivityCalendar({
     true,
     { enabled: active, prefetch, retainOnRefresh: true },
   );
-  const hasParts = !activity.data?.days.some((day) => !day.body_parts);
+  const hasParts = !activity.data?.days.some(
+    (day) =>
+      !day.body_parts ||
+      day.body_parts.some((entry) => !entry.body_part || entry.body_part === "full_body"),
+  );
   const selectedPart = hasParts ? part : "all";
   const data = activity.data ? activityForPart(activity.data, selectedPart) : null;
   const partLabel = PART_FILTERS.find((entry) => entry.value === selectedPart)?.label ?? "すべて";
@@ -55,7 +58,7 @@ export function ActivityCalendar({
 
   return (
     <section className="panel activity-calendar" aria-label="活動カレンダー">
-      <fieldset className="activity-part-filters" ref={filters} aria-label="カレンダーの部位">
+      <fieldset className="activity-part-filters" aria-label="カレンダーの部位">
         {PART_FILTERS.map((entry) => (
           <button
             type="button"
@@ -65,14 +68,6 @@ export function ActivityCalendar({
             onClick={(event) => {
               setPart(entry.value);
               onSelect("");
-              const container = filters.current;
-              if (container) {
-                const button = event.currentTarget;
-                const left = button.offsetLeft - container.offsetLeft;
-                if (left < container.scrollLeft) container.scrollLeft = left;
-                else if (left + button.offsetWidth > container.scrollLeft + container.clientWidth)
-                  container.scrollLeft = left + button.offsetWidth - container.clientWidth;
-              }
             }}
           >
             {entry.label}
@@ -229,7 +224,7 @@ export function ActivityCalendar({
             <p className="muted">主部位の内訳</p>
             <dl>
               {orderedParts(selected.body_parts).map((entry) => (
-                <div key={entry.body_part ?? "unclassified"}>
+                <div key={entry.body_part}>
                   <dt>{entry.label}</dt>
                   <dd>
                     {entry.set_count}セット · {format(entry.volume)}kg

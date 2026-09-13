@@ -72,7 +72,7 @@ def test_reclassification_and_deleted_options_apply_to_old_records_without_mutat
     assert changed.status_code == 200
     assert set(by_part(activity(client)["days"][0])) == {"back"}
     assert client.delete(path).status_code == 204
-    assert set(by_part(activity(client)["days"][0])) == {None}
+    assert set(by_part(activity(client)["days"][0])) == {"other"}
     current = client.get("/api/workouts?performed_on=2024-02-29").json()[0]
     assert current["exercises"] == record["exercises"]
     assert current["revision"] == record["revision"]
@@ -89,7 +89,7 @@ def test_zero_unclassified_edit_delete_and_one_query(client, connection):
     record = save(client, "自重", weight=0)
     unknown = save(client, "昔の名前", weight=0)
     parts = by_part(activity(client)["days"][0])
-    assert set(parts) == {"abs", None}
+    assert set(parts) == {"abs", "other"}
     assert all(row["volume"] == 0 and row["set_count"] == 1 for row in parts.values())
     counted = CountingConnection(connection)
     values = TrainingRepository(counted).activity(USERS["A"], date(2024, 2, 1), date(2024, 3, 1))

@@ -83,7 +83,9 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
                       volume: 0,
                       set_count: 3,
                       workout_count: 1,
-                      body_parts: [{ body_part: null, volume: 0, set_count: 3, workout_count: 1 }],
+                      body_parts: [
+                        { body_part: "other", volume: 0, set_count: 3, workout_count: 1 },
+                      ],
                     },
                   ]
                 : [],
@@ -107,7 +109,23 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
       .getByRole("button")
       .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().top));
     expect(new Set(tops).size).toBe(1);
-    expect(await filters.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+    await expect(filters.getByRole("button")).toHaveText([
+      "すべて",
+      "胸",
+      "背中",
+      "脚",
+      "腕",
+      "肩",
+      "腹筋",
+      "お尻",
+      "その他",
+    ]);
+    for (const button of await filters.getByRole("button").all()) {
+      expect(await button.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      );
+    }
+    expect(await filters.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
       true,
     );
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
@@ -133,10 +151,10 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
   await expect(
     calendar.getByRole("button", { name: /2024年2月13日、/ }).locator(".activity-day-part"),
   ).toHaveText("腕");
-  await filters.getByRole("button", { name: "未分類", exact: true }).click();
-  await expect(filters.getByRole("button", { name: "未分類", exact: true })).toBeInViewport();
+  await filters.getByRole("button", { name: "その他", exact: true }).click();
+  await expect(filters.getByRole("button", { name: "その他", exact: true })).toBeInViewport();
   const zero = calendar.getByRole("button", {
-    name: "2024年2月11日、総負荷0kg、1件、未分類",
+    name: "2024年2月11日、総負荷0kg、1件、その他",
     exact: true,
   });
   await expect(zero).toHaveAttribute("data-volume", "0");

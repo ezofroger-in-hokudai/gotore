@@ -1,24 +1,31 @@
 import type { ActivityBodyPart, MonthlyActivity } from "@/lib/api";
-import { BODY_PARTS, BODY_PART_LABELS, type BodyPartFilter } from "../exercises/body-parts";
+import {
+  BODY_PARTS,
+  BODY_PART_LABELS,
+  type BodyPartFilter,
+  normalizeBodyPart,
+} from "../exercises/body-parts";
 
 export function orderedParts(parts: ActivityBodyPart[] = []) {
-  return parts
-    .map((part) => ({
-      ...part,
-      label: part.body_part ? BODY_PART_LABELS[part.body_part] : "未分類",
-    }))
-    .sort(
-      (a, b) =>
-        (a.body_part ? BODY_PARTS.indexOf(a.body_part) : BODY_PARTS.length) -
-        (b.body_part ? BODY_PARTS.indexOf(b.body_part) : BODY_PARTS.length),
-    );
+  return BODY_PARTS.flatMap((body_part) => {
+    const matches = parts.filter((entry) => normalizeBodyPart(entry.body_part) === body_part);
+    return matches.length
+      ? [
+          {
+            body_part,
+            label: BODY_PART_LABELS[body_part],
+            volume: matches.reduce((total, entry) => total + entry.volume, 0),
+            set_count: matches.reduce((total, entry) => total + entry.set_count, 0),
+          },
+        ]
+      : [];
+  });
 }
 
 export function activityForPart(activity: MonthlyActivity, part: BodyPartFilter): MonthlyActivity {
   if (part === "all") return activity;
-  const wanted = part === "unclassified" ? null : part;
   const days = activity.days.flatMap((day) => {
-    const value = day.body_parts?.find((entry) => entry.body_part === wanted);
+    const value = day.body_parts?.find((entry) => entry.body_part === part);
     return value ? [{ date: day.date, ...value, body_parts: [value] }] : [];
   });
   return {

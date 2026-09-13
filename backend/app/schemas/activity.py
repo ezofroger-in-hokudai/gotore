@@ -7,7 +7,7 @@ from app.domain.exercise_catalog import BodyPart
 
 
 class ActivityBodyPart(BaseModel):
-    body_part: BodyPart | None
+    body_part: BodyPart
     volume: float
     set_count: int
     workout_count: int

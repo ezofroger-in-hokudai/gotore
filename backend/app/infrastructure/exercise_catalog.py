@@ -29,7 +29,7 @@ class ExerciseCatalogRepository:
             (user_id,),
         ).fetchall()
 
-    def add(self, user_id: UUID, name: str, primary_body_part=None, secondary_body_parts=None):
+    def add(self, user_id: UUID, name: str, primary_body_part="other", secondary_body_parts=None):
         # 同名の再送は同じ候補に集約し、並行した追加でも重複させない。
         return self.connection.execute(
             """INSERT INTO public.gotore_exercise_options

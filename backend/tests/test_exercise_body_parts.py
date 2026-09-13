@@ -47,7 +47,6 @@ def test_body_parts_are_private_persisted_and_revision_protected(client):
         {"primary_body_part": "chest", "secondary_body_parts": ["unknown"]},
         {"primary_body_part": "chest", "secondary_body_parts": ["chest"]},
         {"primary_body_part": "chest", "secondary_body_parts": ["arms", "arms"]},
-        {"secondary_body_parts": ["arms"]},
         {"primary_body_part": 1},
         {"secondary_body_parts": None},
     ],
@@ -60,7 +59,7 @@ def test_metadata_changes_preserve_record_and_legacy_create(client):
     from tests.test_workout import payload
 
     option = client.post("/api/exercise-options", json={"name": "過去の種目"}).json()
-    assert option["primary_body_part"] is None
+    assert option["primary_body_part"] == "other"
     assert option["secondary_body_parts"] == []
     data = payload(exercises=[{"name": "過去の種目", "sets": [{"weight": 20, "reps": 10}]}])
     record = client.post("/api/workouts", json=data).json()
@@ -94,6 +93,7 @@ def test_migration_preserves_custom_names_and_empty_catalog(client, connection):
         Path(__file__).parents[2] / "supabase/migrations/20260913020000_exercise_body_parts.sql"
     )
     connection.execute(migration.read_text())
+    connection.execute((migration.parent / "20260913080000_fixed_body_parts.sql").read_text())
     assert (
         connection.execute(
             "SELECT id, user_id, name, created_at FROM public.gotore_exercise_options ORDER BY id"
@@ -103,9 +103,9 @@ def test_migration_preserves_custom_names_and_empty_catalog(client, connection):
     options = client.get(path).json()
     assert next(x for x in options if x["name"] == "ベンチプレス")["primary_body_part"] == "chest"
     custom = next(x for x in options if x["name"] == "独自メニュー")
-    assert custom["primary_body_part"] is None
+    assert custom["primary_body_part"] == "other"
     assert custom["secondary_body_parts"] == []
-    assert custom["revision"] == 1
+    assert custom["revision"] == 2
     assert client.get(path, headers={"X-Test-User": "B"}).json() == []
     assert connection.execute(
         "SELECT user_id FROM public.gotore_exercise_catalogs WHERE user_id = %s", (USERS["B"],)
@@ -127,7 +127,7 @@ def test_database_rejects_invalid_body_parts(client, connection, primary, second
     import psycopg
 
     option = client.get("/api/exercise-options").json()[0]
-    with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+    with pytest.raises(psycopg.IntegrityError), connection.transaction():
         connection.execute(
             """UPDATE public.gotore_exercise_options
             SET primary_body_part = %s, secondary_body_parts = %s WHERE id = %s""",

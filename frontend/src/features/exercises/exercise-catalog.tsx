@@ -3,8 +3,9 @@
 import { ApiError, type BodyPartSelection, type ExerciseOption, api } from "@/lib/api";
 import { type FormEvent, useState } from "react";
 import { BodyPartFields, BodyPartTags } from "./body-part-fields";
+import { optionParts } from "./body-parts";
 
-const emptyParts: BodyPartSelection = { primary_body_part: null, secondary_body_parts: [] };
+const emptyParts: BodyPartSelection = { primary_body_part: "other", secondary_body_parts: [] };
 
 export function ExerciseCatalog({
   options,
@@ -74,10 +75,7 @@ export function ExerciseCatalog({
 
   function edit(option: ExerciseOption) {
     setEditing(option);
-    setEditParts({
-      primary_body_part: option.primary_body_part ?? null,
-      secondary_body_parts: option.secondary_body_parts ?? [],
-    });
+    setEditParts(optionParts(option));
     setError("");
     setNotice("");
     setConflict(false);

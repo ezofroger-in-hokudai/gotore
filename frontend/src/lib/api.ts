@@ -1,7 +1,7 @@
 import { getSupabase } from "./supabase";
 
 export type ActivityBodyPart = {
-  body_part: BodyPart | null;
+  body_part: BodyPart | "full_body" | null;
   volume: number;
   set_count: number;
   workout_count: number;
@@ -40,18 +40,19 @@ export type BodyPart =
   | "legs"
   | "glutes"
   | "abs"
-  | "full_body"
   | "other";
 export type BodyPartSelection = {
-  primary_body_part: BodyPart | null;
+  primary_body_part: BodyPart;
   secondary_body_parts: BodyPart[];
 };
-// 旧応答・キャッシュの分類省略は未分類として扱う。
+// 旧応答・キャッシュの全身と分類省略はその他として扱う。
 export type ExerciseOption = {
   id: string;
   name: string;
   revision?: number;
-} & Partial<BodyPartSelection>;
+  primary_body_part?: BodyPart | "full_body" | null;
+  secondary_body_parts?: (BodyPart | "full_body")[];
+};
 export type Exercise = {
   name: string;
   sets: { weight: number; reps: number }[];

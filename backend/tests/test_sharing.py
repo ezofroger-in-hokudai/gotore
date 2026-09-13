@@ -450,13 +450,13 @@ def test_activity_uses_all_own_sets_with_month_boundaries_and_daily_pages(client
             {
                 "date": "2024-02-01", "set_count": 5, "workout_count": 2, "volume": 375,
                 "body_parts": [
-                    {"body_part": None, "set_count": 5, "workout_count": 2, "volume": 375}
+                    {"body_part": "other", "set_count": 5, "workout_count": 2, "volume": 375}
                 ],
             },
             {
                 "date": "2024-02-29", "set_count": 51, "workout_count": 51, "volume": 0,
                 "body_parts": [
-                    {"body_part": None, "set_count": 51, "workout_count": 51, "volume": 0}
+                    {"body_part": "other", "set_count": 51, "workout_count": 51, "volume": 0}
                 ],
             },
         ],

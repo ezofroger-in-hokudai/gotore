@@ -41,7 +41,7 @@ async function prepare(page: import("@playwright/test").Page) {
   return state;
 }
 
-test("A案の部位と検索は通信を待たずに切り替わり、主部位・補助部位・未分類から選べる", async ({
+test("A案の部位と検索は通信を待たずに切り替わり、主部位・補助部位・その他から選べる", async ({
   page,
 }) => {
   await prepare(page);
@@ -60,12 +60,12 @@ test("A案の部位と検索は通信を待たずに切り替わり、主部位�
   await expect(list.getByRole("button")).toHaveCount(2);
   await page.getByPlaceholder("種目名で検索").fill(" ベンチ ");
   await expect(list.getByRole("button")).toHaveCount(1);
-  await expect(list).toContainText("補助：肩・腕");
+  await expect(list).toContainText("補助：腕・肩");
   await page.getByPlaceholder("種目名で検索").fill("");
-  await filters.getByRole("button", { name: "未分類", exact: true }).click();
+  await filters.getByRole("button", { name: "その他", exact: true }).click();
   await expect(list.getByRole("button")).toHaveCount(1);
   await expect(list).toContainText("自分の種目");
-  await filters.getByRole("button", { name: "腹", exact: true }).click();
+  await filters.getByRole("button", { name: "腹筋", exact: true }).click();
   await expect(page.getByText("条件に合う種目がありません。", { exact: true })).toBeVisible();
   await filters.getByRole("button", { name: "胸", exact: true }).click();
   for (const width of [320, 390, 430]) {
@@ -79,7 +79,7 @@ test("A案の部位と検索は通信を待たずに切り替わり、主部位�
   }
   expect(reads).toBe(loaded);
   await list.getByRole("button", { name: /^ベンチプレス/ }).click();
-  await expect(page.locator(".session-context .body-part-tags")).toHaveText("胸補助：肩・腕");
+  await expect(page.locator(".session-context .body-part-tags")).toHaveText("胸補助：腕・肩");
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("80");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "test-results/body-parts-record-390.png", fullPage: true });
@@ -167,13 +167,13 @@ test("今回の種目に戻れて、未保存入力の保護と削除済み種�
   await page.getByRole("button", { name: "種目を変更", exact: true }).click();
   await page
     .getByRole("group", { name: "部位で絞り込み" })
-    .getByRole("button", { name: "未分類", exact: true })
+    .getByRole("button", { name: "その他", exact: true })
     .click();
   await expect(page.locator(".exercise-picker-list")).toContainText("ベンチプレス");
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "記録に戻る：ベンチプレス", exact: true }).click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("80");
-  await expect(page.locator(".session-context .body-part-tags")).toHaveText("未分類");
+  await expect(page.locator(".session-context .body-part-tags")).toHaveText("その他");
   expect(state.session?.exercises).toHaveLength(1);
 });
 
@@ -197,7 +197,7 @@ test("種目一覧の再取得に失敗しても、読み込んだ候補で部�
   await page.getByRole("button", { name: "再試行", exact: true }).click();
   await page
     .getByRole("group", { name: "部位で絞り込み" })
-    .getByRole("button", { name: "未分類", exact: true })
+    .getByRole("button", { name: "その他", exact: true })
     .click();
   await expect(page.locator(".exercise-picker-list")).toContainText("追加種目");
 });

@@ -172,9 +172,10 @@ class TrainingRepository:
         return row
 
     def activity(self, user_id: UUID, start: date, end: date):
+        part = "COALESCE(NULLIF(o.primary_body_part, 'full_body'), 'other')"
         rows = self.connection.execute(
-            """SELECT w.performed_on AS date, o.primary_body_part AS body_part,
-                GROUPING(o.primary_body_part) AS is_total,
+            f"""SELECT w.performed_on AS date, {part} AS body_part,
+                GROUPING({part}) AS is_total,
                 COUNT(DISTINCT w.id) AS workout_count,
                 SUM(s.set_count) AS set_count, SUM(s.volume) AS volume
             FROM public.gotore_workouts w
@@ -183,8 +184,8 @@ class TrainingRepository:
                 ON o.user_id = w.user_id AND o.name = s.exercise_name
             WHERE w.user_id = %s AND w.performed_on >= %s AND w.performed_on < %s
               AND jsonb_array_length(w.exercises) > 0
-            GROUP BY GROUPING SETS ((w.performed_on), (w.performed_on, o.primary_body_part))
-            ORDER BY w.performed_on, is_total DESC, o.primary_body_part NULLS LAST""",
+            GROUP BY GROUPING SETS ((w.performed_on), (w.performed_on, {part}))
+            ORDER BY w.performed_on, is_total DESC, {part}""",
             (user_id, start, end),
         ).fetchall()
         metrics = ("volume", "set_count", "workout_count")
@@ -197,7 +198,7 @@ class TrainingRepository:
             for row in rows
             if row["is_total"]
         }
-        # 未分類のnullと日別全体をGROUPINGで区別し、同じ記録を全体件数に重複計上しない。
+        # 部位別と日別全体をGROUPINGで区別し、同じ記録を全体件数に重複計上しない。
         for row in rows:
             if not row["is_total"]:
                 days[row["date"]]["body_parts"].append(
