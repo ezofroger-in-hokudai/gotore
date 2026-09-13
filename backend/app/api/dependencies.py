@@ -65,6 +65,7 @@ def current_user(
 def database(request: Request):
     if not settings.database_url:
         raise HTTPException(503, "データベースが設定されていません")
+    phase = "connect"
     try:
         with ExitStack() as stack:
             with measure("db_connect"):
@@ -81,8 +82,19 @@ def database(request: Request):
                         prepare_threshold=None,
                     )
                 )
+            phase = "query"
             yield connection
-    except (psycopg.Error, PoolTimeout, TooManyRequests):
+            phase = "release"
+    except (psycopg.Error, PoolTimeout, TooManyRequests) as error:
+        # 例外本文・実URL・SQLには秘密情報や記録内容が含まれ得るため出力しない。
+        route = getattr(request, "scope", {}).get("route")
+        logger.error(
+            "database_failure phase=%s error=%s sqlstate=%s route=%s",
+            phase,
+            type(error).__name__,
+            getattr(error, "sqlstate", None) or "unknown",
+            getattr(route, "path", "unknown"),
+        )
         raise HTTPException(503, "記録サービスを利用できません。再試行してください") from None
 
 

@@ -5,6 +5,46 @@ client = client_fixture
 connection = connection_fixture
 
 
+def test_missing_body_part_migrations_fail_and_upgrade_restores_activity(client, connection):
+    from datetime import date
+    from pathlib import Path
+
+    import psycopg
+    import pytest
+
+    from app.infrastructure.exercise_catalog import ExerciseCatalogRepository
+    from app.infrastructure.training_repository import TrainingRepository
+    from tests.test_sharing import USERS
+
+    save(client, "ベンチプレス")
+    before = client.get("/api/workouts").json()
+    # 公開環境で確認した部位列不足を、専用DBのロールバック対象内で再現する。
+    connection.execute("""ALTER TABLE public.gotore_exercise_options
+        DROP COLUMN primary_body_part,
+        DROP COLUMN secondary_body_parts,
+        DROP COLUMN revision""")
+    repository = TrainingRepository(connection)
+    with pytest.raises(psycopg.errors.UndefinedColumn):
+        with connection.transaction():
+            repository.activity(USERS["A"], date(2024, 2, 1), date(2024, 3, 1))
+    with pytest.raises(psycopg.errors.UndefinedColumn):
+        with connection.transaction():
+            ExerciseCatalogRepository(connection).options(USERS["A"])
+    migrations = Path(__file__).parents[2] / "supabase/migrations"
+    for name in [
+        "20260913020000_exercise_body_parts.sql",
+        "20260913080000_fixed_body_parts.sql",
+    ]:
+        connection.execute((migrations / name).read_text())
+    assert client.get("/api/exercise-options").status_code == 200
+    data = activity(client)
+    assert data["total_volume"] == 200
+    assert data["total_sets"] == 1
+    assert data["workout_count"] == 1
+    assert data["days"][0]["body_parts"][0]["body_part"] == "chest"
+    assert client.get("/api/workouts").json() == before
+
+
 def option(client, name, part, secondary=None, headers=None):
     return client.post(
         "/api/exercise-options",
