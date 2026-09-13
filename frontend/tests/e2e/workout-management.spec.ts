@@ -55,13 +55,21 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     .poll(() => page.evaluate((key) => localStorage.getItem(key), draftKey))
     .not.toBeNull();
   const draft = await page.evaluate((key) => localStorage.getItem(key), draftKey);
+  const volume = () =>
+    record.exercises.reduce(
+      (sum, exercise) =>
+        sum + exercise.sets.reduce((total, set) => total + set.weight * set.reps, 0),
+      0,
+    );
   await page.route("**/api/workouts/activity?*", (route) =>
     route.fulfill({
       json: {
         month: new URL(route.request().url()).searchParams.get("month"),
         metric: "volume",
-        total_volume: 0,
-        days: removed ? [] : [{ date: record.performed_on, set_count: 1, workout_count: 1 }],
+        total_volume: removed ? 0 : volume(),
+        days: removed
+          ? []
+          : [{ date: record.performed_on, volume: volume(), set_count: 1, workout_count: 1 }],
         total_sets: removed ? 0 : 1,
         workout_count: removed ? 0 : 1,
         active_days: removed ? 0 : 1,
@@ -71,7 +79,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   const openRecords = async () => {
     await navigate(page, "履歴");
     await page.getByLabel("月", { exact: true }).fill("2026-01");
-    await page.getByRole("button", { name: "2026年1月1日、計測中、1件", exact: true }).click();
+    await page.getByRole("button", { name: "2026年1月1日、総負荷480kg、1件", exact: true }).click();
     await page.locator(".history-row").click();
   };
   await openRecords();
@@ -97,7 +105,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await expect(page.getByLabel("月", { exact: true })).toHaveValue("2026-01");
   await expect(
     page.getByRole("button", {
-      name: "2026年1月1日、計測中、1件",
+      name: "2026年1月1日、総負荷560kg、1件",
       exact: true,
     }),
   ).toHaveAttribute("aria-pressed", "true");
