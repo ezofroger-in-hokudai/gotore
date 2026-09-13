@@ -43,7 +43,7 @@ export function TrainingApp() {
   if (!ready)
     return (
       <main className="auth-page">
-        <LoadingState label="アプリを読み込み中" />
+        <LoadingState label="アプリを読み込み中" startup />
       </main>
     );
   return session ? <Workspace key={session.user.id} session={session} /> : <AuthPanel />;

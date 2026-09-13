@@ -3,7 +3,15 @@ import styles from "./loading-state.module.css";
 export function LoadingState({
   label = "読み込み中",
   compact = false,
-}: { label?: string; compact?: boolean }) {
+  startup = false,
+}: { label?: string; compact?: boolean; startup?: boolean }) {
+  if (!startup) {
+    return (
+      <output className="resource-status muted" aria-label={label}>
+        読み込み中…
+      </output>
+    );
+  }
   return (
     <output className={`${styles.loading} ${compact ? styles.compact : ""}`} aria-label={label}>
       <svg className={styles.mascot} viewBox="0 0 170 130" aria-hidden="true" focusable="false">
