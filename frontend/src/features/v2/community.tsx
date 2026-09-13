@@ -5,7 +5,14 @@ import {
   type GroupSummary,
   api,
 } from "@/lib/api";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { AnalyticsPanel } from "../analytics/panel";
 import { GroupScoreWeights } from "../score/group-score-weights";
 import { ScoreBadge } from "../score/score-display";
@@ -17,6 +24,8 @@ import { Avatar } from "./avatar";
 import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
+import { useGroupCardDrag } from "./use-group-card-drag";
+import { useGroupLongPress } from "./use-group-long-press";
 import { useSharedWorkoutDetails } from "./use-shared-workout-details";
 
 export function CommunityHome({
@@ -24,6 +33,7 @@ export function CommunityHome({
   selected,
   onSelect,
   onGroups,
+  onOrder,
   onDetail,
   refreshKey,
   active,
@@ -35,6 +45,7 @@ export function CommunityHome({
   selected: string;
   onSelect: (id: string) => void;
   onGroups: () => void;
+  onOrder: (ids: string[]) => void;
   onDetail: () => void;
   refreshKey: number;
   active: boolean;
@@ -43,21 +54,37 @@ export function CommunityHome({
   trainingAction?: ReactNode;
 }) {
   const carousel = useRef<HTMLDivElement>(null);
-  const restored = useRef(false);
-  useEffect(() => {
+  const cardDrag = useGroupCardDrag({
+    carousel,
+    groups,
+    selected,
+    active,
+    onSave: onOrder,
+    onOpen: (id) => {
+      onSelect(id);
+      onDetail();
+    },
+  });
+  const restored = useRef("");
+  const groupIds = groups.map((group) => group.id).join(",");
+  useLayoutEffect(() => {
     if (!active) {
-      restored.current = false;
+      restored.current = "";
       return;
     }
-    if (restored.current || !carousel.current || !groups.length) return;
+    if (cardDrag.drag) {
+      restored.current = "";
+      return;
+    }
+    if (restored.current === groupIds || !carousel.current || !groups.length) return;
     const index = Math.max(
       0,
       groups.findIndex((group) => group.id === selected),
     );
     const card = carousel.current.children[index] as HTMLElement | undefined;
     if (card) carousel.current.scrollLeft = card.offsetLeft;
-    restored.current = true;
-  }, [groups, selected, active]);
+    restored.current = groupIds;
+  }, [groups, groupIds, selected, active, cardDrag.drag]);
   const activity = useResource<GroupActivity>(
     selected ? `/groups/${selected}/activity` : null,
     refreshKey,
@@ -119,11 +146,12 @@ export function CommunityHome({
       ) : (
         <>
           <div
-            className="group-carousel"
+            className={`group-carousel${cardDrag.drag ? " is-reordering" : ""}`}
             ref={carousel}
+            {...cardDrag.handlers}
             onScroll={() => {
               const element = carousel.current;
-              if (!active || !element?.clientWidth) return;
+              if (!active || cardDrag.isMoving() || !element?.clientWidth) return;
               const width = (element.firstElementChild as HTMLElement)?.offsetWidth + 12;
               const index = Math.min(
                 groups.length - 1,
@@ -132,10 +160,12 @@ export function CommunityHome({
               if (groups[index].id !== selected) onSelect(groups[index].id);
             }}
           >
-            {groups.map((group) => (
+            {groups.map((group, index) => (
               <GroupCard
                 key={group.id}
                 group={group}
+                dragging={cardDrag.drag?.id === group.id}
+                style={cardDrag.style(group.id, index)}
                 active={active}
                 data={
                   group.id === selected
@@ -151,6 +181,17 @@ export function CommunityHome({
               />
             ))}
           </div>
+          {cardDrag.drag && (
+            <output className="sr-only">
+              {groups.find((group) => group.id === cardDrag.drag?.id)?.name}を移動中。
+              {cardDrag.drag.target + 1}番目
+            </output>
+          )}
+          {cardDrag.error && (
+            <p className="error" role="alert">
+              {cardDrag.error}
+            </p>
+          )}
           {groups.length > 1 && summaries.error && (
             <p role="alert" className="error">
               {summaries.error}
@@ -207,6 +248,8 @@ function GroupCard({
   refreshing,
   active,
   onClick,
+  dragging,
+  style,
 }: {
   group: Group;
   data: GroupSummary | null;
@@ -214,10 +257,14 @@ function GroupCard({
   refreshing: boolean;
   active: boolean;
   onClick: () => void;
+  dragging: boolean;
+  style?: CSSProperties;
 }) {
   return (
     <button
-      className="community-card"
+      className={`community-card${dragging ? " is-dragging" : ""}`}
+      data-group-id={group.id}
+      style={style}
       type="button"
       onClick={onClick}
       aria-label={`${group.name}の詳細`}
@@ -425,6 +472,7 @@ export function CommunityScreen({
   onSelect,
   onChanged,
   onHome,
+  onReorder,
 }: {
   groups: Group[];
   selected: string;
@@ -435,6 +483,7 @@ export function CommunityScreen({
   onSelect: (id: string) => void;
   onChanged: () => void;
   onHome: () => void;
+  onReorder: () => void;
 }) {
   const [analyticsTab, setAnalyticsTab] = useState<"feed" | "graph" | "ranking">("feed");
   const [mode, setMode] = useState<Mode>(initialDetail ? "detail" : "list");
@@ -546,21 +595,26 @@ export function CommunityScreen({
       </button>
       {mode === "list" ? (
         <>
-          <h1>グループ一覧</h1>
+          <div className="section-heading">
+            <h1>グループ一覧</h1>
+            {groups.length > 1 && (
+              <button type="button" className="text-button" onClick={onReorder}>
+                並べ替え
+              </button>
+            )}
+          </div>
           <div className="v2-rows">
             {groups.map((item) => (
-              <button
-                className="v2-row"
-                type="button"
+              <GroupListRow
                 key={item.id}
+                group={item}
+                active={active && mode === "list"}
+                onReorder={groups.length > 1 ? onReorder : undefined}
                 onClick={() => {
                   onSelect(item.id);
                   change("detail", item.id);
                 }}
-              >
-                <span>{item.name}</span>
-                <span>›</span>
-              </button>
+              />
             ))}
           </div>
           <button className="primary full" type="button" onClick={() => change("create")}>
@@ -778,5 +832,25 @@ export function CommunityScreen({
         </Sheet>
       )}
     </section>
+  );
+}
+
+function GroupListRow({
+  group,
+  active,
+  onClick,
+  onReorder,
+}: {
+  group: Group;
+  active: boolean;
+  onClick: () => void;
+  onReorder?: () => void;
+}) {
+  const longPress = useGroupLongPress(onReorder, active);
+  return (
+    <button className="v2-row group-order-entry" type="button" {...longPress} onClick={onClick}>
+      <span>{group.name}</span>
+      <span>›</span>
+    </button>
   );
 }
