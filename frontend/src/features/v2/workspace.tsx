@@ -186,16 +186,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             refreshKey={refreshKey}
             active={view === "home"}
             trainingAction={
-              <section className="home-training" aria-label="トレーニング開始">
-                <button
-                  className="primary full"
-                  type="button"
-                  disabled={!canStart}
-                  aria-label={resumable ? "トレーニングを再開" : "トレーニングを開始"}
-                  onClick={startOrResume}
-                >
-                  {resumable ? "RESUME" : "START"}
-                </button>
+              <section className="home-training" aria-label="トレーニングの状況">
                 <p className="muted">
                   {training.session
                     ? `進行中 · ${training.session.exercises.reduce((count, exercise) => count + exercise.sets.length, 0)}セット${training.pending ? " · 同期中" : ""}`
@@ -351,7 +342,7 @@ function WorkspaceContent({ session }: { session: Session }) {
           type="button"
           className="floating-training"
           data-testid="floating-training"
-          aria-label={resumable ? "記録入力を再開" : "今すぐ記録を開始"}
+          aria-label={resumable ? "トレーニングを再開" : "トレーニングを開始"}
           disabled={!canStart}
           onClick={startOrResume}
         >

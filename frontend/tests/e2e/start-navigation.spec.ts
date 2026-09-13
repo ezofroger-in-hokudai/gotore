@@ -9,6 +9,7 @@ for (const width of [320, 390, 430]) {
     await expect(nav.getByRole("button")).toHaveText(["ホーム", "グループ", "履歴", "設定"]);
     const floating = page.getByTestId("floating-training");
     await expect(floating).toHaveText("START");
+    await expect(page.locator(".home-training > button")).toHaveCount(0);
     const actionBox = await floating.boundingBox();
     const navBox = await nav.boundingBox();
     expect((actionBox?.y ?? 0) + (actionBox?.height ?? 0)).toBeLessThan(navBox?.y ?? 0);
@@ -60,6 +61,8 @@ for (const width of [320, 390, 430]) {
     expect(state.session?.id).toBe(sessionId);
     expect(starts).toBe(1);
     await navigate(page, "ホーム");
+    await expect(page.locator(".home-training > button")).toHaveCount(0);
+    await expect(floating).toHaveText("RESUME");
     await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
     expect(starts).toBe(1);
   });
