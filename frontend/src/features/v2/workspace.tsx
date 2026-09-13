@@ -179,7 +179,10 @@ function WorkspaceContent({ session }: { session: Session }) {
             failed={!!groupList.error}
             selected={selected}
             onSelect={setGroupId}
-            onReorder={() => setOrderingGroups(true)}
+            onOrder={(ids) => {
+              groupOrder.save(ids);
+              setGroupId(selected);
+            }}
             onGroups={() => {
               setGroupDetail(false);
               navigate("groups", "list");

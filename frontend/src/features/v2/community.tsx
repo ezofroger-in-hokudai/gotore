@@ -5,7 +5,14 @@ import {
   type GroupSummary,
   api,
 } from "@/lib/api";
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { AnalyticsPanel } from "../analytics/panel";
 import { GroupScoreWeights } from "../score/group-score-weights";
 import { ScoreBadge } from "../score/score-display";
@@ -17,6 +24,7 @@ import { Avatar } from "./avatar";
 import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
+import { useGroupCardDrag } from "./use-group-card-drag";
 import { useGroupLongPress } from "./use-group-long-press";
 import { useSharedWorkoutDetails } from "./use-shared-workout-details";
 
@@ -25,7 +33,7 @@ export function CommunityHome({
   selected,
   onSelect,
   onGroups,
-  onReorder,
+  onOrder,
   onDetail,
   refreshKey,
   active,
@@ -37,7 +45,7 @@ export function CommunityHome({
   selected: string;
   onSelect: (id: string) => void;
   onGroups: () => void;
-  onReorder: () => void;
+  onOrder: (ids: string[]) => void;
   onDetail: () => void;
   refreshKey: number;
   active: boolean;
@@ -46,10 +54,25 @@ export function CommunityHome({
   trainingAction?: ReactNode;
 }) {
   const carousel = useRef<HTMLDivElement>(null);
+  const cardDrag = useGroupCardDrag({
+    carousel,
+    groups,
+    selected,
+    active,
+    onSave: onOrder,
+    onOpen: (id) => {
+      onSelect(id);
+      onDetail();
+    },
+  });
   const restored = useRef("");
   const groupIds = groups.map((group) => group.id).join(",");
   useLayoutEffect(() => {
     if (!active) {
+      restored.current = "";
+      return;
+    }
+    if (cardDrag.drag) {
       restored.current = "";
       return;
     }
@@ -61,7 +84,7 @@ export function CommunityHome({
     const card = carousel.current.children[index] as HTMLElement | undefined;
     if (card) carousel.current.scrollLeft = card.offsetLeft;
     restored.current = groupIds;
-  }, [groups, groupIds, selected, active]);
+  }, [groups, groupIds, selected, active, cardDrag.drag]);
   const activity = useResource<GroupActivity>(
     selected ? `/groups/${selected}/activity` : null,
     refreshKey,
@@ -124,11 +147,12 @@ export function CommunityHome({
       ) : (
         <>
           <div
-            className="group-carousel"
+            className={`group-carousel${cardDrag.drag ? " is-reordering" : ""}`}
             ref={carousel}
+            {...cardDrag.handlers}
             onScroll={() => {
               const element = carousel.current;
-              if (!active || !element?.clientWidth) return;
+              if (!active || cardDrag.isMoving() || !element?.clientWidth) return;
               const width = (element.firstElementChild as HTMLElement)?.offsetWidth + 12;
               const index = Math.min(
                 groups.length - 1,
@@ -137,11 +161,12 @@ export function CommunityHome({
               if (groups[index].id !== selected) onSelect(groups[index].id);
             }}
           >
-            {groups.map((group) => (
+            {groups.map((group, index) => (
               <GroupCard
                 key={group.id}
                 group={group}
-                onReorder={groups.length > 1 ? onReorder : undefined}
+                dragging={cardDrag.drag?.id === group.id}
+                style={cardDrag.style(group.id, index)}
                 active={active}
                 data={
                   group.id === selected
@@ -157,6 +182,17 @@ export function CommunityHome({
               />
             ))}
           </div>
+          {cardDrag.drag && (
+            <output className="sr-only">
+              {groups.find((group) => group.id === cardDrag.drag?.id)?.name}を移動中。
+              {cardDrag.drag.target + 1}番目
+            </output>
+          )}
+          {cardDrag.error && (
+            <p className="error" role="alert">
+              {cardDrag.error}
+            </p>
+          )}
           {groups.length > 1 && summaries.error && (
             <p role="alert" className="error">
               {summaries.error}
@@ -213,7 +249,8 @@ function GroupCard({
   refreshing,
   active,
   onClick,
-  onReorder,
+  dragging,
+  style,
 }: {
   group: Group;
   data: GroupSummary | null;
@@ -221,13 +258,14 @@ function GroupCard({
   refreshing: boolean;
   active: boolean;
   onClick: () => void;
-  onReorder?: () => void;
+  dragging: boolean;
+  style?: CSSProperties;
 }) {
-  const longPress = useGroupLongPress(onReorder, active);
   return (
     <button
-      className="community-card"
-      {...longPress}
+      className={`community-card${dragging ? " is-dragging" : ""}`}
+      data-group-id={group.id}
+      style={style}
       type="button"
       onClick={onClick}
       aria-label={`${group.name}の詳細`}

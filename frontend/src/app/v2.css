@@ -1390,7 +1390,7 @@
 .analytics-chart svg {
   width: 100%;
   overflow: visible;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 .analytics-chart svg text {
   fill: var(--muted);
@@ -1943,4 +1943,24 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+.group-carousel {
+  touch-action: pan-y pinch-zoom;
+}
+.group-carousel.is-reordering {
+  overflow-anchor: none;
+}
+.group-carousel.is-reordering .community-card {
+  position: relative;
+}
+.group-carousel .community-card.is-dragging {
+  z-index: 2;
+  cursor: grabbing;
+  box-shadow: inset 0 0 0 3px var(--accent), 0 8px 20px #0004;
+}
+@media (prefers-reduced-motion: reduce) {
+  .group-carousel.is-reordering .community-card {
+    transition: none !important;
+  }
 }
