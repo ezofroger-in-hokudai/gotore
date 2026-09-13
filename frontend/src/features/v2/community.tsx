@@ -413,6 +413,13 @@ function Feed({
                 aria-label={`${item.display_name}の記録詳細を開く`}
                 onClick={() => setOpened(item.workout_id)}
               >
+                {item.summary && (
+                  <span className="feed-summary">
+                    <strong>{item.summary.exercise_count}</strong>種目
+                    <span aria-hidden="true"> · </span>
+                    <strong>{item.summary.set_count}</strong>セット
+                  </span>
+                )}
                 <span className="feed-value">
                   <span className="feed-measurements">
                     <strong>

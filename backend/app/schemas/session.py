@@ -46,7 +46,13 @@ class ActivityMember(MemberResponse):
     avatar_version: UUID | None = None
 
 
+class FeedSummary(BaseModel):
+    exercise_count: int
+    set_count: int
+
+
 class FeedItem(BaseModel):
+    summary: FeedSummary
     best_weight: bool = False
     best_rm: bool = False
     score: ScoreSummary | None = None
