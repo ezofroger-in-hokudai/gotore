@@ -51,15 +51,6 @@ export function History({
       <button type="button" className="text-button back-button" onClick={() => setDetail(null)}>
         ‹ 履歴
       </button>
-      <h1>{dateLabel(current.performed_on)}</h1>
-      <p className="muted">
-        {current.exercises.reduce((total, exercise) => total + exercise.sets.length, 0)}セット
-        {current.started_at && current.ended_at
-          ? ` · ${Math.max(0, Math.floor((Date.parse(current.ended_at) - Date.parse(current.started_at)) / 60000))}分`
-          : current.started_at
-            ? " · トレーニング中"
-            : ""}
-      </p>
       <RecordList
         records={[current]}
         userId={userId}

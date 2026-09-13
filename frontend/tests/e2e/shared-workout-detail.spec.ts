@@ -62,7 +62,7 @@ test("友達のセットから選んだ記録の全種目・全セットを開�
   await open.click();
   const dialog = page.getByRole("dialog", { name: "記録の詳細", exact: true });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("2026.01.02");
+  await expect(dialog).toContainText("2026年1月2日");
   await expect(dialog.locator(".record-set")).toHaveCount(3);
   await expect(dialog.locator(".record-details")).toContainText("ベンチプレス");
   await expect(dialog.locator(".record-details")).toContainText("スクワット");

@@ -34,10 +34,9 @@ test("採点APIを使わず終了結果・履歴・ホーム・設定を表示�
   await page.locator(".history-row").click();
   await expect(page.locator(".history-detail")).toBeVisible();
   const detail = page.locator(".history-detail");
-  await expect(detail.locator(".exercise-summary")).toBeHidden();
-  await detail.locator("summary").filter({ hasText: "セット詳細" }).click();
-  await expect(detail.locator(".exercise-summary")).toBeVisible();
-  await detail.locator("summary").filter({ hasText: "セット詳細" }).click();
+  await expect(detail.locator(".exercise-summary")).toHaveCount(0);
+  await expect(detail.locator("summary").filter({ hasText: "セット詳細" })).toHaveCount(0);
+  await expect(detail.getByRole("table")).toBeVisible();
   await page.screenshot({ path: "test-results/ui-copy-history-detail.png", fullPage: true });
   await expect(page.locator(".history-detail")).not.toContainText(/SCORE|スコア/);
   await navigate(page, "ホーム");
