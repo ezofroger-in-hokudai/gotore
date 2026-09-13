@@ -4,6 +4,7 @@ import type { BodyPart, MonthlyActivity } from "@/lib/api";
 import { useState } from "react";
 import { PART_FILTERS } from "../exercises/body-parts";
 import { today } from "../training/draft";
+import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { activityForParts, orderedParts, toggleActivityPart } from "./body-parts";
 import { calendarDays, dateLabel, shiftMonth } from "./calendar";
@@ -110,14 +111,7 @@ export function ActivityCalendar({
           →
         </button>
       </div>
-      {activity.error && (
-        <div className="error" role="alert">
-          {activity.error}
-          <button type="button" className="text-button" onClick={activity.retry}>
-            再試行
-          </button>
-        </div>
-      )}
+      <ResourceError resource={activity} />
       <output className="resource-status muted">
         {activity.loading ? (activity.data ? "更新中…" : "読み込み中…") : ""}
       </output>
