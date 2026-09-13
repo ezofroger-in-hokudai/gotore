@@ -3,8 +3,9 @@
 import { ApiError, type BodyPartSelection, type ExerciseOption, api } from "@/lib/api";
 import { type FormEvent, useState } from "react";
 import { BodyPartFields, BodyPartTags } from "./body-part-fields";
+import { optionParts } from "./body-parts";
 
-const emptyParts: BodyPartSelection = { primary_body_part: null, secondary_body_parts: [] };
+const emptyParts: BodyPartSelection = { primary_body_part: "other", secondary_body_parts: [] };
 
 export function ExerciseCatalog({
   options,
@@ -74,10 +75,7 @@ export function ExerciseCatalog({
 
   function edit(option: ExerciseOption) {
     setEditing(option);
-    setEditParts({
-      primary_body_part: option.primary_body_part ?? null,
-      secondary_body_parts: option.secondary_body_parts ?? [],
-    });
+    setEditParts(optionParts(option));
     setError("");
     setNotice("");
     setConflict(false);
@@ -129,7 +127,6 @@ export function ExerciseCatalog({
     return (
       <section className="body-part-editor" aria-label="部位を編集">
         <h3>{editing.name}</h3>
-        <p className="muted">部位を編集</p>
         <form onSubmit={saveParts}>
           <fieldset disabled={busy}>
             <BodyPartFields value={editParts} onChange={setEditParts} />
@@ -151,7 +148,7 @@ export function ExerciseCatalog({
               className="primary full"
               disabled={conflict || editing.revision === undefined}
             >
-              {pending ? "保存中…" : "保存する"}
+              {pending ? "保存中…" : "保存"}
             </button>
             <button
               type="button"
@@ -169,8 +166,8 @@ export function ExerciseCatalog({
     );
 
   return (
-    <details className="panel exercise-catalog" open={expanded || undefined}>
-      <summary>種目リスト</summary>
+    <details className="panel exercise-catalog" open={expanded || undefined} aria-label="種目一覧">
+      <summary hidden={expanded}>種目リスト</summary>
 
       <form onSubmit={add}>
         <fieldset disabled={busy}>

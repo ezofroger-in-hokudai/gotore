@@ -451,7 +451,6 @@ function ActiveTraining({
             ))}
           </fieldset>
           <div className="exercise-filter-heading">
-            <h2>{PART_FILTERS.find((filter) => filter.value === part)?.label}</h2>
             <span className="muted">{visibleOptions.length}種目</span>
           </div>
           {catalog.error && (
@@ -568,9 +567,7 @@ function ActiveTraining({
               <h2>
                 前回 <small>{context.data?.previous?.performed_on.replaceAll("-", "/")}</small>
               </h2>
-              <h2>
-                今回 <small>タップで編集</small>
-              </h2>
+              <h2>今回</h2>
             </div>
             <section className="comparison-table" ref={comparisonTable} aria-label="全セットの比較">
               {Array.from({ length: Math.max(previous.length, sets.length, 1) }, (_, i) => (
@@ -774,7 +771,6 @@ function ActiveTraining({
                   <span>
                     {blocking ? "保存中…" : input.editing === null ? "次のセットへ" : "変更を保存"}
                   </span>
-                  <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
                 </button>
               </div>
             </fieldset>
@@ -869,11 +865,7 @@ function ActiveTraining({
             if (!controller.busy) setFinishOpen(false);
           }}
         >
-          <p>
-            {input.dirty
-              ? "未保存の入力があります。保存済みのセットだけを残して終了しますか？"
-              : "おつかれさまでした。保存したセットは履歴で確認できます。"}
-          </p>
+          {input.dirty && <p>未保存の入力があります。保存済みのセットだけを残して終了しますか？</p>}
           <button
             className="primary full"
             type="button"

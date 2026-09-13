@@ -14,6 +14,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 ## 開発用の文書
 
+- [部位ヒートマップ](body-part-calendar.md): 日付セルの部位、横一列のフィルター、現在分類による過去記録の表示。
+
 - [ライブ表示とプロフィール画像](live-presence-avatars.md): 記録中の赤丸・LIVE、新着表示と設定からの画像変更・閲覧範囲。
 
 - [GOTORE v2 実装仕様](gotore-v2-spec.md): 2026-09-09合意の全所属グループ共有、終了・復元、LIVE、記録・BEST・種目メモ。v2実装では旧業務仕様との差分を本書で適用する。
@@ -25,6 +27,7 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
+- [画面文言の再棚卸し](ui-copy-review-2026-09-13.md): 削減候補37件と今回採用する範囲。
 - [history-analytics.md](history-analytics.md): 種目別の履歴グラフ、グループの推移・ランキングと集計・先読み。
 - [score.md](score.md): SCOREの計算式・基準回・目標・採点保存の設計案。初版への採用と実装状況は [score-implementation.md](score-implementation.md) を参照。
 - [activity-heatmap.md](activity-heatmap.md): 日別総負荷量の月別ヒートマップと日別記録。

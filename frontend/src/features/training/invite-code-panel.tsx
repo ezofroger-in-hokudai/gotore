@@ -45,7 +45,7 @@ export function InviteCodePanel({
       setMessage("取得しました。");
       onRenewed(current);
     } catch {
-      setError("コードを取得できません。再取得してください。");
+      setError("コードを取得できません。");
     } finally {
       setBusy(false);
     }
@@ -112,7 +112,7 @@ export function InviteCodePanel({
         ))}
       {error && (
         <div className="error" role="alert">
-          {error} 再取得してください。
+          {error}
           <button
             className="secondary full"
             type="button"

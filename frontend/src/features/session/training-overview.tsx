@@ -45,7 +45,7 @@ export function TrainingOverview({
       ) : (
         <>
           <div className="section-heading">
-            <h2>前回のトレーニング</h2>
+            <h2 className="sr-only">前回のトレーニング</h2>
             <span className="muted">
               {resource.loading ? "更新中…" : dateLabel(latest.performed_on)}
             </span>

@@ -140,7 +140,7 @@ test("先読みした履歴グラフを表示し、指標・粒度・期間再�
   await expect(panel.locator(".analytics-summary")).toBeVisible();
   await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("month");
   await expect(panel.locator(".analytics-summary")).toContainText("85", { timeout: 500 });
-  await panel.getByRole("button", { name: "この期間の記録を見る" }).click();
+  await panel.getByRole("button", { name: "記録を見る" }).click();
   await expect(
     page.getByRole("heading", { name: "2026/09/01 〜 2026/09/07", exact: true }),
   ).toBeVisible();

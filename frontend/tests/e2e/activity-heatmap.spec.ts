@@ -196,9 +196,7 @@ test("過去月の詳細から戻っても月・選択日・ページを保持�
   await expect(page.locator(".history-row")).toContainText("2024-02-29の種目51");
   await expect(page.getByText("2ページ", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "前の月", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "最近のトレーニング", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "最近の記録", exact: true })).toBeVisible();
   await page.getByLabel("月", { exact: true }).fill("2024-02");
   await day.click();
   await expect(page.getByText("1ページ", { exact: true })).toBeVisible();

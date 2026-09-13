@@ -135,7 +135,7 @@ test("履歴をホームで準備し、再確認待ちでも一覧とカレン�
   try {
     await navigate(page, "履歴");
     await expect(page.locator(".history-row")).toContainText("ベンチプレス");
-    await expect(page.locator(".activity-totals")).toContainText("月の総負荷880kg");
+    await expect(page.locator(".activity-totals")).toContainText("総負荷880kg");
     await page.screenshot({ path: "test-results/history-prefetch.png", fullPage: true });
   } finally {
     release();

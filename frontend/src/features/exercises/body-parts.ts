@@ -3,21 +3,33 @@ import type { BodyPart, ExerciseOption } from "@/lib/api";
 export const BODY_PART_LABELS: Record<BodyPart, string> = {
   chest: "胸",
   back: "背中",
-  shoulders: "肩",
-  arms: "腕",
   legs: "脚",
+  arms: "腕",
+  shoulders: "肩",
+  abs: "腹筋",
   glutes: "お尻",
-  abs: "腹",
-  full_body: "全身",
   other: "その他",
 };
 export const BODY_PARTS = Object.keys(BODY_PART_LABELS) as BodyPart[];
-export type BodyPartFilter = BodyPart | "all" | "unclassified";
+export type BodyPartFilter = BodyPart | "all";
 export const PART_FILTERS: { value: BodyPartFilter; label: string }[] = [
   { value: "all", label: "すべて" },
   ...BODY_PARTS.map((value) => ({ value, label: BODY_PART_LABELS[value] })),
-  { value: "unclassified", label: "未分類" },
 ];
+export function normalizeBodyPart(part: ExerciseOption["primary_body_part"]): BodyPart {
+  return part && part !== "full_body" ? part : "other";
+}
+export function optionParts(option?: Partial<ExerciseOption>) {
+  const primary_body_part = normalizeBodyPart(option?.primary_body_part);
+  return {
+    primary_body_part,
+    secondary_body_parts: BODY_PARTS.filter(
+      (part) =>
+        part !== primary_body_part &&
+        option?.secondary_body_parts?.some((item) => normalizeBodyPart(item) === part),
+    ),
+  };
+}
 export function filterExercises<
   T extends Pick<ExerciseOption, "name" | "primary_body_part" | "secondary_body_parts">,
 >(options: T[], part: BodyPartFilter, query: string): T[] {
@@ -25,16 +37,13 @@ export function filterExercises<
     (option) =>
       option.name.includes(query.trim()) &&
       (part === "all" ||
-        (part === "unclassified"
-          ? !option.primary_body_part
-          : option.primary_body_part === part || option.secondary_body_parts?.includes(part))),
+        normalizeBodyPart(option.primary_body_part) === part ||
+        option.secondary_body_parts?.some((item) => normalizeBodyPart(item) === part)),
   );
 }
 export function groupExercises(options: ExerciseOption[]) {
-  return [...BODY_PARTS, null]
-    .map((part) => ({
-      label: part ? BODY_PART_LABELS[part] : "未分類",
-      options: options.filter((option) => (option.primary_body_part ?? null) === part),
-    }))
-    .filter((group) => group.options.length > 0);
+  return BODY_PARTS.map((part) => ({
+    label: BODY_PART_LABELS[part],
+    options: options.filter((option) => normalizeBodyPart(option.primary_body_part) === part),
+  })).filter((group) => group.options.length > 0);
 }
