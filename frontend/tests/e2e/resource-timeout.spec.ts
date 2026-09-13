@@ -101,7 +101,7 @@ test("活動取得は遅い正常応答を待ち、期限切れ後も多重取�
     gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    await page.clock.runFor(1000);
+    await page.clock.runFor(15_000);
     await expect.poll(() => reads).toBe(first + 1);
     await page.clock.runFor(15_001);
     await expect(
@@ -111,7 +111,7 @@ test("活動取得は遅い正常応答を待ち、期限切れ後も多重取�
     ).toBeVisible();
     expect(reads).toBe(first + 1);
     hold = false;
-    await page.clock.runFor(5000);
+    await page.clock.runFor(15_000);
     await expect(page.locator(".community-total").first()).toContainText("1人");
     expect(reads).toBe(first + 2);
     await navigate(page, "設定");

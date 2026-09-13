@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { resourceRequest } from "../training/resource-request";
 import { AnalyticsCache } from "./cache";
 import { type Analytics, type Period, analyticsPath } from "./types";
@@ -12,9 +12,8 @@ export function useAnalytics(
   prefetch: boolean,
   refreshKey: number,
 ) {
-  const [cache] = useState(
-    () => new AnalyticsCache<Analytics>(resourceRequest, undefined, scope ? 5000 : 60_000),
-  );
+  const [cache] = useState(() => new AnalyticsCache<Analytics>(resourceRequest));
+  const wasActive = useRef(false);
   const path = analyticsPath(scope, period, offset, exercise);
   useSyncExternalStore(cache.subscribe, cache.snapshot, cache.snapshot);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存や共有変更で全期間の集計を無効化する。
@@ -24,21 +23,24 @@ export function useAnalytics(
   useEffect(() => () => cache.clear(), [cache]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 無効化した直後にも選択中の集計を取得する。
   useEffect(() => {
+    const resumed = active && !wasActive.current;
+    wasActive.current = active;
     cache.select(path);
     if (!active && !prefetch) {
       cache.stop();
       return;
     }
-    const load = () => {
-      if (!document.hidden) cache.request(path, active, Boolean(scope) && active);
+    const load = (force = false) => {
+      if (!document.hidden) cache.request(path, active, force);
       else cache.stop();
     };
-    load();
-    const timer = active && scope ? window.setInterval(load, 5000) : undefined;
-    document.addEventListener("visibilitychange", load);
+    load(Boolean(scope) && resumed);
+    const timer = active && scope ? window.setInterval(() => load(true), 60_000) : undefined;
+    const visible = () => load(true);
+    document.addEventListener("visibilitychange", visible);
     return () => {
       if (timer) window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", load);
+      document.removeEventListener("visibilitychange", visible);
     };
   }, [cache, path, active, prefetch, scope, refreshKey]);
   const entry = cache.read(path);
