@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Response
 
 from app.api.dependencies import current_user, database
 from app.core.timing import measure
-from app.domain.exercise_catalog import ExerciseOptionInput
+from app.domain.exercise_catalog import ExerciseOptionInput, ExerciseOptionUpdate
 from app.infrastructure.exercise_catalog import ExerciseCatalogRepository
 from app.infrastructure.training_repository import TrainingRepository
 from app.schemas.exercise_catalog import ExerciseOptionResponse
@@ -30,7 +30,12 @@ def options(service: Service):
 
 @router.post("/exercise-options", response_model=ExerciseOptionResponse, status_code=201)
 def add_option(data: ExerciseOptionInput, service: Service):
-    return service.add(data.name)
+    return service.add(data)
+
+
+@router.patch("/exercise-options/{option_id}", response_model=ExerciseOptionResponse)
+def update_option(option_id: UUID, data: ExerciseOptionUpdate, service: Service):
+    return service.update(option_id, data)
 
 
 @router.delete("/exercise-options/{option_id}", status_code=204)
