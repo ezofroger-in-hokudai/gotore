@@ -141,8 +141,10 @@ export function AnalyticsPanel({
         <output className="analytics-placeholder">グラフを準備しています…</output>
       ) : (
         <>
-          <div className="analytics-summary">
-            <span>{ranking ? "グループランキング" : labels[selectedMetric]}</span>
+          <section
+            className="analytics-summary"
+            aria-label={`${labels[selected]}${ranking ? "ランキング" : "の要約"}`}
+          >
             {!ranking && (
               <strong>
                 {number(data.totals[selectedMetric])}
@@ -154,7 +156,7 @@ export function AnalyticsPanel({
                 ? "更新中…"
                 : `${data.totals.days}日間の記録${scope ? ` · ${data.totals.people}人が活動` : ""}`}
             </span>
-          </div>
+          </section>
           {!ranking && data.previous_totals && (
             <p className="analytics-comparison muted">
               前期間比{" "}

@@ -1,5 +1,18 @@
 import { getSupabase } from "./supabase";
 
+export type ActivityBodyPart = {
+  body_part: BodyPart | null;
+  volume: number;
+  set_count: number;
+  workout_count: number;
+};
+export type ActivityDay = {
+  date: string;
+  volume: number;
+  set_count: number;
+  workout_count: number;
+  body_parts?: ActivityBodyPart[];
+};
 export type MonthlyActivity = {
   month: string;
   metric: "volume";
@@ -7,7 +20,7 @@ export type MonthlyActivity = {
   total_sets: number;
   workout_count: number;
   active_days: number;
-  days: { date: string; volume: number; set_count: number; workout_count: number }[];
+  days: ActivityDay[];
 };
 
 export type Group = {

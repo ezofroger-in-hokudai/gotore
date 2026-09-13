@@ -172,18 +172,38 @@ class TrainingRepository:
         return row
 
     def activity(self, user_id: UUID, start: date, end: date):
-        return self.connection.execute(
-            """SELECT w.performed_on AS date, COUNT(*) AS workout_count,
-                SUM(f.set_count) AS set_count,
-                COALESCE(SUM(f.volume), 0) AS volume
+        rows = self.connection.execute(
+            """SELECT w.performed_on AS date, o.primary_body_part AS body_part,
+                GROUPING(o.primary_body_part) AS is_total,
+                COUNT(DISTINCT w.id) AS workout_count,
+                SUM(s.set_count) AS set_count, SUM(s.volume) AS volume
             FROM public.gotore_workouts w
-            JOIN LATERAL (SELECT SUM(set_count) AS set_count, SUM(volume) AS volume
-                FROM public.gotore_workout_statistics WHERE workout_id = w.id) f ON true
+            JOIN public.gotore_workout_statistics s ON s.workout_id = w.id
+            LEFT JOIN public.gotore_exercise_options o
+                ON o.user_id = w.user_id AND o.name = s.exercise_name
             WHERE w.user_id = %s AND w.performed_on >= %s AND w.performed_on < %s
               AND jsonb_array_length(w.exercises) > 0
-            GROUP BY w.performed_on ORDER BY w.performed_on""",
+            GROUP BY GROUPING SETS ((w.performed_on), (w.performed_on, o.primary_body_part))
+            ORDER BY w.performed_on, is_total DESC, o.primary_body_part NULLS LAST""",
             (user_id, start, end),
         ).fetchall()
+        metrics = ("volume", "set_count", "workout_count")
+        days = {
+            row["date"]: {
+                "date": row["date"],
+                **{key: row[key] for key in metrics},
+                "body_parts": [],
+            }
+            for row in rows
+            if row["is_total"]
+        }
+        # 未分類のnullと日別全体をGROUPINGで区別し、同じ記録を全体件数に重複計上しない。
+        for row in rows:
+            if not row["is_total"]:
+                days[row["date"]]["body_parts"].append(
+                    {"body_part": row["body_part"], **{key: row[key] for key in metrics}}
+                )
+        return list(days.values())
 
     def workouts(
         self,

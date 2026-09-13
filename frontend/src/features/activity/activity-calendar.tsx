@@ -1,8 +1,11 @@
 "use client";
 
 import type { MonthlyActivity } from "@/lib/api";
+import { useRef, useState } from "react";
+import { type BodyPartFilter, PART_FILTERS } from "../exercises/body-parts";
 import { today } from "../training/draft";
 import { useResource } from "../training/use-resource";
+import { activityForPart, orderedParts } from "./body-parts";
 import { calendarDays, dateLabel, shiftMonth } from "./calendar";
 import { volumeAppearance, volumeGradient } from "./volume-colors";
 
@@ -23,6 +26,8 @@ export function ActivityCalendar({
   active?: boolean;
   prefetch?: boolean;
 }) {
+  const [part, setPart] = useState<BodyPartFilter>("all");
+  const filters = useRef<HTMLFieldSetElement>(null);
   const currentDay = today();
   const currentMonth = currentDay.slice(0, 7);
   const activity = useResource<MonthlyActivity>(
@@ -32,9 +37,14 @@ export function ActivityCalendar({
     true,
     { enabled: active, prefetch, retainOnRefresh: true },
   );
-  const maximum = Math.max(0, ...(activity.data?.days.map((day) => day.volume) ?? []));
+  const hasParts = !activity.data?.days.some((day) => !day.body_parts);
+  const selectedPart = hasParts ? part : "all";
+  const data = activity.data ? activityForPart(activity.data, selectedPart) : null;
+  const partLabel = PART_FILTERS.find((entry) => entry.value === selectedPart)?.label ?? "すべて";
+  const maximum = Math.max(0, ...(data?.days.map((day) => day.volume) ?? []));
+  const selected = activity.data?.days.find((day) => day.date === selectedDate);
   const format = (value: number) => value.toLocaleString("ja-JP", { maximumFractionDigits: 1 });
-  const days = new Map(activity.data?.days.map((day) => [day.date, day]));
+  const days = new Map(data?.days.map((day) => [day.date, day]));
 
   function changeMonth(value: string) {
     if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(value) || value < "2000-01" || value > currentMonth)
@@ -45,8 +55,30 @@ export function ActivityCalendar({
 
   return (
     <section className="panel activity-calendar" aria-label="活動カレンダー">
-      <h2>総負荷カレンダー</h2>
-
+      <fieldset className="activity-part-filters" ref={filters} aria-label="カレンダーの部位">
+        {PART_FILTERS.map((entry) => (
+          <button
+            type="button"
+            key={entry.value}
+            aria-pressed={selectedPart === entry.value}
+            disabled={entry.value !== "all" && (!activity.data || !hasParts)}
+            onClick={(event) => {
+              setPart(entry.value);
+              onSelect("");
+              const container = filters.current;
+              if (container) {
+                const button = event.currentTarget;
+                const left = button.offsetLeft - container.offsetLeft;
+                if (left < container.scrollLeft) container.scrollLeft = left;
+                else if (left + button.offsetWidth > container.scrollLeft + container.clientWidth)
+                  container.scrollLeft = left + button.offsetWidth - container.clientWidth;
+              }
+            }}
+          >
+            {entry.label}
+          </button>
+        ))}
+      </fieldset>
       <div className="activity-month">
         <button
           type="button"
@@ -58,7 +90,7 @@ export function ActivityCalendar({
           ←
         </button>
         <label className="grow">
-          月
+          <span className="sr-only">月</span>
           <input
             type="month"
             min="2000-01"
@@ -91,23 +123,23 @@ export function ActivityCalendar({
       <>
         <dl className="activity-totals">
           <div>
-            <dt>月の総負荷</dt>
+            <dt>{selectedPart === "all" ? "月の総負荷" : `${partLabel}の総負荷`}</dt>
             <dd>
-              {activity.data ? format(activity.data.total_volume) : "—"}
+              {data ? format(data.total_volume) : "—"}
               <small>kg</small>
             </dd>
           </div>
           <div>
             <dt>活動日数</dt>
             <dd>
-              {activity.data?.active_days ?? "—"}
+              {data?.active_days ?? "—"}
               <small>日</small>
             </dd>
           </div>
           <div>
             <dt>記録件数</dt>
             <dd>
-              {activity.data?.workout_count ?? "—"}
+              {data?.workout_count ?? "—"}
               <small>件</small>
             </dd>
           </div>
@@ -123,6 +155,7 @@ export function ActivityCalendar({
             if (!day) return <span key={`blank-${index}`} aria-hidden="true" />;
             const counts = days.get(day);
             const volume = counts?.volume ?? null;
+            const bodyParts = orderedParts(counts?.body_parts);
             const label = volume !== null ? `総負荷${format(volume)}kg` : "記録なし";
             const future = day > currentDay;
             return (
@@ -133,12 +166,20 @@ export function ActivityCalendar({
                 data-volume={future ? undefined : (volume ?? undefined)}
                 style={volumeAppearance(future ? null : volume, maximum)}
                 disabled={future || !activity.data}
-                aria-label={`${dateLabel(day)}、${future ? "未来の日付" : !activity.data ? "未取得" : `${label}、${counts?.workout_count ?? 0}件`}`}
+                aria-label={`${dateLabel(day)}、${future ? "未来の日付" : !activity.data ? "未取得" : `${label}、${counts?.workout_count ?? 0}件${bodyParts.length ? `、${bodyParts.map((item) => item.label).join("・")}` : ""}`}`}
                 aria-pressed={selectedDate === day}
                 aria-current={day === currentDay ? "date" : undefined}
                 onClick={() => onSelect(day)}
               >
                 <span>{Number(day.slice(-2))}</span>
+                <span className="activity-day-part" aria-hidden="true">
+                  {!future && bodyParts.length ? (
+                    <>
+                      {bodyParts[0].label}
+                      {bodyParts.length > 1 && <sup>+{bodyParts.length - 1}</sup>}
+                    </>
+                  ) : null}
+                </span>
                 <small>
                   {future || volume === null
                     ? "—"
@@ -172,9 +213,32 @@ export function ActivityCalendar({
           </div>
         </div>
         <p className="muted">
-          重量×回数の合計（kg）。1k＝1,000kg。色は月内の最大値を基準にしています。
+          重量×回数の合計（kg）。1k＝1,000kg。色は{selectedPart === "all" ? "全体" : partLabel}
+          の月内最大値が基準。
         </p>
-        {activity.data?.workout_count === 0 && <p className="muted">この月は記録なし</p>}
+        {data?.workout_count === 0 && (
+          <p className="muted">
+            {selectedPart === "all" ? "この月は記録なし" : `この月の${partLabel}は記録なし`}
+          </p>
+        )}
+        {!!selected?.body_parts?.length && (
+          <section
+            className="activity-part-breakdown"
+            aria-label={`${dateLabel(selected.date)}の部位内訳`}
+          >
+            <p className="muted">主部位の内訳</p>
+            <dl>
+              {orderedParts(selected.body_parts).map((entry) => (
+                <div key={entry.body_part ?? "unclassified"}>
+                  <dt>{entry.label}</dt>
+                  <dd>
+                    {entry.set_count}セット · {format(entry.volume)}kg
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
       </>
     </section>
   );

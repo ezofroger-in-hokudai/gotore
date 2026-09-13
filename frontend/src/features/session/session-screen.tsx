@@ -451,7 +451,6 @@ function ActiveTraining({
             ))}
           </fieldset>
           <div className="exercise-filter-heading">
-            <h2>{PART_FILTERS.find((filter) => filter.value === part)?.label}</h2>
             <span className="muted">{visibleOptions.length}種目</span>
           </div>
           {catalog.error && (
