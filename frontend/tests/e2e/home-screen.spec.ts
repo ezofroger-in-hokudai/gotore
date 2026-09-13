@@ -20,13 +20,16 @@ test("ホーム画面用のメタ情報と各サイズのPNGを配信する", as
   );
   const manifest = await request.get("/manifest.webmanifest");
   expect(manifest.ok()).toBe(true);
-  expect((await manifest.json()).display).toBe("standalone");
+  const webManifest = await manifest.json();
+  expect(webManifest.display).toBe("standalone");
+  const iconPaths: string[] = webManifest.icons.map((icon: { src: string }) => icon.src);
+  await expect(page.locator('link[rel="icon"]').first()).toHaveAttribute("href", iconPaths[0]);
   const apple = await page.locator('link[rel="apple-touch-icon"]').getAttribute("href");
   expect(apple).toBeTruthy();
   if (!apple) throw new Error("Apple用アイコンが設定されていません。");
   for (const [path, size] of [
-    ["/app-icons/192", 192],
-    ["/app-icons/512", 512],
+    [iconPaths[0], 192],
+    [iconPaths[1], 512],
     [apple, 180],
   ] as const) {
     const response = await request.get(path);

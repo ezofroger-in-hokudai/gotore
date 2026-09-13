@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "仲間とトレーニングを記録・共有するGO TORE",
   applicationName: "GO TORE",
   appleWebApp: { capable: true, title: "GO TORE", statusBarStyle: "default" },
-  icons: { icon: "/app-icons/192", apple: "/apple-icon" },
+  icons: { icon: "/app-icons/192?v=wombat-a", apple: "/apple-icon?v=wombat-a" },
 };
 
 export const viewport: Viewport = {
