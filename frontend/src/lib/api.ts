@@ -2,12 +2,12 @@ import { getSupabase } from "./supabase";
 
 export type MonthlyActivity = {
   month: string;
-  metric: "score";
-  best_score: number | null;
+  metric: "volume";
+  total_volume: number;
   total_sets: number;
   workout_count: number;
   active_days: number;
-  days: { date: string; score: number | null; set_count: number; workout_count: number }[];
+  days: { date: string; volume: number; set_count: number; workout_count: number }[];
 };
 
 export type Group = {

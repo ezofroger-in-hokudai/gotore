@@ -240,8 +240,8 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
       return route.fulfill({
         json: {
           month: new URL(route.request().url()).searchParams.get("month"),
-          metric: "score",
-          best_score: null,
+          metric: "volume",
+          total_volume: 0,
           total_sets: 0,
           workout_count: 0,
           active_days: 0,

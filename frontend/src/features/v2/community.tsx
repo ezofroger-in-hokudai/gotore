@@ -14,8 +14,6 @@ import {
   useState,
 } from "react";
 import { AnalyticsPanel } from "../analytics/panel";
-import { GroupScoreWeights } from "../score/group-score-weights";
-import { ScoreBadge } from "../score/score-display";
 import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
 import { MembershipPanel } from "../training/membership-panel";
@@ -183,7 +181,8 @@ export function CommunityHome({
           </div>
           {cardDrag.drag && (
             <output className="sr-only">
-              {groups.find((group) => group.id === cardDrag.drag?.id)?.name}を移動中。
+              {groups.find((group) => group.id === cardDrag.drag?.id)?.name}
+              を移動中。
               {cardDrag.drag.target + 1}番目
             </output>
           )}
@@ -438,7 +437,6 @@ function Feed({
                   )}
                   <span className="feed-detail-hint">詳細</span>
                 </span>
-                <ScoreBadge score={item.score} />
               </button>
             </article>
           );
@@ -461,7 +459,7 @@ type Preview = {
   member_count: number;
   already_member: boolean;
 };
-type Mode = "list" | "detail" | "create" | "join" | "members" | "invite" | "weights";
+type Mode = "list" | "detail" | "create" | "join" | "members" | "invite";
 export function CommunityScreen({
   groups,
   selected,
@@ -491,7 +489,7 @@ export function CommunityScreen({
     if (active) {
       const restoredMode = window.history.state?.communityMode;
       setMode(
-        ["list", "detail", "members", "invite", "weights", "create", "join"].includes(restoredMode)
+        ["list", "detail", "members", "invite", "create", "join"].includes(restoredMode)
           ? restoredMode
           : initialDetail
             ? "detail"
@@ -508,7 +506,7 @@ export function CommunityScreen({
       if (event.state?.gotoreView === "groups") {
         const next = event.state.communityMode;
         setMode(
-          ["list", "detail", "create", "join", "members", "invite", "weights"].includes(next)
+          ["list", "detail", "create", "join", "members", "invite"].includes(next)
             ? next
             : initialDetail
               ? "detail"
@@ -669,9 +667,7 @@ export function CommunityScreen({
           ) : group ? (
             <>
               <h1>{group.name}</h1>
-              {mode === "weights" && (
-                <GroupScoreWeights groupId={group.id} editable={group.owner_id === userId} />
-              )}
+
               {mode === "detail" && (
                 <>
                   <div className="analytics-tabs" aria-label="グループの表示">
@@ -732,13 +728,6 @@ export function CommunityScreen({
                           </button>
                           <button className="v2-row" type="button" onClick={() => change("invite")}>
                             メンバーを招待 <span>›</span>
-                          </button>
-                          <button
-                            className="v2-row"
-                            type="button"
-                            onClick={() => change("weights")}
-                          >
-                            SCOREの配点 <span>›</span>
                           </button>
                         </div>
                         <h2>みんなの最新記録</h2>

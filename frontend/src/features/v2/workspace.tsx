@@ -1,14 +1,13 @@
 "use client";
-import type { Group, TrainingGoal, Workout } from "@/lib/api";
+import type { Group, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import { OnboardingGuide } from "../onboarding/onboarding-guide";
-import { useScoring } from "../score/use-scoring";
-import { WorkoutResult } from "../score/workout-result";
 import { SessionScreen } from "../session/session-screen";
 import { TrainingOverview } from "../session/training-overview";
 import { useSession } from "../session/use-session";
+import { WorkoutResult } from "../session/workout-result";
 import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
@@ -40,7 +39,6 @@ function WorkspaceContent({ session }: { session: Session }) {
   const [signingOut, setSigningOut] = useState(false);
   const [notice, setNotice] = useState("");
   const changed = () => setRefreshKey((key) => key + 1);
-  const scoring = useScoring(changed);
   const [finished, setFinished] = useState<Workout | null>(null);
   const training = useSession(session.user.id, changed);
   const preferences = usePreferences(session.user.id);
@@ -90,10 +88,6 @@ function WorkspaceContent({ session }: { session: Session }) {
     }
   }, [view]);
   const selected = groups.some((group) => group.id === groupId) ? groupId : groups[0]?.id || "";
-  const goal = useResource<TrainingGoal>("/me/goal", 0, false, true, {
-    enabled: view === "settings",
-    prefetch: prepareHistory && historyReady,
-  });
   useEffect(() => {
     window.history.replaceState({ ...window.history.state, gotoreView: "home" }, "");
     const back = (event: PopStateEvent) => {
@@ -224,15 +218,12 @@ function WorkspaceContent({ session }: { session: Session }) {
               setView("result");
               setNotice("");
               window.scrollTo({ top: 0 });
-              if (record.score) void scoring.evaluate(record.id);
             }}
           />
         </div>
         {view === "result" && finished && (
           <WorkoutResult
             record={finished}
-            result={scoring.results[finished.id]}
-            onRetry={() => void scoring.evaluate(finished.id)}
             onHistory={() => navigate("history")}
             onHome={() => navigate("home")}
           />
@@ -267,8 +258,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             groups={groups}
             selectedGroup={selected}
             userId={session.user.id}
-            onSaved={(record) => {
-              if (record.score?.status === "pending") void scoring.evaluate(record.id);
+            onSaved={() => {
               changed();
               navigate("history");
               setNotice("更新しました。");
@@ -295,7 +285,6 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         {view === "settings" && (
           <Preferences
-            goal={goal}
             preferences={preferences}
             onChanged={changed}
             onGuide={() => setGuideReplay((value) => value + 1)}

@@ -1,10 +1,10 @@
 "use client";
 
 import type { MonthlyActivity } from "@/lib/api";
-import { scoreAppearance, scoreGradient } from "../score/score-colors";
 import { today } from "../training/draft";
 import { useResource } from "../training/use-resource";
 import { calendarDays, dateLabel, shiftMonth } from "./calendar";
+import { volumeAppearance, volumeGradient } from "./volume-colors";
 
 export function ActivityCalendar({
   month,
@@ -32,6 +32,8 @@ export function ActivityCalendar({
     true,
     { enabled: active, prefetch, retainOnRefresh: true },
   );
+  const maximum = Math.max(0, ...(activity.data?.days.map((day) => day.volume) ?? []));
+  const format = (value: number) => value.toLocaleString("ja-JP", { maximumFractionDigits: 1 });
   const days = new Map(activity.data?.days.map((day) => [day.date, day]));
 
   function changeMonth(value: string) {
@@ -43,7 +45,7 @@ export function ActivityCalendar({
 
   return (
     <section className="panel activity-calendar" aria-label="活動カレンダー">
-      <h2>SCOREカレンダー</h2>
+      <h2>総負荷カレンダー</h2>
 
       <div className="activity-month">
         <button
@@ -89,10 +91,10 @@ export function ActivityCalendar({
       <>
         <dl className="activity-totals">
           <div>
-            <dt>最高SCORE</dt>
+            <dt>月の総負荷</dt>
             <dd>
-              {activity.data?.best_score ?? "—"}
-              <small>点</small>
+              {activity.data ? format(activity.data.total_volume) : "—"}
+              <small>kg</small>
             </dd>
           </div>
           <div>
@@ -120,17 +122,16 @@ export function ActivityCalendar({
             // biome-ignore lint/suspicious/noArrayIndexKey: 空白セルは固定の曜日位置を表す。
             if (!day) return <span key={`blank-${index}`} aria-hidden="true" />;
             const counts = days.get(day);
-            const score = counts?.score ?? null;
-            const label = score !== null ? `${score}点` : counts ? "計測中" : "記録なし";
+            const volume = counts?.volume ?? null;
+            const label = volume !== null ? `総負荷${format(volume)}kg` : "記録なし";
             const future = day > currentDay;
             return (
               <button
                 key={day}
                 type="button"
                 className="activity-day"
-                data-score={future ? "pending" : (score ?? "pending")}
-                style={scoreAppearance(future ? null : score)}
-                data-pending={!!counts && score === null}
+                data-volume={future ? undefined : (volume ?? undefined)}
+                style={volumeAppearance(future ? null : volume, maximum)}
                 disabled={future || !activity.data}
                 aria-label={`${dateLabel(day)}、${future ? "未来の日付" : !activity.data ? "未取得" : `${label}、${counts?.workout_count ?? 0}件`}`}
                 aria-pressed={selectedDate === day}
@@ -139,32 +140,40 @@ export function ActivityCalendar({
               >
                 <span>{Number(day.slice(-2))}</span>
                 <small>
-                  {future || !activity.data
+                  {future || volume === null
                     ? "—"
-                    : score !== null
-                      ? `${score}点`
-                      : counts
-                        ? "計測中"
-                        : "—"}
+                    : volume >= 1000
+                      ? `${format(volume / 1000)}k`
+                      : format(volume)}
                 </small>
               </button>
             );
           })}
         </div>
-        <div className="activity-legend score-legend" aria-label="色の凡例（SCORE）">
+        <div
+          className="activity-legend volume-legend"
+          aria-label="色の凡例（総負荷kg・月内の相対表示）"
+        >
           <span>
-            <span className="heat-swatch" style={scoreAppearance(null)} aria-hidden="true" />
-            未記録・計測中
+            <span
+              className="heat-swatch"
+              style={volumeAppearance(null, maximum)}
+              aria-hidden="true"
+            />
+            未記録
           </span>
-          <div className="score-gradient-legend">
-            <span style={{ background: scoreGradient }} aria-hidden="true" />
+          <div className="volume-gradient-legend">
+            <span style={{ background: volumeGradient }} aria-hidden="true" />
             <div>
-              <span>0点</span>
-              <span>50点</span>
-              <span>100点</span>
+              <span>0kg</span>
+              <span>{format(maximum / 2)}kg</span>
+              <span>{format(maximum)}kg</span>
             </div>
           </div>
         </div>
+        <p className="muted">
+          重量×回数の合計（kg）。1k＝1,000kg。色は月内の最大値を基準にしています。
+        </p>
         {activity.data?.workout_count === 0 && <p className="muted">この月は記録なし</p>}
       </>
     </section>

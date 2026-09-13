@@ -59,8 +59,8 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     route.fulfill({
       json: {
         month: new URL(route.request().url()).searchParams.get("month"),
-        metric: "score",
-        best_score: null,
+        metric: "volume",
+        total_volume: 0,
         days: removed ? [] : [{ date: record.performed_on, set_count: 1, workout_count: 1 }],
         total_sets: removed ? 0 : 1,
         workout_count: removed ? 0 : 1,

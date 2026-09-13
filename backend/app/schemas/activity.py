@@ -6,15 +6,15 @@ from pydantic import BaseModel
 
 class ActivityDay(BaseModel):
     date: date
-    score: int | None = None
+    volume: float
     set_count: int
     workout_count: int
 
 
 class MonthlyActivity(BaseModel):
     month: str
-    metric: Literal["score"] = "score"
-    best_score: int | None = None
+    metric: Literal["volume"] = "volume"
+    total_volume: float
     total_sets: int
     workout_count: int
     active_days: int

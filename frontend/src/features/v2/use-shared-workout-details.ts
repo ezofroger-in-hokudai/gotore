@@ -4,7 +4,7 @@ import { resourceRequest } from "../training/resource-request";
 import { memberIsLive } from "./live-presence";
 
 function feedVersion(item?: GroupActivity["feed"][number]) {
-  return item ? JSON.stringify([item.updated_at, item.score]) : "";
+  return item ? item.updated_at : "";
 }
 
 type Entry = {
