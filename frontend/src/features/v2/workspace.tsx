@@ -13,9 +13,11 @@ import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
 import { CommunityHome, CommunityScreen } from "./community";
+import { GroupOrderSheet } from "./group-order-sheet";
 import { History } from "./history";
 import { Preferences, usePreferences } from "./settings";
 import { Sheet } from "./sheet";
+import { useGroupOrder } from "./use-group-order";
 
 type View = "home" | "record" | "history" | "settings" | "groups" | "edit" | "result";
 export function Workspace({ session }: { session: Session }) {
@@ -49,7 +51,9 @@ function WorkspaceContent({ session }: { session: Session }) {
     true,
     { enabled: view === "home" || view === "groups", retainOnRefresh: true },
   );
-  const groups = groupList.data ?? [];
+  const groupOrder = useGroupOrder(session.user.id, groupList.data);
+  const groups = groupOrder.groups;
+  const [orderingGroups, setOrderingGroups] = useState(false);
   const [historyReady, setHistoryReady] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   useEffect(() => {
@@ -175,6 +179,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             failed={!!groupList.error}
             selected={selected}
             onSelect={setGroupId}
+            onReorder={() => setOrderingGroups(true)}
             onGroups={() => {
               setGroupDetail(false);
               navigate("groups", "list");
@@ -278,6 +283,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             userId={session.user.id}
             refreshKey={refreshKey}
             onSelect={setGroupId}
+            onReorder={() => setOrderingGroups(true)}
             onChanged={() => {
               setGroupRefreshKey((key) => key + 1);
               changed();
@@ -348,6 +354,17 @@ function WorkspaceContent({ session }: { session: Session }) {
         >
           {resumable ? "RESUME" : "START"}
         </button>
+      )}
+      {orderingGroups && (
+        <GroupOrderSheet
+          available={groupList.data !== null}
+          groups={groups}
+          onClose={() => setOrderingGroups(false)}
+          onSave={(ids) => {
+            groupOrder.save(ids);
+            setGroupId(selected);
+          }}
+        />
       )}
       <nav className="bottom-nav" aria-label="メインナビゲーション">
         {(
