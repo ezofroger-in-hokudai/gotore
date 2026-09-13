@@ -4,6 +4,6 @@
 
 - [4案一覧](overview.png) / [起動画面を含む全体](comparison.png)
 - 起動とアイコン: [A ウォンバット](A-startup-icon.png) / [B シンプル](B-startup-icon.png) / [C 現行ハムスター](C-startup-icon.png) / [D ラッコ](D-startup-icon.png)
-- [390px相当の明暗比較用モバイル表示](mobile-dark.png)（撮影幅430px）
+- [モバイル430px・ダーク](mobile-dark.png)
 
 320/390/430pxで横にはみ出さないこと、4案の切替、動きの停止/再開、ダーク、OSの動き低減を確認。選択操作は試作ページ内だけに反映し、設定や記録を保存しない。

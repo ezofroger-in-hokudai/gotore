@@ -2025,3 +2025,10 @@
 - 影響範囲・関連ファイル: LoadingState、TrainingApp、loading-mascot.spec.ts、docs/previews/mascot-options.html、mascot-options.md、docs/images/mascot-options/。今回作成した比較資料だけを共有リポジトリにも新規コピーした。
 - 未解決事項・次のアクション: 全E2E143件を実行中。候補の選択待ちとしてPR #147を更新する。選択後に起動SVG・PWA/Appleアイコンの実装と確認を行う。
 - ヒートマップ: ユーザーによる部位migration適用後、公開月集計200・集計表示あり・エラー表示なしを確認。#143へ根拠を記録して完了にした。公開DBは変更していない。
+
+
+## 2026-09-14 01:45
+- 変更内容・目的: 起動時だけの表示と4案比較をPR #147へ反映し、キャラクター選択待ちのドラフトにした。比較画像の撮影幅表記を430pxへ訂正。
+- 検証: 変更後のローカル全E2E143件成功（5.8分）。make checkも237件/75件・lint・型・build成功。実装コミット3134030のCIはbackend/frontend成功、databaseジョブ実行中。文書追記はリンク・git diff --checkで確認し、アプリは再変更していない。
+- 影響範囲・関連ファイル: PR #147、docs/images/mascot-options/README.md、progress.md、週次#33。
+- 未解決事項・次のアクション: A〜Dの選択待ち。選択後に起動キャラクターとPWA/Appleアイコンを統一して検証する。最終CIの結果はPRで追跡。ヒートマップは公開環境の復旧確認済み（#143完了）。
