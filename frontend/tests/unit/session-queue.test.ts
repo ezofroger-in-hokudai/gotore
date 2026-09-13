@@ -191,3 +191,196 @@ test("サーバー保存後に端末のACK記録が失敗しても再送で重�
   expect(f.writes).toBe(1);
   expect(f.queue.state.pending).toBe(0);
 });
+
+test("150セットの送信待ちを重複保存せず、訂正と取消を含め全操作を同じ順で送る", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  const expected: TrainingSession["exercises"][] = [];
+  let values: TrainingSession["exercises"] = [];
+  for (let index = 0; index < 150; index++) {
+    values = structuredClone(values);
+    if (index % 30 === 0) values.push({ name: `種目${index / 30}`, sets: [] });
+    values.at(-1)?.sets.push({ weight: 80, reps: 10 });
+    expected.push(structuredClone(values));
+    await f.queue.enqueue(values, index + 1);
+  }
+  const bytes = new TextEncoder().encode(f.stored as string).length;
+  expect(bytes).toBeLessThan(40_000);
+  values = structuredClone(values);
+  values[0].sets[0] = { weight: 82.5, reps: 8 };
+  expected.push(structuredClone(values));
+  await f.queue.enqueue(values, 151);
+  values = structuredClone(values);
+  values[0].sets.splice(1, 1);
+  expected.push(structuredClone(values));
+  await f.queue.enqueue(values, 152);
+  const sent: TrainingSession["exercises"][] = [];
+  const send = f.options.send;
+  f.options.send = async (...args) => {
+    sent.push(structuredClone(args[2]));
+    return send(...args);
+  };
+  const reopened = new SessionQueue(f.options);
+  await reopened.restore();
+  expect(reopened.state.session?.exercises).toEqual(values);
+  await reopened.sync();
+  expect(sent).toEqual(expected);
+  expect(f.writes).toBe(152);
+  expect(f.server.exercises).toEqual(values);
+});
+
+test("旧v1の操作IDと順序を保持し、読取だけでは上書きせず次の保存で移行する", async () => {
+  const f = fixture();
+  const legacy = JSON.stringify({
+    base: initial,
+    pending: [
+      { id: "first", exercises: exercises(1) },
+      { id: "second", exercises: exercises(2) },
+    ],
+  });
+  f.options.write(legacy);
+  await f.queue.restore();
+  expect(f.stored).toBe(legacy);
+  expect(f.queue.state.session?.exercises).toEqual(exercises(2));
+  await f.queue.enqueue(exercises(3), 3);
+  const saved = JSON.parse(f.stored as string);
+  expect(saved.version).toBe(2);
+  expect(saved.pending.map((job: { id: string }) => job.id).slice(0, 2)).toEqual([
+    "first",
+    "second",
+  ]);
+  // 旧クライアントの読取条件を満たさず、差分を空の全状態として誤送信させない。
+  expect(saved.pending.every((job: { exercises?: unknown }) => Array.isArray(job.exercises))).toBe(
+    false,
+  );
+  await f.queue.sync();
+  expect(f.writes).toBe(3);
+  expect(f.server.exercises).toEqual(exercises(3));
+});
+
+test("移行時の容量不足でも旧v1を保持し、再試行できる", async () => {
+  const f = fixture();
+  const legacy = JSON.stringify({
+    base: initial,
+    pending: [{ id: "old", exercises: exercises(1) }],
+  });
+  f.options.write(legacy);
+  await f.queue.restore();
+  const write = f.options.write;
+  f.options.write = () => {
+    throw new Error("quota");
+  };
+  await expect(f.queue.enqueue(exercises(2), 2)).rejects.toThrow("保存できません");
+  expect(f.stored).toBe(legacy);
+  expect(f.queue.state.pending).toBe(1);
+  f.options.write = write;
+  await f.queue.enqueue(exercises(2), 2);
+  await f.queue.sync();
+  expect(f.server.exercises).toEqual(exercises(2));
+});
+
+test("差分の基準と異なる保存応答は未送信を保持して停止する", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  await f.queue.enqueue(exercises(1), 1);
+  await f.queue.enqueue(exercises(2), 2);
+  f.options.send = async () => ({ ...initial, revision: 2, exercises: exercises(7) });
+  await f.queue.sync();
+  expect(f.queue.state.status).toBe("conflict");
+  expect(f.queue.state.pending).toBe(2);
+  expect(f.queue.state.session?.exercises).toEqual(exercises(2));
+  const reopened = new SessionQueue(f.options);
+  await reopened.restore();
+  expect(reopened.state.status).toBe("conflict");
+  expect(reopened.state.session?.exercises).toEqual(exercises(2));
+});
+
+test("種目の並べ替え・削除・全取消でも操作を復元し、入力元を変更しない", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  const first = [
+    { name: "A", sets: [{ weight: 0, reps: 12 }] },
+    { name: "B", sets: [{ weight: 82.5, reps: 8 }] },
+    { name: "A", sets: [{ weight: 60, reps: 10 }] },
+  ];
+  const snapshots = [first, [first[1], first[0], first[2]], [first[2]], [], exercises(1)];
+  const original = structuredClone(snapshots);
+  for (const [index, values] of snapshots.entries()) await f.queue.enqueue(values, index + 1);
+  expect(snapshots).toEqual(original);
+  const sent: TrainingSession["exercises"][] = [];
+  const send = f.options.send;
+  f.options.send = async (...args) => {
+    sent.push(structuredClone(args[2]));
+    return send(...args);
+  };
+  await f.queue.sync();
+  expect(sent).toEqual(original);
+  expect(f.queue.state.pending).toBe(0);
+});
+
+test("同じ端末の2つのキューが同時に同期しても各操作を一度ずつ確定する", async () => {
+  const f = fixture();
+  const locks = new Map<string, Promise<void>>();
+  f.options.lock = async (name, work) => {
+    const previous = locks.get(name);
+    let release = () => {};
+    locks.set(
+      name,
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+    );
+    await previous;
+    try {
+      return await work();
+    } finally {
+      release();
+    }
+  };
+  await f.queue.restore();
+  await f.queue.enqueue(exercises(1), 1);
+  await f.queue.enqueue(exercises(2), 2);
+  const other = new SessionQueue(f.options);
+  await other.restore();
+  await other.enqueue(exercises(3), 3);
+  await Promise.all([f.queue.sync(), other.sync()]);
+  expect(f.writes).toBe(3);
+  expect(f.server.exercises).toEqual(exercises(3));
+  expect(JSON.parse(f.stored as string).pending).toHaveLength(0);
+});
+
+for (const corrupt of [
+  { version: 9, pending: [] },
+  {
+    version: 2,
+    pending: [{ id: "bad", change: { kind: "exercises", start: 2, remove: 0, values: [] } }],
+  },
+  {
+    version: 2,
+    pending: [
+      {
+        id: "bad",
+        change: {
+          kind: "sets",
+          exercise: 0,
+          start: 0,
+          remove: 0,
+          values: [{ weight: 80, reps: -1 }],
+        },
+      },
+    ],
+  },
+  { version: 2, pending: [{ id: "bad", change: { kind: "unknown" } }] },
+]) {
+  test(`壊れた差分と未対応形式を上書きせず保持する ${JSON.stringify(corrupt)}`, async () => {
+    const f = fixture();
+    const raw = JSON.stringify({ base: initial, ...corrupt });
+    f.options.write(raw);
+    await f.queue.restore();
+    expect(f.queue.state.status).toBe("offline");
+    expect(f.queue.state.error).toContain("読み取れません");
+    await f.queue.sync();
+    expect(f.stored).toBe(raw);
+    expect(f.writes).toBe(0);
+  });
+}
