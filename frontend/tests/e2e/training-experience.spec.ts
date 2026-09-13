@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test("全セットを一覧で確認し、追加操作を表示したまま次の種目を記録する", async ({ page }) => {
   const state = await mockTraining(page);
@@ -29,6 +29,7 @@ test("全セットを一覧で確認し、追加操作を表示したまま次�
   await expect(page.getByRole("region", { name: "今回のトレーニング" }).locator("li")).toHaveCount(
     8,
   );
+  await page.getByText("セットの詳細", { exact: true }).click();
   await page.screenshot({ path: "test-results/session-overview.png", fullPage: true });
   await page.getByRole("button", { name: /^スクワット/ }).click();
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
@@ -64,7 +65,7 @@ test("開始応答を待ちながら入力でき、失敗後の再試行でも�
     }
     return route.fallback();
   });
-  await navigate(page, "記録");
+  await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   try {
     await page.getByRole("button", { name: /^スクワット/ }).click({ timeout: 2000 });

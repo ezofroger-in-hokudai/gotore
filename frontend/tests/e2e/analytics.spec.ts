@@ -123,6 +123,14 @@ test("先読みした履歴グラフを表示し、指標・粒度・期間再�
   await expect(panel.locator(".analytics-summary")).toContainText("23,500");
   state.slow();
   const before = state.selectedCount();
+  const help = panel.locator(".analytics-help");
+  await expect(help.locator("p")).toBeHidden();
+  await help.getByText("指標について", { exact: true }).click();
+  await expect(help.locator("p")).toContainText("重量 × 回数");
+  await page.screenshot({ path: "test-results/analytics-help-open.png", fullPage: true });
+  await help.getByText("指標について", { exact: true }).click();
+  await expect(help.locator("p")).toBeHidden();
+  expect(state.selectedCount()).toBe(before);
   await panel.getByRole("button", { name: "最高重量", exact: true }).click();
   await expect(panel.locator(".analytics-summary")).toContainText("85", { timeout: 500 });
   await panel.getByRole("button", { name: "週別", exact: true }).click();
@@ -132,7 +140,7 @@ test("先読みした履歴グラフを表示し、指標・粒度・期間再�
   await expect(panel.locator(".analytics-summary")).toBeVisible();
   await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("month");
   await expect(panel.locator(".analytics-summary")).toContainText("85", { timeout: 500 });
-  await panel.getByRole("button", { name: "この期間の記録を見る" }).click();
+  await panel.getByRole("button", { name: "記録を見る" }).click();
   await expect(
     page.getByRole("heading", { name: "2026/09/01 〜 2026/09/07", exact: true }),
   ).toBeVisible();
@@ -212,4 +220,27 @@ test("実DBの個人グラフは非公開も集計し、グループのランキ
   await expect(page.locator(".analytics-ranks")).toContainText("800");
   await page.getByRole("button", { name: "グラフ", exact: true }).click();
   await expect(page.locator(".community-screen .analytics-summary")).toContainText("800");
+});
+
+test("グループの集計を60秒保持し、グラフとランキングの切替で再取得しない", async ({ page }) => {
+  await page.clock.install();
+  await mockTraining(page);
+  const state = await routes(page);
+  await openGroup(page);
+  await page.getByRole("button", { name: "グラフ", exact: true }).click();
+  const panel = page.getByRole("region", { name: "グループ集計" });
+  await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("month");
+  await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
+  await expect(panel.locator(".analytics-summary")).toContainText("23,500");
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+  const before = state.selectedCount();
+  await page.clock.runFor(5000);
+  expect(state.selectedCount()).toBe(before);
+  await page.getByRole("button", { name: "ランキング", exact: true }).click();
+  await expect(panel.locator(".analytics-ranks")).toContainText("タクミ");
+  await page.getByRole("button", { name: "グラフ", exact: true }).click();
+  await expect(panel.locator(".analytics-summary")).toContainText("23,500");
+  expect(state.selectedCount()).toBe(before);
+  await page.clock.runFor(55_000);
+  await expect.poll(state.selectedCount).toBe(before + 1);
 });

@@ -14,15 +14,25 @@ async function activityFixture(page: Page) {
     const days =
       month === "2024-02"
         ? [
-            { date: "2024-02-01", score: 70, set_count: 5, workout_count: 2 },
-            { date: "2024-02-29", score: 96, set_count: 51, workout_count: 51 },
+            {
+              date: "2024-02-01",
+              volume: 1500,
+              set_count: 5,
+              workout_count: 2,
+            },
+            {
+              date: "2024-02-29",
+              volume: 15300,
+              set_count: 51,
+              workout_count: 51,
+            },
           ]
         : [];
     return route.fulfill({
       json: {
         month,
-        metric: "score",
-        best_score: days.length ? 96 : null,
+        metric: "volume",
+        total_volume: days.reduce((sum, day) => sum + day.volume, 0),
         days,
         total_sets: days.length ? 56 : 0,
         workout_count: days.length ? 53 : 0,
@@ -72,13 +82,19 @@ async function activityFixture(page: Page) {
   };
 }
 
-test("SCOREヒートマップから日付を選び、日別記録を50件ずつ確認する", async ({ page }) => {
+test("総負荷ヒートマップから日付を選び、日別記録を50件ずつ確認する", async ({ page }) => {
   await activityFixture(page);
-  const day = page.getByRole("button", { name: "2024年2月29日、96点、51件", exact: true });
-  await expect(day).toHaveAttribute("data-score", "96");
+  const day = page.getByRole("button", {
+    name: "2024年2月29日、総負荷15,300kg、51件",
+    exact: true,
+  });
+  await expect(day).toHaveAttribute("data-volume", "15300");
   await expect(
-    page.getByRole("button", { name: "2024年2月1日、70点、2件", exact: true }),
-  ).toHaveAttribute("data-score", "70");
+    page.getByRole("button", {
+      name: "2024年2月1日、総負荷1,500kg、2件",
+      exact: true,
+    }),
+  ).toHaveAttribute("data-volume", "1500");
   await day.focus();
   await page.keyboard.press("Enter");
   await expect(day).toHaveAttribute("aria-pressed", "true");
@@ -92,10 +108,18 @@ test("SCOREヒートマップから日付を選び、日別記録を50件ずつ�
   await page.getByRole("button", { name: "すべての記録", exact: true }).click();
   await expect(day).toHaveAttribute("aria-pressed", "false");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole("button", { name: "2024年2月1日、70点、2件", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "2024年2月1日、総負荷1,500kg、2件",
+      exact: true,
+    })
+    .click();
   await expect(page.locator(".history-row")).toHaveCount(2);
 
-  await page.screenshot({ path: "test-results/activity-heatmap-mobile.png", fullPage: true });
+  await page.screenshot({
+    path: "test-results/activity-heatmap-mobile.png",
+    fullPage: true,
+  });
 });
 
 test("月と日付の取得失敗を再試行し、遅い前日の応答を表示しない", async ({ page }) => {
@@ -137,10 +161,16 @@ test("日本時間の今日を示し、未来の日付と範囲外の月への�
   await activityFixture(page);
   await expect(page.getByRole("button", { name: "次の月", exact: true })).toBeDisabled();
   await expect(
-    page.getByRole("button", { name: "2024年2月11日、記録なし、0件", exact: true }),
+    page.getByRole("button", {
+      name: "2024年2月11日、記録なし、0件",
+      exact: true,
+    }),
   ).toHaveAttribute("aria-current", "date");
   await expect(
-    page.getByRole("button", { name: "2024年2月12日、未来の日付", exact: true }),
+    page.getByRole("button", {
+      name: "2024年2月12日、未来の日付",
+      exact: true,
+    }),
   ).toBeDisabled();
   await page.getByLabel("月", { exact: true }).fill("2000-01");
   await expect(page.getByRole("button", { name: "前の月", exact: true })).toBeDisabled();
@@ -151,7 +181,10 @@ test("過去月の詳細から戻っても月・選択日・ページを保持�
   page,
 }) => {
   await activityFixture(page);
-  const day = page.getByRole("button", { name: "2024年2月29日、96点、51件", exact: true });
+  const day = page.getByRole("button", {
+    name: "2024年2月29日、総負荷15,300kg、51件",
+    exact: true,
+  });
   await day.click();
   await page.getByRole("button", { name: "以前の記録", exact: true }).click();
   await expect(page.locator(".history-row")).toHaveCount(1);
@@ -163,9 +196,7 @@ test("過去月の詳細から戻っても月・選択日・ページを保持�
   await expect(page.locator(".history-row")).toContainText("2024-02-29の種目51");
   await expect(page.getByText("2ページ", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "前の月", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "最近のトレーニング", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "最近の記録", exact: true })).toBeVisible();
   await page.getByLabel("月", { exact: true }).fill("2024-02");
   await day.click();
   await expect(page.getByText("1ページ", { exact: true })).toBeVisible();

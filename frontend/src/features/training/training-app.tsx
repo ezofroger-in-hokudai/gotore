@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "../loading/loading-state";
+
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
@@ -41,7 +43,7 @@ export function TrainingApp() {
   if (!ready)
     return (
       <main className="auth-page">
-        <output>読み込み中…</output>
+        <LoadingState label="アプリを読み込み中" startup />
       </main>
     );
   return session ? <Workspace key={session.user.id} session={session} /> : <AuthPanel />;

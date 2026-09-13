@@ -1,5 +1,5 @@
 import { type Page, expect, test } from "@playwright/test";
-import { mockTraining, startTraining } from "./mock-training";
+import { mockTraining, openTraining, startTraining } from "./mock-training";
 
 test("端末保存を待つ間に入力した次セットの値を保持する", async ({ page }) => {
   const state = await mockTraining(page);
@@ -26,7 +26,7 @@ test("端末保存を待つ間に入力した次セットの値を保持する",
     .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), inputKey))
     .toMatchObject({ weight: "82.5", dirty: true, revision: state.session?.revision });
   await page.reload();
-  await page.getByRole("button", { name: "記録", exact: true }).click();
+  await openTraining(page);
   await expect(weight).toHaveValue("82.5");
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect

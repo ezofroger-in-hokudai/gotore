@@ -4,9 +4,11 @@ import { ActivityCalendar } from "../activity/activity-calendar";
 import { dateLabel } from "../activity/calendar";
 import { dates } from "../analytics/chart";
 import { AnalyticsPanel } from "../analytics/panel";
-import { ScoreBadge } from "../score/score-display";
+import { LoadingState } from "../loading/loading-state";
+import { BestFlame } from "../training/best-flame";
 import { today } from "../training/draft";
 import { RecordList } from "../training/record-list";
+import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 
 export function History({
@@ -46,18 +48,10 @@ export function History({
   const current = records.data?.find((record) => record.id === detail);
   const detailView = current ? (
     <section className="history-detail">
+      <ResourceError resource={records} />
       <button type="button" className="text-button back-button" onClick={() => setDetail(null)}>
         ‹ 履歴
       </button>
-      <h1>{dateLabel(current.performed_on)}</h1>
-      <p className="muted">
-        {current.exercises.reduce((total, exercise) => total + exercise.sets.length, 0)}セット ·{" "}
-        {current.started_at && current.ended_at
-          ? `${Math.max(0, Math.floor((Date.parse(current.ended_at) - Date.parse(current.started_at)) / 60000))}分`
-          : current.started_at
-            ? "トレーニング中"
-            : "時間未計測"}
-      </p>
       <RecordList
         records={[current]}
         userId={userId}
@@ -113,13 +107,7 @@ export function History({
             prefetch={prefetch}
           />
           <div className="section-heading">
-            <h2>
-              {date
-                ? dateLabel(date)
-                : range
-                  ? dates(range.start, range.end)
-                  : "最近のトレーニング"}
-            </h2>
+            <h2>{date ? dateLabel(date) : range ? dates(range.start, range.end) : "最近の記録"}</h2>
             {(date || range) && (
               <button
                 className="text-button"
@@ -134,17 +122,14 @@ export function History({
               </button>
             )}
           </div>
-          {records.error && (
-            <p className="error" role="alert">
-              {records.error}
-              <button className="text-button" type="button" onClick={records.retry}>
-                再試行
-              </button>
-            </p>
+          <ResourceError resource={records} />
+          {records.loading && !records.data && !records.error ? (
+            <LoadingState label="記録一覧を読み込み中" />
+          ) : (
+            <output className="resource-status muted">
+              {records.loading && records.data ? "更新中…" : ""}
+            </output>
           )}
-          <output className="resource-status muted">
-            {records.loading ? (records.data ? "更新中…" : "読み込み中…") : ""}
-          </output>
           <div className="v2-rows">
             {records.data?.map((record) => (
               <button
@@ -154,14 +139,18 @@ export function History({
                 onClick={() => setDetail(record.id)}
               >
                 <div>
-                  <strong>
-                    {record.performed_on.replaceAll("-", "/")}
-                    {record.started_at && !record.ended_at ? " · トレーニング中" : ""}
-                  </strong>
+                  {(!date || (record.started_at && !record.ended_at)) && (
+                    <strong>
+                      {!date && record.performed_on.replaceAll("-", "/")}
+                      {record.started_at && !record.ended_at
+                        ? `${date ? "" : " · "}トレーニング中`
+                        : ""}
+                    </strong>
+                  )}
                   <p>{record.exercises.map((e) => e.name).join(" / ")}</p>
-                  <ScoreBadge score={record.score} />
                 </div>
-                <span>
+                <span className="history-best-meta">
+                  {!!record.best_sets?.length && <BestFlame />}
                   {record.exercises.reduce((count, e) => count + e.sets.length, 0)} SETS ›
                 </span>
               </button>

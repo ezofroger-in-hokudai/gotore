@@ -9,11 +9,11 @@ test("記録済み種目から1タップで復帰し、未保存入力は確認�
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   const overview = page.getByRole("region", { name: "今回のトレーニング" });
-  await expect(overview.getByRole("button", { name: "ベンチプレスの記録に戻る" })).toHaveAttribute(
+  await expect(overview.getByRole("button", { name: "記録に戻る：ベンチプレス" })).toHaveAttribute(
     "aria-current",
     "true",
   );
-  await expect(overview.getByText("全セットを見る", { exact: true })).toBeVisible();
+  await expect(overview.getByText("セットの詳細", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /^スクワット/ }).click();
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("80");
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
@@ -21,13 +21,13 @@ test("記録済み種目から1タップで復帰し、未保存入力は確認�
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("82.5");
   await page.getByRole("button", { name: "種目を変更", exact: true }).click();
   page.once("dialog", (dialog) => dialog.dismiss());
-  await overview.getByRole("button", { name: "ベンチプレスの記録に戻る" }).click();
+  await overview.getByRole("button", { name: "記録に戻る：ベンチプレス" }).click();
   await expect(overview).toBeVisible();
-  await overview.getByRole("button", { name: "スクワットの記録に戻る" }).click();
+  await overview.getByRole("button", { name: "記録に戻る：スクワット" }).click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("82.5");
   await page.getByRole("button", { name: "種目を変更", exact: true }).click();
   page.once("dialog", (dialog) => dialog.accept());
-  await overview.getByRole("button", { name: "ベンチプレスの記録に戻る" }).click();
+  await overview.getByRole("button", { name: "記録に戻る：ベンチプレス" }).click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("60");
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("9");

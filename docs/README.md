@@ -14,6 +14,10 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 ## 開発用の文書
 
+- [起動キャラクターとアイコンの比較](mascot-options.md): ウォンバット2案・現行ハムスター・ラッコの動く比較。Aの丸いウォンバットを採用。
+
+- [部位ヒートマップ](body-part-calendar.md): 日付セルの部位、横一列のフィルター、現在分類による過去記録の表示。
+
 - [ライブ表示とプロフィール画像](live-presence-avatars.md): 記録中の赤丸・LIVE、新着表示と設定からの画像変更・閲覧範囲。
 
 - [GOTORE v2 実装仕様](gotore-v2-spec.md): 2026-09-09合意の全所属グループ共有、終了・復元、LIVE、記録・BEST・種目メモ。v2実装では旧業務仕様との差分を本書で適用する。
@@ -22,12 +26,17 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [design-system.md](design-system.md): スマホアプリを見据えた色・文字・余白・操作と共通部品の基準。[画面見本](design-preview.html)。
 
+- [performance-best-history.md](performance-best-history.md): BEST・前回比較の履歴件数別計測と既存集計の利用。
+
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
+- [画面文言の再棚卸し](ui-copy-review-2026-09-13.md): 削減候補37件と今回採用する範囲。
 - [history-analytics.md](history-analytics.md): 種目別の履歴グラフ、グループの推移・ランキングと集計・先読み。
 - [score.md](score.md): SCOREの計算式・基準回・目標・採点保存の設計案。初版への採用と実装状況は [score-implementation.md](score-implementation.md) を参照。
-- [activity-heatmap.md](activity-heatmap.md): 日別最高SCOREの月別ヒートマップと日別記録。
+- [activity-heatmap.md](activity-heatmap.md): 日別総負荷量の月別ヒートマップと日別記録。
+- [personal-record-highlights.md](personal-record-highlights.md): 履歴・記録・共有の最高重量/RMを炎と赤字で示す条件と取得方法。
+- [exercise-body-parts.md](exercise-body-parts.md): A案の部位別選択、主部位・補助部位の保存と編集、既存候補の移行。
 - [exercise-options.md](exercise-options.md): 本人用の種目リスト、選択入力、追加・削除と履歴保持。
 - [../README.md](../README.md): 初回セットアップ、日々の開発、環境変数、migration、検証の共通手順。
 - [../supabase/README.md](../supabase/README.md): migrationの作成・検証・履歴管理、共有DBへの反映手順。日々のローカル更新は未適用migrationを適用し、resetは失ってよいデータでの再構築検証に限定する。
@@ -56,3 +65,9 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 4. `progress.md` に判断の経緯を残し、実装・テスト・PRを紐付ける。
 
 元のPDFを暗黙に読み替えません。新しい文書の追加・適用範囲の確定に合わせて、この一覧も更新します。
+
+送信待ち保存形式と旧データの互換性は [差分保存](queue-storage.md) を参照。
+
+- [セット保存の通信量](session-transfer.md): gzip送信の互換性・制約・ローカル比較（#77）。
+
+- [記録閲覧の3案と履歴エラー調査](record-review-options.md): 本人・共有詳細の比較、端末キャッシュ案（採用前）。

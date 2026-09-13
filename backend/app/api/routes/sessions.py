@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
+from app.api.compressed_request import GzipRoute
 from app.api.dependencies import training_service
 from app.domain.session import ExerciseMemoInput, SessionRevision, SessionStart, SessionUpdate
 from app.domain.workout import Name
@@ -42,9 +43,23 @@ def session_bests(session_id: UUID, service: Service):
     return repository(service).overview_bests(service.user.id, session_id)
 
 
-@router.patch("/sessions/{session_id}", response_model=SessionResponse)
 def save_session(session_id: UUID, data: SessionUpdate, service: Service):
     return repository(service).save_session(service.user.id, session_id, data)
+
+
+router.add_api_route(
+    "/sessions/{session_id}",
+    save_session,
+    methods=["PATCH"],
+    response_model=SessionResponse,
+    route_class_override=GzipRoute,
+    description="通常のJSONまたはContent-Encoding: gzip。圧縮時は本文・展開後とも128KiBまで。",
+    responses={
+        400: {"description": "圧縮本文が不正"},
+        413: {"description": "圧縮本文または展開結果が過大"},
+        415: {"description": "未対応のContent-Encoding"},
+    },
+)
 
 
 @router.post("/sessions/{session_id}/finish", response_model=SessionResponse)

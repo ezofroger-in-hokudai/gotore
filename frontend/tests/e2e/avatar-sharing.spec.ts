@@ -59,7 +59,7 @@ test("実画像は設定で保存後に仲間へ表示され、退出後と未�
     const dialog = pageA.getByRole("dialog");
     await dialog.getByLabel("写真を選ぶ").setInputFiles("tests/fixtures/avatar.png");
     await dialog.getByRole("button", { name: "保存", exact: true }).click();
-    await expect(dialog.getByRole("status")).toHaveText("保存しました。");
+    await expect(dialog.getByRole("status").filter({ hasText: "保存しました。" })).toBeVisible();
     await pageA.screenshot({ path: "test-results/avatar-settings.png", fullPage: true });
     await pageB.bringToFront();
     await pageB.reload();

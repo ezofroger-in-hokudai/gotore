@@ -49,7 +49,15 @@ class GroupDetail(GroupResponse):
     members: list[MemberResponse]
 
 
+class RecordBestSet(BaseModel):
+    exercise_index: int
+    set_index: int
+    weight: bool
+    rm: bool
+
+
 class WorkoutResponse(BaseModel):
+    best_sets: list[RecordBestSet] = Field(default_factory=list)
     score: ScoreSummary | None = None
     started_at: datetime | None = None
     ended_at: datetime | None = None

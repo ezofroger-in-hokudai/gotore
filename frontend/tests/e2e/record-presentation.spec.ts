@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test.use({ viewport: { width: 390, height: 720 } });
 
@@ -49,12 +49,12 @@ test("今回の一覧は確定した最高記録を炎で示し、再起動・�
   const next = page.getByRole("button", { name: "次の種目へ", exact: true });
   const overview = page.getByRole("region", { name: "今回のトレーニング" });
   await next.click();
-  await overview.getByText("全セットを見る", { exact: true }).click();
+  await overview.getByText("セットの詳細", { exact: true }).click();
   await expect(overview.locator(".record-celebration")).toContainText("85kg");
   await expect(overview.locator(".record-celebration")).toContainText("🔥");
   await page.screenshot({ path: "test-results/session-overview-bests.png", fullPage: true });
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await next.click();
   await expect(overview.locator(".record-celebration")).toHaveCount(1);
   await page.getByRole("button", { name: /^ベンチプレス/ }).click();
