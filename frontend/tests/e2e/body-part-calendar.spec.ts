@@ -210,8 +210,10 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
   await expect(calendar.getByText("この月は記録なし", { exact: true })).toBeVisible();
   fail = true;
   await calendar.getByRole("button", { name: "次の月", exact: true }).click();
-  await expect(calendar.getByRole("alert")).toContainText("再試行してください");
-  await expect(day).toHaveCount(0);
+  await expect(calendar.getByRole("alert")).toContainText(
+    "更新できませんでした。前回の内容を表示しています。",
+  );
+  await expect(day).toBeVisible();
   fail = false;
   await calendar.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(day).toBeVisible();

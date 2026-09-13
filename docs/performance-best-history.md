@@ -40,3 +40,9 @@ uv run --locked python ../scripts/benchmark_best_history.py --plans /tmp/gotore-
 ```
 
 `--baseline`で比較元コミット、`--samples`で初回を除く試行数を指定できる。`--plans`は各SELECTのEXPLAIN ANALYZE結果の保存先で、省略可能。本文の転送先に実データや認証情報を含めない。
+
+## 最新mainとの統合時の扱い
+
+上の数値はPR #124作成時の比較であり、最新mainとの差を再計測した数値ではない。統合時点のmain（`4b180cd`）では、最高重量・RMを区別する炎表示の実装により、BEST・全セットBEST・フィードの集計取得はすでに最適化されている。この処理を保持し、前回比較に残っていた全履歴JSONの取得を、前回1件の同名セットと集計値の取得へ置き換える。
+
+現在の記録を除いた最高重量・RMも同じSQLで取得し、記録画面の更新判定と炎表示を維持する。スコアの付与は再開しない。既存の集計テーブルを利用し、新しいmigrationは不要。取得量・SQL回数の回帰検証は `backend/tests/test_session_performance.py`、並び順・RM境界・同名種目は `backend/tests/test_best_history.py`、最高記録の判定は `backend/tests/test_personal_records.py` で確認する。

@@ -111,10 +111,17 @@ test("履歴とカレンダーは同じ取得先の値を保持し、別月と40
         calendarStatus === 200
           ? {
               month: new URL(route.request().url()).searchParams.get("month"),
-              metric: "score",
-              best_score: 96,
-              days: [],
-              total_sets: 3,
+              metric: "volume",
+              total_volume: 600,
+              days: [
+                {
+                  date: `${new URL(route.request().url()).searchParams.get("month")}-01`,
+                  volume: 600,
+                  set_count: 1,
+                  workout_count: 1,
+                },
+              ],
+              total_sets: 1,
               workout_count: 1,
               active_days: 1,
             }
@@ -123,7 +130,7 @@ test("履歴とカレンダーは同じ取得先の値を保持し、別月と40
   );
   await navigate(page, "履歴");
   await expect(page.locator(".history-row")).toContainText("保持する種目");
-  await expect(page.locator(".activity-totals")).toContainText("96");
+  await expect(page.locator(".activity-totals")).toContainText("600");
   status = 503;
   calendarStatus = 503;
   await navigate(page, "設定");
@@ -132,9 +139,9 @@ test("履歴とカレンダーは同じ取得先の値を保持し、別月と40
     page.locator(".v2-app").getByRole("alert").filter({ hasText: retained }),
   ).toHaveCount(2);
   await expect(page.locator(".history-row")).toContainText("保持する種目");
-  await expect(page.locator(".activity-totals")).toContainText("96");
+  await expect(page.locator(".activity-totals")).toContainText("600");
   await page.getByRole("button", { name: "前の月", exact: true }).click();
-  await expect(page.locator(".activity-totals")).not.toContainText("96");
+  await expect(page.locator(".activity-totals")).not.toContainText("600");
   status = 404;
   await navigate(page, "設定");
   await navigate(page, "履歴");
