@@ -1611,3 +1611,20 @@
 - 検証: make check成功（backend210件、frontend単体58件、lint・型・build）。ローカル全体E2Eは120件成功、実Supabase共有1件で記録開始前にChromiumのタブがクラッシュ。コード変更なしの単独再実行は成功（29.9秒）。CI run 34739116903はbackend/frontend/databaseの全ジョブ成功し、独立した環境でE2E121件すべて成功（4.9分）。DBの新規適用・lintもCI成功。
 - 未解決事項: 本番migrationと実機の操作感は未確認。公開前に20260913020000_exercise_body_parts.sqlをAPIより先に適用する。
 - 次のアクション: PR #133をレビュー待ちへ進める。追加依頼の最高重量/RMの炎・赤字表示は別Issue・変更として着手する。
+
+## 2026-09-13 14:11
+- 変更内容: 追加依頼の最高重量/RM表示を#134へ記録し、feat/personal-record-highlightsへ着手。
+- 目的: 履歴・記録・共有で最高記録を見つけやすくし、読み込み回数を増やさず表示する。
+- 影響範囲: 最高記録の表示情報と本人/共有の閲覧、記録比較。
+- 関連ファイル: docs/personal-record-highlights.md、task.md。
+- 未解決事項: 初回/同値の扱いは任意確認中。既存仕様を基本とする。部位選択PR #133の結果追記コミットはCI再実行中。
+- 次のアクション: 重量/RMの独立判定と共有範囲のテストを先行し、APIと画面を実装する。
+
+## 2026-09-13 14:33
+- 変更内容: #134の最高記録表示をAPIと画面へ実装。重量/RMを別々に判定し、履歴一覧・詳細・共有詳細・記録比較・フィードへ炎と赤字を追加。
+- 目的: 最高記録を素早く見つけ、入力中と保存確定を区別する。
+- 影響範囲: 本人/共有の閲覧DTOにセット位置と判定フラグを追加。記録本文・共有範囲・DB schemaは維持。記録中は既存context応答、履歴と共有は既存集計テーブルを使い、個別セットのHTTP取得を増やさない。フィードは保存時のBESTと現在の最高値を照合し、複数メンバーも一括SQLで判定する。
+- 関連ファイル: backend/app/domain/personal_records.py、backend/app/infrastructure/personal_records.py、frontend/src/features/training/best-flame.tsx、docs/personal-record-highlights.md。
+- 検証: 先行ドメインテストは未実装でimport失敗、APIテストはbest_sets/current_bests不足、先行E2Eは炎未表示で失敗を確認。その後ドメイン・API・共有・一括SQL7件成功。make check成功（backend217件・frontend単体58件・lint/型/build）。グループBESTの同値互換調整後もbackend全217件成功。新規UI3件と既存表示6件のE2E成功、記録画面の320/390/430px確認も成功。
+- 未解決事項: 同じ更新日時で最高記録フラグが変わる共有詳細の再確認を追加し、全体E2E/CIを実施する。部位選択PR #133は結果追記コミットも全CI成功。
+- 次のアクション: 画像付きPRを提出し、全体検証後にレビュー待ちへ進める。

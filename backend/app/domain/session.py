@@ -1,8 +1,10 @@
-from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.domain.personal_records import estimated_rm as estimated_rm
+from app.domain.personal_records import personal_bests as personal_bests
+from app.domain.personal_records import record_best_sets
 from app.domain.workout import Exercise, Name
 
 
@@ -27,47 +29,15 @@ class ExerciseMemoInput(BaseModel):
     expected_revision: int = Field(ge=0, strict=True)
 
 
-def estimated_rm(weight: float | Decimal, reps: int) -> float | None:
-    if weight <= 0 or not 1 <= reps <= 10:
-        return None
-    value = Decimal(str(weight))
-    if reps > 1:
-        value *= 1 + Decimal(reps) / 30
-    return float(value.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
-
-
-def personal_bests(sets: list[dict]) -> dict:
-    weights = [float(s["weight"]) for s in sets]
-    rms = [rm for s in sets if (rm := estimated_rm(s["weight"], s["reps"])) is not None]
-    return {"best_weight": max(weights, default=None), "best_rm": max(rms, default=None)}
-
-
 def session_best_sets(exercises: list[dict], other_exercises: list[dict]) -> list[dict]:
-    """更新したセットのうち、現在も最高重量またはRMを保つ位置を返す。"""
     names = {e["name"] for e in exercises}
-    bests = {
+    baseline = {
         name: personal_bests([s for e in other_exercises if e["name"] == name for s in e["sets"]])
         for name in names
     }
-    candidates = []
-    for ei, exercise in enumerate(exercises):
-        best = bests[exercise["name"]]
-        for si, value in enumerate(exercise["sets"]):
-            weight = float(value["weight"])
-            rm = estimated_rm(weight, value["reps"])
-            improved_weight = best["best_weight"] is not None and weight > best["best_weight"]
-            improved_rm = rm is not None and best["best_rm"] is not None and rm > best["best_rm"]
-            candidates.append(
-                (ei, si, weight if improved_weight else None, rm if improved_rm else None)
-            )
-            best["best_weight"] = max(weight, best["best_weight"] or 0)
-            if rm is not None:
-                best["best_rm"] = max(rm, best["best_rm"] or 0)
     return [
-        {"exercise_index": ei, "set_index": si}
-        for ei, si, weight, rm in candidates
-        if (weight is not None and weight == bests[exercises[ei]["name"]]["best_weight"])
-        or (rm is not None and rm == bests[exercises[ei]["name"]]["best_rm"])
+        {"exercise_index": value["exercise_index"], "set_index": value["set_index"]}
+        for value in record_best_sets(exercises, baseline)
     ]
 
 
