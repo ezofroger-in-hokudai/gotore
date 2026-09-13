@@ -43,7 +43,14 @@ export type Exercise = {
   name: string;
   sets: { weight: number; reps: number }[];
 };
+export type RecordBestSet = {
+  exercise_index: number;
+  set_index: number;
+  weight?: boolean;
+  rm?: boolean;
+};
 export type Workout = {
+  best_sets?: RecordBestSet[];
   score?: ScoreSummary | null;
   id: string;
   user_id: string;
@@ -64,6 +71,7 @@ export type TrainingSession = Workout & {
   best_updated?: boolean;
 };
 export type ExerciseContext = {
+  current_bests?: SessionBests | null;
   best_weight: number | null;
   best_rm: number | null;
   previous: { id: string; performed_on: string; sets: Exercise["sets"] } | null;
@@ -71,7 +79,7 @@ export type ExerciseContext = {
 };
 export type SessionBests = {
   revision: number;
-  sets: { exercise_index: number; set_index: number }[];
+  sets: RecordBestSet[];
 };
 export type AvatarImage = { version: string | null; data_url: string | null };
 export type GroupSummary = {
@@ -101,6 +109,8 @@ export type GroupActivity = GroupSummary & {
     estimated_rm: number | null;
     updated_at: string;
     best: boolean;
+    best_weight?: boolean;
+    best_rm?: boolean;
   }[];
 };
 

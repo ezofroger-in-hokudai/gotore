@@ -1628,3 +1628,12 @@
 - 検証: 先行ドメインテストは未実装でimport失敗、APIテストはbest_sets/current_bests不足、先行E2Eは炎未表示で失敗を確認。その後ドメイン・API・共有・一括SQL7件成功。make check成功（backend217件・frontend単体58件・lint/型/build）。グループBESTの同値互換調整後もbackend全217件成功。新規UI3件と既存表示6件のE2E成功、記録画面の320/390/430px確認も成功。
 - 未解決事項: 同じ更新日時で最高記録フラグが変わる共有詳細の再確認を追加し、全体E2E/CIを実施する。部位選択PR #133は結果追記コミットも全CI成功。
 - 次のアクション: 画像付きPRを提出し、全体検証後にレビュー待ちへ進める。
+
+## 2026-09-13 14:41
+- 変更内容: #134の履歴・記録・共有の強調画面と、同じ更新日時でもBESTフラグ変更を検出する共有詳細の再確認を完成。モバイル確認画像を保存。
+- 目的: 最高重量とRMを別々に目立たせ、キャッシュに古い炎を残さない。
+- 影響範囲: frontend/src/features/training/record-list.tsx、session-screen.tsx、v2/history.tsx・community.tsx・use-shared-workout-details.ts、API型とCSS。
+- 関連ファイル: docs/images/personal-records/、frontend/tests/e2e/personal-records.spec.ts。
+- 検証: 新規UI3件は全体E2E内でも成功。画像の前回値・保存後最高値を整合する架空データにそろえた。既存の430pxグループ並べ替えとLIVE更新でタイムアウトが出たため、全体実行後に個別確認する。
+- 未解決事項: 全体E2E・既存2件の再検証・CIは継続中。
+- 次のアクション: 画像付きドラフトPRを提出し、検証結果を反映する。

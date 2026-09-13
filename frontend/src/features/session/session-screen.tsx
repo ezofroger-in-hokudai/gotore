@@ -1,10 +1,11 @@
 "use client";
 
-import type { ExerciseOption, SessionBests, TrainingSession } from "@/lib/api";
+import type { ExerciseOption, RecordBestSet, SessionBests, TrainingSession } from "@/lib/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BodyPartTags } from "../exercises/body-part-fields";
 import { type BodyPartFilter, PART_FILTERS, filterExercises } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
+import { BestFlame } from "../training/best-flame";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
 import { InlineMemo } from "./inline-memo";
@@ -137,9 +138,9 @@ function ActiveTraining({
     true,
     { enabled: active && selecting && exercises.length > 0 },
   );
-  const bestPositions = new Set(
+  const bestPositions = new Map(
     overviewBests.data && overviewBests.data.revision === revision && !controller.pending
-      ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
+      ? overviewBests.data.sets.map((set) => [`${set.exercise_index}:${set.set_index}`, set])
       : [],
   );
   const names = Array.from(
@@ -165,6 +166,21 @@ function ActiveTraining({
     active,
   );
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
+  const confirmedBests = new Map(
+    context.data?.current_bests &&
+      context.data.current_bests.revision === revision &&
+      !controller.pending
+      ? context.data.current_bests.sets.map((best) => [
+          `${best.exercise_index}:${best.set_index}`,
+          best,
+        ])
+      : [],
+  );
+  const selectedBests = exercises.flatMap((exercise, ei) =>
+    exercise.name === input.name
+      ? exercise.sets.map((_, si) => confirmedBests.get(`${ei}:${si}`))
+      : [],
+  );
   const previous = context.data?.previous?.sets ?? [];
   useEffect(() => {
     if (!input.awaitingPrevious) return;
@@ -393,9 +409,7 @@ function ActiveTraining({
                           }
                         >
                           {bestPositions.has(`${index}:${i}`) && (
-                            <span role="img" aria-label="最高記録">
-                              🔥{" "}
-                            </span>
+                            <BestFlame best={bestPositions.get(`${index}:${i}`)} />
                           )}
                           {i + 1}: {value.weight}kg × {value.reps}回
                         </li>
@@ -586,7 +600,15 @@ function ActiveTraining({
                       setFeedback("");
                     }}
                   >
-                    {sets[i] ? <SetMeasurement weight={sets[i].weight} reps={sets[i].reps} /> : "—"}
+                    {sets[i] ? (
+                      <SetMeasurement
+                        weight={sets[i].weight}
+                        reps={sets[i].reps}
+                        best={selectedBests[i]}
+                      />
+                    ) : (
+                      "—"
+                    )}
                   </button>
                 </div>
               ))}
@@ -881,13 +903,23 @@ function ActiveTraining({
   );
 }
 
-function SetMeasurement({ weight, reps }: { weight: number; reps: number }) {
+function SetMeasurement({
+  weight,
+  reps,
+  best,
+}: { weight: number; reps: number; best?: RecordBestSet }) {
   return (
     <span className="set-measurement">
       <span>
-        {weight}kg × {reps}
+        {best && <BestFlame best={best} />}
+        <b className={best?.weight ? "personal-best-value" : undefined}>{weight}</b>kg × {reps}
       </span>
-      <small>RM {estimatedRM(weight, reps) ?? "—"}</small>
+      <small>
+        RM{" "}
+        <b className={best?.rm ? "personal-best-value" : undefined}>
+          {estimatedRM(weight, reps) ?? "—"}
+        </b>
+      </small>
     </span>
   );
 }

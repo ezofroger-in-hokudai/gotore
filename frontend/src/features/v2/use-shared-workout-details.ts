@@ -4,7 +4,8 @@ import { resourceRequest } from "../training/resource-request";
 import { memberIsLive } from "./live-presence";
 
 function feedVersion(item?: GroupActivity["feed"][number]) {
-  return item ? item.updated_at : "";
+  // 別の記録で最高値が変わると、本文の更新日時が同じでも強調表示を読み直す。
+  return item ? JSON.stringify([item.updated_at, item.best, item.best_weight, item.best_rm]) : "";
 }
 
 type Entry = {
