@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from app.domain.workout import WorkoutSet
 from app.schemas.score import ScoreSummary
-from app.schemas.training import MemberResponse, WorkoutMemoResponse, WorkoutResponse
+from app.schemas.training import MemberResponse, RecordBestSet, WorkoutMemoResponse, WorkoutResponse
 
 
 class SessionResponse(WorkoutResponse):
@@ -13,14 +13,9 @@ class SessionResponse(WorkoutResponse):
     best_updated: bool = Field(default=False, validation_alias="feed_best")
 
 
-class BestSetPosition(BaseModel):
-    exercise_index: int
-    set_index: int
-
-
 class SessionBests(BaseModel):
     revision: int
-    sets: list[BestSetPosition]
+    sets: list[RecordBestSet]
 
 
 class InvitePreview(BaseModel):
@@ -37,6 +32,7 @@ class PreviousSession(BaseModel):
 
 
 class ExerciseContext(BaseModel):
+    current_bests: SessionBests | None = None
     best_weight: float | None
     best_rm: float | None
     previous: PreviousSession | None
@@ -51,6 +47,8 @@ class ActivityMember(MemberResponse):
 
 
 class FeedItem(BaseModel):
+    best_weight: bool = False
+    best_rm: bool = False
     score: ScoreSummary | None = None
     workout_id: UUID
     user_id: UUID

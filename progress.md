@@ -1611,3 +1611,38 @@
 - 検証: make check成功（backend210件、frontend単体58件、lint・型・build）。ローカル全体E2Eは120件成功、実Supabase共有1件で記録開始前にChromiumのタブがクラッシュ。コード変更なしの単独再実行は成功（29.9秒）。CI run 34739116903はbackend/frontend/databaseの全ジョブ成功し、独立した環境でE2E121件すべて成功（4.9分）。DBの新規適用・lintもCI成功。
 - 未解決事項: 本番migrationと実機の操作感は未確認。公開前に20260913020000_exercise_body_parts.sqlをAPIより先に適用する。
 - 次のアクション: PR #133をレビュー待ちへ進める。追加依頼の最高重量/RMの炎・赤字表示は別Issue・変更として着手する。
+
+## 2026-09-13 14:11
+- 変更内容: 追加依頼の最高重量/RM表示を#134へ記録し、feat/personal-record-highlightsへ着手。
+- 目的: 履歴・記録・共有で最高記録を見つけやすくし、読み込み回数を増やさず表示する。
+- 影響範囲: 最高記録の表示情報と本人/共有の閲覧、記録比較。
+- 関連ファイル: docs/personal-record-highlights.md、task.md。
+- 未解決事項: 初回/同値の扱いは任意確認中。既存仕様を基本とする。部位選択PR #133の結果追記コミットはCI再実行中。
+- 次のアクション: 重量/RMの独立判定と共有範囲のテストを先行し、APIと画面を実装する。
+
+## 2026-09-13 14:33
+- 変更内容: #134の最高記録表示をAPIと画面へ実装。重量/RMを別々に判定し、履歴一覧・詳細・共有詳細・記録比較・フィードへ炎と赤字を追加。
+- 目的: 最高記録を素早く見つけ、入力中と保存確定を区別する。
+- 影響範囲: 本人/共有の閲覧DTOにセット位置と判定フラグを追加。記録本文・共有範囲・DB schemaは維持。記録中は既存context応答、履歴と共有は既存集計テーブルを使い、個別セットのHTTP取得を増やさない。フィードは保存時のBESTと現在の最高値を照合し、複数メンバーも一括SQLで判定する。
+- 関連ファイル: backend/app/domain/personal_records.py、backend/app/infrastructure/personal_records.py、frontend/src/features/training/best-flame.tsx、docs/personal-record-highlights.md。
+- 検証: 先行ドメインテストは未実装でimport失敗、APIテストはbest_sets/current_bests不足、先行E2Eは炎未表示で失敗を確認。その後ドメイン・API・共有・一括SQL7件成功。make check成功（backend217件・frontend単体58件・lint/型/build）。グループBESTの同値互換調整後もbackend全217件成功。新規UI3件と既存表示6件のE2E成功、記録画面の320/390/430px確認も成功。
+- 未解決事項: 同じ更新日時で最高記録フラグが変わる共有詳細の再確認を追加し、全体E2E/CIを実施する。部位選択PR #133は結果追記コミットも全CI成功。
+- 次のアクション: 画像付きPRを提出し、全体検証後にレビュー待ちへ進める。
+
+## 2026-09-13 14:41
+- 変更内容: #134の履歴・記録・共有の強調画面と、同じ更新日時でもBESTフラグ変更を検出する共有詳細の再確認を完成。モバイル確認画像を保存。
+- 目的: 最高重量とRMを別々に目立たせ、キャッシュに古い炎を残さない。
+- 影響範囲: frontend/src/features/training/record-list.tsx、session-screen.tsx、v2/history.tsx・community.tsx・use-shared-workout-details.ts、API型とCSS。
+- 関連ファイル: docs/images/personal-records/、frontend/tests/e2e/personal-records.spec.ts。
+- 検証: 新規UI3件は全体E2E内でも成功。画像の前回値・保存後最高値を整合する架空データにそろえた。既存の430pxグループ並べ替えとLIVE更新でタイムアウトが出たため、全体実行後に個別確認する。
+- 未解決事項: 全体E2E・既存2件の再検証・CIは継続中。
+- 次のアクション: 画像付きドラフトPRを提出し、検証結果を反映する。
+
+## 2026-09-13 14:55
+- 変更内容: #134を画像付きPR #135へ提出し、実装の全体検証を完了。記録画面の画像を、部位と保存後の最高重量が整合する最新のテストデータで再撮影した。
+- 目的: 最高重量/RMの強調と既存の入力・閲覧・共有を確認し、レビューできる状態へ仕上げる。
+- 影響範囲: 今回の追記は検証記録・タスク状態・確認画像のみ。先行の部位選択PR #133はマージ済み。
+- 関連ファイル: task.md、docs/images/personal-records/personal-record-recording.png。PR: https://github.com/ezofroger-in-hokudai/gotore/pull/135 。
+- 検証: make check成功（backend217件・frontend単体58件・lint・型・build）。CI run 34740998438（f5d6025）は全ジョブ成功、E2E124件すべて成功（4.3分）。ローカルの全体実行は117件成功、既存7件でタイムアウト/Chromiumクラッシュ。自分の開発サーバーを止めて本番buildを行い、同じコードで失敗した7件を含む関連33件を再実行してすべて成功（2.2分）。新規UI3件も再確認し、記録画面320/390/430pxのはみ出し・操作ボタンを確認。コード変更・タイムアウト延長は行っていない。
+- 未解決事項: 実機の操作感と他の実装者によるレビューは未確認。文書と画像の最終コミットはCIで再確認する。追加のmigration・環境変数はない。
+- 次のアクション: PR #135の結果と画像を更新し、レビュー待ちへ進める。

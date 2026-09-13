@@ -70,11 +70,11 @@ class TrainingService:
         records = self.repository.workouts(
             self.user.id, group_id, limit, offset, performed_on, date_from, date_to
         )
-        return records
+        return self.repository.with_bests(records)
 
     def shared_workout(self, group_id: UUID, workout_id: UUID):
         record = self.repository.shared_workout(self.user.id, group_id, workout_id)
-        return record
+        return self.repository.with_bests([record])[0]
 
     def update_workout(self, workout_id: UUID, workout: WorkoutUpdate):
         with self.repository.connection.transaction():

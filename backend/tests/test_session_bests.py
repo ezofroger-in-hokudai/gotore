@@ -36,7 +36,7 @@ def test_overview_bests_are_owned_and_recomputed_after_edit(client):
     ).json()
     assert client.get(path).json() == {
         "revision": session["revision"],
-        "sets": [{"exercise_index": 0, "set_index": 1}],
+        "sets": [{"exercise_index": 0, "set_index": 1, "weight": True, "rm": True}],
     }
     assert client.get(path, headers={"X-Test-User": "B"}).status_code == 404
     client.patch(

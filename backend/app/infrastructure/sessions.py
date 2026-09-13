@@ -4,14 +4,15 @@ from uuid import UUID
 from psycopg.types.json import Jsonb
 
 from app.domain.errors import Conflict, NotFound
+from app.domain.personal_records import record_best_sets
 from app.domain.session import (
     ExerciseMemoInput,
     SessionUpdate,
     estimated_rm,
     latest_change,
     personal_bests,
-    session_best_sets,
 )
+from app.infrastructure.personal_records import PersonalRecordRepository
 from app.infrastructure.training_repository import TrainingRepository
 
 
@@ -164,35 +165,19 @@ class SessionRepository(TrainingRepository):
             )
 
     def bests(self, user_id: UUID, name: str):
-        rows = self.connection.execute(
-            """SELECT exercises FROM public.gotore_workouts
-            WHERE user_id = %s AND exercises @> %s""",
-            (user_id, Jsonb([{"name": name}])),
-        ).fetchall()
-        return personal_bests(
-            [s for row in rows for e in row["exercises"] if e["name"] == name for s in e["sets"]]
-        )
+        row = self.connection.execute(
+            """SELECT max(s.best_weight) AS best_weight, max(s.best_rm) AS best_rm
+            FROM public.gotore_workout_statistics s
+            JOIN public.gotore_workouts w ON w.id = s.workout_id
+            WHERE w.user_id = %s AND s.exercise_name = %s""",
+            (user_id, name),
+        ).fetchone()
+        return {key: float(value) if value is not None else None for key, value in row.items()}
 
     def overview_bests(self, user_id: UUID, workout_id: UUID):
         row = self.session(user_id, workout_id)
-        names = list({e["name"] for e in row["exercises"]})
-        others = (
-            self.connection.execute(
-                """SELECT w.exercises FROM public.gotore_workouts w
-            WHERE w.user_id = %s AND w.id != %s
-            AND EXISTS (SELECT 1 FROM jsonb_array_elements(w.exercises) e
-                WHERE e->>'name' = ANY(%s::text[]))""",
-                (user_id, workout_id, names),
-            ).fetchall()
-            if names
-            else []
-        )
-        return {
-            "revision": row["revision"],
-            "sets": session_best_sets(
-                row["exercises"], [e for other in others for e in other["exercises"]]
-            ),
-        }
+        result = self.with_bests([row])[0]
+        return {"revision": row["revision"], "sets": result["best_sets"]}
 
     def preview(self, user_id: UUID, code: str):
         row = self.connection.execute(
@@ -240,7 +225,32 @@ class SessionRepository(TrainingRepository):
             WHERE user_id = %s AND name = %s""",
             (user_id, name),
         ).fetchone() or {"content": "", "revision": 0}
-        return {**personal_bests(sets), "previous": previous, "memo": memo}
+        current_bests = None
+        if current:
+            others = [
+                value
+                for row in rows
+                if row["id"] != current["id"]
+                for exercise in row["exercises"]
+                if exercise["name"] == name
+                for value in exercise["sets"]
+            ]
+            current_bests = {
+                "revision": current["revision"],
+                "sets": [
+                    position
+                    for position in record_best_sets(
+                        current["exercises"], {name: personal_bests(others)}
+                    )
+                    if current["exercises"][position["exercise_index"]]["name"] == name
+                ],
+            }
+        return {
+            **personal_bests(sets),
+            "previous": previous,
+            "memo": memo,
+            "current_bests": current_bests,
+        }
 
     def save_exercise_memo(self, user_id: UUID, data: ExerciseMemoInput):
         with self.connection.transaction():
@@ -327,13 +337,28 @@ class SessionRepository(TrainingRepository):
             (group_id, group_id),
         ).fetchall()
         feed = []
+        maxima = PersonalRecordRepository(self.connection).maxima(
+            [row for row in latest if row["feed_best"]]
+        )
         for row in latest:
             exercise = row["exercises"][
                 row["feed_exercise"] if row["feed_exercise"] is not None else -1
             ]
             s = exercise["sets"][row["feed_set"] if row["feed_set"] is not None else -1]
-            best = self.bests(row["user_id"], exercise["name"]) if row["feed_best"] else None
+            best = maxima.get((row["user_id"], exercise["name"])) if row["feed_best"] else None
             rm = estimated_rm(s["weight"], s["reps"])
+            # 保存時に更新した出来事を保ち、後から同値が増えても最高値なら表示する。
+            best_weight = (
+                best is not None
+                and float(s["weight"]) > 0
+                and float(s["weight"]) == float(best["best_weight"])
+            )
+            best_rm = (
+                best is not None
+                and rm is not None
+                and best["best_rm"] is not None
+                and rm == float(best["best_rm"])
+            )
             feed.append(
                 {
                     "workout_id": row["id"],
@@ -344,11 +369,9 @@ class SessionRepository(TrainingRepository):
                     "reps": s["reps"],
                     "estimated_rm": rm,
                     "updated_at": row["updated_at"],
-                    "best": best is not None
-                    and (
-                        (float(s["weight"]) > 0 and float(s["weight"]) == best["best_weight"])
-                        or (rm is not None and rm == best["best_rm"])
-                    ),
+                    "best": best_weight or best_rm,
+                    "best_weight": best_weight,
+                    "best_rm": best_rm,
                 }
             )
         feed.sort(key=lambda item: item["updated_at"], reverse=True)

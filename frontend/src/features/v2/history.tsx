@@ -4,6 +4,7 @@ import { ActivityCalendar } from "../activity/activity-calendar";
 import { dateLabel } from "../activity/calendar";
 import { dates } from "../analytics/chart";
 import { AnalyticsPanel } from "../analytics/panel";
+import { BestFlame } from "../training/best-flame";
 import { today } from "../training/draft";
 import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
@@ -159,7 +160,8 @@ export function History({
                   </strong>
                   <p>{record.exercises.map((e) => e.name).join(" / ")}</p>
                 </div>
-                <span>
+                <span className="history-best-meta">
+                  {!!record.best_sets?.length && <BestFlame />}
                   {record.exercises.reduce((count, e) => count + e.sets.length, 0)} SETS ›
                 </span>
               </button>

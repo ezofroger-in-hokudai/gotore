@@ -2147,3 +2147,50 @@
 .exercise-options .exercise-option-name {
   flex: 1 1 150px;
 }
+
+.personal-best-value,
+.set-measurement .personal-best-value {
+  color: var(--accent);
+  font-weight: 800;
+}
+.best-flame {
+  display: inline-block;
+  font-size: 16px;
+  line-height: 1.2;
+  vertical-align: baseline;
+}
+.history-best-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.record-set.has-personal-best {
+  background: var(--accent-soft);
+  border-radius: 8px;
+}
+.record-set-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.set-measurement .best-flame {
+  font-size: 12px;
+  margin-right: 3px;
+}
+.set-measurement b:not(.personal-best-value),
+.feed-measurements b:not(.personal-best-value) {
+  font-weight: inherit;
+}
+.feed-measurements {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.feed-rm {
+  font-size: 13px;
+  color: var(--muted);
+}
+.feed-rm .personal-best-value {
+  font-size: 16px;
+}

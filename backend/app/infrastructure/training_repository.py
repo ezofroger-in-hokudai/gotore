@@ -10,11 +10,15 @@ from app.domain.errors import Conflict, NotFound, ServiceUnavailable
 from app.domain.identity import AuthenticatedUser, User
 from app.domain.workout import WorkoutInput, WorkoutUpdate
 from app.domain.workout_memo import WorkoutMemoInput
+from app.infrastructure.personal_records import PersonalRecordRepository
 
 
 class TrainingRepository:
     def __init__(self, connection: Connection):
         self.connection = connection
+
+    def with_bests(self, records: list[dict]):
+        return PersonalRecordRepository(self.connection).attach(records)
 
     def profile(self, user: AuthenticatedUser) -> User:
         existing = self.connection.execute(

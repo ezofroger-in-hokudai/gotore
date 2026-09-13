@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 import { AnalyticsPanel } from "../analytics/panel";
+import { BestFlame } from "../training/best-flame";
 import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
 import { MembershipPanel } from "../training/membership-panel";
@@ -422,17 +423,28 @@ function Feed({
                 onClick={() => setOpened(item.workout_id)}
               >
                 <span className="feed-value">
-                  <strong>
-                    {item.weight}
-                    <small> kg × </small>
-                    {item.reps}
-                    <small> 回</small>
-                  </strong>
+                  <span className="feed-measurements">
+                    <strong>
+                      <b className={item.best_weight ? "personal-best-value" : undefined}>
+                        {item.weight}
+                      </b>
+                      <small> kg × </small>
+                      {item.reps}
+                      <small> 回</small>
+                    </strong>
+                    {item.estimated_rm !== null && (
+                      <span className="feed-rm">
+                        RM{" "}
+                        <b className={item.best_rm ? "personal-best-value" : undefined}>
+                          {item.estimated_rm}
+                        </b>
+                        <small> kg</small>
+                      </span>
+                    )}
+                  </span>
                   {item.best && (
                     <span className="best-badge record-celebration">
-                      <span role="img" aria-label="最高記録">
-                        🔥
-                      </span>
+                      <BestFlame best={{ weight: item.best_weight, rm: item.best_rm }} />
                     </span>
                   )}
                   <span className="feed-detail-hint">詳細</span>
