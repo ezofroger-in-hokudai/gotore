@@ -1,7 +1,12 @@
 import type { Exercise, TrainingSession } from "@/lib/api";
-
-type Pending = { id: string; exercises: Exercise[] };
-type SavedQueue = { base: TrainingSession; pending: Pending[]; conflict?: boolean };
+import {
+  type SavedQueue,
+  applyQueueChange,
+  queueChange,
+  queuedExercises,
+  readQueue,
+  writeQueue,
+} from "./queue-storage";
 export type QueueState = {
   session: TrainingSession | null;
   pending: number;
@@ -50,25 +55,15 @@ export class SessionQueue {
   private read(): SavedQueue | null {
     const raw = this.options.read();
     if (!raw) return null;
-    const value = JSON.parse(raw);
-    if (
-      !value?.base?.id ||
-      !Number.isInteger(value.base.revision) ||
-      !Array.isArray(value.base.exercises) ||
-      !Array.isArray(value.pending) ||
-      value.pending.some((p: Pending) => !p.id || !Array.isArray(p.exercises))
-    )
-      throw new Error("端末の保存待ちデータを読み取れません。データを削除せず確認してください。");
-    return value;
+    return readQueue(raw);
   }
   private publish(record: SavedQueue | null, patch: Partial<QueueState> = {}) {
-    const last = record?.pending.at(-1);
     this.state = {
       ...this.state,
       session: record
         ? {
             ...record.base,
-            exercises: last?.exercises ?? record.base.exercises,
+            exercises: queuedExercises(record),
             revision: record.base.revision + record.pending.length,
           }
         : null,
@@ -82,7 +77,7 @@ export class SessionQueue {
   private write(record: SavedQueue | null, patch: Partial<QueueState> = {}) {
     // 書き込み失敗時はUIにも追加しない。ACK後に失敗しても同じ要求を再送できる。
     try {
-      this.options.write(record ? JSON.stringify(record) : null);
+      this.options.write(record ? writeQueue(record) : null);
     } catch {
       throw new Error("この端末に記録を保存できません。空き容量やブラウザ設定を確認してください。");
     }
@@ -136,7 +131,7 @@ export class SessionQueue {
         throw new Error("保存済みとの違いを確認してください。端末の入力は保持しています。");
       const current = {
         ...record.base,
-        exercises: record.pending.at(-1)?.exercises ?? record.base.exercises,
+        exercises: queuedExercises(record),
         revision: record.base.revision + record.pending.length,
       };
       if (revision !== current.revision)
@@ -146,7 +141,7 @@ export class SessionQueue {
         ...record,
         pending: [
           ...record.pending,
-          { id: crypto.randomUUID(), exercises: structuredClone(exercises) },
+          { id: crypto.randomUUID(), change: queueChange(current.exercises, exercises) },
         ],
       };
       this.write(next);
@@ -166,11 +161,15 @@ export class SessionQueue {
           }
           this.publish(record, { status: "syncing", error: "" });
           try {
-            const result = await this.options.send(
-              record.base.id,
-              record.base.revision,
-              job.exercises,
-            );
+            const exercises = applyQueueChange(record.base.exercises, job.change);
+            const result = await this.options.send(record.base.id, record.base.revision, exercises);
+            // 後続差分の基準は送信した全状態。異なるACKへ差分を適用しない。
+            if (
+              result.id !== record.base.id ||
+              result.revision !== record.base.revision + 1 ||
+              JSON.stringify(result.exercises) !== JSON.stringify(exercises)
+            )
+              throw Object.assign(new Error("保存結果の確認が必要です。"), { status: 409 });
             await this.options.lock("store", async () => {
               const latest = this.read();
               if (latest?.base.id !== record.base.id || latest.pending[0]?.id !== job.id) return;
