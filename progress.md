@@ -2060,3 +2060,17 @@
 - 影響範囲・関連ファイル: features/branding/wombat.tsx、LoadingState、app-icon、manifest/layout/apple-icon、home-screen.spec.ts、docs/mascot-options.md、docs/images/wombat/。DB/API・記録ルールへの変更なし。
 - 未解決事項: OS実機へのホーム画面追加と既存アイコンの更新時期は未確認。全E2E143件は直前の起動限定実装で成功済み。今回の図形変更後は関連5件を再実行し、全件の再実行はCIで追跡する。
 - 次のアクション: 画像付きPR #147をA案の採用実装へ更新し、ドラフトを解除してレビュー/CIを待つ。
+
+## 2026-09-14 02:27
+- 変更内容・目的: #148の設定からの種目管理、検索/分類、追加フォーム開閉、対象行の削除確認、保存成功の即時反映を実装。設定・記録・旧記録編集が候補を共用し、履歴分類も更新する。
+- 検証: 先行E2Eが未実装の「種目を管理」入口で失敗することを確認後に実装。標準チェックは237件/75件・lint/型/build成功、その後の画面間共用調整は再ビルド・E2Eで確認中。
+- 影響範囲: ExerciseCatalog、useExerciseCatalog、useResourceの成功結果更新、設定/Workspace/SessionScreen/WorkoutForm。API/DBと共有ルールは未変更。
+- 未解決事項・次のアクション: 関連E2E、遅いGET・再試行・入力保持・画像の確認後に全E2Eを実行する。PR #115の検証は独立worktreeで進める。
+
+## 2026-09-14 02:58
+- 変更内容・目的: #148の種目管理を完成し、320/390/430px・ダーク・追加/削除の実画面画像を追加。設定から開始なしで整理でき、成功した更新を候補へ即時反映する。
+- 検証: make check成功（backend237件/frontend75件、lint・型・build）。最終調整後もlint・型を含むbuild成功。関連11件と既存の部位操作4件、記録/共有を含む全E2E146件が成功（5.5分）。git diff --checkと資料の参照先を確認。画像/文書だけの追記には追加テストを設けていない。
+- 検証中の修正: 最初の関連実行で2件が高負荷時に遷移待ちでタイムアウトしたため、同時実行を減らし該当ケースを含め再実行して成功。Next.jsのAPI転送先はbuild時に決まるため、ローカル検証用URLを8100へ統一して最終buildと全E2Eを実行。既存テストの下書き保存待ちと保存statusの選択を実際の完了条件に合わせた。
+- 影響範囲・関連ファイル: ExerciseCatalog/CatalogPanel/useExerciseCatalog、useResource、設定・記録・履歴編集、関連E2E、docs/exercise-body-parts.md、docs/images/exercise-management/。DB/API変更なし。
+- 未解決事項: お気に入り・並べ替え・一括分類・種目名の変更/統合は今回含めない。サーバー応答前の保存完了表示や端末への記録永続保存は追加していない。
+- 次のアクション: #148の画像付きPRを作成してCI/レビューへ進む。週次#149で後続の#104共有要約を追跡。独立PR #115は最新mainとの競合解消と記録修正をpush済みで、backend/frontend/database/Vercelがすべて成功した。mainへのマージは未実施。

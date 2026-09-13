@@ -2304,3 +2304,37 @@
   color: var(--muted);
   font-size: .75rem;
 }
+
+.catalog-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.catalog-toolbar input {
+  min-width: 0;
+  flex: 1;
+}
+.catalog-toolbar button {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 8px;
+  min-height: 44px;
+}
+.catalog-filters {
+  gap: 5px;
+  margin-top: 12px;
+}
+.catalog-filters button {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.exercise-catalog .exercise-options {
+  max-height: none;
+  overflow: visible;
+}
+.exercise-options > li > .notice {
+  flex-basis: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

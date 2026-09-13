@@ -4,7 +4,8 @@ import type { ExerciseOption, RecordBestSet, SessionBests, TrainingSession } fro
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BodyPartTags } from "../exercises/body-part-fields";
 import { type BodyPartFilter, PART_FILTERS, filterExercises } from "../exercises/body-parts";
-import { ExerciseCatalog } from "../exercises/exercise-catalog";
+import { CatalogPanel } from "../exercises/catalog-panel";
+import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { BestFlame } from "../training/best-flame";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
@@ -23,6 +24,7 @@ import { useExerciseContext } from "./use-exercise-context";
 import type { SessionController } from "./use-session";
 
 export function SessionScreen({
+  catalog,
   active,
   controller,
   userId,
@@ -30,14 +32,13 @@ export function SessionScreen({
   haptic,
 }: {
   active: boolean;
+  catalog: ReturnType<typeof useExerciseCatalog>;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
 }) {
   const { session } = controller;
-  // 本人用の一覧はマウント中のデータを保持し、再取得失敗でも選択肢を消さない。
-  const catalog = useResource<ExerciseOption[]>("/exercise-options");
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
   if (!session && !controller.startingId)
     return (
@@ -91,7 +92,7 @@ function ActiveTraining({
   session: TrainingSession | null;
   initialInput: SessionInput;
   onPreparingInput: (input: SessionInput) => void;
-  catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  catalog: ReturnType<typeof useExerciseCatalog>;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
@@ -115,7 +116,7 @@ function ActiveTraining({
     if (!sessionId) onPreparingInput(input);
   }, [input, sessionId, onPreparingInput]);
   const [selecting, setSelecting] = useState(!input.name);
-  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState<false | "list" | "add">(false);
   const comparisonTable = useRef<HTMLElement>(null);
   const repsField = useRef<HTMLInputElement>(null);
   const [conflictOpen, setConflictOpen] = useState(false);
@@ -360,7 +361,7 @@ function ActiveTraining({
         <>
           <div className="section-heading">
             <h1>種目を選択</h1>
-            <button className="text-button" type="button" onClick={() => setCatalogOpen(true)}>
+            <button className="text-button" type="button" onClick={() => setCatalogOpen("list")}>
               種目一覧
             </button>
           </div>
@@ -488,7 +489,7 @@ function ActiveTraining({
           <button
             className="secondary full exercise-add-button"
             type="button"
-            onClick={() => setCatalogOpen(true)}
+            onClick={() => setCatalogOpen("add")}
           >
             新しい種目を追加
           </button>
@@ -506,7 +507,7 @@ function ActiveTraining({
               >
                 種目を変更
               </button>
-              <button type="button" className="text-button" onClick={() => setCatalogOpen(true)}>
+              <button type="button" className="text-button" onClick={() => setCatalogOpen("list")}>
                 種目一覧
               </button>
             </div>
@@ -784,11 +785,10 @@ function ActiveTraining({
       )}
       {catalogOpen && (
         <Sheet title="種目一覧" onClose={() => setCatalogOpen(false)}>
-          <ExerciseCatalog
-            options={catalog.data ?? []}
-            expanded
+          <CatalogPanel
+            catalog={catalog}
             disabled={controller.busy}
-            onChanged={catalog.retry}
+            startAdding={catalogOpen === "add"}
           />
         </Sheet>
       )}
