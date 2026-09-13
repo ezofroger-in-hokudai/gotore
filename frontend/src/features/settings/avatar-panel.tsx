@@ -1,5 +1,6 @@
 import { type AvatarImage, api } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
+import { LoadingState } from "../loading/loading-state";
 import { useResource } from "../training/use-resource";
 import { prepareAvatar } from "./avatar-image";
 
@@ -105,7 +106,9 @@ export function AvatarPanel({
         }}
       />
       <p className="muted avatar-file-hint">JPEG・PNG・WebP / 10MBまで</p>
-      {current.loading && !image && <output>読み込み中…</output>}
+      {current.loading && !image && !current.error && (
+        <LoadingState label="プロフィール画像を読み込み中" compact />
+      )}
       {current.error && !saved && (
         <p className="error" role="alert">
           {current.error}

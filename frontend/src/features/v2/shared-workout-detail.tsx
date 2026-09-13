@@ -1,4 +1,5 @@
 import type { Workout } from "@/lib/api";
+import { LoadingState } from "../loading/loading-state";
 import { RecordList } from "../training/record-list";
 import { Sheet } from "./sheet";
 
@@ -18,7 +19,7 @@ export function SharedWorkoutDetail({
       ) : record.data ? (
         <RecordList records={[record.data]} empty="" />
       ) : (
-        <output className="muted">読み込み中…</output>
+        <LoadingState label="記録の詳細を読み込み中" />
       )}
     </Sheet>
   );

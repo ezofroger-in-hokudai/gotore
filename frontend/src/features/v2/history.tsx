@@ -4,6 +4,7 @@ import { ActivityCalendar } from "../activity/activity-calendar";
 import { dateLabel } from "../activity/calendar";
 import { dates } from "../analytics/chart";
 import { AnalyticsPanel } from "../analytics/panel";
+import { LoadingState } from "../loading/loading-state";
 import { BestFlame } from "../training/best-flame";
 import { today } from "../training/draft";
 import { RecordList } from "../training/record-list";
@@ -122,9 +123,13 @@ export function History({
             )}
           </div>
           <ResourceError resource={records} />
-          <output className="resource-status muted">
-            {records.loading ? (records.data ? "更新中…" : "読み込み中…") : ""}
-          </output>
+          {records.loading && !records.data && !records.error ? (
+            <LoadingState label="記録一覧を読み込み中" />
+          ) : (
+            <output className="resource-status muted">
+              {records.loading && records.data ? "更新中…" : ""}
+            </output>
+          )}
           <div className="v2-rows">
             {records.data?.map((record) => (
               <button
