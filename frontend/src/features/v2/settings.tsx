@@ -90,10 +90,6 @@ export function Preferences({
       </div>
       <h2>アプリ</h2>
       <div className="v2-rows">
-        <div className="v2-row">
-          <span>通知</span>
-          <span className="muted">準備中</span>
-        </div>
         <button className="v2-row" type="button" onClick={() => setSheet("theme")}>
           <span>外観</span>
           <span>

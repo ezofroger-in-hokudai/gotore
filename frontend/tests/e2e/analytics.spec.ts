@@ -123,6 +123,14 @@ test("先読みした履歴グラフを表示し、指標・粒度・期間再�
   await expect(panel.locator(".analytics-summary")).toContainText("23,500");
   state.slow();
   const before = state.selectedCount();
+  const help = panel.locator(".analytics-help");
+  await expect(help.locator("p")).toBeHidden();
+  await help.getByText("指標について", { exact: true }).click();
+  await expect(help.locator("p")).toContainText("重量 × 回数");
+  await page.screenshot({ path: "test-results/analytics-help-open.png", fullPage: true });
+  await help.getByText("指標について", { exact: true }).click();
+  await expect(help.locator("p")).toBeHidden();
+  expect(state.selectedCount()).toBe(before);
   await panel.getByRole("button", { name: "最高重量", exact: true }).click();
   await expect(panel.locator(".analytics-summary")).toContainText("85", { timeout: 500 });
   await panel.getByRole("button", { name: "週別", exact: true }).click();

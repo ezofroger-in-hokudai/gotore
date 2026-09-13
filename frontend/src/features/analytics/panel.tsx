@@ -225,11 +225,14 @@ export function AnalyticsPanel({
               {!data.totals.sets && <p className="muted">この期間は記録がありません。</p>}
             </>
           )}
-          <p className="analytics-footnote muted">
-            {ranking
-              ? "現在グループに共有されている記録で集計します。"
-              : "総負荷 = 重量 × 回数の合計。最高推定1RMは1〜10回の記録から算出します。"}
-          </p>
+          {ranking ? (
+            <p className="analytics-footnote muted">共有済みの記録のみで集計</p>
+          ) : (
+            <details className="analytics-help">
+              <summary>指標について</summary>
+              <p>総負荷 = 重量 × 回数の合計。最高推定1RMは1〜10回の記録から算出します。</p>
+            </details>
+          )}
         </>
       )}
     </section>
