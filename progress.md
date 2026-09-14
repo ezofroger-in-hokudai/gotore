@@ -2244,3 +2244,10 @@
 - 検証: 提出時点のba1c521はmainとの競合なし。backend/frontend/databaseのCI実行中、Vercel Previewも処理中。ローカルでは統合後make checkと全E2E174件が成功済み。今回は提出記録のみの追記のため、先行テストを追加せずgit diff --checkを確認する。
 - 影響範囲・関連ファイル: progress.md、PR #155。作業ツリーは修正専用ブランチで管理し、元の未コミット変更を保持した。
 - 未解決事項・次のアクション: 最終コミットのCIと第三者レビューを確認する。実機Safari/Android/PWA、マージ・本番反映は未実施。
+
+
+## 2026-09-15 00:25
+- 変更内容・目的: PR #155のCI失敗を調査。7912ecaのdatabaseジョブ（run 34857917530）は、追加テスト2件でclock.pauseAtが「Cannot fast-forward to the past」となり失敗、残り172件は成功していた。実行側の現在時刻を毎回使う初期化をやめ、停止時刻を一度決め、その1時間前から時計を初期化する共通処理へ変更した。
+- 影響範囲・関連ファイル: frontend/tests/e2e/group-order.spec.ts、progress.md。時計制御を使う3件へ適用し、画面のタイマー作成前にinstallする順序へ合わせた。参照: https://playwright.dev/docs/clock#consistent-time-and-timers 。アプリ本体・期待するスワイプ動作・CIの検査項目は変更しない。
+- 検証: 既存CIの失敗ログを先行する失敗の証拠として利用。修正後、CIと同じNext.js開発サーバーでグループ関連E2E14件成功（55.2秒）、lint・型検査も成功。時計を使う3件を各3回繰り返した計9件も成功（27.6秒）。自分の検証用Web/APIは停止し、開発サーバーが生成したnext-env.d.tsの変更だけを元へ戻した。ローカルSupabaseの設定変更は行っていない。
+- 未解決事項・次のアクション: 反復検証後にPR #155へpushし、最終コミットのCIがすべて成功するまで確認する。確定したCI結果は同PRの検証結果にも記載する。本番反映は行わない。

@@ -344,10 +344,17 @@ for (const width of [320, 390, 430]) {
   });
 }
 
+async function setupWithPausedClock(page: Page) {
+  const pausedAt = new Date();
+  // 停止時刻を初期時刻より十分先に固定し、CIの処理時間や時計の差に依存させない。
+  await page.clock.install({ time: new Date(pausedAt.getTime() - 60 * 60 * 1000) });
+  const state = await setup(page);
+  await page.clock.pauseAt(pausedAt);
+  return state;
+}
+
 test("移動中の連続スワイプは前の目標から進み、逆方向なら戻る", async ({ page }) => {
-  const { key } = await setup(page);
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  const { key } = await setupWithPausedClock(page);
   await touchSwipe(page, -60);
   await touchSwipe(page, -60);
   await page.clock.runFor(500);
@@ -380,9 +387,7 @@ test("移動中の連続スワイプは前の目標から進み、逆方向な�
 });
 
 test("移動中にドットや別画面を操作しても古いアニメーションが選択を戻さない", async ({ page }) => {
-  await setup(page);
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await setupWithPausedClock(page);
   await touchSwipe(page, -60);
   await page.getByRole("button", { name: "週末トレ部を表示" }).click();
   await page.clock.runFor(500);
@@ -402,9 +407,7 @@ test("移動中にドットや別画面を操作しても古いアニメーシ�
 
 test("動きを減らす設定ではスワイプを離すと即時に次のカードを表示する", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await setup(page);
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await setupWithPausedClock(page);
   await touchSwipe(page, -60);
   expect(
     await page
