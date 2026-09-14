@@ -2148,3 +2148,10 @@
 - 影響範囲・関連ファイル: AuthPanel、features/auth、auth/confirm/resend、認証テスト、supabase/config.toml/templates、docs/email-signup.md・画像、README、task/progress。DB migration、API、アプリ環境変数の追加なし。
 - 未解決事項: 公開SMTP/送信元ドメインの準備状況・対象環境の設定反映と実配送、実機PWAは未確認。公開設定・DNS・契約・本番メール送信・マージ/デプロイは未実施。#25全体は完了扱いにしない。
 - 次のアクション: 検証済みの変更をコミットし、画像付きドラフトPRへ提出。CIと第三者レビュー、SMTPの準備後に公開反映を進める。元の作業ツリーの未コミット変更は保持し、自分の検証用Web/APIは停止する。
+
+## 2026-09-14 21:31
+- 変更内容・目的: 実装をローカルコミット88e9839に保存し、ドラフトPR本文も準備した。GitHubへ提出する前の停止状況を記録する。
+- 影響範囲・関連ファイル: progress.md、ローカルブランチfeat/25-email-signup。送信先originはgit@github.com:ezofroger-in-hokudai/gotore.git。
+- 検証: コミット後の作業ツリーがクリーンであることを確認。今回は作業記録のみのため先行テストは追加せず、git diff --checkで検証する。
+- 未解決事項: git pushが自動承認レビューで拒否された。コード・文書・画像を当該GitHubへ送信する明示承認がないことと送信先の信頼性を確認できないことが理由。push・PR作成・CIは未実施。公開SMTPも引き続き準備状況を確認中。
+- 次のアクション: ユーザーに当該リポジトリへのpushとドラフトPR作成の承認を求める。承認後に提出しCI/第三者レビューへ進む。マージ・デプロイは行わない。
