@@ -26,7 +26,10 @@ export default defineConfig({
     {
       command: "bunx next dev --hostname 127.0.0.1 --port 3100",
       url: "http://127.0.0.1:3100",
-      env: { BACKEND_INTERNAL_URL: "http://127.0.0.1:8100" },
+      env: {
+        BACKEND_INTERNAL_URL: "http://127.0.0.1:8100",
+        NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "true",
+      },
       reuseExistingServer,
       timeout: 60_000,
     },

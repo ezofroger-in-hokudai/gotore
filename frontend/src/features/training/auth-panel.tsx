@@ -1,12 +1,36 @@
 "use client";
 
 import { getSupabase } from "@/lib/supabase";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
+import { googleSignInOptions } from "../auth/google-auth";
 
 export function AuthPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const configured = !!getSupabase();
+  const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
+
+  useEffect(() => {
+    const restore = () => setBusy(false);
+    window.addEventListener("pageshow", restore);
+    return () => window.removeEventListener("pageshow", restore);
+  }, []);
+
+  async function googleLogin() {
+    const client = getSupabase();
+    if (!client || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const { error } = await client.auth.signInWithOAuth(
+        googleSignInOptions(window.location.origin),
+      );
+      if (error) throw error;
+    } catch {
+      setError("Googleでのログインを開始できません。再試行してください。");
+      setBusy(false);
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,7 +63,23 @@ export function AuthPanel() {
       </div>
       <section className="panel auth-form">
         <h2>ログイン</h2>
-        <p className="notice">アカウントの発行は管理者へ。</p>
+        {googleEnabled ? (
+          <>
+            <button
+              className="google-signin"
+              type="button"
+              disabled={busy || !configured}
+              onClick={googleLogin}
+            >
+              <img src="/google-g.svg" alt="" width="20" height="20" />
+              <span>Googleで続ける</span>
+            </button>
+            <p className="auth-description">初めての方も、そのまま登録できます。</p>
+            <p className="auth-email-label">メールで登録済みの方</p>
+          </>
+        ) : (
+          <p className="notice">アカウントの発行は管理者へ。</p>
+        )}
         <form onSubmit={submit}>
           <fieldset disabled={busy || !configured}>
             <label>

@@ -100,7 +100,7 @@ make frontend
 
 Supabase StudioのAuthentication → Users → Add user → Create new userで、開発用のメール・パスワードを設定し、Auto Confirm Userをオンにします。seedは空なので、初回起動だけではログイン用ユーザーや記録は作られません。
 
-ローカル・公開環境とも一般ユーザーの新規登録は提供しません。詳細は [管理者登録ガイド](docs/admin-managed-accounts.md) を参照してください。アカウントを作成できたら [最初に試す操作](#最初に試す操作) でログインから記録共有まで確認します。
+Googleでの新規登録は [Google認証の設定手順](docs/google-signin.md) に従って有効にします。公開アドレスは https://egotore.com/ です。ローカルの管理者発行は [管理者登録ガイド](docs/admin-managed-accounts.md) を参照してください。アカウントを作成できたら [最初に試す操作](#最初に試す操作) でログインから記録共有まで確認します。
 
 ## 日々の開発
 
@@ -144,6 +144,8 @@ git switch -c feat/123-workout-record
 CI成功と原則として実装者以外のレビューを経てマージします。詳しい運用は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
 
 ## 環境変数
+
+Googleボタンは `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` のビルドだけで表示します。設定手順・秘密情報の置き場所は [Google認証ガイド](docs/google-signin.md) を参照してください。
 
 ### ファイルの置き場所と読み込み先
 
@@ -285,7 +287,7 @@ LinuxでブラウザのOS依存が不足する場合は `frontend/` で `bunx pl
 
 E2EはローカルSupabaseと設定済みの環境ファイルを使い、APIを8100番・Webを3100番で一時起動します。
 中断後に自分が起動した同じテスト用サーバーが残っている場合だけ、`PLAYWRIGHT_REUSE_SERVER=1 make test-e2e` で再利用できます。別のアプリや通常開発用サーバーには使わないでください。CIでは再利用しません。
-一般登録の拒否とログイン専用UI、管理者作成ユーザーの別ブラウザでのログイン・参加・共有、下書き復元、通信失敗後の再送、再ログインを確認します。
+メール自己登録の拒否、Google認証の復帰・初回表示名設定、管理者作成ユーザーの別ブラウザでのログイン・参加・共有、下書き復元、通信失敗後の再送、再ログインを確認します。
 ホーム画面用のmanifest・メタ情報・各サイズのPNGアイコン配信も確認します。
 ローカルDBに `gotore-…@example.test` のテストアカウントとその記録を作成します。既存ユーザーのデータは削除しません。
 結果・失敗時の画像はGit対象外の `frontend/test-results/` に出力します。
@@ -332,7 +334,7 @@ VercelのRoot Directoryはリポジトリのルート（`.`）です。`frontend
 各サービスのFramework・buildは設定ファイルで指定し、`/api/*` をFastAPI、それ以外をNext.jsへ送ります。
 
 設定する値は [.env.vercel.example](.env.vercel.example)、具体的な手順・注意点は [公開準備ガイド](docs/vercel-supabase.md) を参照してください。
-クラウドの環境変数・DB migration・Auth設定は別途必要です。テスト運用はログイン専用とし、[管理者登録ガイド](docs/admin-managed-accounts.md) に従ってアカウントを発行してください。画面変更だけでは一般登録は止まらないため、公開Supabase側の登録禁止設定も必要です。
+クラウドの環境変数・DB migration・Auth設定は別途必要です。公開アドレスは https://egotore.com/ です。[Google認証の設定手順](docs/google-signin.md) に従い、登録制限hook → Google設定 → 新規登録の許可 → `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` の順に反映します。既存のメールログインは維持します。
 ローカルの環境ファイルは公開用の値で上書きしません。migrationの反映は [共有DBへの適用手順](supabase/README.md#共有dbへの適用担当者向け) に従い、アプリのデプロイとは別に管理します。
 
 ## 主な配置先

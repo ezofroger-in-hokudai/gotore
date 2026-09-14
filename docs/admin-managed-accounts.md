@@ -1,4 +1,6 @@
-# テスト運用: 管理者登録・ログイン専用
+# テスト運用: 管理者によるアカウント発行
+
+2026-09-15以降のGoogle自己登録は[Google認証ガイド](google-signin.md)を優先する。以下の一般登録禁止設定はGoogle導入前・新規登録停止時に使う。管理者発行と既存メールログインの手順は継続する。
 
 ユーザー合意により、テスト中は管理者がSupabase Authでアカウントを発行する。
 アプリの自己登録は提供しない。画面だけの変更ではAuth APIからの登録を防げないため、以下のクラウド設定も必須。
@@ -9,7 +11,7 @@
 1. VercelのSUPABASE_URLと同じプロジェクトをSupabase Dashboardで開く。
 2. Authentication → Sign In / Providersで **Allow new users to sign up** をオフにして保存する。Emailプロバイダーのログインは有効のままにする。匿名ログインは無効のままにする。
 3. Emailの **Confirm Email** は有効のままにする。確認メールを避けるために全ユーザーの確認を無効化するのではなく、以下でテスト対象者だけを確認済みとして発行する。
-4. Authentication → URL Configurationの **Site URL** を `https://gotore-two.vercel.app/` に変更する。Redirect URLsにも同じ正確なURLを登録する。これはlocalhostへの遷移対策であり、メール送信の429制限とは別の設定。
+4. Authentication → URL Configurationの **Site URL** を `https://egotore.com/` に変更する。Redirect URLsにも同じ正確なURLを登録する。これはlocalhostへの遷移対策であり、メール送信の429制限とは別の設定。
 
 この設定はリポジトリのmigrationやVercelへの再デプロイだけでは反映されない。
 
@@ -33,16 +35,16 @@ DBのTable EditorやSQLでauth.usersへ直接INSERTしない。public.gotore_pro
 
 ## ローカル開発・CI
 
-- `supabase/config.toml` でも一般登録を無効にし、メール確認を有効にする。すでに起動中なら `make db-stop` → `make db-start` で反映する。通常のstopはデータを保持する。`--no-backup` や `make db-reset` は使わない。
+- `supabase/config.toml` はGoogle自己登録用のhookを有効にする。メール自己登録は拒否し、メール確認は維持する。既存環境は `make db-migrate` で関数を追加してから `make db-stop` → `make db-start` で反映する。通常のstopはデータを保持する。`--no-backup` や `make db-reset` は使わない。
 - ローカルアカウントもStudio（http://localhost:59323）のAuthenticationから確認済みで作成する。メール送信は不要。
 - `make test-e2e` はローカルCLIのstatusから取得した管理キーをテストプロセス内だけで使い、管理者APIでランダムなメールアドレスのテストユーザーを作成する。キーを環境ファイル・ブラウザ・ログへ書かない。
 - E2Eの管理者操作はGO TORE専用のloopback:59321に限定し、クラウドのAuthには実行しない。テスト用アカウントと共有記録はローカルDBに残る。
-- 新規登録UIがないこと、一般登録APIの拒否、ログイン失敗の案内、管理者作成の2ユーザーによる共有と再ログインを検証する。
+- メール自己登録APIの拒否、Googleの認証復帰と初回表示名、ログイン失敗の案内、管理者作成の2ユーザーによる共有と再ログインを検証する。
 
 ## 残る制約・自己登録を再開するとき
 
-これは少人数の管理者発行によるテスト運用。アプリ内の登録・パスワード再設定・管理画面は提供しない。資格情報の再発行は管理者対応とする。表示名はアプリの設定画面から変更できる。
-自己登録再開時は後続IssueでSMTP、送信制限、正しい公開URL、メール確認、登録画面、テストと運用をまとめて見直す。管理者用の確認済み発行を一般登録APIへ公開しない。
+管理者発行は少人数のテスト運用や既存利用者向けに維持する。Google自己登録は追加するが、メール自己登録・パスワード再設定・管理画面は提供しない。資格情報の再発行は管理者対応とする。表示名はアプリの設定画面から変更できる。
+メール自己登録の再開時は#25/#4でSMTP、送信制限、正しい公開URL、メール確認、登録画面、テストと運用をまとめて見直す。管理者用の確認済み発行を一般登録APIへ公開しない。
 
 ## 参照
 
