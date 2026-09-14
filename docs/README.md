@@ -47,7 +47,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [invite-code.md](invite-code.md): オーナーによる招待コード再発行・旧コード無効化。
 - [workout-management.md](workout-management.md): 本人の記録訂正・削除、競合と再送。
 - [daily-improvements.md](daily-improvements.md): 入力操作・表示名・グループ名変更の合意範囲。
-- [admin-managed-accounts.md](admin-managed-accounts.md): テスト用アカウントの管理者発行、一般登録禁止、公開Authの設定。
+- [email-signup.md](email-signup.md): メール確認付き一般登録、再送・期限切れ、SMTPと公開Authの反映手順。
+- [admin-managed-accounts.md](admin-managed-accounts.md): 開発・テスト用アカウントの管理者発行と過去の登録制限。
 - [vercel-supabase.md](vercel-supabase.md): Vercel Servicesの1プロジェクト構成、環境変数と公開前の手順。
 - [standard-v0.1-scope.md](standard-v0.1-scope.md): ユーザー指定のグループ作成・記録・共有を完成ラインとする初版の仕様。
 - [current-state.md](current-state.md): 現行実装と資料の差分。Issueを起こすときの出発点。

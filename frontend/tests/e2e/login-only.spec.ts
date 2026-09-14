@@ -1,33 +1,21 @@
 import { expect, test } from "@playwright/test";
-import { localAuth, testPassword } from "./local-auth";
+import { testPassword } from "./local-auth";
 
-test("ログイン専用画面は管理者発行を案内し、新規登録を提供しない", async ({ page }) => {
+test("既存ユーザーはログインでき、一般ユーザー向けの登録入口も表示する", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "新規登録", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "新規登録", exact: true })).toBeVisible();
   await expect(page.getByLabel("表示名", { exact: true })).toHaveCount(0);
-  await expect(
-    page.getByText("アカウントの発行は管理者へ。", {
-      exact: true,
-    }),
-  ).toBeVisible();
-});
-
-test("一般ユーザー向けAuth APIから新規登録できない", async () => {
-  const { publicAuth } = localAuth();
-  const { data, error } = await publicAuth.signUp({
-    email: `gotore-blocked-${crypto.randomUUID()}@example.test`,
-    password: testPassword,
-  });
-  expect(error?.code).toBe("signup_disabled");
-  expect(data.user).toBeNull();
-  expect(data.session).toBeNull();
 });
 
 test("ログイン失敗は管理者への案内を表示し、再試行できる", async ({ page }) => {
   await page.route("**/auth/v1/token?grant_type=password", (route) =>
     route.fulfill({
       status: 400,
+      headers: {
+        "x-supabase-api-version": "2024-01-01",
+        "access-control-expose-headers": "x-supabase-api-version",
+      },
       contentType: "application/json",
       body: JSON.stringify({ code: "invalid_credentials", msg: "Invalid login credentials" }),
     }),

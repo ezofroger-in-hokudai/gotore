@@ -12,7 +12,7 @@ v2の画面・共有・セッションの規則は [gotore-v2-spec.md](gotore-v2
 
 | 機能 | 動作 | 主な配置先 |
 | --- | --- | --- |
-| アカウント | 管理者発行、ログイン・ログアウト。設定で本人の表示名を取得・変更・同期。Auth未設定時はDBの既存名を保持（#29）。APIがトークンと認証設定の形式を検証 | frontend/src/features/settings/、auth-panel.tsx、backend/app/api/dependencies.py |
+| アカウント | メール確認付き一般登録・再送、ログイン・ログアウト。管理者発行も継続。設定で本人の表示名を取得・変更・同期。Auth未設定時はDBの既存名を保持（#29）。APIがトークンと認証設定の形式を検証 | frontend/src/features/settings/、auth-panel.tsx、backend/app/api/dependencies.py |
 | グループ | 作成・招待参加・一覧・メンバー表示。名称変更・招待コード再発行・退出・メンバー除外。退出・除外後は本人の履歴を残して共有解除 | features/v2/community.tsx、group-name-form.tsx、backend/app/services/training.py |
 | 記録 | 本人用の種目リストから選択し、候補の追加・削除も可能（#28）。主部位・補助部位を保存・編集し、A案の部位ボタンと名前検索で選択（#132）。v2では1セットずつ端末へ即時追加し、DBへ順序付きでバックグラウンド保存。連続ホイール・直接入力・全セット一覧の前回比較・RM・BEST・常時表示のメモ。明示終了まで継続し、未保存入力は同じ端末で復元。旧記録の編集フォームは維持 | features/session/、workout-form.tsx、backend/app/domain/session.py |
 | 共有 | v2は開始時の全所属グループへ保存済みセットを共有。旧記録の共有範囲は維持。メンバー限定のLIVE/TODAYと最新記録 | backend/app/infrastructure/training_repository.py、record-list.tsx |
@@ -22,7 +22,7 @@ v2の画面・共有・セッションの規則は [gotore-v2-spec.md](gotore-v2
 | DB・設定 | migration、RLS、外部キー・一意制約、ローカル設定の生成 | supabase/migrations/、scripts/configure_local.py |
 
 公開APIは `/api`。ローカルではNext.jsからFastAPIへ転送します。
-Vercel Servicesでは1プロジェクトの共通ルートから各サービスへ振り分けます。設定は [vercel-supabase.md](vercel-supabase.md) を参照してください。ユーザーが公開サイトをデプロイし、migration適用を報告済みです。公開Authの登録制限・手動発行・URL設定は [管理者登録ガイド](admin-managed-accounts.md) に従って管理者が反映します。各リリースの本番反映は管理者が確認します。
+Vercel Servicesでは1プロジェクトの共通ルートから各サービスへ振り分けます。設定は [vercel-supabase.md](vercel-supabase.md) を参照してください。ユーザーが公開サイトをデプロイし、migration適用を報告済みです。公開Authの一般登録・SMTP・確認URL設定は [メール登録の公開手順](email-signup.md#公開への反映手順)に従って管理者が反映します。コードだけでは公開設定は更新されません。各リリースの本番反映は管理者が確認します。
 業務データはFastAPI経由で操作し、ブラウザからのDB直接アクセスはRLSで拒否します。
 追加の名称設定・入力操作の仕様は [daily-improvements.md](daily-improvements.md)。#4のメール／パスワード変更は後続です。名称設定・入力改善はPR #27でmainへ統合済みです。#29の名前保持修正はPR #32でmainへ統合済みです。本番反映はこの記録で保証しません。最新のレビュー・検証状況はPRとprogress.mdで追跡します。
 ローカルSupabaseのプロジェクトIDは `gotore`、ポートは59320番台です。
@@ -31,7 +31,7 @@ Vercel Servicesでは1プロジェクトの共通ルートから各サービス�
 
 - backend: 入力制約・認証・グループ参加・共有範囲・再送・DB直接アクセス拒否・接続プール設定のテスト。
 - frontend: 下書き復元・入力制約・ホーム画面設定の単体テスト。
-- E2E: 一般登録拒否、ログイン専用UI、管理者作成アカウントでのログイン・グループ作成・参加・記録共有、通信再試行、下書き復元、再ログイン。
+- E2E: メール確認付き登録と未確認ログイン拒否、管理者作成アカウントでのログイン・グループ作成・参加・記録共有、通信再試行、下書き復元、再ログイン。
 - ホーム画面: manifest・メタ情報・PNG配信をブラウザで検証。ユーザーがHTTPS公開済みだが、iPhone／Android実機での追加・再起動確認は未実施。
 - CI: backend／frontend／database。PostgreSQL統合テスト、Supabase migration、ブラウザテストを含む。
 - 最新の実施結果と未実施項目は `progress.md` に記録する。

@@ -289,6 +289,39 @@ fieldset {
 .auth-form .notice {
   margin: 0;
 }
+.auth-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+.auth-form button,
+.auth-actions a,
+.auth-confirm > a {
+  min-height: 48px;
+}
+.auth-actions a,
+.auth-confirm > a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+}
+.auth-message {
+  font-size: 14px;
+  line-height: 1.7;
+  margin-block: 16px;
+}
+.auth-email {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.auth-confirm {
+  margin-top: 32px;
+}
+.auth-confirm h1 {
+  font-size: 22px;
+}
 .auth-footer {
   text-align: center;
   color: #8a8075;
