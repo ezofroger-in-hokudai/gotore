@@ -1,5 +1,5 @@
 import type { Workout } from "@/lib/api";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityCalendar } from "../activity/activity-calendar";
 import { dateLabel } from "../activity/calendar";
 import { dates } from "../analytics/chart";
@@ -37,6 +37,10 @@ export function History({
   const [month, setMonth] = useState(() => today().slice(0, 7));
   const [date, setDate] = useState("");
   const [page, setPage] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const recordHeading = useRef<HTMLHeadingElement>(null);
+  const revealRecords = () =>
+    requestAnimationFrame(() => recordHeading.current?.scrollIntoView({ block: "start" }));
   const [detail, setDetail] = useState<string | null>(null);
   useEffect(() => {
     if (guideTarget?.target !== "calendar" && guideTarget?.target !== "graph") return;
@@ -52,6 +56,8 @@ export function History({
     { enabled: active && !useRecent, prefetch: prefetch && !useRecent, retainOnRefresh: true },
   );
   const records = useRecent ? recent : filteredRecords;
+  const compact = useRecent && !expanded;
+  const visibleRecords = compact ? records.data?.slice(0, 3) : records.data;
   const current = records.data?.find((record) => record.id === detail);
   const detailView = current ? (
     <section className="history-detail">
@@ -101,25 +107,15 @@ export function History({
               setDate("");
               setPage(0);
               setTab("records");
+              revealRecords();
             }}
           />
         </div>
         <div hidden={tab !== "records"}>
-          <ActivityCalendar
-            month={month}
-            onMonthChange={setMonth}
-            selectedDate={date}
-            onSelect={(value) => {
-              setDate(value);
-              setRange(null);
-              setPage(0);
-            }}
-            refreshKey={refreshKey}
-            active={active}
-            prefetch={prefetch}
-          />
           <div className="section-heading">
-            <h2>{date ? dateLabel(date) : range ? dates(range.start, range.end) : "最近の記録"}</h2>
+            <h2 ref={recordHeading} className="history-record-heading">
+              {date ? dateLabel(date) : range ? dates(range.start, range.end) : "最近の記録"}
+            </h2>
             {(date || range) && (
               <button
                 className="text-button"
@@ -128,6 +124,7 @@ export function History({
                   setDate("");
                   setRange(null);
                   setPage(0);
+                  setExpanded(false);
                 }}
               >
                 すべての記録
@@ -143,7 +140,7 @@ export function History({
             </output>
           )}
           <div className="v2-rows">
-            {records.data?.map((record) => (
+            {visibleRecords?.map((record) => (
               <button
                 className="v2-row history-row"
                 type="button"
@@ -171,7 +168,19 @@ export function History({
           {records.data?.length === 0 && (
             <p className="muted">{date ? "この日は記録なし" : "まだ記録がありません"}</p>
           )}
-          {(page > 0 || records.data?.length === 50) && (
+          {useRecent && (records.data?.length ?? 0) > 3 && (
+            <button
+              className="secondary full history-expand"
+              type="button"
+              onClick={() => {
+                setExpanded(!expanded);
+                if (expanded) revealRecords();
+              }}
+            >
+              {expanded ? "直近3件に戻す" : "もっと見る"}
+            </button>
+          )}
+          {!compact && (page > 0 || records.data?.length === 50) && (
             <div className="pagination">
               <button
                 type="button"
@@ -192,6 +201,21 @@ export function History({
               </button>
             </div>
           )}
+          <ActivityCalendar
+            month={month}
+            onMonthChange={setMonth}
+            selectedDate={date}
+            onSelect={(value) => {
+              setDate(value);
+              setRange(null);
+              setPage(0);
+              setExpanded(false);
+              if (value) revealRecords();
+            }}
+            refreshKey={refreshKey}
+            active={active}
+            prefetch={prefetch}
+          />
         </div>
       </section>
     </>
