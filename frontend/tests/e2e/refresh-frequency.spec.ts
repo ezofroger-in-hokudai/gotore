@@ -28,7 +28,8 @@ for (const live of [false, true]) {
     });
     await page.reload();
     await expect(page.locator(".group-carousel .community-card")).toHaveCount(2);
-    await expect.poll(() => counts.summary).toBeGreaterThan(0);
+    await expect.poll(() => counts.activity).toBe(2);
+    expect(counts.summary).toBe(0);
     await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
     const initial = { ...counts };
     for (let tick = 0; tick < 12; tick++) {
@@ -49,7 +50,7 @@ for (const live of [false, true]) {
     expect(measured).toEqual({
       groups: baseline ? 12 : 1,
       activity: baseline || live ? 12 : 4,
-      summary: baseline || live ? 12 : 4,
+      summary: 0,
     });
   });
 }
