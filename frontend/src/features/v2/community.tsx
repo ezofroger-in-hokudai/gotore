@@ -129,7 +129,6 @@ export function CommunityHome({
           <div className="section-heading">
             <h2>みんなの最新記録</h2>
           </div>
-          <output className="resource-status muted" />
           {failed ? (
             <div className="resource-placeholder">グループを取得できませんでした</div>
           ) : (
@@ -206,9 +205,6 @@ export function CommunityHome({
             <h2>みんなの最新記録</h2>
             <span className="muted">{groups.find((group) => group.id === selected)?.name}</span>
           </div>
-          <output className="resource-status muted">
-            {activity.loading && activity.data ? "更新中…" : ""}
-          </output>
           <ResourceError resource={activity} />
           {activity.data ? (
             <Feed
