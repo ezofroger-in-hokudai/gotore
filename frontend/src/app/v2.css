@@ -8,6 +8,8 @@
   --cta: #ce282b;
   --accent-soft: #fff0f0;
   --track: #eceef1;
+  scroll-padding-block: calc(12px + env(safe-area-inset-top))
+    calc(78px + env(safe-area-inset-bottom));
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -625,9 +627,6 @@
   color: var(--text);
   font-size: 14px;
 }
-.rm-estimate span {
-  font-size: 9px;
-}
 .save-feedback {
   min-height: 30px;
   padding: 5px 0;
@@ -661,10 +660,6 @@
 .set-actions .primary {
   flex-direction: column;
   gap: 2px;
-}
-.set-actions small {
-  font-size: 10px;
-  font-weight: 400;
 }
 .v2-app .next-exercise {
   padding: 8px 4px;
@@ -796,7 +791,7 @@
 .recording-view .session-screen {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 .recording-view .session-screen > .section-heading {
   margin: 0;
@@ -809,14 +804,15 @@
 }
 .recording-view .session-screen .text-button {
   padding: 4px 6px;
-  min-height: 28px;
+  min-height: 48px;
 }
 .recording-view .session-screen .finish-training {
+  min-height: 48px;
   margin: 0;
   color: var(--text);
 }
 .recording-view .personal-bests {
-  padding: 5px 12px;
+  padding: 2px 12px;
   margin: 0;
 }
 .recording-view .personal-bests > div {
@@ -831,10 +827,10 @@
   font-size: 20px;
 }
 .recording-view .personal-bests span {
-  font-size: 10px;
+  font-size: 0.75rem;
 }
 .recording-view .personal-bests small {
-  font-size: 10px;
+  font-size: 0.75rem;
 }
 .inline-memo {
   min-width: 0;
@@ -843,7 +839,7 @@
 .memo-text {
   display: block;
   width: 100%;
-  min-height: 28px;
+  min-height: 48px;
   padding: 3px 0;
   border: 0;
   background: transparent;
@@ -878,31 +874,32 @@
   font-size: 12px;
 }
 .recording-view .comparison-heading small {
-  font-size: 9px;
+  font-size: 0.75rem;
 }
 .recording-view .comparison-table {
   margin: 0;
 }
 .recording-view .comparison-row {
-  min-height: 39px;
+  min-height: 48px;
 }
 .recording-view .comparison-row button {
-  min-height: 39px;
+  min-height: 48px;
   padding: 2px 0;
 }
 .recording-view .set-entry {
   margin: 0;
-  padding: 8px 12px;
+  padding: 4px 12px;
   border-radius: 12px;
 }
 .recording-view .set-entry .section-heading {
   margin: 0;
-  min-height: 28px;
+  min-height: 48px;
 }
 .recording-view .set-entry h2 {
   font-size: 13px;
 }
 .recording-view .wheels {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
   gap: 12px;
   margin: 0;
 }
@@ -913,42 +910,43 @@
 }
 .recording-view .number-wheel label {
   margin: 0;
-  font-size: 10px;
+  font-size: 0.75rem;
   line-height: 16px;
 }
 .recording-view .number-wheel input {
-  height: 36px;
-  min-height: 36px;
-  font-size: 30px;
+  height: 48px;
+  min-height: 48px;
+  font-size: 1.875rem;
   padding: 0;
   line-height: 36px;
   transition: none;
   will-change: transform;
 }
 .recording-view .wheel-neighbor {
-  height: 24px;
-  min-height: 24px;
+  height: auto;
+  min-height: 48px;
   padding: 0;
   font-size: 16px;
-  line-height: 24px;
+  line-height: 1.5;
 }
 .recording-view .rm-estimate {
   margin: 2px 0;
-  font-size: 10px;
+  font-size: 0.75rem;
 }
 .recording-view .save-feedback {
-  min-height: calc(1.6em + 10px);
-  font-size: 11px;
+  min-height: calc(1.6em + 4px);
+  padding: 2px 0;
+  font-size: 0.75rem;
   margin: 0;
 }
 .recording-view .set-entry .primary {
-  min-height: 40px;
+  min-height: 48px;
   padding: 8px;
 }
 .recording-view .undo-button {
   margin: 0;
   align-self: center;
-  font-size: 10px;
+  font-size: 0.75rem;
 }
 .sync-status {
   display: flex;
@@ -956,7 +954,7 @@
   justify-content: center;
   gap: 6px;
   min-height: 22px;
-  font-size: 10px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .recording-view .session-screen .error {
@@ -988,7 +986,7 @@
   gap: 4px 8px;
 }
 .recording-view .number-wheel input {
-  min-height: 1.2em;
+  min-height: max(48px, 1.2em);
 }
 .recording-view .inline-memo textarea {
   min-height: 1.5em;
@@ -997,7 +995,7 @@
 /* 一覧だけをスクロールし、入力と追加操作を常に画面内へ残す。 */
 .recording-view .entering-sets {
   height: calc(100dvh - 74px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-  min-height: 610px;
+  min-height: min-content;
 }
 .entering-sets > * {
   flex-shrink: 0;
@@ -1013,7 +1011,7 @@
   margin: 0;
 }
 .exercise-memo-slot {
-  min-height: 28px;
+  min-height: 48px;
 }
 .entering-sets .set-comparison {
   display: flex;
@@ -2303,6 +2301,71 @@
   margin: 16px 0 0;
   color: var(--muted);
   font-size: .75rem;
+}
+
+.session-exercise-shortcuts button {
+  width: 100%;
+  min-height: 48px;
+  gap: 8px;
+  text-align: left;
+}
+.session-exercise-shortcuts [aria-current="true"] {
+  color: var(--accent);
+}
+.session-exercise-shortcuts small {
+  font-size: .75rem;
+}
+.session-overview-details > summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}
+
+/* 記録中の補助情報は縮小せず、重複する説明を省く。 */
+.recording-view .comparison-row small,
+.recording-view .number-wheel small,
+.recording-view .eyebrow {
+  font-size: 0.75rem;
+}
+.recording-view .number-wheel label {
+  line-height: 1.5;
+}
+.recording-view .comparison-row {
+  grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+}
+.recording-view .set-actions button {
+  min-height: 48px;
+  font-size: 0.875rem;
+}
+
+.recording-view .set-entry .rm-estimate {
+  margin: 0 auto 0 0;
+  max-width: none;
+}
+
+.recording-view .session-screen button,
+.recording-view .session-screen input,
+.recording-view .session-screen textarea {
+  scroll-margin-block: 12px calc(78px + env(safe-area-inset-bottom));
+}
+
+/* 部位とメモの入口を同じ行にし、48pxの操作領域を維持する。 */
+.recording-view .exercise-metadata {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.recording-view .exercise-metadata > .body-part-tags {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+}
+.recording-view .exercise-metadata .exercise-memo-slot {
+  min-width: 48px;
+}
+.recording-view .exercise-metadata:has(textarea) {
+  display: block;
 }
 
 .catalog-toolbar {
