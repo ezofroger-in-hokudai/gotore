@@ -120,11 +120,7 @@ export function ActivityCalendar({
       <ResourceError resource={activity} />
       {activity.loading && !activity.data && !activity.error ? (
         <LoadingState label="活動カレンダーを読み込み中" compact />
-      ) : (
-        <output className="resource-status muted">
-          {activity.loading && activity.data ? "更新中…" : ""}
-        </output>
-      )}
+      ) : null}
       <>
         <dl className="activity-totals" aria-label={`${partLabel || "すべて"}の月間集計`}>
           <div>

@@ -137,11 +137,7 @@ export function History({
           <ResourceError resource={records} />
           {records.loading && !records.data && !records.error ? (
             <LoadingState label="記録一覧を読み込み中" />
-          ) : (
-            <output className="resource-status muted">
-              {records.loading && records.data ? "更新中…" : ""}
-            </output>
-          )}
+          ) : null}
           <div className="v2-rows">
             {records.data?.map((record) => (
               <button

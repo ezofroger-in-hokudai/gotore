@@ -8,8 +8,11 @@ export function LoadingState({
 }: { label?: string; compact?: boolean; startup?: boolean }) {
   if (!startup) {
     return (
-      <output className="resource-status muted" aria-label={label}>
-        読み込み中…
+      <output
+        className={`resource-status ${styles.progress}${compact ? ` ${styles.inline}` : ""}`}
+        aria-label={label}
+      >
+        <span className={styles.spinner} aria-hidden="true" />
       </output>
     );
   }
@@ -41,7 +44,6 @@ export function LoadingState({
           </g>
         </g>
       </svg>
-      <span aria-hidden="true">読み込み中…</span>
     </output>
   );
 }

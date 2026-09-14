@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "../loading/loading-state";
+
 import type { ExerciseOption, RecordBestSet, SessionBests, TrainingSession } from "@/lib/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BodyPartTags } from "../exercises/body-part-fields";
@@ -559,10 +561,10 @@ function ActiveTraining({
                     userId={userId}
                     onSaved={context.retry}
                   />
+                ) : context.error ? (
+                  <span className="memo-text muted">メモ未取得</span>
                 ) : (
-                  <span className="memo-text muted">
-                    {context.error ? "メモ未取得" : "メモを読み込み中…"}
-                  </span>
+                  <LoadingState label="メモを読み込み中" compact />
                 )}
               </div>
             </div>
