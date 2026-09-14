@@ -108,7 +108,7 @@ export function AnalyticsPanel({
         >
           ‹
         </button>
-        <span>{data ? dates(data.window.start, data.window.end) : "期間を読み込み中…"}</span>
+        <span>{data ? dates(data.window.start, data.window.end) : "—"}</span>
         <button
           type="button"
           className="secondary"
@@ -147,9 +147,7 @@ export function AnalyticsPanel({
               </strong>
             )}
             <span className="muted">
-              {resource.loading
-                ? "更新中…"
-                : `${data.totals.days}日間の記録${scope ? ` · ${data.totals.people}人が活動` : ""}`}
+              {`${data.totals.days}日間の記録${scope ? ` · ${data.totals.people}人が活動` : ""}`}
             </span>
           </section>
           {!ranking && data.previous_totals && (
