@@ -11,6 +11,7 @@ from app.domain.session import (
     estimated_rm,
     latest_change,
 )
+from app.domain.workout import workout_summary
 from app.infrastructure.personal_records import PersonalRecordRepository
 from app.infrastructure.training_repository import TrainingRepository
 
@@ -384,6 +385,7 @@ class SessionRepository(TrainingRepository):
             feed.append(
                 {
                     "workout_id": row["id"],
+                    "summary": workout_summary(row["exercises"]),
                     "user_id": row["user_id"],
                     "display_name": row["display_name"],
                     "exercise": exercise["name"],

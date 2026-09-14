@@ -23,6 +23,7 @@ export function useResource<T>(
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const writes = useRef(0);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存後・再試行の操作でも再取得する。
   useEffect(() => {
     // 非表示中の無効化は再訪時に処理し、同じ種目の比較・メモを更新中も保持する。
@@ -62,9 +63,10 @@ export function useResource<T>(
       window.clearTimeout(timer);
       pending = true;
       setLoading(true);
+      const startedBeforeWrite = writes.current;
       try {
         const value = await resourceRequest<T>(path, controller.signal);
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && startedBeforeWrite === writes.current) {
           latest = value;
           setResult({ path, data: value, version: refreshKey, stale: false });
           if (remember) {
@@ -78,7 +80,7 @@ export function useResource<T>(
           setError("");
         }
       } catch (reason) {
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && startedBeforeWrite === writes.current) {
           if (!canRetainResource(reason)) {
             cache.current.pages.clear();
             setResult(null);
@@ -114,5 +116,18 @@ export function useResource<T>(
     error,
     loading,
     retry: () => setRetryKey((value) => value + 1),
+    updateData: (update: (current: T | null) => T) => {
+      if (!path) return;
+      // 成功した更新より前に始めたGETで、確定内容を巻き戻さない。
+      writes.current++;
+      cache.current.pages.delete(path);
+      setError("");
+      setResult((current) => ({
+        path,
+        data: update(current?.path === path ? current.data : null),
+        version: refreshKey,
+        stale: false,
+      }));
+    },
   };
 }

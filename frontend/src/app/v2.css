@@ -2367,3 +2367,112 @@
 .recording-view .exercise-metadata:has(textarea) {
   display: block;
 }
+
+.catalog-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.catalog-toolbar input {
+  min-width: 0;
+  flex: 1;
+}
+.catalog-toolbar button {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 8px;
+  min-height: 44px;
+}
+.catalog-filters {
+  gap: 5px;
+  margin-top: 12px;
+}
+.catalog-filters button {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.exercise-catalog .exercise-options {
+  max-height: none;
+  overflow: visible;
+}
+.exercise-options > li > .notice {
+  flex-basis: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.feed-record-row.feed-detail-button:has(.feed-summary) {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.feed-summary {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: left;
+}
+.feed-summary strong {
+  color: var(--text);
+  font-size: 17px;
+  margin-right: 2px;
+}
+
+.tour-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+.tour-highlight {
+  position: fixed;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 22%);
+}
+.guided-tour {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  width: calc(100% - 24px);
+  margin: 0;
+  padding: 16px;
+  background: var(--panel);
+  pointer-events: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 18%);
+}
+.guided-tour h2 {
+  margin: 12px 0 8px;
+  font-size: 1.125rem;
+}
+.guided-tour p {
+  font-size: .875rem;
+  line-height: 1.6;
+}
+.guided-tour .onboarding-hint {
+  padding: 0;
+  color: var(--muted);
+}
+.guided-tour .onboarding-actions {
+  margin-top: 12px;
+}
+.guided-tour .onboarding-actions button {
+  min-height: 44px;
+}
+.guided-tour details {
+  font-size: .8125rem;
+}
+.guided-tour li {
+  margin-block: 8px;
+}
+.tour-arrow {
+  position: fixed;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

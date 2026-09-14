@@ -14,6 +14,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 ## 開発用の文書
 
+- [次の実装候補と着手順](implementation-review-2026-09-14.md): 記録・速度・共有・種目管理等の棚卸しと週次#149への対応。
+
 - [起動キャラクターとアイコンの比較](mascot-options.md): ウォンバット2案・現行ハムスター・ラッコの動く比較。Aの丸いウォンバットを採用。
 
 - [部位ヒートマップ](body-part-calendar.md): 日付セルの部位、横一列のフィルター、現在分類による過去記録の表示。
@@ -40,6 +42,7 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [exercise-options.md](exercise-options.md): 本人用の種目リスト、選択入力、追加・削除と履歴保持。
 - [../README.md](../README.md): 初回セットアップ、日々の開発、環境変数、migration、検証の共通手順。
 - [../supabase/README.md](../supabase/README.md): migrationの作成・検証・履歴管理、共有DBへの反映手順。日々のローカル更新は未適用migrationを適用し、resetは失ってよいデータでの再構築検証に限定する。
+- [共有記録の要約](shared-workout-summary.md): ホームの種目数・セット数と既存応答での集計。
 - [onboarding.md](onboarding.md): 初回利用ガイドの表示・保存・再表示。
 - [invite-code.md](invite-code.md): オーナーによる招待コード再発行・旧コード無効化。
 - [workout-management.md](workout-management.md): 本人の記録訂正・削除、競合と再送。

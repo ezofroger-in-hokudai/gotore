@@ -6,6 +6,7 @@ import { type ExerciseOption, type Group, type Workout, api } from "@/lib/api";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { groupExercises } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
+import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import {
   type Draft,
   editDraft,
@@ -17,9 +18,9 @@ import {
   today,
   workoutPayload,
 } from "./draft";
-import { useResource } from "./use-resource";
 
 export function WorkoutForm({
+  exerciseCatalog,
   groups,
   selectedGroup,
   userId,
@@ -28,6 +29,7 @@ export function WorkoutForm({
   editing,
   source,
 }: {
+  exerciseCatalog?: ReturnType<typeof useExerciseCatalog>;
   editing?: Workout | null;
   source?: Workout | null;
   groups: Group[];
@@ -36,7 +38,8 @@ export function WorkoutForm({
   onSaved: (workout: Workout) => void;
   onBack: () => void;
 }) {
-  const catalog = useResource<ExerciseOption[]>("/exercise-options");
+  const ownCatalog = useExerciseCatalog(undefined, !exerciseCatalog);
+  const catalog = exerciseCatalog ?? ownCatalog;
   const options = catalog.data ?? [];
   const storageKey = `gotore:draft:${userId}`;
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -218,7 +221,7 @@ export function WorkoutForm({
       <ExerciseCatalog
         options={options}
         disabled={busy || catalog.loading || catalog.data === null || !!catalog.error}
-        onChanged={catalog.retry}
+        onChanged={catalog.changed}
       />
       <form
         onSubmit={submit}
