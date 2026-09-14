@@ -1389,6 +1389,10 @@
   stroke-width: 2.5;
   stroke-linejoin: round;
 }
+.chart-bar {
+  fill: var(--accent);
+}
+
 .chart-dot {
   fill: var(--accent);
 }

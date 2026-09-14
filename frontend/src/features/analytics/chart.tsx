@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { chartKind, chartMaximum } from "./presentation";
 import { type Metric, type Point, labels, units } from "./types";
 
 export const number = (value: number | null | undefined) =>
@@ -25,8 +26,15 @@ export function AnalyticsChart({
   );
   const index = Math.min(selected, points.length - 1);
   const point = points[index];
-  const max = Math.max(1, ...points.map((p) => p[metric] ?? 0));
-  const x = (i: number) => 50 + (i * 280) / Math.max(1, points.length - 1);
+  const bars = chartKind(metric) === "bar";
+  const max = chartMaximum(
+    metric,
+    points.map((p) => p[metric]),
+  );
+  const slot = 280 / Math.max(1, points.length);
+  const barWidth = Math.min(32, slot * 0.7);
+  const x = (i: number) =>
+    bars ? 50 + (i + 0.5) * slot : 50 + (i * 280) / Math.max(1, points.length - 1);
   const y = (value: number) => 175 - (value / max) * 135;
   const connectGaps = metric === "weight" || metric === "rm";
   const paths: string[] = [];
@@ -52,7 +60,9 @@ export function AnalyticsChart({
               0,
               Math.min(
                 points.length - 1,
-                Math.round(((position - 50) / 280) * (points.length - 1)),
+                bars
+                  ? Math.floor((position - 50) / slot)
+                  : Math.round(((position - 50) / 280) * (points.length - 1)),
               ),
             ),
           );
@@ -69,11 +79,22 @@ export function AnalyticsChart({
             </text>
           </g>
         ))}
-        {paths.map((d) => (
-          <path key={d} d={d} fill="none" className="chart-line" />
-        ))}
+        <text x="44" y="26" textAnchor="end">
+          {units[metric]}
+        </text>
+        {!bars && paths.map((d) => <path key={d} d={d} fill="none" className="chart-line" />)}
         {points.map((p, i) =>
-          p[metric] == null ? null : (
+          p[metric] == null ? null : bars ? (
+            <rect
+              key={p.start}
+              x={x(i) - barWidth / 2}
+              y={y(p[metric])}
+              width={barWidth}
+              height={175 - y(p[metric])}
+              className="chart-bar"
+              opacity={i === index ? 1 : 0.65}
+            />
+          ) : (
             <circle
               key={p.start}
               cx={x(i)}

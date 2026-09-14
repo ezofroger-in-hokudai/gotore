@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { LoadingState } from "../loading/loading-state";
 import { ResourceError } from "../training/resource-error";
 import { AnalyticsChart, dates, number } from "./chart";
+import { chartGrains } from "./presentation";
 import { type Grain, type Metric, type Period, type RankMetric, labels, units } from "./types";
 import { useAnalytics } from "./use-analytics";
 
@@ -56,7 +57,7 @@ export function AnalyticsPanel({
       : []),
   ];
   const selectedRank = rankMetrics.includes(rankMetric) ? rankMetric : "volume";
-  const availableGrains = Object.keys(data?.series ?? {}) as Grain[];
+  const availableGrains = chartGrains(selectedMetric, Object.keys(data?.series ?? {}) as Grain[]);
   const selectedGrain = availableGrains.includes(grain) ? grain : (availableGrains[0] ?? "month");
   const selected = ranking ? selectedRank : selectedMetric;
   const entries = data?.rankings[selectedRank] ?? [];

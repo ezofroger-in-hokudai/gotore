@@ -54,8 +54,8 @@ function fixture(url: URL, group = false): Analytics {
     },
     series: {
       day: shownPoints,
-      week: [{ ...points[1], start: "2026-09-01", end: "2026-09-07", volume: 14000 }],
-      month: [{ ...points[1], start: "2026-09-01", end: "2026-09-11", volume: 23500 }],
+      week: [{ ...points[1], start: "2026-09-01", end: "2026-09-07", volume: 14000, days: 5 }],
+      month: [{ ...points[1], start: "2026-09-01", end: "2026-09-11", volume: 23500, days: 8 }],
     },
     rankings: group
       ? {
@@ -243,4 +243,32 @@ test("グループの集計を60秒保持し、グラフとランキングの切
   expect(state.selectedCount()).toBe(before);
   await page.clock.runFor(55_000);
   await expect.poll(state.selectedCount).toBe(before + 1);
+});
+
+test("活動日数は週・月の棒グラフ、強度は実測の折れ線で表示する", async ({ page }) => {
+  await mockTraining(page);
+  const state = await routes(page);
+  await navigate(page, "履歴");
+  await page.getByRole("button", { name: "グラフ", exact: true }).click();
+  const panel = page.getByRole("region", { name: "履歴グラフ" });
+  await expect(panel.locator(".chart-bar")).toHaveCount(11);
+  const before = state.count();
+  await panel.getByRole("button", { name: "活動日数", exact: true }).click();
+  await expect(panel.getByRole("button", { name: "日別", exact: true })).toHaveCount(0);
+  await expect(panel.getByRole("button", { name: "週別", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(panel.locator(".chart-bar")).toHaveCount(1);
+  await expect(panel.locator(".chart-line")).toHaveCount(0);
+  await expect(panel.getByRole("slider")).toHaveAttribute("aria-valuetext", /5日$/);
+  await panel.getByRole("button", { name: "月別", exact: true }).click();
+  await expect(panel.getByRole("slider")).toHaveAttribute("aria-valuetext", /8日$/);
+  expect(state.count()).toBe(before);
+  await page.screenshot({ path: "test-results/activity-days-bars.png", fullPage: true });
+  await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
+  await panel.getByRole("button", { name: "最高重量", exact: true }).click();
+  await panel.getByRole("button", { name: "日別", exact: true }).click();
+  await expect(panel.locator(".chart-line")).toHaveCount(1);
+  await expect(panel.locator(".chart-bar")).toHaveCount(0);
 });

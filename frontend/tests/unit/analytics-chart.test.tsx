@@ -31,7 +31,9 @@ test("総負荷とセット数は未記録日の0を残し、重量の実測が1
   const points = [point(1, 60), point(2, null), point(3, 80)];
   for (const metric of ["volume", "sets"] as const) {
     const html = renderToStaticMarkup(<AnalyticsChart points={points} metric={metric} />);
-    expect(html.match(/class="chart-dot"/g)?.length).toBe(3);
+    expect(html.match(/class="chart-bar"/g)?.length).toBe(3);
+    expect(html).not.toContain('class="chart-line"');
+    expect(html).toContain('height="0"');
   }
   const html = renderToStaticMarkup(
     <AnalyticsChart points={[point(1, null), point(2, 60), point(3, null)]} metric="weight" />,
