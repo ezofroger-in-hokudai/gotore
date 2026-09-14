@@ -55,7 +55,7 @@ Config／Secretと反映タイミングは [Vercel環境変数](https://vercel.c
 
 ## Supabaseの準備
 
-- テスト中は [管理者登録ガイド](admin-managed-accounts.md) に従い、一般登録を禁止して確認済みアカウントを発行する。公開プロジェクトの設定は管理者が行う。
+- 公開URLは `https://egotore.com/`。[Google認証ガイド](google-signin.md) に従い、登録前hookとGoogleプロバイダーを設定してから新規登録を許可し、`NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` で再ビルドする。導入前は全体の新規登録を禁止したまま、[管理者発行](admin-managed-accounts.md) を利用する。
 - 公開用のSupabaseプロジェクトを用意する。ローカルDBのテストアカウントや記録は自動移行しない。
 - 対象プロジェクトと既存テーブルを確認したうえで、リポジトリのmigrationを適用する。既存データを消す `db reset` は本番へ実行しない。今回はリモートDB操作を行っていない。具体的な履歴確認・dry-run・適用は [共有DBへの適用手順](../supabase/README.md#共有dbへの適用担当者向け) を参照する。Vercelのbuildや現在のCIはクラウドDBへのmigrationを自動適用しない。
 - Connect画面でTransaction Poolerの接続先を取得し、`DATABASE_URL` に設定する。例のホスト名をそのまま使わない。パスワードの特殊文字はURLエンコードし、`sslmode=require` を指定する。
@@ -74,7 +74,7 @@ Vercel向けのNext.js buildのみを確認する場合は `cd frontend && VERCE
 
 - `/` がGO TORE、`/manifest.webmanifest` とアイコンが正しく配信される。
 - `/api/health` がAPIのJSONを返す。未認証の `/api/groups` は401になる。
-- 管理者が発行した2ユーザーでログイン・グループ作成／参加・記録共有・再ログインができる。共有外のユーザーには見えない。一般登録はAuth API側でも拒否される。
+- 管理者が発行した2ユーザーでログイン・グループ作成／参加・記録共有・再ログインができる。共有外のユーザーには見えない。メール自己登録はAuth hookで拒否され、Googleの新規登録・再ログインは別途確認する。
 - 通信失敗時に入力を保持し、保存の再送で重複しない。
 - iPhone／Androidでホーム画面に追加・再起動して操作できる。
 

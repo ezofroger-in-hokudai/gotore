@@ -1,25 +1,24 @@
 import { expect, test } from "@playwright/test";
 import { localAuth, testPassword } from "./local-auth";
 
-test("ログイン専用画面は管理者発行を案内し、新規登録を提供しない", async ({ page }) => {
+test("Googleでの登録と既存メールログインを案内する", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "新規登録", exact: true })).toHaveCount(0);
   await expect(page.getByLabel("表示名", { exact: true })).toHaveCount(0);
-  await expect(
-    page.getByText("アカウントの発行は管理者へ。", {
-      exact: true,
-    }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Googleで続ける" })).toBeVisible();
+  await expect(page.getByText("メールで登録済みの方", { exact: true })).toBeVisible();
 });
 
-test("一般ユーザー向けAuth APIから新規登録できない", async () => {
+test("一般ユーザー向けAuth APIからメールで新規登録できない", async () => {
   const { publicAuth } = localAuth();
   const { data, error } = await publicAuth.signUp({
     email: `gotore-blocked-${crypto.randomUUID()}@example.test`,
     password: testPassword,
+    options: { data: { provider: "google", app_metadata: { provider: "google" } } },
   });
-  expect(error?.code).toBe("signup_disabled");
+  expect(error?.status).toBe(403);
+  expect(error?.message).toContain("新規登録にはGoogle");
   expect(data.user).toBeNull();
   expect(data.session).toBeNull();
 });

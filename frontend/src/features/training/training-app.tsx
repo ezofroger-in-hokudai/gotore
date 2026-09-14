@@ -5,7 +5,7 @@ import { LoadingState } from "../loading/loading-state";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
-import { Workspace } from "../v2/workspace";
+import { AccountWorkspace } from "../auth/account-workspace";
 import { AuthPanel } from "./auth-panel";
 
 export function TrainingApp() {
@@ -46,5 +46,5 @@ export function TrainingApp() {
         <LoadingState label="アプリを読み込み中" startup />
       </main>
     );
-  return session ? <Workspace key={session.user.id} session={session} /> : <AuthPanel />;
+  return session ? <AccountWorkspace key={session.user.id} session={session} /> : <AuthPanel />;
 }

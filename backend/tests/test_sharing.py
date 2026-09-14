@@ -31,6 +31,18 @@ def connection():
         conn.execute("CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY)")
         # 専用DBのトランザクション内だけにschemaを展開する。
         with conn.transaction(force_rollback=True):
+            # 通常のPostgreSQLでもSupabase Auth hookの実行権限を検証する。
+            conn.execute("""DO $$ BEGIN
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+                    CREATE ROLE anon NOLOGIN;
+                END IF;
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+                    CREATE ROLE authenticated NOLOGIN;
+                END IF;
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
+                    CREATE ROLE supabase_auth_admin NOLOGIN;
+                END IF;
+            END $$""")
             for path in sorted((Path(__file__).parents[2] / "supabase/migrations").glob("*.sql")):
                 conn.execute(path.read_text())
             for user_id in USERS.values():

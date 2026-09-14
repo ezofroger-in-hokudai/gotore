@@ -1006,3 +1006,35 @@ fieldset {
 .activity-part-breakdown dd {
   margin: 0;
 }
+
+.google-signin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #747775;
+  border-radius: 4px;
+  background: #fff;
+  color: #1f1f1f;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+}
+.google-signin img {
+  flex-shrink: 0;
+}
+.auth-email-label {
+  margin: 24px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.auth-description {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}

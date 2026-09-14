@@ -2251,3 +2251,26 @@
 - 影響範囲・関連ファイル: frontend/tests/e2e/group-order.spec.ts、progress.md。時計制御を使う3件へ適用し、画面のタイマー作成前にinstallする順序へ合わせた。参照: https://playwright.dev/docs/clock#consistent-time-and-timers 。アプリ本体・期待するスワイプ動作・CIの検査項目は変更しない。
 - 検証: 既存CIの失敗ログを先行する失敗の証拠として利用。修正後、CIと同じNext.js開発サーバーでグループ関連E2E14件成功（55.2秒）、lint・型検査も成功。時計を使う3件を各3回繰り返した計9件も成功（27.6秒）。自分の検証用Web/APIは停止し、開発サーバーが生成したnext-env.d.tsの変更だけを元へ戻した。ローカルSupabaseの設定変更は行っていない。
 - 未解決事項・次のアクション: 反復検証後にPR #155へpushし、最終コミットのCIがすべて成功するまで確認する。確定したCI結果は同PRの検証結果にも記載する。本番反映は行わない。
+
+
+## 2026-09-15 01:03
+- 変更内容・目的: ユーザーが基本権限で審査なしに利用できるならGoogle方式を採用すると指定。公式条件を確認し、最新main 64d48c3から専用worktree/ブランチを作成、taskと認証仕様を追加した。
+- 仕様との差分: 従来の管理者発行限定と#25の運用検討を、今回の明示的な自己登録の承認範囲で更新する。PR #154はOPENのため依存しない。週次#149の途中追加理由はメール配送設定を省いて登録を開始するため。
+- 影響範囲: Google認証UI/復帰/表示名設定、Auth hook、公開URLと運用文書。既存データ/元フォルダの未コミット変更は保持する。
+- 検証方針: 先行単体・DBテストとブラウザ回帰を追加し、make check/記録共有E2Eを実行する。Googleの本番資格情報なしで検証できる範囲と実サービス確認を区別する。
+- 未解決事項・次のアクション: Google Cloud/Supabase/Vercelの設定と個人Googleアカウントでの実機確認は未実施。まず登録制限と認証UIを実装・検証する。
+
+
+## 2026-09-15 01:25
+- 変更内容・目的: Google自己登録を#156として分割。基本権限のみのOAuth、固定callback、初回表示名、Google以外の自己登録拒否hook、egotore.comの公開手順と表示フラグを実装した。Googleの氏名/写真は共有名へ転記しない。
+- 影響範囲・関連ファイル: features/auth、AuthPanel/TrainingApp、20260915010000_google_signup_policy.sql、関連テスト、docs/google-signin.md、READMEと認証資料。既存メールログイン、記録/共有APIは維持する。
+- 検証: 先行単体の未実装エラー・DB関数未定義の失敗を確認後、単体3件/DB5件成功。初回の認証E2E12件成功。待機超過追加テストは表示文言でなくaria-labelを持つstatusの取得へ直し、当該1件成功。make checkはCSS整形を修正後に全成功（backend245件、frontend78件、lint/型/build）。ローカルmigration追加適用・再適用・db lintも成功。ユーザーデータのリセットは実施していない。
+- 未解決事項・次のアクション: 全E2Eを実行中。Google Cloud/Supabase/Vercelの本番設定、実Googleの新規登録/自動関連付け、実機PWAは未実施で公開前に確認する。PR #154のメール登録案は取り込んでいない。
+
+
+## 2026-09-15 01:35
+- 変更内容・目的: Googleログイン#156の実装とegotore.com向け設定手順を完成させ、PR提出用に検証結果と画面画像を整理した。設定フラグは既定オフとし、公開設定後だけGoogleボタンを表示する。
+- 検証: 最終の全E2E184件が成功（10.2分）。Googleの基本権限/認証復帰/キャンセル/待機超過/URLの認証情報除去/初回名/失敗再試行/既存名保持と、実ローカルAuthのメール自己登録拒否・管理者発行・既存ログイン・2人の保存共有が成功。make checkはbackend245件/frontend78件・lint/型/build成功、migration追加適用・再適用・db lint成功。新規文書のリンク・3幅の画像・git diff --checkを確認した。
+- 影響範囲・関連ファイル: features/auth、AuthPanel/TrainingApp、登録前hook migration、認証テスト、docs/google-signin.mdとdocs/images/google-signin/、README/認証資料・task。新しい依存はない。元フォルダの未コミット変更を保持した。
+- 環境: 自分のWeb/APIを停止し、next-env.d.tsの自動生成差分だけを戻した。ローカルSupabaseは新しいGoogle登録制限hookの設定で起動中（Googleの実接続設定は未投入）。データ削除・本番設定変更は行っていない。
+- 未解決事項・次のアクション: PR/CI/第三者レビューへ進む。Google Cloud/Supabase/Vercelの公開設定、実Googleの新規登録と同一メールの関連付け、実機PWAは未実施で公開前の確認事項。PR #154は未マージの別案として維持する。

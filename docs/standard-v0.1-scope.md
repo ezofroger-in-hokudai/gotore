@@ -6,6 +6,8 @@
 
 ## 今回の範囲
 
+2026-09-15の追加指定により、認証・自己登録は[Google認証仕様](google-signin.md)を優先する。以下の管理者発行限定は初版時点の範囲であり、Google導入後は既存メールログインとGoogle自己登録を併用する。
+
 本人の活動表示は [activity-heatmap.md](activity-heatmap.md) を追加適用する。
 
 種目の選択と本人用リストの管理は [exercise-options.md](exercise-options.md) を追加適用する。
