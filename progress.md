@@ -2149,3 +2149,10 @@
 - 影響範囲・関連ファイル: history.tsx、v2.css、history-priority.spec.ts、docs/history-analytics.md、docs/images/history-priority/、task.md、progress.md。追加のAPI・DB変更なし。
 - 未解決事項: 実機PWAと公開環境の受け入れは未確認。マージ・本番反映は行っていない。
 - 次のアクション: PR #117へ競合解消・画像・検証結果を反映してCI/レビューを確認する。自分の検証用Web/APIを停止し、ローカルSupabaseをデータ保持でメール登録PR #154の設定へ戻す。
+
+## 2026-09-14 22:54
+- 変更内容・目的: ①〜④をPR #115の5f599cd、⑤をPR #117の687dc22へpushし、現在の仕様・画像・最終検証結果にPR本文を更新した。両PRともmainとの競合なしを確認。
+- 検証: PR #115のbackend/frontend/database/Vercelはすべて成功。PR #117はCI実行中。履歴テストの最終修正後もlint・型検査成功。今回の追記は提出記録のみのため先行テストを追加せずgit diff --checkで確認する。
+- 影響範囲・関連ファイル: progress.md、PR #115/#117。検証用Web/APIは停止済み。ローカルSupabaseはデータ保持でPR #154のメール確認付き一般登録設定へ戻し、起動成功を確認した。元の作業ツリーの未コミット変更は保持。
+- 未解決事項: PR #117のCIと第三者レビュー、実機PWA、公開環境への反映。⑥の分析整理は今回保留。
+- 次のアクション: 各PRでレビューを行う。マージ・本番設定変更・本番デプロイは未実施。
