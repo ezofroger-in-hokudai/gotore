@@ -7,20 +7,22 @@ test("初回ガイドは完了・再ログイン後に再表示せず、設定�
   const state = await mockTraining(page, true, true);
   const guide = page.getByRole("region", { name: "使い方ガイド" });
   await expect(guide).toBeVisible();
-  await expect(guide).toContainText("1 / 3");
+  await expect(guide).toContainText("1 / 6");
   await guide.getByRole("button", { name: "次へ", exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(guide.getByRole("heading")).toBeFocused();
-  await expect(guide).toContainText("2 / 3");
+  await expect(guide).toContainText("2 / 6");
   await guide.getByRole("button", { name: "戻る", exact: true }).click();
-  await expect(guide).toContainText("1 / 3");
+  await expect(guide).toContainText("1 / 6");
   await guide.getByRole("button", { name: "次へ", exact: true }).click();
   await guide.getByRole("button", { name: "次へ", exact: true }).click();
-  await expect(guide).toContainText("カレンダーはその日の最高SCORE");
+  await expect(guide).toContainText("カレンダーはその日の総負荷量");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
   await page.screenshot({ path: testInfo.outputPath("onboarding-mobile.png"), fullPage: false });
+  for (let index = 0; index < 3; index++)
+    await guide.getByRole("button", { name: "次へ", exact: true }).click();
   await guide.getByRole("button", { name: "はじめる", exact: true }).click();
   await expect(guide).toHaveCount(0);
   await page.reload();
@@ -35,7 +37,7 @@ test("初回ガイドは完了・再ログイン後に再表示せず、設定�
   await expect(guide).toHaveCount(0);
   await page.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
   await page.getByRole("button", { name: /^使い方/ }).click();
-  await expect(guide).toContainText("1 / 3");
+  await expect(guide).toContainText("1 / 6");
   await expect(guide.getByRole("heading")).toBeFocused();
   expect(state.authUpdates).toBe(0);
   expect(state.syncs).toBe(0);
@@ -45,7 +47,7 @@ test("他ユーザーの表示済み状態を使わず、スキップしても�
   page,
 }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("gotore:onboarding:v1:other-user", "seen");
+    localStorage.setItem("gotore:onboarding:v2:other-user", "seen");
   });
   const state = await mockTraining(page, true, true);
   const guide = page.getByRole("region", { name: "使い方ガイド" });

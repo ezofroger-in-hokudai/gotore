@@ -1,10 +1,16 @@
 "use client";
 
-import type { MonthlyActivity } from "@/lib/api";
-import { scoreAppearance, scoreGradient } from "../score/score-colors";
+import { LoadingState } from "../loading/loading-state";
+
+import type { BodyPart, MonthlyActivity } from "@/lib/api";
+import { useState } from "react";
+import { PART_FILTERS } from "../exercises/body-parts";
 import { today } from "../training/draft";
+import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
+import { activityForParts, orderedParts, toggleActivityPart } from "./body-parts";
 import { calendarDays, dateLabel, shiftMonth } from "./calendar";
+import { volumeAppearance } from "./volume-colors";
 
 export function ActivityCalendar({
   month,
@@ -23,6 +29,7 @@ export function ActivityCalendar({
   active?: boolean;
   prefetch?: boolean;
 }) {
+  const [parts, setParts] = useState<BodyPart[]>([]);
   const currentDay = today();
   const currentMonth = currentDay.slice(0, 7);
   const activity = useResource<MonthlyActivity>(
@@ -32,7 +39,22 @@ export function ActivityCalendar({
     true,
     { enabled: active, prefetch, retainOnRefresh: true },
   );
-  const days = new Map(activity.data?.days.map((day) => [day.date, day]));
+  const hasParts = !activity.data?.days.some(
+    (day) =>
+      !day.body_parts ||
+      day.body_parts.some((entry) => !entry.body_part || entry.body_part === "full_body"),
+  );
+  const selectedParts = hasParts ? parts : [];
+  const data = activity.data ? activityForParts(activity.data, selectedParts) : null;
+  const partLabel = PART_FILTERS.filter(
+    (entry) => entry.value !== "all" && selectedParts.includes(entry.value),
+  )
+    .map((entry) => entry.label)
+    .join("・");
+  const maximum = Math.max(0, ...(data?.days.map((day) => day.volume) ?? []));
+  const selected = activity.data?.days.find((day) => day.date === selectedDate);
+  const format = (value: number) => value.toLocaleString("ja-JP", { maximumFractionDigits: 1 });
+  const days = new Map(data?.days.map((day) => [day.date, day]));
 
   function changeMonth(value: string) {
     if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(value) || value < "2000-01" || value > currentMonth)
@@ -43,8 +65,28 @@ export function ActivityCalendar({
 
   return (
     <section className="panel activity-calendar" aria-label="活動カレンダー">
-      <h2>SCOREカレンダー</h2>
-
+      <fieldset
+        className="activity-part-filters"
+        data-tour="calendar"
+        aria-label="カレンダーの部位"
+      >
+        {PART_FILTERS.map((entry) => (
+          <button
+            type="button"
+            key={entry.value}
+            aria-pressed={
+              entry.value === "all" ? !selectedParts.length : selectedParts.includes(entry.value)
+            }
+            disabled={entry.value !== "all" && (!activity.data || !hasParts)}
+            onClick={() => {
+              setParts(toggleActivityPart(selectedParts, entry.value));
+              onSelect("");
+            }}
+          >
+            {entry.label}
+          </button>
+        ))}
+      </fieldset>
       <div className="activity-month">
         <button
           type="button"
@@ -56,7 +98,7 @@ export function ActivityCalendar({
           ←
         </button>
         <label className="grow">
-          月
+          <span className="sr-only">月</span>
           <input
             type="month"
             min="2000-01"
@@ -75,37 +117,34 @@ export function ActivityCalendar({
           →
         </button>
       </div>
-      {activity.error && (
-        <div className="error" role="alert">
-          {activity.error}
-          <button type="button" className="text-button" onClick={activity.retry}>
-            再試行
-          </button>
-        </div>
+      <ResourceError resource={activity} />
+      {activity.loading && !activity.data && !activity.error ? (
+        <LoadingState label="活動カレンダーを読み込み中" compact />
+      ) : (
+        <output className="resource-status muted">
+          {activity.loading && activity.data ? "更新中…" : ""}
+        </output>
       )}
-      <output className="resource-status muted">
-        {activity.loading ? (activity.data ? "更新中…" : "読み込み中…") : ""}
-      </output>
       <>
-        <dl className="activity-totals">
+        <dl className="activity-totals" aria-label={`${partLabel || "すべて"}の月間集計`}>
           <div>
-            <dt>最高SCORE</dt>
+            <dt>総負荷</dt>
             <dd>
-              {activity.data?.best_score ?? "—"}
-              <small>点</small>
+              {data ? format(data.total_volume) : "—"}
+              <small>kg</small>
             </dd>
           </div>
           <div>
             <dt>活動日数</dt>
             <dd>
-              {activity.data?.active_days ?? "—"}
+              {data?.active_days ?? "—"}
               <small>日</small>
             </dd>
           </div>
           <div>
             <dt>記録件数</dt>
             <dd>
-              {activity.data?.workout_count ?? "—"}
+              {data?.workout_count ?? "—"}
               <small>件</small>
             </dd>
           </div>
@@ -120,52 +159,65 @@ export function ActivityCalendar({
             // biome-ignore lint/suspicious/noArrayIndexKey: 空白セルは固定の曜日位置を表す。
             if (!day) return <span key={`blank-${index}`} aria-hidden="true" />;
             const counts = days.get(day);
-            const score = counts?.score ?? null;
-            const label = score !== null ? `${score}点` : counts ? "計測中" : "記録なし";
+            const volume = counts?.volume ?? null;
+            const bodyParts = orderedParts(counts?.body_parts);
+            const label = volume !== null ? `総負荷${format(volume)}kg` : "記録なし";
             const future = day > currentDay;
             return (
               <button
                 key={day}
                 type="button"
                 className="activity-day"
-                data-score={future ? "pending" : (score ?? "pending")}
-                style={scoreAppearance(future ? null : score)}
-                data-pending={!!counts && score === null}
+                data-volume={future ? undefined : (volume ?? undefined)}
+                style={volumeAppearance(future ? null : volume, maximum)}
                 disabled={future || !activity.data}
-                aria-label={`${dateLabel(day)}、${future ? "未来の日付" : !activity.data ? "未取得" : `${label}、${counts?.workout_count ?? 0}件`}`}
+                aria-label={`${dateLabel(day)}、${future ? "未来の日付" : !activity.data ? "未取得" : `${label}、${counts?.workout_count === null ? "件数未取得" : `${counts?.workout_count ?? 0}件`}${bodyParts.length ? `、${bodyParts.map((item) => item.label).join("・")}` : ""}`}`}
                 aria-pressed={selectedDate === day}
                 aria-current={day === currentDay ? "date" : undefined}
                 onClick={() => onSelect(day)}
               >
                 <span>{Number(day.slice(-2))}</span>
+                <span className="activity-day-part" aria-hidden="true">
+                  {!future && bodyParts.length ? (
+                    <>
+                      {bodyParts[0].label}
+                      {bodyParts.length > 1 && <sup>+{bodyParts.length - 1}</sup>}
+                    </>
+                  ) : null}
+                </span>
                 <small>
-                  {future || !activity.data
+                  {future || volume === null
                     ? "—"
-                    : score !== null
-                      ? `${score}点`
-                      : counts
-                        ? "計測中"
-                        : "—"}
+                    : volume >= 1000
+                      ? `${format(volume / 1000)}k`
+                      : format(volume)}
                 </small>
               </button>
             );
           })}
         </div>
-        <div className="activity-legend score-legend" aria-label="色の凡例（SCORE）">
-          <span>
-            <span className="heat-swatch" style={scoreAppearance(null)} aria-hidden="true" />
-            未記録・計測中
-          </span>
-          <div className="score-gradient-legend">
-            <span style={{ background: scoreGradient }} aria-hidden="true" />
-            <div>
-              <span>0点</span>
-              <span>50点</span>
-              <span>100点</span>
-            </div>
-          </div>
-        </div>
-        {activity.data?.workout_count === 0 && <p className="muted">この月は記録なし</p>}
+        {data?.active_days === 0 && (
+          <p className="muted">
+            {!selectedParts.length ? "この月は記録なし" : `この月の${partLabel}は記録なし`}
+          </p>
+        )}
+        {!!selected?.body_parts?.length && (
+          <section
+            className="activity-part-breakdown"
+            aria-label={`${dateLabel(selected.date)}の部位内訳`}
+          >
+            <dl>
+              {orderedParts(selected.body_parts).map((entry) => (
+                <div key={entry.body_part}>
+                  <dt>{entry.label}</dt>
+                  <dd>
+                    {entry.set_count}セット · {format(entry.volume)}kg
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
       </>
     </section>
   );

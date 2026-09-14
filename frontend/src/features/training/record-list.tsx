@@ -1,32 +1,23 @@
 import type { Workout } from "@/lib/api";
-import { HistoryScore } from "../score/history-score";
-import { ScoreBadge, ScoreBreakdown } from "../score/score-display";
+import { dateLabel } from "../activity/calendar";
 import { estimatedRM } from "../session/session";
+import { BestFlame } from "./best-flame";
+import { recordSummary } from "./record-summary";
 import { ReuseWorkout } from "./reuse-workout";
 import { WorkoutActions } from "./workout-actions";
 
 import { WorkoutMemo } from "./workout-memo";
-
-const savedAtFormatter = new Intl.DateTimeFormat("ja-JP", {
-  month: "numeric",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "Asia/Tokyo",
-});
 
 export function RecordList({
   records,
   userId,
   empty,
   personal = false,
-  expanded = personal,
   onReuse,
   onEdit,
   onDeleted,
 }: {
   personal?: boolean;
-  expanded?: boolean;
   records: Workout[];
   userId?: string;
   empty: string;
@@ -44,69 +35,130 @@ export function RecordList({
     );
   return (
     <div className="record-list">
-      {records.map((record) => (
-        <article className="panel record" key={record.id}>
-          <div className="record-top">
-            <span className="avatar">{record.display_name.slice(0, 1)}</span>
-            <div className="grow">
-              <strong>{record.display_name}</strong>
-              {record.user_id === userId && <span className="you">YOU</span>}
-              <p className="record-date">{record.performed_on.replaceAll("-", ".")}</p>
-            </div>
-            <span className="badge">
-              {record.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0)} SETS
-            </span>
-          </div>
-          <h3 className="exercise-summary">
-            {record.exercises.map((exercise) => exercise.name).join(" / ")}
-          </h3>
-          {record.score && (
-            <div className="record-score">
-              <ScoreBadge score={record.score} />
-              <ScoreBreakdown score={record.score} />
-            </div>
-          )}
-          {record.score && personal && record.user_id === userId && (
-            <HistoryScore record={record} onChanged={onDeleted} />
-          )}
-          <details open={expanded}>
-            <summary>セット詳細</summary>
+      {records.map((record) => {
+        const bests = new Map(
+          (record.best_sets ?? []).map((best) => [
+            `${best.exercise_index}:${best.set_index}`,
+            best,
+          ]),
+        );
+        const summary = recordSummary(record);
+        const own = personal && record.user_id === userId;
+        return (
+          <article className="record record-review" key={record.id}>
+            <header className="record-heading">
+              {!own && (
+                <div className="record-author">
+                  <span className="avatar" aria-hidden="true">
+                    {record.display_name.slice(0, 1)}
+                  </span>
+                  <strong>{record.display_name}</strong>
+                </div>
+              )}
+              <h2>
+                <time dateTime={record.performed_on}>{dateLabel(record.performed_on)}</time>
+              </h2>
+              {record.started_at && !record.ended_at && <p className="muted">トレーニング中</p>}
+              <dl className="record-overview">
+                <div aria-label="総負荷">
+                  <dt>総負荷</dt>
+                  <dd>
+                    <strong>
+                      {summary.volume.toLocaleString("ja-JP", { maximumFractionDigits: 1 })}
+                    </strong>
+                    <small>kg</small>
+                  </dd>
+                </div>
+                <div aria-label="セット数">
+                  <dt>セット</dt>
+                  <dd>
+                    <strong>{summary.sets}</strong>
+                  </dd>
+                </div>
+                {summary.minutes !== null && (
+                  <div aria-label="時間">
+                    <dt>時間</dt>
+                    <dd>
+                      <strong>{summary.minutes}</strong>
+                      <small>分</small>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </header>
             <div className="record-details">
               {record.exercises.map((exercise, index) => (
-                <div key={`${index}-${exercise.name}`}>
-                  <h4>{exercise.name}</h4>
-                  {exercise.sets.map((set, setIndex) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: 確定済みセットは保存順が変わらない。
-                    <div className="record-set" key={`${index}-${setIndex}`}>
-                      <span>SET {setIndex + 1}</span>
-                      <strong>
-                        {set.weight} <small>kg</small> × {set.reps}{" "}
-                        <small>回 · RM {estimatedRM(set.weight, set.reps) ?? "—"}</small>
-                      </strong>
-                    </div>
-                  ))}
-                </div>
+                <section className="record-exercise" key={`${index}-${exercise.name}`}>
+                  <h3>{exercise.name}</h3>
+                  <section
+                    className="record-table-scroll"
+                    aria-label={`${exercise.name}の全セット`}
+                    // biome-ignore lint/a11y/noNoninteractiveTabindex: 文字拡大時に表をキーボードで横スクロールする。
+                    tabIndex={0}
+                  >
+                    <table className="record-table" aria-label={exercise.name}>
+                      <thead>
+                        <tr>
+                          <th scope="col">セット</th>
+                          <th scope="col">
+                            重量 <small>kg</small>
+                          </th>
+                          <th scope="col">回数</th>
+                          <th scope="col">
+                            推定1RM <small>kg</small>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {exercise.sets.map((set, setIndex) => {
+                          const best = bests.get(`${index}:${setIndex}`);
+                          return (
+                            <tr
+                              className={`record-set${best ? " has-personal-best" : ""}`}
+                              // biome-ignore lint/suspicious/noArrayIndexKey: 保存順で特定する読み取り専用のセット。
+                              key={`${index}-${setIndex}`}
+                            >
+                              <th scope="row">
+                                <span className="record-set-label">
+                                  {setIndex + 1} {best && <BestFlame best={best} />}
+                                </span>
+                              </th>
+                              <td>
+                                <b className={best?.weight ? "personal-best-value" : undefined}>
+                                  {set.weight}
+                                </b>
+                              </td>
+                              <td>{set.reps}</td>
+                              <td>
+                                <b className={best?.rm ? "personal-best-value" : undefined}>
+                                  {estimatedRM(set.weight, set.reps) ?? "—"}
+                                </b>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </section>
+                </section>
               ))}
             </div>
-          </details>
-          <div className="record-footer">
-            <span>
-              {record.group_id || record.shared_group_ids?.length ? "共有済み" : "自分だけ"}
-            </span>
-            <time dateTime={record.created_at}>
-              {savedAtFormatter.format(new Date(record.created_at))} 保存
-            </time>
-          </div>
-          {record.user_id === userId && onReuse && (
-            <ReuseWorkout record={record} onReuse={onReuse} />
-          )}
-          {record.user_id === userId && onEdit && onDeleted && (
-            <WorkoutActions record={record} onEdit={onEdit} onDeleted={onDeleted} />
-          )}
+            {own && (
+              <p className="record-sharing">
+                {record.group_id || record.shared_group_ids?.length ? "共有済み" : "自分だけ"}
+              </p>
+            )}
+            {record.user_id === userId && onReuse && (
+              <ReuseWorkout record={record} onReuse={onReuse} />
+            )}
+            {record.user_id === userId && onEdit && onDeleted && (
+              <WorkoutActions record={record} onEdit={onEdit} onDeleted={onDeleted} />
+            )}
 
-          {personal && record.user_id === userId && <WorkoutMemo workoutId={record.id} />}
-        </article>
-      ))}
+            {personal && record.user_id === userId && <WorkoutMemo workoutId={record.id} />}
+          </article>
+        );
+      })}
     </div>
   );
 }

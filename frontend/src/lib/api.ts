@@ -1,13 +1,27 @@
 import { getSupabase } from "./supabase";
 
+export type ActivityBodyPart = {
+  body_part: BodyPart | "full_body" | null;
+  volume: number;
+  set_count: number;
+  workout_count: number;
+};
+export type ActivityDay = {
+  date: string;
+  volume: number;
+  set_count: number;
+  workout_count: number;
+  body_parts?: ActivityBodyPart[];
+  workout_groups?: { body_parts: BodyPart[]; workout_count: number }[];
+};
 export type MonthlyActivity = {
   month: string;
-  metric: "score";
-  best_score: number | null;
+  metric: "volume";
+  total_volume: number;
   total_sets: number;
   workout_count: number;
   active_days: number;
-  days: { date: string; score: number | null; set_count: number; workout_count: number }[];
+  days: ActivityDay[];
 };
 
 export type Group = {
@@ -19,12 +33,39 @@ export type Group = {
 export type GroupDetail = Group & {
   members: { id: string; display_name: string; joined_at: string }[];
 };
-export type ExerciseOption = { id: string; name: string };
+export type BodyPart =
+  | "chest"
+  | "back"
+  | "shoulders"
+  | "arms"
+  | "legs"
+  | "glutes"
+  | "abs"
+  | "other";
+export type BodyPartSelection = {
+  primary_body_part: BodyPart;
+  secondary_body_parts: BodyPart[];
+};
+// 旧応答・キャッシュの全身と分類省略はその他として扱う。
+export type ExerciseOption = {
+  id: string;
+  name: string;
+  revision?: number;
+  primary_body_part?: BodyPart | "full_body" | null;
+  secondary_body_parts?: (BodyPart | "full_body")[];
+};
 export type Exercise = {
   name: string;
   sets: { weight: number; reps: number }[];
 };
+export type RecordBestSet = {
+  exercise_index: number;
+  set_index: number;
+  weight?: boolean;
+  rm?: boolean;
+};
 export type Workout = {
+  best_sets?: RecordBestSet[];
   score?: ScoreSummary | null;
   id: string;
   user_id: string;
@@ -45,6 +86,7 @@ export type TrainingSession = Workout & {
   best_updated?: boolean;
 };
 export type ExerciseContext = {
+  current_bests?: SessionBests | null;
   best_weight: number | null;
   best_rm: number | null;
   previous: { id: string; performed_on: string; sets: Exercise["sets"] } | null;
@@ -52,7 +94,7 @@ export type ExerciseContext = {
 };
 export type SessionBests = {
   revision: number;
-  sets: { exercise_index: number; set_index: number }[];
+  sets: RecordBestSet[];
 };
 export type AvatarImage = { version: string | null; data_url: string | null };
 export type GroupSummary = {
@@ -72,6 +114,7 @@ export type GroupSummary = {
 };
 export type GroupActivity = GroupSummary & {
   feed: {
+    summary?: { exercise_count: number; set_count: number };
     score?: ScoreSummary | null;
     workout_id: string;
     user_id: string;
@@ -82,6 +125,8 @@ export type GroupActivity = GroupSummary & {
     estimated_rm: number | null;
     updated_at: string;
     best: boolean;
+    best_weight?: boolean;
+    best_rm?: boolean;
   }[];
 };
 

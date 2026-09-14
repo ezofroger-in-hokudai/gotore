@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 for (const destination of ["ホーム", "設定"]) {
   test(`保存完了時に${destination}なら比較を取得せず、記録へ戻ると更新する`, async ({ page }) => {
@@ -51,7 +51,7 @@ for (const destination of ["ホーム", "設定"]) {
       await expect(page.locator(".sync-status")).toContainText("同期済み");
       await page.waitForTimeout(250);
       expect(allContexts).toBe(0);
-      await navigate(page, "記録");
+      await openTraining(page);
       await expect.poll(() => contexts).toBe(1);
       await expect(page.locator(".personal-bests")).toContainText("80");
       await expect(page.getByRole("textbox", { name: "種目メモ", exact: true })).toHaveValue(
@@ -107,7 +107,7 @@ test("保存待ちの全セット一覧を離れた後はBEST取得を延期し�
     await expect(page.locator(".sync-status")).toContainText("同期済み");
     await page.waitForTimeout(250);
     expect(bests).toBe(1);
-    await navigate(page, "記録");
+    await openTraining(page);
     await expect.poll(() => bests).toBe(2);
     expect(revisions).toEqual([1, 2]);
     expect(state.saves).toBe(1);

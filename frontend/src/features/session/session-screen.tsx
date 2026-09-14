@@ -1,8 +1,12 @@
 "use client";
 
-import type { ExerciseOption, SessionBests, TrainingSession } from "@/lib/api";
+import type { ExerciseOption, RecordBestSet, SessionBests, TrainingSession } from "@/lib/api";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ExerciseCatalog } from "../exercises/exercise-catalog";
+import { BodyPartTags } from "../exercises/body-part-fields";
+import { type BodyPartFilter, PART_FILTERS, filterExercises } from "../exercises/body-parts";
+import { CatalogPanel } from "../exercises/catalog-panel";
+import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
+import { BestFlame } from "../training/best-flame";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
 import { InlineMemo } from "./inline-memo";
@@ -16,29 +20,25 @@ import {
   setValue,
   updateSet,
 } from "./session";
-import { TrainingOverview } from "./training-overview";
 import { useExerciseContext } from "./use-exercise-context";
 import type { SessionController } from "./use-session";
 
 export function SessionScreen({
+  catalog,
   active,
   controller,
   userId,
-  recent,
-  onHistory,
   onFinished,
   haptic,
 }: {
   active: boolean;
+  catalog: ReturnType<typeof useExerciseCatalog>;
   controller: SessionController;
   userId: string;
-  recent: Parameters<typeof TrainingOverview>[0]["resource"];
-  onHistory: () => void;
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
 }) {
   const { session } = controller;
-  const catalog = useResource<ExerciseOption[]>("/exercise-options", 0, false, true);
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
   if (!session && !controller.startingId)
     return (
@@ -56,7 +56,6 @@ export function SessionScreen({
         >
           {controller.busy ? "開始中…" : "トレーニングを開始"}
         </button>
-        <TrainingOverview resource={recent} onHistory={onHistory} />
       </section>
     );
   return (
@@ -93,7 +92,7 @@ function ActiveTraining({
   session: TrainingSession | null;
   initialInput: SessionInput;
   onPreparingInput: (input: SessionInput) => void;
-  catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  catalog: ReturnType<typeof useExerciseCatalog>;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
@@ -117,7 +116,7 @@ function ActiveTraining({
     if (!sessionId) onPreparingInput(input);
   }, [input, sessionId, onPreparingInput]);
   const [selecting, setSelecting] = useState(!input.name);
-  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState<false | "list" | "add">(false);
   const comparisonTable = useRef<HTMLElement>(null);
   const repsField = useRef<HTMLInputElement>(null);
   const [conflictOpen, setConflictOpen] = useState(false);
@@ -132,6 +131,7 @@ function ActiveTraining({
     revision: number;
   } | null>(null);
   const [query, setQuery] = useState("");
+  const [part, setPart] = useState<BodyPartFilter>("all");
   const overviewBests = useResource<SessionBests>(
     sessionId ? `/sessions/${sessionId}/bests` : null,
     controller.confirmedRevision,
@@ -139,22 +139,49 @@ function ActiveTraining({
     true,
     { enabled: active && selecting && exercises.length > 0 },
   );
-  const bestPositions = new Set(
+  const bestPositions = new Map(
     overviewBests.data && overviewBests.data.revision === revision && !controller.pending
-      ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
+      ? overviewBests.data.sets.map((set) => [`${set.exercise_index}:${set.set_index}`, set])
       : [],
   );
   const names = Array.from(
-    new Set([...(catalog.data ?? []).map((e) => e.name), ...exercises.map((e) => e.name)]),
+    new Set([
+      ...(catalog.data ?? []).map((e) => e.name),
+      ...exercises.map((e) => e.name),
+      ...(input.name ? [input.name] : []),
+    ]),
+  );
+  const optionsByName = new Map((catalog.data ?? []).map((option) => [option.name, option]));
+  const visibleOptions = filterExercises(
+    names.map((name) => optionsByName.get(name) ?? { name }),
+    part,
+    query,
   );
   const context = useExerciseContext(
     sessionId,
     input.name,
-    names.filter((name) => name !== input.name && (!selecting || name.includes(query.trim()))),
+    (selecting ? visibleOptions.map((option) => option.name) : names).filter(
+      (name) => name !== input.name,
+    ),
     controller.confirmedRevision,
     active,
   );
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
+  const confirmedBests = new Map(
+    context.data?.current_bests &&
+      context.data.current_bests.revision === revision &&
+      !controller.pending
+      ? context.data.current_bests.sets.map((best) => [
+          `${best.exercise_index}:${best.set_index}`,
+          best,
+        ])
+      : [],
+  );
+  const selectedBests = exercises.flatMap((exercise, ei) =>
+    exercise.name === input.name
+      ? exercise.sets.map((_, si) => confirmedBests.get(`${ei}:${si}`))
+      : [],
+  );
   const previous = context.data?.previous?.sets ?? [];
   useEffect(() => {
     if (!input.awaitingPrevious) return;
@@ -235,6 +262,37 @@ function ActiveTraining({
     input.revision !== revision &&
     (input.dirty || input.editing !== null);
 
+  function selectExercise(name: string) {
+    if (
+      input.dirty &&
+      input.name !== name &&
+      !window.confirm("未保存の入力を破棄して種目を変更しますか？")
+    )
+      return;
+    if (input.name === name) {
+      setSelecting(false);
+      return;
+    }
+    const latest = exercises
+      .filter((e) => e.name === name)
+      .flatMap((e) => e.sets)
+      .at(-1);
+    const first = latest ?? context.firstPreviousSet(name);
+    setInput({
+      name,
+      revision,
+      weight: String(first?.weight ?? 20),
+      reps: String(first?.reps ?? 10),
+      awaitingPrevious: !first,
+      editing: null,
+      dirty: false,
+    });
+    setSelecting(false);
+    setFeedback("");
+    setSubmission(null);
+    setUndo(null);
+  }
+
   async function save() {
     if (!session || !storageKey || controller.busy || stale || adding.current) return;
     adding.current = true;
@@ -303,40 +361,67 @@ function ActiveTraining({
         <>
           <div className="section-heading">
             <h1>種目を選択</h1>
-            <button className="text-button" type="button" onClick={() => setCatalogOpen(true)}>
+            <button className="text-button" type="button" onClick={() => setCatalogOpen("list")}>
               種目一覧
             </button>
           </div>
           <section className="session-overview" aria-label="今回のトレーニング">
-            <h2>今回のトレーニング</h2>
-            {exercises.length ? (
-              exercises.map((exercise, index) => (
-                <div key={`${exercise.name}-${index}`}>
-                  <h3>
-                    {exercise.name} · {exercise.sets.length}セット
-                  </h3>
-                  <ol>
-                    {exercise.sets.map((value, i) => (
-                      <li
-                        key={`set-${i + 1}`}
-                        className={
-                          bestPositions.has(`${index}:${i}`) ? "record-celebration" : undefined
-                        }
-                      >
-                        {bestPositions.has(`${index}:${i}`) && (
-                          <span role="img" aria-label="最高記録">
-                            🔥{" "}
-                          </span>
-                        )}
-                        {i + 1}: {value.weight}kg × {value.reps}回
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              ))
-            ) : (
-              <p className="muted">まだセットがありません</p>
+            <div className="session-overview-heading">
+              <h2>今回のトレーニング</h2>
+              <span className="muted">
+                {exercises.reduce((count, exercise) => count + exercise.sets.length, 0)}セット
+              </span>
+            </div>
+            {exercises.length > 0 && (
+              <div className="session-exercise-shortcuts">
+                {Array.from(new Set(exercises.map((exercise) => exercise.name))).map((name) => (
+                  <button
+                    type="button"
+                    className="text-button"
+                    key={name}
+                    aria-label={`記録に戻る：${name}`}
+                    onClick={() => selectExercise(name)}
+                  >
+                    {name}{" "}
+                    <span className="muted">
+                      {exercises
+                        .filter((exercise) => exercise.name === name)
+                        .reduce((count, exercise) => count + exercise.sets.length, 0)}
+                      セット ›
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
+            <details className="session-overview-details">
+              <summary>セットの詳細</summary>
+              {exercises.length ? (
+                exercises.map((exercise, index) => (
+                  <div key={`${exercise.name}-${index}`}>
+                    <h3>
+                      {exercise.name} · {exercise.sets.length}セット
+                    </h3>
+                    <ol>
+                      {exercise.sets.map((value, i) => (
+                        <li
+                          key={`set-${i + 1}`}
+                          className={
+                            bestPositions.has(`${index}:${i}`) ? "record-celebration" : undefined
+                          }
+                        >
+                          {bestPositions.has(`${index}:${i}`) && (
+                            <BestFlame best={bestPositions.get(`${index}:${i}`)} />
+                          )}
+                          {i + 1}: {value.weight}kg × {value.reps}回
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))
+              ) : (
+                <p className="muted">まだセットがありません</p>
+              )}
+            </details>
           </section>
           {overviewBests.error && (
             <p className="error" role="alert">
@@ -354,6 +439,21 @@ function ActiveTraining({
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
+          <fieldset className="body-part-chips" aria-label="部位で絞り込み">
+            {PART_FILTERS.map((filter) => (
+              <button
+                type="button"
+                key={filter.value}
+                aria-pressed={part === filter.value}
+                onClick={() => setPart(filter.value)}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </fieldset>
+          <div className="exercise-filter-heading">
+            <span className="muted">{visibleOptions.length}種目</span>
+          </div>
           {catalog.error && (
             <p role="alert" className="error">
               {catalog.error}
@@ -362,56 +462,35 @@ function ActiveTraining({
               </button>
             </p>
           )}
-          <div className="v2-rows">
-            {names
-              .filter((name) => name.includes(query.trim()))
-              .map((name) => (
-                <button
-                  type="button"
-                  className="v2-row"
-                  key={name}
-                  onClick={() => {
-                    if (
-                      input.dirty &&
-                      input.name !== name &&
-                      !window.confirm("未保存の入力を破棄して種目を変更しますか？")
-                    )
-                      return;
-                    if (input.name === name) {
-                      setSelecting(false);
-                      return;
-                    }
-                    const latest = exercises
-                      .filter((e) => e.name === name)
-                      .flatMap((e) => e.sets)
-                      .at(-1);
-                    const first = latest ?? context.firstPreviousSet(name);
-                    setInput({
-                      name,
-                      revision,
-                      weight: String(first?.weight ?? 20),
-                      reps: String(first?.reps ?? 10),
-                      awaitingPrevious: !first,
-                      editing: null,
-                      dirty: false,
-                    });
-                    setSelecting(false);
-                    setFeedback("");
-                    setSubmission(null);
-                    setUndo(null);
-                  }}
-                >
-                  <span>{name}</span>
-                  <span className="muted">
-                    {exercises.find((e) => e.name === name)?.sets.length || ""} ›
-                  </span>
-                </button>
-              ))}
+          <div className="v2-rows exercise-picker-list">
+            {visibleOptions.map((option) => (
+              <button
+                type="button"
+                className="v2-row"
+                key={option.name}
+                onClick={() => selectExercise(option.name)}
+              >
+                <span className="exercise-option-name">
+                  <strong>{option.name}</strong>
+                  <BodyPartTags option={option} />
+                </span>
+                <span className="muted" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            ))}
           </div>
+          {names.length > 0 && visibleOptions.length === 0 && (
+            <p className="muted">条件に合う種目がありません。</p>
+          )}
           {!names.length && !catalog.loading && (
             <p className="muted">種目一覧から種目を追加してください。</p>
           )}
-          <button className="secondary full" type="button" onClick={() => setCatalogOpen(true)}>
+          <button
+            className="secondary full exercise-add-button"
+            type="button"
+            onClick={() => setCatalogOpen("add")}
+          >
             新しい種目を追加
           </button>
         </>
@@ -428,10 +507,11 @@ function ActiveTraining({
               >
                 種目を変更
               </button>
-              <button type="button" className="text-button" onClick={() => setCatalogOpen(true)}>
+              <button type="button" className="text-button" onClick={() => setCatalogOpen("list")}>
                 種目一覧
               </button>
             </div>
+            <BodyPartTags option={optionsByName.get(input.name)} />
             <div className="personal-bests">
               <div>
                 <span>最高重量</span>
@@ -488,9 +568,7 @@ function ActiveTraining({
               <h2>
                 前回 <small>{context.data?.previous?.performed_on.replaceAll("-", "/")}</small>
               </h2>
-              <h2>
-                今回 <small>タップで編集</small>
-              </h2>
+              <h2>今回</h2>
             </div>
             <section className="comparison-table" ref={comparisonTable} aria-label="全セットの比較">
               {Array.from({ length: Math.max(previous.length, sets.length, 1) }, (_, i) => (
@@ -520,7 +598,15 @@ function ActiveTraining({
                       setFeedback("");
                     }}
                   >
-                    {sets[i] ? <SetMeasurement weight={sets[i].weight} reps={sets[i].reps} /> : "—"}
+                    {sets[i] ? (
+                      <SetMeasurement
+                        weight={sets[i].weight}
+                        reps={sets[i].reps}
+                        best={selectedBests[i]}
+                      />
+                    ) : (
+                      "—"
+                    )}
                   </button>
                 </div>
               ))}
@@ -686,7 +772,6 @@ function ActiveTraining({
                   <span>
                     {blocking ? "保存中…" : input.editing === null ? "次のセットへ" : "変更を保存"}
                   </span>
-                  <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
                 </button>
               </div>
             </fieldset>
@@ -700,11 +785,10 @@ function ActiveTraining({
       )}
       {catalogOpen && (
         <Sheet title="種目一覧" onClose={() => setCatalogOpen(false)}>
-          <ExerciseCatalog
-            options={catalog.data ?? []}
-            expanded
+          <CatalogPanel
+            catalog={catalog}
             disabled={controller.busy}
-            onChanged={catalog.retry}
+            startAdding={catalogOpen === "add"}
           />
         </Sheet>
       )}
@@ -781,11 +865,7 @@ function ActiveTraining({
             if (!controller.busy) setFinishOpen(false);
           }}
         >
-          <p>
-            {input.dirty
-              ? "未保存の入力があります。保存済みのセットだけを残して終了しますか？"
-              : "おつかれさまでした。保存したセットは履歴で確認できます。"}
-          </p>
+          {input.dirty && <p>未保存の入力があります。保存済みのセットだけを残して終了しますか？</p>}
           <button
             className="primary full"
             type="button"
@@ -815,13 +895,23 @@ function ActiveTraining({
   );
 }
 
-function SetMeasurement({ weight, reps }: { weight: number; reps: number }) {
+function SetMeasurement({
+  weight,
+  reps,
+  best,
+}: { weight: number; reps: number; best?: RecordBestSet }) {
   return (
     <span className="set-measurement">
       <span>
-        {weight}kg × {reps}
+        {best && <BestFlame best={best} />}
+        <b className={best?.weight ? "personal-best-value" : undefined}>{weight}</b>kg × {reps}
       </span>
-      <small>RM {estimatedRM(weight, reps) ?? "—"}</small>
+      <small>
+        RM{" "}
+        <b className={best?.rm ? "personal-best-value" : undefined}>
+          {estimatedRM(weight, reps) ?? "—"}
+        </b>
+      </small>
     </span>
   );
 }

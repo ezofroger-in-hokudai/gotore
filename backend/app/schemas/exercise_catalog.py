@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from app.domain.exercise_catalog import BodyPartSelection
 
 
-class ExerciseOptionResponse(BaseModel):
+class ExerciseOptionResponse(BodyPartSelection):
     id: UUID
     name: str
+    revision: int

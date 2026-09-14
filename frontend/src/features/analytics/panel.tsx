@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { LoadingState } from "../loading/loading-state";
+import { ResourceError } from "../training/resource-error";
 import { AnalyticsChart, dates, number } from "./chart";
 import { type Grain, type Metric, type Period, type RankMetric, labels, units } from "./types";
 import { useAnalytics } from "./use-analytics";
@@ -128,21 +130,15 @@ export function AnalyticsPanel({
           </button>
         ))}
       </div>
-      {resource.error ? (
-        <div className="analytics-placeholder">
-          <p role="alert" className="error">
-            {resource.error}
-          </p>
-          <button type="button" className="secondary" onClick={resource.retry}>
-            再試行
-          </button>
-        </div>
-      ) : !data ? (
-        <output className="analytics-placeholder">グラフを準備しています…</output>
+      <ResourceError resource={resource} />
+      {resource.error && !data ? null : !data ? (
+        <LoadingState label={ranking ? "ランキングを読み込み中" : "グラフを読み込み中"} />
       ) : (
         <>
-          <div className="analytics-summary">
-            <span>{ranking ? "グループランキング" : labels[selectedMetric]}</span>
+          <section
+            className="analytics-summary"
+            aria-label={`${labels[selected]}${ranking ? "ランキング" : "の要約"}`}
+          >
             {!ranking && (
               <strong>
                 {number(data.totals[selectedMetric])}
@@ -154,7 +150,7 @@ export function AnalyticsPanel({
                 ? "更新中…"
                 : `${data.totals.days}日間の記録${scope ? ` · ${data.totals.people}人が活動` : ""}`}
             </span>
-          </div>
+          </section>
           {!ranking && data.previous_totals && (
             <p className="analytics-comparison muted">
               前期間比{" "}
@@ -225,11 +221,14 @@ export function AnalyticsPanel({
               {!data.totals.sets && <p className="muted">この期間は記録がありません。</p>}
             </>
           )}
-          <p className="analytics-footnote muted">
-            {ranking
-              ? "現在グループに共有されている記録で集計します。"
-              : "総負荷 = 重量 × 回数の合計。最高推定1RMは1〜10回の記録から算出します。"}
-          </p>
+          {ranking ? (
+            <p className="analytics-footnote muted">共有済みの記録のみで集計</p>
+          ) : (
+            <details className="analytics-help">
+              <summary>指標について</summary>
+              <p>総負荷 = 重量 × 回数の合計。最高推定1RMは1〜10回の記録から算出します。</p>
+            </details>
+          )}
         </>
       )}
     </section>

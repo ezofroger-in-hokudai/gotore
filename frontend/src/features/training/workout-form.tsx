@@ -1,8 +1,12 @@
 "use client";
 
+import { LoadingState } from "../loading/loading-state";
+
 import { type ExerciseOption, type Group, type Workout, api } from "@/lib/api";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { groupExercises } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
+import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import {
   type Draft,
   editDraft,
@@ -14,9 +18,9 @@ import {
   today,
   workoutPayload,
 } from "./draft";
-import { useResource } from "./use-resource";
 
 export function WorkoutForm({
+  exerciseCatalog,
   groups,
   selectedGroup,
   userId,
@@ -25,6 +29,7 @@ export function WorkoutForm({
   editing,
   source,
 }: {
+  exerciseCatalog?: ReturnType<typeof useExerciseCatalog>;
   editing?: Workout | null;
   source?: Workout | null;
   groups: Group[];
@@ -33,7 +38,8 @@ export function WorkoutForm({
   onSaved: (workout: Workout) => void;
   onBack: () => void;
 }) {
-  const catalog = useResource<ExerciseOption[]>("/exercise-options");
+  const ownCatalog = useExerciseCatalog(undefined, !exerciseCatalog);
+  const catalog = exerciseCatalog ?? ownCatalog;
   const options = catalog.data ?? [];
   const storageKey = `gotore:draft:${userId}`;
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -198,7 +204,9 @@ export function WorkoutForm({
 
       {source && <p className="notice">{source.performed_on}からコピー</p>}
 
-      {catalog.loading && <output className="loading">読み込み中…</output>}
+      {catalog.loading && !catalog.data && !catalog.error && (
+        <LoadingState label="種目を読み込み中" compact />
+      )}
       {catalog.error && (
         <div className="error" role="alert">
           {catalog.error}
@@ -213,7 +221,7 @@ export function WorkoutForm({
       <ExerciseCatalog
         options={options}
         disabled={busy || catalog.loading || catalog.data === null || !!catalog.error}
-        onChanged={catalog.retry}
+        onChanged={catalog.changed}
       />
       <form
         onSubmit={submit}
@@ -288,10 +296,14 @@ export function WorkoutForm({
                     {exercise.name && !options.some((option) => option.name === exercise.name) && (
                       <option value={exercise.name}>{exercise.name}（保存済み）</option>
                     )}
-                    {options.map((option) => (
-                      <option key={option.id} value={option.name}>
-                        {option.name}
-                      </option>
+                    {groupExercises(options).map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.options.map((option) => (
+                          <option key={option.id} value={option.name}>
+                            {option.name}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </label>

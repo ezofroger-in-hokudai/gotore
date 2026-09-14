@@ -1,6 +1,7 @@
 import type { Workout } from "@/lib/api";
 import { dateLabel } from "../activity/calendar";
 import { number } from "../analytics/chart";
+import { LoadingState } from "../loading/loading-state";
 import type { useResource } from "../training/use-resource";
 import { estimatedRM } from "./session";
 
@@ -39,13 +40,13 @@ export function TrainingOverview({
           </button>
         </div>
       ) : !records ? (
-        <output className="muted">前回の記録を読み込み中…</output>
+        <LoadingState label="前回の記録を読み込み中" compact />
       ) : !latest ? (
-        <p className="muted">最初のトレーニングを記録してみましょう。</p>
+        <p className="muted">記録はありません</p>
       ) : (
         <>
           <div className="section-heading">
-            <h2>前回のトレーニング</h2>
+            <h2 className="sr-only">前回のトレーニング</h2>
             <span className="muted">
               {resource.loading ? "更新中…" : dateLabel(latest.performed_on)}
             </span>

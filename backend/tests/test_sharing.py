@@ -418,18 +418,18 @@ def test_activity_uses_all_own_sets_with_month_boundaries_and_daily_pages(client
         "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
     )
 
-    def save(day, counts, user="A", shared=False):
+    def save(day, counts, user="A", shared=False, weight=0):
         record = payload(group_id=group["id"] if shared else None)
         record["performed_on"] = day
         record["exercises"] = [
-            {"name": f"種目{index}", "sets": [{"weight": 0, "reps": 10}] * count}
+            {"name": f"種目{index}", "sets": [{"weight": weight, "reps": 10}] * count}
             for index, count in enumerate(counts)
         ]
         response = client.post("/api/workouts", json=record, headers={"X-Test-User": user})
         assert response.status_code == 201
         return record["id"]
 
-    save("2024-02-01", [1, 2])
+    save("2024-02-01", [1, 2], weight=12.5)
     save("2024-02-01", [2], shared=True)
     save("2024-02-01", [6], user="B", shared=True)
     save("2024-02-29", [9], user="B")
@@ -441,14 +441,26 @@ def test_activity_uses_all_own_sets_with_month_boundaries_and_daily_pages(client
     assert response.headers["cache-control"] == "no-store"
     assert response.json() == {
         "month": "2024-02",
-        "metric": "score",
-        "best_score": None,
+        "metric": "volume",
+        "total_volume": 375,
         "total_sets": 56,
         "workout_count": 53,
         "active_days": 2,
         "days": [
-            {"date": "2024-02-01", "set_count": 5, "workout_count": 2, "score": None},
-            {"date": "2024-02-29", "set_count": 51, "workout_count": 51, "score": None},
+            {
+                "date": "2024-02-01", "set_count": 5, "workout_count": 2, "volume": 375,
+                "workout_groups": [{"body_parts": ["other"], "workout_count": 2}],
+                "body_parts": [
+                    {"body_part": "other", "set_count": 5, "workout_count": 2, "volume": 375}
+                ],
+            },
+            {
+                "date": "2024-02-29", "set_count": 51, "workout_count": 51, "volume": 0,
+                "workout_groups": [{"body_parts": ["other"], "workout_count": 51}],
+                "body_parts": [
+                    {"body_part": "other", "set_count": 51, "workout_count": 51, "volume": 0}
+                ],
+            },
         ],
     }
     first = client.get("/api/workouts?performed_on=2024-02-29").json()
@@ -473,8 +485,8 @@ def test_activity_empty_month_and_refresh_after_record_changes(client, connectio
     path = "/api/workouts/activity?month=2024-12"
     empty = {
         "month": "2024-12",
-        "metric": "score",
-        "best_score": None,
+        "metric": "volume",
+        "total_volume": 0,
         "total_sets": 0,
         "workout_count": 0,
         "active_days": 0,
@@ -485,13 +497,22 @@ def test_activity_empty_month_and_refresh_after_record_changes(client, connectio
     record["performed_on"] = "2024-12-31"
     assert client.post("/api/workouts", json=record).status_code == 201
     assert client.get(path).json()["total_sets"] == 1
+    assert client.get(path).json()["total_volume"] == 644
     assert client.get("/api/workouts/activity?month=2025-01").json()["total_sets"] == 0
+    revised = client.patch(f"/api/workouts/{record['id']}", json={
+        "expected_revision": 1,
+        "performed_on": "2024-12-31",
+        "exercises": [{"name": "ベンチプレス", "sets": [{"weight": 12.5, "reps": 3}]}],
+    })
+    assert revised.status_code == 200, revised.text
+    assert client.get(path).json()["total_volume"] == 37.5
     connection.execute(
         "UPDATE public.gotore_workouts SET performed_on = '2025-01-01' WHERE id = %s",
         (record["id"],),
     )
     assert client.get(path).json() == empty
     assert client.get("/api/workouts/activity?month=2025-01").json()["total_sets"] == 1
+    assert client.get("/api/workouts/activity?month=2025-01").json()["total_volume"] == 37.5
     connection.execute("DELETE FROM public.gotore_workouts WHERE id = %s", (record["id"],))
     assert client.get("/api/workouts/activity?month=2025-01").json()["total_sets"] == 0
 

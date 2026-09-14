@@ -32,12 +32,14 @@ for (const width of [320, 390, 430]) {
     expect((await rows.last().boundingBox())?.y).toBeLessThan(
       (await page.getByLabel("月", { exact: true }).boundingBox())?.y ?? 0,
     );
-    await expect(page.getByRole("heading", { name: "SCOREカレンダー", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "活動カレンダー", exact: true })).toBeVisible();
+    await expect(page.getByRole("group", { name: "カレンダーの部位", exact: true })).toBeVisible();
     const initialReads = reads;
     await page.screenshot({ path: `test-results/history-priority-${width}.png`, fullPage: false });
     await rows.first().click();
     await expect(page.getByRole("button", { name: "編集", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "コピー", exact: true })).toBeVisible();
+    await expect(page.getByRole("table", { name: "記録1の種目", exact: true })).toContainText("20");
     await page.getByRole("button", { name: "‹ 履歴", exact: true }).click();
     await page.getByRole("button", { name: "もっと見る", exact: true }).click();
     await expect(rows).toHaveCount(50);
@@ -49,6 +51,18 @@ for (const width of [320, 390, 430]) {
     await page.getByRole("button", { name: "以前の記録", exact: true }).click();
     await expect(rows).toHaveCount(1);
     await expect(rows).toContainText("記録51の種目");
+    await page.getByRole("button", { name: "新しい記録", exact: true }).click();
+    await expect(rows).toHaveCount(50);
+    await page.getByRole("button", { name: "直近3件に戻す", exact: true }).click();
+    await expect(rows).toHaveCount(3);
+    const calendar = page.getByRole("region", { name: "活動カレンダー", exact: true });
+    await calendar.getByLabel("月", { exact: true }).fill("2026-09");
+    await calendar.getByRole("button", { name: /^2026年9月12日、/ }).click();
+    await expect(rows).toHaveCount(50);
+    await expect(
+      page.getByRole("heading", { name: "2026年9月12日", exact: true }),
+    ).toBeInViewport();
+    await expect(page.getByRole("button", { name: "もっと見る", exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   });
 }
@@ -67,8 +81,12 @@ test("履歴の読込中・取得失敗・空の記録を区別し、その場�
     );
   });
   try {
+    // ログイン直後の先読み済み一覧を除き、初回取得の保留から検証する。
+    await page.reload();
     await navigate(page, "履歴");
-    await expect(page.getByRole("status").filter({ hasText: "読み込み中" })).toBeVisible();
+    await expect(
+      page.getByRole("status", { name: "記録一覧を読み込み中", exact: true }),
+    ).toBeVisible();
     await expect(page.getByText("まだ記録がありません", { exact: true })).toHaveCount(0);
     release();
     await expect(page.getByRole("main").getByRole("alert")).toContainText("記録を取得できません");

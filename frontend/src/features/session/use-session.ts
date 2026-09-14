@@ -1,4 +1,5 @@
 import { type Exercise, type TrainingSession, api } from "@/lib/api";
+import { createSessionSender } from "@/lib/session-transport";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { SessionQueue } from "./session-queue";
 
@@ -19,12 +20,7 @@ export function useSession(userId: string, onChanged: () => void) {
           navigator.locks ? navigator.locks.request(`${storageKey}:${name}`, work) : work(),
         load: () =>
           api<TrainingSession | null>("/sessions/active", { signal: AbortSignal.timeout(15_000) }),
-        send: (id, revision, exercises) =>
-          api<TrainingSession>(`/sessions/${id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ expected_revision: revision, exercises }),
-            signal: AbortSignal.timeout(15_000),
-          }),
+        send: createSessionSender(api<TrainingSession>),
       }),
   );
   const state = useSyncExternalStore(queue.subscribe, queue.getSnapshot, queue.getSnapshot);

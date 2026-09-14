@@ -1,5 +1,6 @@
+import { gunzipSync } from "node:zlib";
 import { type Page, expect } from "@playwright/test";
-import type { TrainingSession } from "../../src/lib/api";
+import type { ExerciseOption, TrainingSession } from "../../src/lib/api";
 
 // UI単独の検証用。実際の認証・DB・共有検証はsharing.spec.tsで行う。
 export async function mockTraining(page: Page, owner = true, showGuide = false) {
@@ -27,7 +28,7 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     options: [
       { id: "option-bench", name: "ベンチプレス" },
       { id: "option-squat", name: "スクワット" },
-    ],
+    ] as ExerciseOption[],
     failOptions: false,
     failOptionWrite: false,
     authUpdates: 0,
@@ -84,7 +85,10 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     if (path.startsWith("/api/sessions/")) {
       if (path.endsWith("/heartbeat")) return route.fulfill({ status: 204 });
       if (!state.session) return route.fulfill({ status: 409, json: { detail: "終了済み" } });
-      const body = route.request().postDataJSON();
+      const body =
+        route.request().headers()["content-encoding"] === "gzip"
+          ? JSON.parse(gunzipSync(route.request().postDataBuffer() ?? Buffer.alloc(0)).toString())
+          : route.request().postDataJSON();
       if (state.failSave) return route.abort();
       if (
         body.expected_revision + 1 === state.session.revision &&
@@ -192,6 +196,9 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
         const option = state.options.find((item) => item.name === name) ?? {
           id: crypto.randomUUID(),
           name,
+          primary_body_part: route.request().postDataJSON().primary_body_part ?? null,
+          secondary_body_parts: route.request().postDataJSON().secondary_body_parts ?? [],
+          revision: 1,
         };
         if (!state.options.includes(option)) state.options.push(option);
         return route.fulfill({ status: 201, json: option });
@@ -201,6 +208,23 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     }
     if (path.startsWith("/api/exercise-options/")) {
       if (state.failOptionWrite) return route.abort();
+      if (route.request().method() === "PATCH") {
+        const option = state.options.find((item) => item.id === path.split("/").at(-1));
+        if (!option)
+          return route.fulfill({ status: 404, json: { detail: "種目が見つかりません" } });
+        const body = route.request().postDataJSON();
+        if (option.revision === undefined || body.expected_revision !== option.revision)
+          return route.fulfill({
+            status: 409,
+            json: { detail: "別の更新があります。最新の部位を読み直してください" },
+          });
+        Object.assign(option, {
+          primary_body_part: body.primary_body_part,
+          secondary_body_parts: body.secondary_body_parts,
+          revision: option.revision + 1,
+        });
+        return route.fulfill({ json: option });
+      }
       state.options = state.options.filter((item) => item.id !== path.split("/").at(-1));
       return route.fulfill({ status: 204 });
     }
@@ -240,8 +264,8 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
       return route.fulfill({
         json: {
           month: new URL(route.request().url()).searchParams.get("month"),
-          metric: "score",
-          best_score: null,
+          metric: "volume",
+          total_volume: 0,
           total_sets: 0,
           workout_count: 0,
           active_days: 0,
@@ -270,8 +294,13 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
 export async function navigate(page: Page, name: string) {
   await page.getByRole("navigation").getByRole("button", { name, exact: true }).click();
 }
+export async function openTraining(page: Page) {
+  await navigate(page, "ホーム");
+  const resume = page.getByRole("button", { name: "トレーニングを再開", exact: true });
+  if (await resume.count()) await resume.click();
+}
 export async function startTraining(page: Page, name = "ベンチプレス") {
-  await navigate(page, "記録");
+  await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   await page.getByRole("button", { name: new RegExp(`^${name}`) }).click();
 }

@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import { type FormEvent, useState } from "react";
+import { LoadingState } from "../loading/loading-state";
 import { useResource } from "../training/use-resource";
 import { saveDisplayName } from "./profile";
 
@@ -20,7 +21,7 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
           </button>
         </div>
       ) : (
-        <output className="loading">読み込み中…</output>
+        <LoadingState label="プロフィールを読み込み中" />
       )}
     </section>
   );

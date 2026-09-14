@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 async function catalog(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "種目一覧", exact: true }).click();
@@ -8,6 +8,7 @@ test("種目追加・削除の失敗を再試行でき、削除後も入力を�
   const state = await mockTraining(page);
   await startTraining(page, "スクワット");
   await catalog(page);
+  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   const name = page.getByLabel("新しい種目", { exact: true });
   await name.fill(" ケーブルロウ ");
   state.failOptionWrite = true;
@@ -34,7 +35,7 @@ test("種目追加・削除の失敗を再試行でき、削除後も入力を�
   await expect(page.getByRole("status")).toContainText("削除しました");
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.getByRole("heading", { name: "ケーブルロウ", exact: true })).toBeVisible();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("30");
   expect(state.saves).toBe(0);
@@ -44,7 +45,7 @@ test("候補取得失敗から再試行し、空リストにも追加できる",
   const state = await mockTraining(page);
   state.failOptions = true;
   await page.reload();
-  await navigate(page, "記録");
+  await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("通信できません");
   state.failOptions = false;
@@ -69,6 +70,7 @@ test("空白・長すぎる名前を送信せず、種目ごとにセットを�
   const state = await mockTraining(page);
   await startTraining(page);
   await catalog(page);
+  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   for (const value of ["   ", "長".repeat(61)]) {
     await page.getByLabel("新しい種目", { exact: true }).fill(value);
     await page.getByRole("button", { name: "追加", exact: true }).click();

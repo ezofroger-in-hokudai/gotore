@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test("編集の競合・キャンセル・保存で新規下書きを保持し、削除を確認する", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -50,18 +50,27 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     return route.fulfill({ json: removed ? [] : [record] });
   });
   await startTraining(page, "スクワット");
+  await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("92.5");
   const draftKey = `gotore:session-input:v2:${user.id}:${state.session?.id}`;
   await expect
-    .poll(() => page.evaluate((key) => localStorage.getItem(key), draftKey))
-    .not.toBeNull();
+    .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), draftKey))
+    .toMatchObject({ name: "スクワット", weight: "92.5", dirty: true });
   const draft = await page.evaluate((key) => localStorage.getItem(key), draftKey);
+  const volume = () =>
+    record.exercises.reduce(
+      (sum, exercise) =>
+        sum + exercise.sets.reduce((total, set) => total + set.weight * set.reps, 0),
+      0,
+    );
   await page.route("**/api/workouts/activity?*", (route) =>
     route.fulfill({
       json: {
         month: new URL(route.request().url()).searchParams.get("month"),
-        metric: "score",
-        best_score: null,
-        days: removed ? [] : [{ date: record.performed_on, set_count: 1, workout_count: 1 }],
+        metric: "volume",
+        total_volume: removed ? 0 : volume(),
+        days: removed
+          ? []
+          : [{ date: record.performed_on, volume: volume(), set_count: 1, workout_count: 1 }],
         total_sets: removed ? 0 : 1,
         workout_count: removed ? 0 : 1,
         active_days: removed ? 0 : 1,
@@ -71,7 +80,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   const openRecords = async () => {
     await navigate(page, "履歴");
     await page.getByLabel("月", { exact: true }).fill("2026-01");
-    await page.getByRole("button", { name: "2026年1月1日、計測中、1件", exact: true }).click();
+    await page.getByRole("button", { name: "2026年1月1日、総負荷480kg、1件", exact: true }).click();
     await page.locator(".history-row").click();
   };
   await openRecords();
@@ -97,7 +106,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await expect(page.getByLabel("月", { exact: true })).toHaveValue("2026-01");
   await expect(
     page.getByRole("button", {
-      name: "2026年1月1日、計測中、1件",
+      name: "2026年1月1日、総負荷560kg、1件",
       exact: true,
     }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -121,7 +130,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
     }),
   ).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate((key) => localStorage.getItem(key), draftKey)).toBe(draft);
-  await navigate(page, "記録");
+  await openTraining(page);
   await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

@@ -4,16 +4,15 @@ from uuid import UUID
 from psycopg.types.json import Jsonb
 
 from app.domain.errors import Conflict, NotFound
-from app.domain.goal import STANDARD_CRITERIA, STANDARD_GOAL
+from app.domain.personal_records import record_best_sets
 from app.domain.session import (
     ExerciseMemoInput,
     SessionUpdate,
     estimated_rm,
     latest_change,
-    personal_bests,
-    session_best_sets,
 )
-from app.infrastructure.scores import ScoreRepository
+from app.domain.workout import workout_summary
+from app.infrastructure.personal_records import PersonalRecordRepository
 from app.infrastructure.training_repository import TrainingRepository
 
 
@@ -68,31 +67,17 @@ class SessionRepository(TrainingRepository):
             group_ids = [membership["group_id"] for membership in memberships]
             # 所属の行ロックを保持したまま、開始・共有・当日の活動を一括で保存する。
             row = self.connection.execute(
-                """WITH default_goal AS (INSERT INTO public.gotore_goal_versions
-                    (user_id, version, body, is_standard, criteria)
-                    SELECT %s, 1, %s, true, %s WHERE NOT EXISTS
-                        (SELECT 1 FROM public.gotore_goal_versions WHERE user_id = %s)
-                    RETURNING id),
-                started AS (INSERT INTO public.gotore_workouts
+                """WITH started AS (INSERT INTO public.gotore_workouts
                 (id, user_id, performed_on, exercises, started_at, last_seen_at)
                 VALUES (%s, %s, (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date,
                 '[]', clock_timestamp(), clock_timestamp()) RETURNING *),
                 shared AS (INSERT INTO public.gotore_workout_shares (workout_id, group_id, user_id)
                     SELECT s.id, g.id, s.user_id FROM started s, unnest(%s::uuid[]) AS g(id)),
                 activity AS (INSERT INTO public.gotore_session_days (workout_id, day)
-                    SELECT id, performed_on FROM started),
-                pinned AS (INSERT INTO public.gotore_workout_goals (workout_id, user_id, goal_id)
-                    SELECT s.id, s.user_id, COALESCE(
-                        (SELECT g.id FROM public.gotore_goal_versions g WHERE g.user_id = s.user_id
-                         ORDER BY g.version DESC LIMIT 1), (SELECT id FROM default_goal))
-                    FROM started s)
+                    SELECT id, performed_on FROM started)
                 SELECT s.*, p.display_name FROM started s
                 JOIN public.gotore_profiles p ON p.id = s.user_id""",
                 (
-                    user_id,
-                    STANDARD_GOAL,
-                    Jsonb(STANDARD_CRITERIA),
-                    user_id,
                     workout_id,
                     user_id,
                     group_ids,
@@ -154,11 +139,7 @@ class SessionRepository(TrainingRepository):
             self.lock_workout(workout_id)
             row = self.session(user_id, workout_id)
             if row["ended_at"] is not None and row["revision"] == revision + 1:
-                repo = ScoreRepository(self.connection)
-                return {
-                    **self.with_shares(row),
-                    "score": repo.present(repo.prepare(row), row["revision"]),
-                }
+                return self.with_shares(row)
             if row["revision"] != revision or row["ended_at"] is not None:
                 raise Conflict("別の更新があります。保存済みを読み直してください")
             updated = self.connection.execute(
@@ -167,9 +148,7 @@ class SessionRepository(TrainingRepository):
                 (workout_id,),
             ).fetchone()
             result = {**row, **updated}
-            repo = ScoreRepository(self.connection)
-            scored = repo.prepare(result)
-            return {**result, "score": repo.present(scored, result["revision"])}
+            return self.with_shares(result)
 
     def heartbeat(self, user_id: UUID, workout_id: UUID):
         with self.connection.transaction():
@@ -186,35 +165,19 @@ class SessionRepository(TrainingRepository):
             )
 
     def bests(self, user_id: UUID, name: str):
-        rows = self.connection.execute(
-            """SELECT exercises FROM public.gotore_workouts
-            WHERE user_id = %s AND exercises @> %s""",
-            (user_id, Jsonb([{"name": name}])),
-        ).fetchall()
-        return personal_bests(
-            [s for row in rows for e in row["exercises"] if e["name"] == name for s in e["sets"]]
-        )
+        row = self.connection.execute(
+            """SELECT max(s.best_weight) AS best_weight, max(s.best_rm) AS best_rm
+            FROM public.gotore_workout_statistics s
+            JOIN public.gotore_workouts w ON w.id = s.workout_id
+            WHERE w.user_id = %s AND s.exercise_name = %s""",
+            (user_id, name),
+        ).fetchone()
+        return {key: float(value) if value is not None else None for key, value in row.items()}
 
     def overview_bests(self, user_id: UUID, workout_id: UUID):
         row = self.session(user_id, workout_id)
-        names = list({e["name"] for e in row["exercises"]})
-        others = (
-            self.connection.execute(
-                """SELECT w.exercises FROM public.gotore_workouts w
-            WHERE w.user_id = %s AND w.id != %s
-            AND EXISTS (SELECT 1 FROM jsonb_array_elements(w.exercises) e
-                WHERE e->>'name' = ANY(%s::text[]))""",
-                (user_id, workout_id, names),
-            ).fetchall()
-            if names
-            else []
-        )
-        return {
-            "revision": row["revision"],
-            "sets": session_best_sets(
-                row["exercises"], [e for other in others for e in other["exercises"]]
-            ),
-        }
+        result = self.with_bests([row])[0]
+        return {"revision": row["revision"], "sets": result["best_sets"]}
 
     def preview(self, user_id: UUID, code: str):
         row = self.connection.execute(
@@ -235,34 +198,82 @@ class SessionRepository(TrainingRepository):
             current = self.owned_workout(user_id, session_id)
             if current is None:
                 raise NotFound("記録が見つかりません")
-        rows = self.connection.execute(
-            """SELECT w.id, w.performed_on, COALESCE(w.started_at, w.created_at) AS ordered_at,
-                w.exercises FROM public.gotore_workouts w
-            WHERE w.user_id = %s AND w.exercises @> %s
-            ORDER BY w.performed_on DESC, COALESCE(w.started_at, w.created_at) DESC, w.id DESC""",
-            (user_id, Jsonb([{"name": name}])),
-        ).fetchall()
-        sets = [s for row in rows for e in row["exercises"] if e["name"] == name for s in e["sets"]]
-        previous = None
-        for row in rows:
-            if current and (row["performed_on"], row["ordered_at"], row["id"]) >= (
-                current["performed_on"],
-                current["started_at"] or current["created_at"],
-                current["id"],
-            ):
-                continue
-            previous = {
-                "id": row["id"],
-                "performed_on": row["performed_on"],
-                "sets": [s for e in row["exercises"] if e["name"] == name for s in e["sets"]],
-            }
-            break
+        order = (
+            (current["performed_on"], current["started_at"] or current["created_at"], current["id"])
+            if current
+            else (None, None, None)
+        )
+        row = self.connection.execute(
+            """SELECT b.*, p.id, p.performed_on, p.sets
+            FROM (
+                SELECT max(s.best_weight)::double precision AS best_weight,
+                    max(s.best_rm)::double precision AS best_rm,
+                    (max(s.best_weight) FILTER (WHERE w.id IS DISTINCT FROM %s::uuid))
+                        ::double precision AS other_best_weight,
+                    (max(s.best_rm) FILTER (WHERE w.id IS DISTINCT FROM %s::uuid))
+                        ::double precision AS other_best_rm
+                FROM public.gotore_workout_statistics s
+                JOIN public.gotore_workouts w ON w.id = s.workout_id
+                WHERE w.user_id = %s AND s.exercise_name = %s
+            ) b
+            LEFT JOIN LATERAL (
+                SELECT w.id, w.performed_on, (
+                    SELECT jsonb_agg(s.value ORDER BY e.position, s.position)
+                    FROM jsonb_array_elements(w.exercises) WITH ORDINALITY e(value, position)
+                    CROSS JOIN LATERAL jsonb_array_elements(e.value->'sets')
+                        WITH ORDINALITY s(value, position)
+                    WHERE e.value->>'name' = %s
+                ) AS sets
+                FROM public.gotore_workouts w
+                WHERE w.user_id = %s AND w.exercises @> %s
+                    AND (%s::uuid IS NULL OR
+                        (w.performed_on, COALESCE(w.started_at, w.created_at), w.id)
+                        < (%s::date, %s::timestamptz, %s::uuid))
+                ORDER BY w.performed_on DESC, COALESCE(w.started_at, w.created_at) DESC, w.id DESC
+                LIMIT 1
+            ) p ON true""",
+            (
+                session_id,
+                session_id,
+                user_id,
+                name,
+                name,
+                user_id,
+                Jsonb([{"name": name}]),
+                session_id,
+                *order,
+            ),
+        ).fetchone()
+        previous = (
+            {"id": row["id"], "performed_on": row["performed_on"], "sets": row["sets"]}
+            if row["id"] is not None
+            else None
+        )
         memo = self.connection.execute(
             """SELECT content, revision FROM public.gotore_exercise_memos
             WHERE user_id = %s AND name = %s""",
             (user_id, name),
         ).fetchone() or {"content": "", "revision": 0}
-        return {**personal_bests(sets), "previous": previous, "memo": memo}
+        current_bests = None
+        if current:
+            baseline = {
+                name: {"best_weight": row["other_best_weight"], "best_rm": row["other_best_rm"]}
+            }
+            current_bests = {
+                "revision": current["revision"],
+                "sets": [
+                    position
+                    for position in record_best_sets(current["exercises"], baseline)
+                    if current["exercises"][position["exercise_index"]]["name"] == name
+                ],
+            }
+        return {
+            "best_weight": row["best_weight"],
+            "best_rm": row["best_rm"],
+            "previous": previous,
+            "memo": memo,
+            "current_bests": current_bests,
+        }
 
     def save_exercise_memo(self, user_id: UUID, data: ExerciseMemoInput):
         with self.connection.transaction():
@@ -348,18 +359,33 @@ class SessionRepository(TrainingRepository):
             ORDER BY w.user_id, w.updated_at DESC, w.created_at DESC, w.id""",
             (group_id, group_id),
         ).fetchall()
-        latest = ScoreRepository(self.connection).attach(latest, group_id)
         feed = []
+        maxima = PersonalRecordRepository(self.connection).maxima(
+            [row for row in latest if row["feed_best"]]
+        )
         for row in latest:
             exercise = row["exercises"][
                 row["feed_exercise"] if row["feed_exercise"] is not None else -1
             ]
             s = exercise["sets"][row["feed_set"] if row["feed_set"] is not None else -1]
-            best = self.bests(row["user_id"], exercise["name"]) if row["feed_best"] else None
+            best = maxima.get((row["user_id"], exercise["name"])) if row["feed_best"] else None
             rm = estimated_rm(s["weight"], s["reps"])
+            # 保存時に更新した出来事を保ち、後から同値が増えても最高値なら表示する。
+            best_weight = (
+                best is not None
+                and float(s["weight"]) > 0
+                and float(s["weight"]) == float(best["best_weight"])
+            )
+            best_rm = (
+                best is not None
+                and rm is not None
+                and best["best_rm"] is not None
+                and rm == float(best["best_rm"])
+            )
             feed.append(
                 {
                     "workout_id": row["id"],
+                    "summary": workout_summary(row["exercises"]),
                     "user_id": row["user_id"],
                     "display_name": row["display_name"],
                     "exercise": exercise["name"],
@@ -367,12 +393,9 @@ class SessionRepository(TrainingRepository):
                     "reps": s["reps"],
                     "estimated_rm": rm,
                     "updated_at": row["updated_at"],
-                    "score": row["score"],
-                    "best": best is not None
-                    and (
-                        (float(s["weight"]) > 0 and float(s["weight"]) == best["best_weight"])
-                        or (rm is not None and rm == best["best_rm"])
-                    ),
+                    "best": best_weight or best_rm,
+                    "best_weight": best_weight,
+                    "best_rm": best_rm,
                 }
             )
         feed.sort(key=lambda item: item["updated_at"], reverse=True)

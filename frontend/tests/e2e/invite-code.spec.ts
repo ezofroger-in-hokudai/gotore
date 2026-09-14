@@ -31,7 +31,9 @@ test("オーナーは影響を確認して再発行でき、失敗時は再取�
   await expect(page.getByTestId("invite-code")).toHaveText("ABCDEF123456");
   await page.getByRole("button", { name: "キャンセル", exact: true }).click();
   await expect(page.getByRole("button", { name: "コピー", exact: true })).toBeDisabled();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("再取得してください");
+  await expect(
+    page.getByRole("main").getByRole("alert").getByRole("button", { name: "再取得", exact: true }),
+  ).toBeEnabled();
   await page.getByRole("button", { name: "再取得", exact: true }).click();
   await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
   fail = false;
