@@ -1375,6 +1375,7 @@
   width: 100%;
   overflow: visible;
   touch-action: pan-y pinch-zoom;
+  -webkit-tap-highlight-color: transparent;
 }
 .analytics-chart svg text {
   fill: var(--muted);
@@ -1389,6 +1390,10 @@
   stroke-width: 2.5;
   stroke-linejoin: round;
 }
+.chart-bar {
+  fill: var(--accent);
+}
+
 .chart-dot {
   fill: var(--accent);
 }
@@ -1397,12 +1402,18 @@
   stroke-width: 1;
   stroke-dasharray: 3 3;
 }
-.analytics-chart .chart-slider {
-  width: 100%;
-  min-height: 32px;
+.chart-touch-target {
+  border: 0;
   padding: 0;
-  accent-color: var(--accent);
+  margin: 0;
+  min-width: 0;
   cursor: pointer;
+  touch-action: pan-y pinch-zoom;
+  -webkit-tap-highlight-color: transparent;
+}
+.chart-touch-target:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 .chart-selection {
   display: flex;
@@ -1941,6 +1952,7 @@
 
 .group-carousel {
   touch-action: pan-y pinch-zoom;
+  -webkit-tap-highlight-color: transparent;
 }
 .group-carousel.is-reordering {
   overflow-anchor: none;
