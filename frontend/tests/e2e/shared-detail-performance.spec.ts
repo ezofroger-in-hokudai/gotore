@@ -225,7 +225,9 @@ for (const target of [0, 2]) {
       await page
         .getByRole("button", { name: `友達${target}の記録詳細を開く`, exact: true })
         .click();
-      await expect(page.getByRole("dialog")).toContainText("読み込み中");
+      await expect(
+        page.getByRole("dialog").getByRole("status", { name: "記録の詳細を読み込み中" }),
+      ).toBeVisible();
       await expect.poll(() => requests.length).toBe(target ? 3 : 2);
       expect(requests).toContain(`record-${target}`);
       release();

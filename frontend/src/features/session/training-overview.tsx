@@ -47,9 +47,7 @@ export function TrainingOverview({
         <>
           <div className="section-heading">
             <h2 className="sr-only">前回のトレーニング</h2>
-            <span className="muted">
-              {resource.loading ? "更新中…" : dateLabel(latest.performed_on)}
-            </span>
+            <span className="muted">{dateLabel(latest.performed_on)}</span>
           </div>
           <p className="training-overview-total">
             <strong>{number(volume(latest))}</strong> kg 総負荷 ·{" "}

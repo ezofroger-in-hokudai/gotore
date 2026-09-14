@@ -35,6 +35,10 @@ test("画面内は短い読み込み表示だけにし、再確認でカレン�
   try {
     await expect(loading).toBeVisible();
     await expect(loading.locator("svg")).toHaveCount(0);
+    await expect(loading).toHaveText("");
+    await expect
+      .poll(() => loading.evaluate((el) => el.getAnimations({ subtree: true }).length))
+      .toBeGreaterThan(0);
     await expect(calendar.locator(".activity-totals")).toContainText("—");
     for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 });
@@ -50,7 +54,7 @@ test("画面内は短い読み込み表示だけにし、再確認でカレン�
     const previous = reads;
     await navigate(page, "履歴");
     await expect.poll(() => reads).toBeGreaterThan(previous);
-    await expect(calendar.getByText("更新中…", { exact: true })).toBeVisible();
+    await expect(calendar.getByText("更新中…", { exact: true })).toHaveCount(0);
     await expect(loading).toHaveCount(0);
     await expect(calendar.locator(".activity-totals")).toContainText("0");
   } finally {

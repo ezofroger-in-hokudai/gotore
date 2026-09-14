@@ -30,7 +30,7 @@ test("履歴は再訪時の表示を保持し、認証エラー時は古い記�
   });
   await navigate(page, "履歴");
   await expect(page.locator(".history-row")).toContainText("保存済みスクワット", { timeout: 1000 });
-  await expect(page.getByRole("status").filter({ hasText: "更新中" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "更新中" })).toHaveCount(0);
   record.exercises[0].name = "更新後スクワット";
   release();
   hold = null;
