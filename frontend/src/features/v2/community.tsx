@@ -102,6 +102,7 @@ export function CommunityHome({
     { enabled: active && groups.length > 1 },
   );
   function select(index: number) {
+    cardDrag.cancel();
     const element = carousel.current?.children[index] as HTMLElement | undefined;
     if (element && carousel.current)
       carousel.current.scrollTo({

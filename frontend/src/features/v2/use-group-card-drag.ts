@@ -19,6 +19,7 @@ type Gesture = {
   startY: number;
   x: number;
   scroll: number;
+  initial: number;
   pitch: number;
   maxScroll: number;
   from: number;
@@ -47,24 +48,29 @@ export function useGroupCardDrag({
   const gesture = useRef<Gesture | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const frame = useRef(0);
+  const destination = useRef<number | null>(null);
   const settling = useRef(false);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [error, setError] = useState("");
-  const stop = useCallback(() => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-    cancelAnimationFrame(frame.current);
-    const current = gesture.current;
-    gesture.current = null;
-    const element = carousel.current;
-    if (element) {
-      element.style.scrollSnapType = "";
-      if (current && element.hasPointerCapture(current.pointer))
-        element.releasePointerCapture(current.pointer);
-    }
-    setDrag(null);
-    return current;
-  }, [carousel]);
+  const stop = useCallback(
+    (restoreSnap = true) => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+      cancelAnimationFrame(frame.current);
+      destination.current = null;
+      const current = gesture.current;
+      gesture.current = null;
+      const element = carousel.current;
+      if (element) {
+        if (restoreSnap) element.style.scrollSnapType = "";
+        if (current && element.hasPointerCapture(current.pointer))
+          element.releasePointerCapture(current.pointer);
+      }
+      setDrag(null);
+      return current;
+    },
+    [carousel],
+  );
   const restore = useCallback(() => {
     const element = carousel.current;
     if (!element) return;
@@ -77,14 +83,41 @@ export function useGroupCardDrag({
     });
   }, [carousel]);
   const cancel = useCallback(() => {
+    const wasAnimating = destination.current !== null;
     const current = stop();
-    if (current) restore();
+    if (current || wasAnimating) restore();
   }, [stop, restore]);
   const ids = groups.map((group) => group.id).join(",");
   useEffect(() => {
     if (!active || !ids) cancel();
     return cancel;
   }, [active, ids, cancel]);
+
+  function animateTo(index: number) {
+    const element = carousel.current;
+    if (!element) return;
+    stop(false);
+    const target = Math.max(0, Math.min(groups.length - 1, index));
+    const card = element.children[target] as HTMLElement;
+    const left = Math.min(card.offsetLeft, element.scrollWidth - element.clientWidth);
+    const start = element.scrollLeft;
+    const startedAt = performance.now();
+    destination.current = target;
+    element.style.scrollSnapType = "none";
+    // 目標へ到着するまで吸着を戻さず、次の操作ではこの目標を引き継ぐ。
+    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 220;
+    const advance = (now: number) => {
+      const progress = duration ? Math.min(1, (now - startedAt) / duration) : 1;
+      element.scrollLeft = start + (left - start) * (1 - (1 - progress) ** 3);
+      if (progress < 1) {
+        frame.current = requestAnimationFrame(advance);
+      } else {
+        destination.current = null;
+        element.style.scrollSnapType = "";
+      }
+    };
+    advance(startedAt);
+  }
 
   function updateDrag() {
     const current = gesture.current;
@@ -149,14 +182,10 @@ export function useGroupCardDrag({
       restore();
     } else if (current.mode === "swipe" && element) {
       const distance = current.x - current.startX;
-      const initial = Math.round(current.scroll / current.pitch);
-      let index = Math.round(element.scrollLeft / current.pitch);
+      const initial = current.initial;
+      let index = initial + Math.round(-distance / current.pitch);
       if (index === initial && Math.abs(distance) > 40) index += distance < 0 ? 1 : -1;
-      stop();
-      element.scrollTo({
-        left: Math.max(0, Math.min(groups.length - 1, index)) * current.pitch,
-        behavior: "smooth",
-      });
+      animateTo(index);
     } else {
       stop();
       onOpen(current.id);
@@ -177,6 +206,7 @@ export function useGroupCardDrag({
     drag,
     error,
     style,
+    cancel,
     isMoving: () => settling.current || gesture.current?.mode === "drag",
     handlers: {
       onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
@@ -188,8 +218,10 @@ export function useGroupCardDrag({
         const card = (event.target as HTMLElement).closest<HTMLElement>("[data-group-id]");
         const id = card?.dataset.groupId;
         if (!card || !id) return;
-        stop();
         const element = event.currentTarget;
+        const pitch = card.offsetWidth + 12;
+        const initial = destination.current ?? Math.round(element.scrollLeft / pitch);
+        stop(false);
         element.style.scrollSnapType = "none";
         element.setPointerCapture(event.pointerId);
         gesture.current = {
@@ -199,7 +231,8 @@ export function useGroupCardDrag({
           startY: event.clientY,
           x: event.clientX,
           scroll: element.scrollLeft,
-          pitch: card.offsetWidth + 12,
+          initial,
+          pitch,
           maxScroll: element.scrollWidth - element.clientWidth,
           from: groups.findIndex((group) => group.id === id),
           target: 0,
@@ -246,7 +279,7 @@ export function useGroupCardDrag({
         }
       },
       onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === "Escape" && gesture.current) {
+        if (event.key === "Escape" && (gesture.current || destination.current !== null)) {
           event.preventDefault();
           cancel();
         }

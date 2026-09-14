@@ -272,3 +272,144 @@ test("カード移動の保存失敗は元の順序へ戻し、同じ操作で�
   await expect(page.locator(".group-carousel h2")).toHaveText([names[1], names[0], names[2]]);
   await expect(page.locator(".v2-app").getByRole("alert")).toHaveCount(0);
 });
+
+async function touchSwipe(page: Page, distance: number) {
+  const cdp = await page.context().newCDPSession(page);
+  const box = await page.locator(".group-carousel").boundingBox();
+  if (!box) throw new Error("カードがありません");
+  const x = distance < 0 ? box.x + 180 : box.x + 80;
+  const y = box.y + 100;
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y }],
+  });
+  for (const fraction of [1 / 3, 2 / 3, 1]) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: x + distance * fraction, y }],
+    });
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await cdp.detach();
+}
+
+for (const width of [320, 390, 430]) {
+  test(`${width}px: スワイプを離した位置から跳ね戻らず次のカードへ進む`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page);
+    const carousel = page.locator(".group-carousel");
+    await carousel.evaluate((element) => {
+      // Reactの処理前後で、離した位置が巻き戻っていないことを確認する。
+      document.addEventListener(
+        "pointerup",
+        () => {
+          element.setAttribute("data-release-before", String(element.scrollLeft));
+        },
+        { capture: true, once: true },
+      );
+      document.addEventListener(
+        "pointerup",
+        () => {
+          element.setAttribute("data-release-after", String(element.scrollLeft));
+        },
+        { once: true },
+      );
+    });
+    await touchSwipe(page, -60);
+    const before = Number(await carousel.getAttribute("data-release-before"));
+    const after = Number(await carousel.getAttribute("data-release-after"));
+    expect(before).toBeGreaterThan(40);
+    expect(after).toBeGreaterThanOrEqual(before - 1);
+    await expect(page.getByRole("button", { name: "朝トレ部を表示" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect
+      .poll(() =>
+        carousel.evaluate((element) => ({
+          left: element.scrollLeft,
+          target: (element.children[1] as HTMLElement).offsetLeft,
+          snap: getComputedStyle(element).scrollSnapType,
+        })),
+      )
+      .toMatchObject({ snap: "x mandatory" });
+    expect(
+      await carousel.evaluate((element) =>
+        Math.abs(element.scrollLeft - (element.children[1] as HTMLElement).offsetLeft),
+      ),
+    ).toBeLessThanOrEqual(1);
+    await expect(page.locator(".group-carousel h2")).toHaveText(names);
+    await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
+  });
+}
+
+test("移動中の連続スワイプは前の目標から進み、逆方向なら戻る", async ({ page }) => {
+  const { key } = await setup(page);
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await touchSwipe(page, -60);
+  await touchSwipe(page, -60);
+  await page.clock.runFor(500);
+  await expect(page.getByRole("button", { name: "週末トレ部を表示" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await touchSwipe(page, 60);
+  await touchSwipe(page, 60);
+  await page.clock.runFor(500);
+  await expect(page.getByRole("button", { name: "画面テスト部を表示" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await touchSwipe(page, -60);
+  await touchSwipe(page, 60);
+  await page.clock.runFor(500);
+  await expect(page.getByRole("button", { name: "画面テスト部を表示" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await touchSwipe(page, -30);
+  await page.clock.runFor(500);
+  await expect(page.getByRole("button", { name: "画面テスト部を表示" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.locator(".group-carousel h2")).toHaveText(names);
+  expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();
+});
+
+test("移動中にドットや別画面を操作しても古いアニメーションが選択を戻さない", async ({ page }) => {
+  await setup(page);
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await touchSwipe(page, -60);
+  await page.getByRole("button", { name: "週末トレ部を表示" }).click();
+  await page.clock.runFor(500);
+  await expect(page.getByRole("button", { name: "週末トレ部を表示" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await touchSwipe(page, 60);
+  await navigate(page, "設定");
+  await page.clock.runFor(500);
+  await navigate(page, "ホーム");
+  await expect(page.getByRole("button", { name: "週末トレ部を表示" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
+test("動きを減らす設定ではスワイプを離すと即時に次のカードを表示する", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await setup(page);
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await touchSwipe(page, -60);
+  expect(
+    await page
+      .locator(".group-carousel")
+      .evaluate((element) =>
+        Math.abs(element.scrollLeft - (element.children[1] as HTMLElement).offsetLeft),
+      ),
+  ).toBeLessThanOrEqual(1);
+});
