@@ -471,6 +471,7 @@ type Preview = {
 };
 type Mode = "list" | "detail" | "create" | "join" | "members" | "invite";
 export function CommunityScreen({
+  guideTarget,
   groups,
   selected,
   initialDetail,
@@ -482,6 +483,7 @@ export function CommunityScreen({
   onHome,
   onReorder,
 }: {
+  guideTarget?: { target: string } | null;
   groups: Group[];
   selected: string;
   initialDetail: boolean;
@@ -495,6 +497,9 @@ export function CommunityScreen({
 }) {
   const [analyticsTab, setAnalyticsTab] = useState<"feed" | "graph" | "ranking">("feed");
   const [mode, setMode] = useState<Mode>(initialDetail ? "detail" : "list");
+  useEffect(() => {
+    if (guideTarget?.target === "groups") setMode("list");
+  }, [guideTarget]);
   useEffect(() => {
     if (active) {
       const restoredMode = window.history.state?.communityMode;
@@ -625,7 +630,12 @@ export function CommunityScreen({
               />
             ))}
           </div>
-          <button className="primary full" type="button" onClick={() => change("create")}>
+          <button
+            className="primary full"
+            data-tour="groups"
+            type="button"
+            onClick={() => change("create")}
+          >
             グループを作成
           </button>
           <button className="secondary full" type="button" onClick={() => change("join")}>

@@ -1,45 +1,23 @@
 import { useEffect, useRef, useState } from "react";
+import { type TourView, tourSteps } from "./tour-steps";
+import { useTourPosition } from "./use-tour-position";
 
-const steps = [
-  {
-    title: "仲間とつながる",
-    description: "グループを作成、または招待コードで参加。ひとりでも使えます。",
-    hint: "開始時の全所属グループに、表示名と保存済みセットを共有。メモは自分だけ。",
-    tips: [
-      "再発行で旧コードは無効。",
-      "退出・除外後も本人の記録は残り、再参加しても再共有しません。オーナーは退出不可。",
-    ],
-  },
-  {
-    title: "トレーニングを記録",
-    description: "種目を選んで1セットずつ保存。種目一覧は追加・削除できます。",
-    hint: "保存済みセットはサーバー、入力中の値はこの端末に保存。ホームに戻っても継続。",
-    tips: [
-      "重量・回数は上下の値をタップ、スワイプ、または中央の数値を直接入力。",
-      "今回の保存済みセットはタップで編集できます。",
-      "終了ボタンで終了。画面を閉じるとLIVEはしばらくして消えますが、トレーニングは残ります。",
-    ],
-  },
-  {
-    title: "記録を振り返る",
-    description: "カレンダーはその日の総負荷量で色分け。タップでその日の記録へ。",
-    hint: "「履歴」で編集・削除・コピー・メモ。",
-    tips: [
-      "カレンダーの部位は複数選択できます。すべてで解除。総負荷は主部位ごとに重量×回数を合計（kg）、1k＝1,000kg。",
-      "色は選択部位の月内最大値が基準。少ない日は青、多い日は赤、記録なしは灰色。0kgの記録は青です。",
-      "編集・メモは保存で確定。閉じると未保存の入力は消えます。共有先は編集不可。",
-      "メモは1000文字まで。空欄保存で消去。記録削除は共有先にも反映され、復元不可。",
-      "表示名は過去の記録にも反映。メール・パスワード変更は管理者へ。",
-    ],
-  },
-];
-
-export function OnboardingGuide({ userId, replay }: { userId: string; replay: number }) {
+export function OnboardingGuide({
+  userId,
+  replay,
+  onVisit,
+}: { userId: string; replay: number; onVisit: (view: TourView, target: string) => void }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const [visitVersion, setVisitVersion] = useState(0);
   const [storageWarning, setStorageWarning] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
+  const card = useRef<HTMLElement>(null);
+  const visit = useRef(onVisit);
+  visit.current = onVisit;
   const storageKey = `gotore:onboarding:v2:${userId}`;
+  const current = tourSteps[step];
+  const position = useTourPosition(open, current.target, card, replay + visitVersion);
 
   useEffect(() => {
     if (replay > 0) {
@@ -55,9 +33,11 @@ export function OnboardingGuide({ userId, replay }: { userId: string; replay: nu
     }
   }, [storageKey, replay]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: ステップ切替・再表示時にも読み上げ位置を戻す。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 再表示・段階変更でのみ案内先へ移動し、通常操作の画面変更は妨げない。
   useEffect(() => {
-    if (open) heading.current?.focus();
+    if (!open) return;
+    visit.current(tourSteps[step].view, tourSteps[step].target);
+    heading.current?.focus({ preventScroll: true });
   }, [open, step, replay]);
 
   function close() {
@@ -67,57 +47,121 @@ export function OnboardingGuide({ userId, replay }: { userId: string; replay: nu
       setStorageWarning(true);
     }
     setOpen(false);
+    const target = document.querySelector<HTMLElement>(`[data-tour="${current.target}"]`);
+    if (target?.getClientRects().length) {
+      const focusable = target.matches("button, input")
+        ? target
+        : target.querySelector<HTMLElement>("button, input");
+      focusable?.focus({ preventScroll: true });
+    }
   }
+  const closeRef = useRef(close);
+  closeRef.current = close;
+  useEffect(() => {
+    if (!open) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !document.querySelector("dialog[open]")) closeRef.current();
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [open]);
 
-  if (!open) {
+  if (!open)
     return storageWarning ? (
       <p className="muted">次回もガイドが表示される場合があります。</p>
     ) : null;
-  }
-
   return (
-    <section className="panel onboarding-guide" aria-label="使い方ガイド">
-      <div className="onboarding-header">
-        <p className="eyebrow">
-          使い方 · {step + 1} / {steps.length}
-        </p>
-        <button className="text-button" type="button" onClick={close}>
-          スキップ
-        </button>
-      </div>
-      <h2 ref={heading} tabIndex={-1}>
-        {steps[step].title}
-      </h2>
-      <p>{steps[step].description}</p>
-      <p className="onboarding-hint">{steps[step].hint}</p>
-      <details>
-        <summary>操作のヒント</summary>
-        <ul>
-          {steps[step].tips.map((tip) => (
-            <li key={tip}>{tip}</li>
-          ))}
-        </ul>
-      </details>
-      {storageWarning && <p className="muted">次回もガイドが表示される場合があります。</p>}
-      <div className="onboarding-actions">
-        <button
-          className="secondary"
-          type="button"
-          disabled={step === 0}
-          onClick={() => setStep((value) => value - 1)}
-        >
-          戻る
-        </button>
-        {step < steps.length - 1 ? (
-          <button className="primary" type="button" onClick={() => setStep((value) => value + 1)}>
-            次へ
+    <div className="tour-layer" hidden={position?.suspended}>
+      {position?.target && (
+        <div className="tour-highlight" aria-hidden="true" style={position.target} />
+      )}
+      <section
+        ref={card}
+        className="panel onboarding-guide guided-tour"
+        aria-label="使い方ガイド"
+        style={
+          position
+            ? {
+                top: position.top,
+                left: position.left,
+                width: position.width,
+                maxHeight: position.maxHeight,
+              }
+            : undefined
+        }
+      >
+        <div className="onboarding-header">
+          <p className="eyebrow">
+            使い方 · {step + 1} / {tourSteps.length}
+          </p>
+          <button className="text-button" type="button" onClick={close}>
+            スキップ
           </button>
-        ) : (
-          <button className="primary" type="button" onClick={close}>
-            はじめる
+        </div>
+        <h2 ref={heading} tabIndex={-1}>
+          {current.title}
+        </h2>
+        <p>{current.description}</p>
+        <p className="onboarding-hint">{current.hint}</p>
+        {!position?.target && (
+          <button
+            className="text-button"
+            type="button"
+            onClick={() => {
+              setVisitVersion((version) => version + 1);
+              visit.current(current.view, current.target);
+            }}
+          >
+            案内の画面に戻る
           </button>
         )}
-      </div>
-    </section>
+        <details key={step}>
+          <summary>操作のヒント</summary>
+          <ul>
+            {current.tips.map((tip) => (
+              <li key={tip}>{tip}</li>
+            ))}
+          </ul>
+        </details>
+        {storageWarning && <p className="muted">次回もガイドが表示される場合があります。</p>}
+        <div className="onboarding-actions">
+          <button
+            className="secondary"
+            type="button"
+            disabled={step === 0}
+            onClick={() => setStep((value) => value - 1)}
+          >
+            戻る
+          </button>
+          {step < tourSteps.length - 1 ? (
+            <button className="primary" type="button" onClick={() => setStep((value) => value + 1)}>
+              次へ
+            </button>
+          ) : (
+            <button className="primary" type="button" onClick={close}>
+              はじめる
+            </button>
+          )}
+        </div>
+      </section>
+      {position?.target && (
+        <svg
+          className="tour-arrow"
+          aria-hidden="true"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          style={{
+            left: position.target.left + position.target.width / 2 - 12,
+            top: position.above
+              ? position.target.top - 22
+              : position.target.top + position.target.height - 2,
+            transform: position.above ? undefined : "rotate(180deg)",
+          }}
+        >
+          <path d="M12 2v17m-6-6 6 6 6-6" />
+        </svg>
+      )}
+    </div>
   );
 }
