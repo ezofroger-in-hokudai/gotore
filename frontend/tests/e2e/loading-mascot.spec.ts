@@ -97,7 +97,7 @@ test("取得失敗と再試行を分け、画面内ではキャラクターを�
   }
 });
 
-test("ホームと共有詳細の取得中も移動や閉じる操作を妨げない", async ({ page }) => {
+test("ホーム準備後は共有詳細の取得中も移動や閉じる操作を妨げない", async ({ page }) => {
   const state = await mockTraining(page);
   let showFeed = () => {};
   let showRecord = () => {};
@@ -148,11 +148,10 @@ test("ホームと共有詳細の取得中も移動や閉じる操作を妨げ�
   });
   try {
     await page.reload();
-    const homeLoading = page.getByRole("status", {
-      name: "グループの記録を読み込み中",
-    });
-    await expect(homeLoading).toBeVisible();
-    await expect(homeLoading.locator("svg")).toHaveCount(0);
+    const homeLoading = page.getByRole("status", { name: "アプリを読み込み中" });
+    await expect(homeLoading.locator("svg")).toBeVisible();
+    showFeed();
+    await expect(homeLoading).toHaveCount(0);
     await navigate(page, "設定");
     await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
     await navigate(page, "ホーム");
