@@ -134,7 +134,7 @@ test("先読みした履歴グラフを表示し、指標・粒度・期間再�
   await panel.getByRole("button", { name: "最高重量", exact: true }).click();
   await expect(panel.locator(".analytics-summary")).toContainText("85", { timeout: 500 });
   await panel.getByRole("button", { name: "週別", exact: true }).click();
-  await expect(panel.getByRole("slider")).toHaveAttribute("max", "0", { timeout: 500 });
+  await expect(panel.locator(".chart-dot")).toHaveCount(1, { timeout: 500 });
   expect(state.selectedCount()).toBe(before);
   await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("year");
   await expect(panel.locator(".analytics-summary")).toBeVisible();
@@ -158,6 +158,9 @@ test("グループのグラフとランキングを共有し、権限喪失後�
   await expect(panel.locator(".rank-position")).toHaveText(["1", "1"]);
   await page.getByRole("button", { name: "グラフ", exact: true }).click();
   await expect(panel.getByRole("img")).toBeVisible({ timeout: 500 });
+  await panel.getByRole("button", { name: "活動人数", exact: true }).click();
+  await panel.locator(".analytics-chart").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/chart-touch-people.png" });
   await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
   await expect(panel.locator(".analytics-summary")).toBeVisible();
   state.forbid();
@@ -261,9 +264,11 @@ test("活動日数は週・月の棒グラフ、強度は実測の折れ線で�
   );
   await expect(panel.locator(".chart-bar")).toHaveCount(1);
   await expect(panel.locator(".chart-line")).toHaveCount(0);
-  await expect(panel.getByRole("slider")).toHaveAttribute("aria-valuetext", /5日$/);
+  await expect(panel.locator(".chart-selection strong")).toHaveText("5 日");
+  await panel.locator(".analytics-chart").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/chart-touch-days.png" });
   await panel.getByRole("button", { name: "月別", exact: true }).click();
-  await expect(panel.getByRole("slider")).toHaveAttribute("aria-valuetext", /8日$/);
+  await expect(panel.locator(".chart-selection strong")).toHaveText("8 日");
   expect(state.count()).toBe(before);
   await page.screenshot({ path: "test-results/activity-days-bars.png", fullPage: true });
   await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
@@ -271,4 +276,65 @@ test("活動日数は週・月の棒グラフ、強度は実測の折れ線で�
   await panel.getByRole("button", { name: "日別", exact: true }).click();
   await expect(panel.locator(".chart-line")).toHaveCount(1);
   await expect(panel.locator(".chart-bar")).toHaveCount(0);
+});
+
+test.describe("グラフの直接タッチ", () => {
+  test.use({ hasTouch: true });
+  test("棒・点をタッチして期間を選び、縦スクロールでは選択を変えない", async ({ page }) => {
+    await mockTraining(page);
+    const state = await routes(page);
+    await navigate(page, "履歴");
+    await page.getByRole("button", { name: "グラフ", exact: true }).click();
+    const panel = page.getByRole("region", { name: "履歴グラフ" });
+    await expect(panel.locator(".chart-bar")).toHaveCount(11);
+    await expect(panel.getByRole("slider")).toHaveCount(0);
+    const chart = panel.getByRole("img");
+    await chart.scrollIntoViewIfNeeded();
+    await panel.locator(".chart-bar").nth(1).tap();
+    const selection = panel.locator(".chart-selection");
+    await expect(selection).toContainText("2026/09/02");
+    await expect(selection).toContainText("2,030");
+    const box = await chart.boundingBox();
+    if (!box) throw new Error("グラフがありません");
+    await page.touchscreen.tap(
+      box.x + (box.width * (50 + 140 / 11)) / 350,
+      box.y + box.height * 0.6,
+    );
+    await expect(selection).toContainText("2026/09/01");
+    await expect(selection.locator("strong")).toHaveText("0 kg");
+    const before = await selection.innerText();
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+    const session = await page.context().newCDPSession(page);
+    const x = box.x + box.width * 0.7;
+    const y = box.y + box.height * 0.7;
+    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+    await session.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x, y: y - 80 }],
+    });
+    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect(selection).toHaveText(before, { useInnerText: true });
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(scrollBefore);
+    await session.detach();
+    const control = panel.getByRole("group", { name: "グラフの期間選択", exact: true });
+    await control.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(selection).toContainText("2026/09/02");
+    await page.keyboard.press("End");
+    await expect(selection).toContainText("2026/09/11");
+    await page.keyboard.press("Home");
+    await expect(selection).toContainText("2026/09/01");
+    await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
+    await panel.getByRole("button", { name: "最高重量", exact: true }).click();
+    await expect(panel.locator(".chart-dot")).toHaveCount(7);
+    const reads = state.selectedCount();
+    await panel.locator(".chart-dot").first().tap();
+    await expect(selection).toContainText("2026/09/02");
+    await expect(selection.locator("strong")).toHaveText("62.5 kg");
+    expect(state.selectedCount()).toBe(reads);
+    await chart.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: "test-results/chart-touch-weight.png" });
+    await panel.getByRole("button", { name: "記録を見る", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "2026/09/02", exact: true })).toBeVisible();
+  });
 });

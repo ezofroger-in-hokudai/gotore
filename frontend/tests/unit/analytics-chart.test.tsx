@@ -41,3 +41,13 @@ test("総負荷とセット数は未記録日の0を残し、重量の実測が1
   expect(html.match(/class="chart-dot"/g)?.length).toBe(1);
   expect(html).not.toContain(" L");
 });
+
+test("位置選択用スライダーを表示せず、グラフから期間を選べる", () => {
+  const html = renderToStaticMarkup(
+    <AnalyticsChart points={[point(1, 60), point(2, 80)]} metric="weight" />,
+  );
+  expect(html).not.toContain('type="range"');
+  expect(html).not.toContain("スライダー");
+  expect(html).toContain('aria-label="グラフの期間選択"');
+  expect(html).toContain('tabindex="0"');
+});
