@@ -2228,3 +2228,12 @@
 - 検証: make check成功（backend240件/frontend75件、lint・型・build）。全E2E開始後にPR #115のmain統合（9081ac1）を検出したため、その実行は中断して最終結果としない。
 - 影響範囲・関連ファイル: グループ切り替えのフック、CommunityHome、関連テスト、仕様・調査記録・task/progress。API・DBの変更なし。
 - 未解決事項・次のアクション: main 9081ac1を取り込み、統合後の標準チェックと全E2Eを実行する。実機確認と本番反映は未実施。
+
+
+## 2026-09-14 23:45
+- 変更内容・目的: main 9081ac1の記録画面改善を取り込み、グループ切り替えの跳ね戻りと連続スワイプの修正を最終検証。progressの競合は両方の追記を保持して解消した。3幅のスワイプ後画像を追加し、カード・ドット・最新記録のグループ名の一致を目視確認した。
+- 検証: 統合後のmake check成功（backend240件/frontend75件、lint・型・build）。最終ビルドの全E2E174件が成功（5.7分）。3幅の位置連続性・連続/逆方向/短いスワイプ・別操作の割込・動きを減らす設定、長押し並べ替え、実DB2人2グループの保存/共有/編集/コピーが成功。画像出力追加後のlint・型検査も成功。相対リンク・git diff --checkも確認した。
+- 影響範囲・関連ファイル: use-group-card-drag.ts、community.tsx、group-order.spec.ts、docs/gotore-v2-spec.md、docs/group-carousel-investigation-2026-09-14.md、docs/images/group-swipe/、task.md、progress.md。API・DB・環境変数・順序の保存形式・共有範囲の変更なし。
+- 検証環境: 自分のWeb/APIを停止済み。全E2E用に一時変更したローカルSupabaseは、データ保持で作業前のメール登録PR #154の設定へ戻し、起動成功を確認した。元の作業ツリーの未コミット変更は保持した。
+- 未解決事項: 実機Safari/Android/PWAの操作感（#23）は未確認。CIと第三者レビュー、マージ・本番反映は未実施。
+- 次のアクション: 画像・検証結果を添えた修正PRをmain向けに作成し、CI/レビューへ進む。

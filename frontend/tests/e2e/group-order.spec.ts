@@ -340,6 +340,7 @@ for (const width of [320, 390, 430]) {
     ).toBeLessThanOrEqual(1);
     await expect(page.locator(".group-carousel h2")).toHaveText(names);
     await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
+    await page.screenshot({ path: `test-results/group-swipe-${width}.png`, fullPage: true });
   });
 }
 

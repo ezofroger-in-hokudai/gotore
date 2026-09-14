@@ -58,4 +58,4 @@ documentのpointerupをcapture/bubbleで観測し、Reactのハンドラー前�
 - ドット、画面離脱、所属変更、キャンセルでは移動を停止する。動きを減らす設定では即時に切り替える。通常タップ・長押しの並べ替え・保存方法は維持する。
 - `group-order.spec.ts` に3幅の離す前後の位置、連続/逆方向/短いスワイプ、ドット/画面遷移の割込、動きを減らす設定の6件を追加。修正前に跳ね戻り2件と連続操作1件の失敗を確認し、修正後は既存8件と合わせて14件成功（35.3秒）。標準チェックもbackend240件/frontend75件、lint・型・buildが成功。
 
-全E2E・提出状況の最終結果は [progress.md](../progress.md) に記録する。実機Safari/Android/PWAでの操作感と本番反映は別途確認する。
+main 9081ac1との統合後も標準チェックが成功し、全E2E174件が成功（5.7分）。[3幅の確認画像](images/group-swipe/README.md)を追加した。提出状況の最終結果は [progress.md](../progress.md) に記録する。実機Safari/Android/PWAでの操作感と本番反映は別途確認する。
