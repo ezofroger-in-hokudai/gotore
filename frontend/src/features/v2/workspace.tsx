@@ -4,6 +4,7 @@ import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
+import { LoadingState } from "../loading/loading-state";
 import { OnboardingGuide } from "../onboarding/onboarding-guide";
 import { SessionScreen } from "../session/session-screen";
 import { TrainingOverview } from "../session/training-overview";
@@ -80,6 +81,24 @@ function WorkspaceContent({ session }: { session: Session }) {
     enabled: view === "history" || (view === "home" && !training.session && !training.startingId),
     retainOnRefresh: true,
   });
+  const [homeReady, setHomeReady] = useState(false);
+  const [opened, setOpened] = useState(false);
+  const ready =
+    homeReady &&
+    (training.ready || !!training.error) &&
+    (catalog.data !== null || !!catalog.error) &&
+    (!!training.session ||
+      !!training.startingId ||
+      recentRecords.data !== null ||
+      !!recentRecords.error);
+  useEffect(() => {
+    if (ready) setOpened(true);
+  }, [ready]);
+  useEffect(() => {
+    // 通信や端末復元が止まっても、再試行できる画面へ戻せるよう上限を設ける。
+    const timer = window.setTimeout(() => setOpened(true), 15_000);
+    return () => window.clearTimeout(timer);
+  }, []);
   const previousView = useRef(view);
   // biome-ignore lint/correctness/useExhaustiveDependencies: ホームと履歴は同じ取得を有効にするため、履歴への再訪時だけ明示的に再確認する。
   useEffect(() => {
@@ -136,28 +155,35 @@ function WorkspaceContent({ session }: { session: Session }) {
   }
   return (
     <div
-      className={`app-shell v2-app${view === "record" ? " recording-view" : ""}${primaryView ? " has-training-shortcut" : ""}`}
+      className={`app-shell v2-app${!opened ? " is-preparing" : ""}${view === "record" ? " recording-view" : ""}${primaryView ? " has-training-shortcut" : ""}`}
     >
+      {!opened && (
+        <main className="auth-page startup-screen">
+          <LoadingState label="アプリを読み込み中" startup />
+        </main>
+      )}
       <header className="app-header">
         <button className="wordmark" type="button" onClick={() => navigate("home")}>
           GO <span>TORE</span>
         </button>
       </header>
       <main className="main-content">
-        <OnboardingGuide
-          userId={session.user.id}
-          replay={guideReplay}
-          onVisit={(next, target) => {
-            setGuideTarget({ target });
-            setGroupDetail(false);
-            setView(next);
-            window.history.replaceState(
-              { gotoreView: next, groupId: selected, communityMode: "list" },
-              "",
-            );
-            window.scrollTo({ top: 0 });
-          }}
-        />
+        {opened && (
+          <OnboardingGuide
+            userId={session.user.id}
+            replay={guideReplay}
+            onVisit={(next, target) => {
+              setGuideTarget({ target });
+              setGroupDetail(false);
+              setView(next);
+              window.history.replaceState(
+                { gotoreView: next, groupId: selected, communityMode: "list" },
+                "",
+              );
+              window.scrollTo({ top: 0 });
+            }}
+          />
+        )}
         {notice && <output className="notice">{notice}</output>}
         {training.error && (
           <div className="error" role="alert">
@@ -176,6 +202,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         <div hidden={view !== "home"}>
           <CommunityHome
             groups={groups}
+            onReady={setHomeReady}
             loading={groupList.data === null}
             failed={!!groupList.error}
             selected={selected}

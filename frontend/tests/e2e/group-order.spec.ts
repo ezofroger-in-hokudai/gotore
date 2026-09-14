@@ -399,7 +399,7 @@ test("移動中にドットや別画面を操作しても古いアニメーシ�
   await navigate(page, "設定");
   await page.clock.runFor(500);
   await navigate(page, "ホーム");
-  await expect(page.getByRole("button", { name: "週末トレ部を表示" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "朝トレ部を表示" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -415,5 +415,47 @@ test("動きを減らす設定ではスワイプを離すと即時に次のカ�
       .evaluate((element) =>
         Math.abs(element.scrollLeft - (element.children[1] as HTMLElement).offsetLeft),
       ),
+  ).toBeLessThanOrEqual(1);
+});
+
+test("長いスワイプも1枚だけ進み、指を離すまで選択を変えない", async ({ page }) => {
+  await setupWithPausedClock(page);
+  const carousel = page.locator(".group-carousel");
+  // 端末幅やポインター種別に依存せず、2枚分を引いた場合の選択を確認する。
+  await carousel.evaluate((element) => {
+    const card = element.firstElementChild as HTMLElement;
+    const pitch = card.offsetWidth + 12;
+    const dispatch = (type: string, x: number) =>
+      card.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          pointerId: 1,
+          pointerType: "touch",
+          isPrimary: true,
+          button: 0,
+          clientX: x,
+          clientY: 100,
+        }),
+      );
+    element.setPointerCapture = () => {};
+    dispatch("pointerdown", 250);
+    dispatch("pointermove", 250 - pitch * 2);
+  });
+  await page.clock.runFor(32);
+  await expect(page.getByRole("button", { name: "画面テスト部を表示" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await carousel.dispatchEvent("pointerup", { pointerId: 1, isPrimary: true });
+  // アニメーションを進めなくても移動先と記録の選択が確定する。
+  await expect(page.getByRole("button", { name: "朝トレ部を表示" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.clock.runFor(200);
+  expect(
+    await carousel.evaluate((element) =>
+      Math.abs(element.scrollLeft - (element.children[1] as HTMLElement).offsetLeft),
+    ),
   ).toBeLessThanOrEqual(1);
 });

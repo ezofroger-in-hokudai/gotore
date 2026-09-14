@@ -26,6 +26,7 @@ import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
 import { GROUP_REFRESH_MS, activityRefreshMs, summaryRefreshMs } from "./refresh-interval";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
+import { useGroupActivity } from "./use-group-activity";
 import { useGroupCardDrag } from "./use-group-card-drag";
 import { useGroupLongPress } from "./use-group-long-press";
 import { useSharedWorkoutDetails } from "./use-shared-workout-details";
@@ -42,6 +43,7 @@ export function CommunityHome({
   loading = false,
   failed = false,
   trainingAction,
+  onReady,
 }: {
   groups: Group[];
   selected: string;
@@ -54,6 +56,7 @@ export function CommunityHome({
   loading?: boolean;
   failed?: boolean;
   trainingAction?: ReactNode;
+  onReady?: (ready: boolean) => void;
 }) {
   const carousel = useRef<HTMLDivElement>(null);
   const cardDrag = useGroupCardDrag({
@@ -62,6 +65,7 @@ export function CommunityHome({
     selected,
     active,
     onSave: onOrder,
+    onSelect,
     onOpen: (id) => {
       onSelect(id);
       onDetail();
@@ -87,13 +91,7 @@ export function CommunityHome({
     if (card) carousel.current.scrollLeft = card.offsetLeft;
     restored.current = groupIds;
   }, [groups, groupIds, selected, active, cardDrag.drag]);
-  const activity = useResource<GroupActivity>(
-    selected ? `/groups/${selected}/activity` : null,
-    refreshKey,
-    activityRefreshMs,
-    true,
-    { enabled: active },
-  );
+  const activity = useGroupActivity(groups, selected, active, refreshKey);
   const summaries = useResource<GroupSummary[]>(
     "/groups/activity/summary",
     refreshKey,
@@ -101,6 +99,14 @@ export function CommunityHome({
     true,
     { enabled: active && groups.length > 1 },
   );
+  const ready =
+    !loading &&
+    (!groups.length ||
+      ((!!activity.data || !!activity.error) &&
+        (groups.length < 2 || summaries.data !== null || !!summaries.error)));
+  useEffect(() => {
+    onReady?.(ready || failed);
+  }, [ready, failed, onReady]);
   function select(index: number) {
     cardDrag.cancel();
     const element = carousel.current?.children[index] as HTMLElement | undefined;

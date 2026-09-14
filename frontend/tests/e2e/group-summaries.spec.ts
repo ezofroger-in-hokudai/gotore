@@ -55,7 +55,7 @@ test("複数グループは概要をまとめ、選択中のフィードだけ�
   await page.reload();
   await expect(page.getByRole("article")).toContainText("最初の記録");
   await expect(page.locator(".community-total").filter({ hasText: "2人" })).toHaveCount(5);
-  expect(feeds.every((id) => id === state.group.id)).toBe(true);
+  await expect.poll(() => feeds).toEqual([state.group.id, "group-0"]);
   const before = { summaries, feeds: feeds.length };
   await page.clock.runFor(30_500);
   expect(summaries - before.summaries).toBe(2);
@@ -63,7 +63,7 @@ test("複数グループは概要をまとめ、選択中のフィードだけ�
   await page.getByRole("button", { name: "部活0を表示", exact: true }).click();
   await expect(page.getByRole("article")).toContainText("切替先の記録");
   await expect(page.getByRole("article")).not.toContainText("最初の記録");
-  expect(feeds.at(-1)).toBe("group-0");
+  expect(feeds).toContain("group-0");
   fail = true;
   await page.clock.runFor(15_000);
   await expect(

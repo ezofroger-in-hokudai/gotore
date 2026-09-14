@@ -35,6 +35,7 @@ export function useGroupCardDrag({
   active,
   onSave,
   onOpen,
+  onSelect,
 }: {
   carousel: RefObject<HTMLDivElement | null>;
   groups: Group[];
@@ -42,6 +43,7 @@ export function useGroupCardDrag({
   active: boolean;
   onSave: (ids: string[]) => void;
   onOpen: (id: string) => void;
+  onSelect: (id: string) => void;
 }) {
   const latest = useRef({ groups, selected, active, onSave, onOpen });
   latest.current = { groups, selected, active, onSave, onOpen };
@@ -105,7 +107,7 @@ export function useGroupCardDrag({
     destination.current = target;
     element.style.scrollSnapType = "none";
     // 目標へ到着するまで吸着を戻さず、次の操作ではこの目標を引き継ぐ。
-    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 220;
+    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 160;
     const advance = (now: number) => {
       const progress = duration ? Math.min(1, (now - startedAt) / duration) : 1;
       element.scrollLeft = start + (left - start) * (1 - (1 - progress) ** 3);
@@ -183,8 +185,10 @@ export function useGroupCardDrag({
     } else if (current.mode === "swipe" && element) {
       const distance = current.x - current.startX;
       const initial = current.initial;
-      let index = initial + Math.round(-distance / current.pitch);
-      if (index === initial && Math.abs(distance) > 40) index += distance < 0 ? 1 : -1;
+      const step = Math.abs(distance) > 40 ? (distance < 0 ? 1 : -1) : 0;
+      const index = Math.max(0, Math.min(groups.length - 1, initial + step));
+      // 選択は離した時に一度だけ確定し、描画途中のスクロール位置には従わない。
+      onSelect(groups[index].id);
       animateTo(index);
     } else {
       stop();
@@ -207,7 +211,7 @@ export function useGroupCardDrag({
     error,
     style,
     cancel,
-    isMoving: () => settling.current || gesture.current?.mode === "drag",
+    isMoving: () => settling.current || gesture.current !== null || destination.current !== null,
     handlers: {
       onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
         if (!active || event.button !== 0) return;
@@ -262,7 +266,11 @@ export function useGroupCardDrag({
           }
           current.mode = "swipe";
         }
-        if (current.mode === "swipe") event.currentTarget.scrollLeft = current.scroll - dx;
+        if (current.mode === "swipe") {
+          const left = (current.initial - 1) * current.pitch;
+          const right = (current.initial + 1) * current.pitch;
+          event.currentTarget.scrollLeft = Math.max(left, Math.min(right, current.scroll - dx));
+        }
         if (current.mode === "drag") updateDrag();
       },
       onPointerUp: finish,

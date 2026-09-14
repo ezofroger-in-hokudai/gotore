@@ -142,7 +142,7 @@ test("履歴をホームで準備し、再確認待ちでも一覧とカレン�
   }
 });
 
-test("復元確認中もホームのSTARTを表示し、未確認の開始は防ぐ", async ({ page }) => {
+test("復元確認中は起動表示で待ち、確認後にSTARTを有効にする", async ({ page }) => {
   await mockTraining(page);
   await navigate(page, "設定");
   let release = () => {};
@@ -155,11 +155,13 @@ test("復元確認中もホームのSTARTを表示し、未確認の開始は防
   });
   await page.reload();
   try {
-    await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
+    await expect(page.getByRole("status", { name: "アプリを読み込み中" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeHidden();
     await expect(page.getByTestId("floating-training")).toBeDisabled();
-    await expect(
-      page.getByRole("button", { name: "トレーニングを開始", exact: true }),
-    ).toBeDisabled();
+    release();
+    await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
+    await expect(page.getByRole("status", { name: "アプリを読み込み中" })).toHaveCount(0);
+    await expect(page.getByTestId("floating-training")).toBeEnabled();
   } finally {
     release();
   }

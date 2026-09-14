@@ -2476,3 +2476,15 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+.startup-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+}
+
+.v2-app.is-preparing > :not(.startup-screen) {
+  visibility: hidden;
+  pointer-events: none;
+}
