@@ -1,5 +1,7 @@
 # GO TORE
 
+公開サイト: [https://egotore.com](https://egotore.com)
+
 離れていても仲間と合トレしている感覚を目指す、トレーニングアプリです。
 初版は「作成 → 記録する → 仲間に共有する」までを実装しています。
 自分で追加・削除できる種目リストから選び、日付・種目・重量・回数・セットを保存し、自分の記録とグループの記録を閲覧できます。
@@ -238,7 +240,7 @@ DBを変更する場合は、最新mainを取り込み、新しいmigrationフ�
 ## スマートフォンのホーム画面から使う
 
 ホーム画面用の名前・アイコンと、ブラウザの枠を外して起動する `standalone` 設定を用意しています。
-公開後、端末からアクセスできるHTTPSのURLで追加してください。ストアへの配布は今回行いません。
+[公開サイト](https://egotore.com)をスマートフォンで開いて追加してください。ストアへの配布は今回行いません。
 
 - iPhone: SafariでURLを開く → 共有 →「ホーム画面に追加」→「Webアプリとして開く」をオンにして追加。[Appleの手順](https://support.apple.com/ja-jp/guide/iphone/iphea86e5236/ios)
 - Android: ChromeでURLを開く → メニュー →「ホーム画面に追加」→「インストール」。表示名は端末・ブラウザによって異なります。[Googleの手順](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=ja)

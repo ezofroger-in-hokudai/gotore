@@ -1,5 +1,7 @@
 # 現在のシステム
 
+公開サイト: [https://egotore.com](https://egotore.com)（2026-09-14にユーザーから公開アドレス変更の連絡）。
+
 更新日: 2026-09-09（v2実装ブランチ）。実装Issue: [#1](https://github.com/ezofroger-in-hokudai/gotore/issues/1)。
 初版の完成ラインはユーザー指定の「グループ作成・記録・記録共有」です。
 仕様とMOCK資料からの変更点は [standard-v0.1-scope.md](standard-v0.1-scope.md)、検証結果は [progress.md](../progress.md) を参照してください。

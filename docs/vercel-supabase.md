@@ -1,5 +1,7 @@
 # Vercel Services・Supabaseへの公開準備
 
+公開サイトは [https://egotore.com](https://egotore.com)。公開後の動作確認とホーム画面への追加にはこのURLを使う。
+
 ユーザー指定により、Next.jsとFastAPIをVercel Services（Beta）の1プロジェクトへまとめる。今回は設定の追加とローカル検証までとし、クラウドへの変更は行わない。
 
 ## 構成と境界
@@ -60,7 +62,7 @@ Config／Secretと反映タイミングは [Vercel環境変数](https://vercel.c
 - 対象プロジェクトと既存テーブルを確認したうえで、リポジトリのmigrationを適用する。既存データを消す `db reset` は本番へ実行しない。今回はリモートDB操作を行っていない。具体的な履歴確認・dry-run・適用は [共有DBへの適用手順](../supabase/README.md#共有dbへの適用担当者向け) を参照する。Vercelのbuildや現在のCIはクラウドDBへのmigrationを自動適用しない。
 - Connect画面でTransaction Poolerの接続先を取得し、`DATABASE_URL` に設定する。例のホスト名をそのまま使わない。パスワードの特殊文字はURLエンコードし、`sslmode=require` を指定する。
 - APIは直接SQL接続で認可を実施する。ローカル同様、migrationのテーブルを操作でき、RLSで一律拒否されない信頼済みサーバー用DBロールで接続する。ブラウザへ接続文字列を渡さない。
-- AuthのSite URLと許可するRedirect URLを公開URLに合わせる。登録確認メールを使う場合は送信元・SMTPも設定する。
+- AuthのSite URLを `https://egotore.com/`、登録確認のRedirect URLを `https://egotore.com/auth/confirm` に設定する。登録確認メールを使う場合は送信元・SMTPも設定する。
 - Supabaseの認証・DB設定、Vercelの環境変数は本番とPreviewの境界をレビューする。
 
 ## 検証と公開時チェック
