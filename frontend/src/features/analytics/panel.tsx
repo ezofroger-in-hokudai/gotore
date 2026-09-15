@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LoadingState } from "../loading/loading-state";
 import { ResourceError } from "../training/resource-error";
 import { AnalyticsChart, dates, number } from "./chart";
 import { type Grain, type Metric, type Period, type RankMetric, labels, units } from "./types";
 import { useAnalytics } from "./use-analytics";
 
+import { today } from "../training/draft";
+import { frameEnd, framePoints, periodGrains, shiftAnchor } from "./period";
+import { PeriodPicker } from "./period-picker";
+import { usePeriodSwipe } from "./use-period-swipe";
+
 const periods: Record<Period, string> = {
-  week: "週",
+  week: "1週間",
   month: "1か月",
   quarter: "3か月",
   year: "1年",
@@ -21,29 +26,58 @@ export function AnalyticsPanel({
   refreshKey,
   ranking = false,
   onRecords,
+  onRecordsReady,
+  anchor = today(),
+  onAnchorChange,
+  members = [],
 }: {
   scope?: string;
   active: boolean;
   prefetch?: boolean;
   refreshKey: number;
   ranking?: boolean;
-  onRecords?: (start: string, end: string) => void;
+  onRecordsReady?: (ready: boolean) => void;
+  onRecords?: (start: string, end: string, exercise: string, member: string) => void;
+  anchor?: string;
+  onAnchorChange?: (value: string) => void;
+  members?: { id: string; display_name: string }[];
 }) {
-  const [period, setPeriod] = useState<Period>(scope ? "week" : "month");
-  const [offset, setOffset] = useState(0);
+  const [period, setPeriod] = useState<Period>("month");
+  const offset = 0;
+  const [member, setMember] = useState("");
+  const selectedMember = !ranking && members.some((m) => m.id === member) ? member : "";
   const [exercise, setExercise] = useState("");
   const [exerciseNames, setExerciseNames] = useState<string[]>([]);
   const [metric, setMetric] = useState<Metric>("volume");
   const [rankMetric, setRankMetric] = useState<RankMetric>("volume");
   const [grain, setGrain] = useState<Grain>("day");
-  const resource = useAnalytics(scope, period, offset, exercise, active, prefetch, refreshKey);
+  const resource = useAnalytics(
+    scope,
+    period,
+    offset,
+    exercise,
+    active,
+    prefetch,
+    refreshKey,
+    anchor,
+    selectedMember,
+  );
   const data = resource.data;
+  useEffect(() => {
+    onRecordsReady?.(!!data);
+  }, [data, onRecordsReady]);
   useEffect(() => {
     if (data) setExerciseNames(data.exercises);
     else if (resource.error) setExerciseNames([]);
   }, [data, resource.error]);
   const metrics: Metric[] = scope
-    ? ["volume", "sets", "people"]
+    ? [
+        "volume",
+        "sets",
+        "days",
+        "people",
+        ...(exercise && selectedMember ? (["weight", "rm"] as const) : []),
+      ]
     : ["volume", "sets", "days", ...(exercise ? (["weight", "rm"] as const) : [])];
   const selectedMetric = metrics.includes(metric) ? metric : "volume";
   const rankMetrics: RankMetric[] = [
@@ -56,12 +90,32 @@ export function AnalyticsPanel({
       : []),
   ];
   const selectedRank = rankMetrics.includes(rankMetric) ? rankMetric : "volume";
-  const availableGrains = Object.keys(data?.series ?? {}) as Grain[];
+  const availableGrains = periodGrains(
+    period,
+    selectedMetric,
+    Object.keys(data?.series ?? {}) as Grain[],
+  );
   const selectedGrain = availableGrains.includes(grain) ? grain : (availableGrains[0] ?? "month");
   const selected = ranking ? selectedRank : selectedMetric;
   const entries = data?.rankings[selectedRank] ?? [];
+  const selectRecords = useCallback(
+    (start: string, end: string) => onRecords?.(start, end, exercise, selectedMember),
+    [onRecords, exercise, selectedMember],
+  );
+  const move = (direction: number) => {
+    if (period === "all") return;
+    const next = shiftAnchor(anchor, period, direction);
+    if (
+      next < "2000-01-01" ||
+      next.slice(0, period === "week" ? 10 : 7) > today().slice(0, period === "week" ? 10 : 7)
+    )
+      return;
+    onAnchorChange?.(next > today() ? today() : next);
+  };
+  const swipe = usePeriodSwipe(move);
   return (
     <section className="analytics-panel" aria-label={scope ? "グループ集計" : "履歴グラフ"}>
+      <PeriodPicker anchor={anchor} period={period} onChange={(value) => onAnchorChange?.(value)} />
       <div className="analytics-controls">
         <label>
           種目
@@ -77,46 +131,61 @@ export function AnalyticsPanel({
             ))}
           </select>
         </label>
+        {scope && !ranking && (
+          <label className="analytics-member">
+            メンバー
+            <select value={selectedMember} onChange={(event) => setMember(event.target.value)}>
+              <option value="">全員</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.display_name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           期間
           <select
             value={period}
             onChange={(event) => {
               setPeriod(event.target.value as Period);
-              setOffset(0);
+              setGrain("day");
             }}
           >
-            {(scope
-              ? (["week", "month", "all"] as const)
-              : (["month", "quarter", "year", "all"] as const)
-            ).map((value) => (
+            {(["week", "month", "quarter", "year", "all"] as const).map((value) => (
               <option key={value} value={value}>
-                {scope && value === "month" ? "月" : periods[value]}
+                {periods[value]}
               </option>
             ))}
           </select>
         </label>
+        {!ranking && !(period === "week" && selectedMetric === "days") && (
+          <div className="analytics-grains" aria-label="グラフの集計単位">
+            {availableGrains.map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={selectedGrain === value}
+                onClick={() => setGrain(value)}
+              >
+                {grains[value]}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <div className="analytics-period">
-        <button
-          type="button"
-          className="secondary"
-          aria-label="前の期間"
-          disabled={period === "all" || !data?.window.can_previous}
-          onClick={() => setOffset(offset + 1)}
-        >
-          ‹
-        </button>
-        <span>{data ? dates(data.window.start, data.window.end) : "—"}</span>
-        <button
-          type="button"
-          className="secondary"
-          aria-label="次の期間"
-          disabled={!offset}
-          onClick={() => setOffset(offset - 1)}
-        >
-          ›
-        </button>
+        <span>
+          {data ? (
+            dates(data.window.start, frameEnd(data.window.end, period))
+          ) : (
+            <LoadingState label="期間を読み込み中" compact />
+          )}
+          {data && data.window.end < frameEnd(data.window.end, period)
+            ? ` · ${data.window.end.slice(5).replace("-", "/")}までの記録`
+            : ""}
+        </span>
       </div>
       <div className="analytics-metrics" aria-label="集計指標">
         {(ranking ? rankMetrics : metrics).map((value) => (
@@ -145,19 +214,8 @@ export function AnalyticsPanel({
                 <small> {units[selectedMetric]}</small>
               </strong>
             )}
-            <span className="muted">
-              {`${data.totals.days}日間の記録${scope ? ` · ${data.totals.people}人が活動` : ""}`}
-            </span>
           </section>
-          {!ranking && data.previous_totals && (
-            <p className="analytics-comparison muted">
-              前期間比{" "}
-              {data.totals[selectedMetric] != null && data.previous_totals[selectedMetric] != null
-                ? `${(data.totals[selectedMetric] ?? 0) - (data.previous_totals[selectedMetric] ?? 0) >= 0 ? "+" : ""}${number((data.totals[selectedMetric] ?? 0) - (data.previous_totals[selectedMetric] ?? 0))}${units[selectedMetric]}`
-                : "比較記録なし"}
-            </p>
-          )}
-          {data.window.previous_start && (
+          {ranking && data.window.previous_start && (
             <p className="analytics-comparison muted">
               比較元{" "}
               {dates(
@@ -198,24 +256,21 @@ export function AnalyticsPanel({
             </>
           ) : (
             <>
-              <div className="analytics-grains" aria-label="グラフの集計単位">
-                {availableGrains.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={selectedGrain === value}
-                    onClick={() => setGrain(value)}
-                  >
-                    {grains[value]}
-                  </button>
-                ))}
+              <div {...swipe}>
+                <AnalyticsChart
+                  key={`${period}:${anchor}:${exercise}:${selectedMember}:${selectedGrain}`}
+                  points={framePoints(
+                    data.series[selectedGrain] ?? [],
+                    period,
+                    selectedGrain,
+                    data.window.end,
+                  )}
+                  metric={selectedMetric}
+                  grain={selectedGrain}
+                  weeklyDays={period === "week" && selectedMetric === "days"}
+                  onRecords={selectRecords}
+                />
               </div>
-              <AnalyticsChart
-                key={`${period}:${offset}:${exercise}:${selectedGrain}`}
-                points={data.series[selectedGrain] ?? []}
-                metric={selectedMetric}
-                onRecords={onRecords}
-              />
               {!data.totals.sets && <p className="muted">この期間は記録がありません。</p>}
             </>
           )}

@@ -1397,13 +1397,6 @@
   stroke-width: 1;
   stroke-dasharray: 3 3;
 }
-.analytics-chart .chart-slider {
-  width: 100%;
-  min-height: 32px;
-  padding: 0;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
 .chart-selection {
   display: flex;
   flex-direction: column;
@@ -2487,4 +2480,178 @@
 .v2-app.is-preparing > :not(.startup-screen) {
   visibility: hidden;
   pointer-events: none;
+}
+
+/* 履歴の共通操作は指標・グラフ・記録の順でまとめる。 */
+.history-period-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 18px;
+}
+.history-period-picker > button:first-child {
+  font-weight: 700;
+  color: var(--text);
+}
+.history-picker-dialog {
+  width: min(340px, calc(100% - 32px));
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--text);
+}
+.history-picker-dialog::backdrop {
+  background: #0005;
+}
+.history-picker-dialog label {
+  display: grid;
+  gap: 10px;
+}
+.history-picker-dialog input {
+  min-height: 44px;
+  width: 100%;
+}
+.history-period-records {
+  margin-top: 20px;
+}
+.history-row > div {
+  min-width: 0;
+}
+.history-row p {
+  overflow-wrap: anywhere;
+}
+.history-row > span {
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.analytics-panel {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+.analytics-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.analytics-controls label:first-child {
+  grid-column: 1 / -1;
+}
+.analytics-metrics {
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--track);
+  margin: 18px 0 10px;
+}
+.analytics-metrics button {
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+.analytics-metrics button[aria-pressed="true"] {
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: 0 1px 4px #0001;
+}
+.analytics-summary {
+  display: block;
+  margin: 20px 0;
+}
+.analytics-summary > strong {
+  font-size: 38px;
+}
+.chart-touch-target {
+  padding: 0;
+  border: 0;
+  margin: 0;
+  min-width: 0;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.chart-bar {
+  fill: var(--accent);
+  rx: 2px;
+}
+.chart-future {
+  fill: var(--track);
+}
+.activity-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin: 20px 0;
+}
+.activity-week button {
+  border: 0;
+  background: var(--track);
+  border-radius: 6px;
+  min-height: 90px;
+  display: grid;
+  gap: 6px;
+  padding: 10px 2px;
+  color: var(--text);
+}
+.activity-week button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+.activity-week button:disabled {
+  opacity: 0.4;
+}
+.activity-week small {
+  font-size: 10px;
+}
+
+.history-period-picker {
+  margin: 0 0 10px;
+}
+.analytics-controls {
+  gap: 8px;
+  align-items: end;
+}
+.analytics-controls label {
+  display: grid;
+  gap: 5px;
+}
+.analytics-controls select {
+  margin: 0;
+  font-size: 13px;
+  padding: 8px;
+}
+.analytics-controls .analytics-member {
+  grid-column: 1 / -1;
+}
+.analytics-controls .analytics-grains {
+  align-self: end;
+  margin: 0 0 0 auto;
+  width: max-content;
+}
+.analytics-grains button {
+  padding: 6px 12px;
+}
+.analytics-panel {
+  background: transparent;
+}
+.analytics-period {
+  margin: 8px 0;
+}
+.analytics-summary {
+  margin: 12px 0;
+}
+.chart-selection {
+  flex-direction: row;
+  justify-content: space-between;
+  min-height: 44px;
+  gap: 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+}
+.chart-selection > strong {
+  font-size: 15px;
+  white-space: nowrap;
 }

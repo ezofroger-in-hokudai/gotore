@@ -62,8 +62,10 @@ test("基本権限だけでGoogleへ進み、キャンセルからログイン�
   await expect(page.getByRole("main").getByRole("alert")).toContainText("キャンセル");
   expect(requested?.searchParams.get("provider")).toBe("google");
   expect(requested?.searchParams.get("scopes")).toBe("openid email profile");
-  expect(requested?.searchParams.get("redirect_to")).toBe("http://127.0.0.1:3100/auth/callback");
-  await expect(page).toHaveURL("http://127.0.0.1:3100/auth/callback");
+  expect(requested?.searchParams.get("redirect_to")).toBe(
+    new URL("/auth/callback", test.info().project.use.baseURL).href,
+  );
+  await expect(page).toHaveURL(new URL("/auth/callback", test.info().project.use.baseURL).href);
   await expect(page.getByRole("main")).not.toContainText("PRIVATE");
   await page.getByRole("link", { name: "ログイン画面へ戻る" }).click();
   await expect(page.getByRole("button", { name: "Googleで続ける" })).toBeEnabled();
@@ -72,7 +74,7 @@ test("基本権限だけでGoogleへ進み、キャンセルからログイン�
 test("セッションのない復帰と認証失敗は、外部の戻り先や詳細を使わない", async ({ page }) => {
   await page.goto("/auth/callback?next=https://example.test");
   await expect(page.getByRole("main").getByRole("alert")).toContainText("確認できません");
-  await expect(page).toHaveURL("http://127.0.0.1:3100/auth/callback");
+  await expect(page).toHaveURL(new URL("/auth/callback", test.info().project.use.baseURL).href);
   await page.goto("/auth/callback?error=server_error&error_description=PRIVATE");
   await expect(page.getByRole("main").getByRole("alert")).toContainText("完了できません");
   await expect(page.getByRole("main")).not.toContainText("PRIVATE");
@@ -98,7 +100,7 @@ test("認証からの復帰でセッションを保存し、トークンをURL�
   });
   await page.goto(`/auth/callback#${hash}`);
   await expect(page.getByRole("navigation")).toBeVisible();
-  await expect(page).toHaveURL("http://127.0.0.1:3100/");
+  await expect(page).toHaveURL(new URL("/", test.info().project.use.baseURL).href);
   expect(state.authUpdates).toBe(0);
 });
 
@@ -185,5 +187,5 @@ test("認証の確認が止まっても待機を終え、再試行の導線を�
   await page.clock.fastForward(16_000);
   await expect(page.getByRole("main").getByRole("alert")).toContainText("確認できません");
   await expect(page.getByRole("link", { name: "ログイン画面へ戻る" })).toBeVisible();
-  await expect(page).toHaveURL("http://127.0.0.1:3100/auth/callback");
+  await expect(page).toHaveURL(new URL("/auth/callback", test.info().project.use.baseURL).href);
 });

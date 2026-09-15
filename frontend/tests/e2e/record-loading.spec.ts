@@ -78,5 +78,5 @@ test("ログアウト後の別利用者へ履歴と入力を引き継がない",
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await navigate(page, "履歴");
   await expect(page.locator(".history-row")).toHaveCount(0);
-  await expect(page.getByText("まだ記録がありません", { exact: true })).toBeVisible();
+  await expect(page.getByText("この期間は記録がありません", { exact: true })).toBeVisible();
 });

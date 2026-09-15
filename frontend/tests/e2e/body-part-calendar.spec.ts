@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseHistoryMonth, moveHistoryMonth } from "./history-period-helper";
 import { mockTraining, navigate } from "./mock-training";
 
 test.use({ locale: "ja-JP" });
@@ -100,7 +101,7 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
   });
   await navigate(page, "履歴");
   const calendar = page.getByRole("region", { name: "活動カレンダー", exact: true });
-  await calendar.getByLabel("月", { exact: true }).fill("2024-02");
+  await chooseHistoryMonth(page, "2024-02");
   const day = calendar.getByRole("button", {
     name: "2024年2月13日、総負荷3,750kg、1件、胸・肩",
     exact: true,
@@ -205,11 +206,11 @@ test("日付の部位・横一列の絞り込み・日別内訳を追加通信�
   expect(requests).toBe(before);
   await page.clock.resume();
   await day.click();
-  await calendar.getByRole("button", { name: "前の月", exact: true }).click();
+  await moveHistoryMonth(page, -1);
   await expect(detail).toHaveCount(0);
   await expect(calendar.getByText("この月は記録なし", { exact: true })).toBeVisible();
   fail = true;
-  await calendar.getByRole("button", { name: "次の月", exact: true }).click();
+  await moveHistoryMonth(page, 1);
   await expect(calendar.getByRole("alert")).toContainText(
     "更新できませんでした。前回の内容を表示しています。",
   );
@@ -249,7 +250,7 @@ test("内訳のない旧応答へ切り替わったとき、0件にせず全体�
   );
   await navigate(page, "履歴");
   const calendar = page.getByRole("region", { name: "活動カレンダー", exact: true });
-  await calendar.getByLabel("月", { exact: true }).fill("2024-02");
+  await chooseHistoryMonth(page, "2024-02");
   const filters = calendar.getByRole("group", { name: "カレンダーの部位", exact: true });
   await filters.getByRole("button", { name: "胸", exact: true }).click();
   await expect(calendar.locator(".activity-totals")).toContainText("総負荷");

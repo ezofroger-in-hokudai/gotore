@@ -42,3 +42,29 @@
 - `GET /api/analytics?period=month&offset=0&exercise=種目名`。periodはweek/month/quarter/year/all、exercise省略は全種目。
 - `GET /api/groups/{group_id}/analytics` は同じ選択とグループ権限確認。返却は期間/比較元、候補、全指標合計、表示可能な全粒度の系列、ランキング。
 - `GET /api/workouts?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD` は本人の記録を両端含む期間で50件ずつ取得する。2日付を必ず組で渡し、performed_on指定との併用はしない。
+
+## 2026-09-15 採用した統一表示
+
+この節は上の旧画面配置・粒度選択を更新する。個人・グループでカレンダー／グラフを共用し、総負荷に応じた現行配色と部位の複数選択を維持。グラフ直下は選択範囲の記録一覧、タップで詳細、本人は編集・コピーを維持する。グループの最新記録・ランキングも残す。
+
+指標はグラフ直上にまとめる。個人とグループに活動日数、グループだけに活動人数。重量/RMは種目指定、グループではさらにメンバー1人指定が必要。日数/人数は重複排除をAPIで行う。
+
+1週間は日別7日枠（活動日数は7実施マーク）、1か月は日/週別（日数は週別）、3か月は週/月別、1年は月別。全期間も維持し月別で描画する。未来は未到来として0と区別し選択しない。重量欠測は—。年と月のラベルを分ける。
+
+矢印やスライダーを外し、日付/月の直接指定・現在に戻る・右スワイプで過去/左で新しい期間へ1幅移動。縦スクロールと短いドラッグ/キャンセルは期間を変えない。カレンダーとグラフは選択月を共有し、切替で種目/指標/選択を保持する。
+
+集計APIへ基準日anchorとグループmember_idを任意追加。グループの月別総負荷・部位集計、期間/種目/メンバーで50件ずつの記録取得を追加する。現在の所属と共有条件を毎回検証し、私的メモを共有しない。DB構造変更なし。
+
+### 追加APIの使い方
+
+- 集計: `/api/analytics?period=week&anchor=2026-09-10`。基準日の含まれる週を表示する。月/3か月/年は基準日の月を終点とする。未来の基準日は422。
+- グループ集計: `/api/groups/{id}/analytics?period=month&exercise=ベンチ&member_id={user_id}`。現在の参加者が共有した記録だけ。指定メンバーに対象記録がなければ量は0、重量は欠測。
+- グループカレンダー: `/api/groups/{id}/workouts/activity?month=2026-09`。個人の月別活動と同じ応答形式で総負荷・部位を表示する。
+- グループの記録: `/api/groups/{id}/workouts?date_from=2026-09-01&date_to=2026-09-07&limit=50&offset=0`。任意の`exercise`/`member_id`、または単日`performed_on`も使用できる。期間の開始/終了は必ず対で指定し、単日との併用は不可。
+- 個人の記録にも`exercise`の絞り込みを追加。グループも含め、一覧から開く詳細は該当トレーニング全体を表示する。
+
+ローカルE2EのWebポートが使えない場合は`PLAYWRIGHT_PORT=3167 make test-e2e`で変更できる。通常/CIの既定は3100のまま。
+
+### 実装画面（架空データ）
+
+[個人カレンダー](images/unified-history/personal-calendar.png) · [個人の週グラフ](images/unified-history/personal-graph.png) · [週の実施日](images/unified-history/personal-days.png) · [グループカレンダー](images/unified-history/group-calendar.png) · [グループのメンバー別重量](images/unified-history/group-weight.png)

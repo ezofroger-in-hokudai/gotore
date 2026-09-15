@@ -171,7 +171,21 @@ class TrainingRepository:
                 raise Conflict("保存が競合しました。記録一覧を確認してください")
         return row
 
-    def activity(self, user_id: UUID, start: date, end: date):
+    def activity(self, user_id: UUID, start: date, end: date, group_id: UUID | None = None):
+        if group_id is not None:
+            self.group(user_id, group_id)
+        scope = (
+            "w.user_id = %(user_id)s"
+            if group_id is None
+            else """
+            EXISTS (SELECT 1 FROM public.gotore_group_members m
+                WHERE m.group_id = %(group_id)s AND m.user_id = w.user_id)
+            AND (w.group_id = %(group_id)s OR EXISTS (
+                SELECT 1 FROM public.gotore_workout_shares s
+                WHERE s.workout_id = w.id AND s.group_id = %(group_id)s))
+            AND EXISTS (SELECT 1 FROM public.gotore_group_members viewer
+                WHERE viewer.group_id = %(group_id)s AND viewer.user_id = %(user_id)s)"""
+        )
         part = "COALESCE(NULLIF(o.primary_body_part, 'full_body'), 'other')"
         rows = self.connection.execute(
             f"""WITH entries AS (
@@ -181,7 +195,7 @@ class TrainingRepository:
                 JOIN public.gotore_workout_statistics s ON s.workout_id = w.id
                 LEFT JOIN public.gotore_exercise_options o
                     ON o.user_id = w.user_id AND o.name = s.exercise_name
-                WHERE w.user_id = %s AND w.performed_on >= %s AND w.performed_on < %s
+                WHERE {scope} AND w.performed_on >= %(start)s AND w.performed_on < %(end)s
                   AND jsonb_array_length(w.exercises) > 0
             ), workout_parts AS (
                 SELECT date, id, array_agg(DISTINCT body_part ORDER BY body_part) AS body_parts
@@ -203,7 +217,7 @@ class TrainingRepository:
             SELECT t.*, g.workout_groups FROM totals t
             LEFT JOIN day_groups g ON g.date = t.date AND t.is_total = 1
             ORDER BY t.date, t.is_total DESC, t.body_part""",
-            (user_id, start, end),
+            {"user_id": user_id, "group_id": group_id, "start": start, "end": end},
         ).fetchall()
         metrics = ("volume", "set_count", "workout_count")
         days = {
@@ -233,6 +247,8 @@ class TrainingRepository:
         performed_on: date | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
+        exercise: str | None = None,
+        member_id: UUID | None = None,
     ):
         if group_id is not None:
             self.group(user_id, group_id)
@@ -247,6 +263,20 @@ class TrainingRepository:
             where, value = "w.user_id = %s", user_id
             order = "w.performed_on DESC, w.created_at DESC, w.id"
         values = [value, value] if group_id is not None else [value]
+        if group_id is not None:
+            where += """ AND EXISTS (SELECT 1 FROM public.gotore_group_members m
+                WHERE m.group_id = %s AND m.user_id = w.user_id)
+                AND EXISTS (SELECT 1 FROM public.gotore_group_members viewer
+                WHERE viewer.group_id = %s AND viewer.user_id = %s)"""
+            values.extend([group_id, group_id, user_id])
+            order = "w.performed_on DESC, w.created_at DESC, w.id"
+        if member_id is not None:
+            where += " AND w.user_id = %s"
+            values.append(member_id)
+        if exercise is not None:
+            where += """ AND EXISTS (SELECT 1 FROM public.gotore_workout_statistics f
+                WHERE f.workout_id = w.id AND f.exercise_name = %s)"""
+            values.append(exercise)
         where += " AND jsonb_array_length(w.exercises) > 0"
         if performed_on is not None:
             where += " AND w.performed_on = %s"
