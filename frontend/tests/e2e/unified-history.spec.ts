@@ -111,50 +111,59 @@ test("統一履歴で週の7枠・活動日数・人数・メンバー・直接�
     recordQueries.push(url.search);
     if (deny) return route.fulfill({ status: 404, json: { detail: "グループに参加していません" } });
     return route.fulfill({
-      json: rows.filter(
-        (r) =>
-          (url.pathname.includes("groups") || r.user_id === state.user.id) &&
-          (!url.searchParams.get("member_id") || r.user_id === url.searchParams.get("member_id")) &&
-          r.performed_on >= (url.searchParams.get("date_from") ?? "2000-01-01") &&
-          r.performed_on <= (url.searchParams.get("date_to") ?? "2026-09-15"),
-      ),
+      json: rows
+        .filter(
+          (r) =>
+            (url.pathname.includes("groups") || r.user_id === state.user.id) &&
+            (!url.searchParams.get("member_id") ||
+              r.user_id === url.searchParams.get("member_id")) &&
+            r.performed_on >= (url.searchParams.get("date_from") ?? "2000-01-01") &&
+            r.performed_on <= (url.searchParams.get("date_to") ?? "2026-09-15"),
+        )
+        .sort((a, b) => b.performed_on.localeCompare(a.performed_on)),
     });
   });
-  await page.route(/\/api\/groups\/[^/]+\/workouts\/activity\?/, (route) =>
-    route.fulfill({
+  await page.route(/\/api\/(groups\/[^/]+\/)?workouts\/activity\?/, (route) => {
+    const group = route.request().url().includes("/groups/");
+    const count = group ? 2 : 1;
+    const volume = group ? 1400 : 600;
+    return route.fulfill({
       json: {
         month: "2026-09",
-        total_volume: 5600,
-        total_sets: 8,
-        workout_count: 8,
+        total_volume: volume * 4,
+        total_sets: count * 4,
+        workout_count: count * 4,
         active_days: 4,
-        days: [
-          {
-            date: "2026-09-15",
-            volume: 1400,
-            set_count: 2,
-            workout_count: 2,
-            body_parts: [{ body_part: "chest", volume: 1400, set_count: 2, workout_count: 2 }],
-            workout_groups: [{ body_parts: ["chest"], workout_count: 2 }],
-          },
-        ],
+        days: ["2026-09-07", "2026-09-11", "2026-09-14", "2026-09-15"].map((date) => ({
+          date,
+          volume,
+          set_count: count,
+          workout_count: count,
+          body_parts: [{ body_part: "chest", volume, set_count: count, workout_count: count }],
+          workout_groups: [{ body_parts: ["chest"], workout_count: count }],
+        })),
       },
-    }),
-  );
+    });
+  });
   await navigate(page, "履歴");
+  await expect(page.locator(".history-screen .activity-totals")).toContainText("2,400");
+  await page.screenshot({ path: "test-results/unified-personal-calendar.png", fullPage: true });
   await page.getByRole("button", { name: "グラフ", exact: true }).click();
   const panel = page.getByRole("region", { name: "履歴グラフ" });
   await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("week");
   await expect(panel.locator(".chart-bar")).toHaveCount(2);
   await expect(panel.locator(".chart-future")).toHaveCount(5);
   await expect(panel.getByRole("button", { name: "週別", exact: true })).toHaveCount(0);
-  await page.screenshot({ path: "test-results/unified-personal-graph.png", fullPage: true });
+  await panel.evaluate((el) =>
+    window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 16),
+  );
+  await page.screenshot({ path: "test-results/unified-personal-graph.png" });
   await expect(page.locator(".history-period-records:visible")).toContainText("2026/09/15");
   await expect.poll(() => recordQueries.some((q) => q.includes("date_from=2026-09-15"))).toBe(true);
   await panel.getByRole("button", { name: "活動日数", exact: true }).click();
   await expect(panel.locator(".activity-week button")).toHaveCount(7);
   await expect(panel.locator(".analytics-summary")).toContainText("2");
-  await page.screenshot({ path: "test-results/unified-personal-week.png", fullPage: true });
+  await page.screenshot({ path: "test-results/unified-personal-week.png" });
   const cdp = await page.context().newCDPSession(page);
   async function swipe(dx: number, cancel = false) {
     await panel.locator(".activity-week").scrollIntoViewIfNeeded();
@@ -207,7 +216,10 @@ test("統一履歴で週の7枠・活動日数・人数・メンバー・直接�
       true,
     );
   }
-  await page.screenshot({ path: "test-results/unified-group-weight.png", fullPage: true });
+  await groupPanel
+    .locator(".analytics-member")
+    .evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 16));
+  await page.screenshot({ path: "test-results/unified-group-weight.png" });
   deny = true;
   await groupPanel.getByRole("combobox", { name: "期間", exact: true }).selectOption("all");
   await expect(groupPanel.getByRole("alert")).toContainText("参加していません");
