@@ -4,6 +4,7 @@ import { ActivityCalendar } from "../activity/activity-calendar";
 import { dates, number } from "../analytics/chart";
 import { AnalyticsPanel } from "../analytics/panel";
 import { LoadingState } from "../loading/loading-state";
+import { StampControl } from "../stamps/stamp-control";
 import { BestFlame } from "../training/best-flame";
 import { today } from "../training/draft";
 import { RecordList } from "../training/record-list";
@@ -113,6 +114,14 @@ export function HistoryBrowser({
               onDeleted();
             }}
           />
+          {scope && (
+            <StampControl
+              key={`${scope}:${current.id}`}
+              groupId={scope.split("/").at(-1) || ""}
+              workoutId={current.id}
+              name={current.display_name}
+            />
+          )}
         </section>
       )}
       <div hidden={!!current}>

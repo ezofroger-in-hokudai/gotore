@@ -1,4 +1,5 @@
 "use client";
+import { StampReceipt } from "../stamps/receipt";
 
 import { LoadingState } from "../loading/loading-state";
 
@@ -369,6 +370,7 @@ function ActiveTraining({
           トレーニング終了
         </button>
       </div>
+      {session && <StampReceipt key={session.id} workoutId={session.id} active={active} />}
       {storageWarning && (
         <p className="error" role="alert">
           この端末に入力を保存できません。閉じる前にセットを保存してください。

@@ -1,12 +1,18 @@
 import type { Workout } from "@/lib/api";
 import { LoadingState } from "../loading/loading-state";
+import { StampControl } from "../stamps/stamp-control";
 import { RecordList } from "../training/record-list";
 import { Sheet } from "./sheet";
 
 export function SharedWorkoutDetail({
   record,
+  groupId,
   onClose,
-}: { record: { data: Workout | null; error: string; retry: () => void }; onClose: () => void }) {
+}: {
+  groupId?: string;
+  record: { data: Workout | null; error: string; retry: () => void };
+  onClose: () => void;
+}) {
   return (
     <Sheet title="記録の詳細" onClose={onClose}>
       {record.error ? (
@@ -17,7 +23,17 @@ export function SharedWorkoutDetail({
           </button>
         </p>
       ) : record.data ? (
-        <RecordList records={[record.data]} empty="" />
+        <>
+          <RecordList records={[record.data]} empty="" />
+          {groupId && (
+            <StampControl
+              key={`${groupId}:${record.data.id}`}
+              groupId={groupId}
+              workoutId={record.data.id}
+              name={record.data.display_name}
+            />
+          )}
+        </>
       ) : (
         <LoadingState label="記録の詳細を読み込み中" />
       )}

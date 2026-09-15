@@ -1,4 +1,5 @@
 import type { Workout } from "@/lib/api";
+import { StampReceipt } from "../stamps/receipt";
 
 export function WorkoutResult({
   record,
@@ -33,6 +34,7 @@ export function WorkoutResult({
           <strong>{sets}</strong> セット
         </span>
       </div>
+      <StampReceipt key={record.id} workoutId={record.id} live={false} />
       <button type="button" className="primary full" onClick={onHome}>
         ホーム
       </button>

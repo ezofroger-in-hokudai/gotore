@@ -14,6 +14,8 @@ import {
   useState,
 } from "react";
 import { LoadingState } from "../loading/loading-state";
+import { StampInboxButton } from "../stamps/inbox";
+import { StampControl } from "../stamps/stamp-control";
 import { BestFlame } from "../training/best-flame";
 import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
@@ -125,6 +127,7 @@ export function CommunityHome({
           グループ一覧
         </button>
       </div>
+      <StampInboxButton groupId={selected || undefined} />
       {trainingAction}
       {loading ? (
         <>
@@ -451,6 +454,12 @@ function Feed({
                   <span className="feed-detail-hint">詳細</span>
                 </span>
               </button>
+              <StampControl
+                key={`${data.group_id}:${item.workout_id}`}
+                groupId={data.group_id}
+                workoutId={item.workout_id}
+                name={item.display_name}
+              />
             </article>
           );
         })}
@@ -459,6 +468,7 @@ function Feed({
         <SharedWorkoutDetail
           key={`${data.group_id}:${opened}`}
           record={details}
+          groupId={data.group_id}
           onClose={() => setOpened(null)}
         />
       )}
@@ -693,6 +703,7 @@ export function CommunityScreen({
             <>
               <ResourceError resource={detail} />
               <h1>{group.name}</h1>
+              <StampInboxButton groupId={selected} />
 
               {mode === "detail" && (
                 <>
