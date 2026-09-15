@@ -61,6 +61,18 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
   });
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
+    if (path === "/api/stamps/inbox")
+      return route.fulfill({
+        json: {
+          items: [],
+          total: 0,
+          people: 0,
+          unread: 0,
+          can_send: false,
+          mine: [],
+          has_more: false,
+        },
+      });
     if (path === "/api/sessions/active") return route.fulfill({ json: state.session });
     if (path === "/api/sessions") {
       state.session ??= {

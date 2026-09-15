@@ -38,6 +38,8 @@ Vercel Servicesでは1プロジェクトの共通ルートから各サービス�
 - CI: backend／frontend／database。PostgreSQL統合テスト、Supabase migration、ブラウザテストを含む。
 - 最新の実施結果と未実施項目は `progress.md` に記録する。
 
+スタンプ実装ブランチでは、B案の送信パネル・記録中の5秒表示と未読・受信一覧を追加。仕様は [stamps.md](stamps.md)。公開前に `20260915110000_workout_stamps.sql` を適用する。検証・PRの状態はprogress.mdで追跡する。
+
 ## 後続で扱うもの
 
 スタンプ、仲間へのコメント、Push通知、アカウント管理、公開環境へのデプロイ、Android／iOSアプリ。履歴グラフとグループ集計は #97 の範囲を追加（検証・PRの状態はprogress.md）。

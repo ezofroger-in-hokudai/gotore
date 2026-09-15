@@ -2655,3 +2655,185 @@
   font-size: 15px;
   white-space: nowrap;
 }
+
+/* スタンプは必要なときだけ選択パネルを開く。受信で入力欄を動かさない。 */
+.v2-app .stamp-open {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--accent);
+}
+.v2-app .stamp-control {
+  margin-top: 10px;
+}
+.v2-app .stamp-inbox-entry {
+  display: block;
+  margin: 0 0 10px auto;
+}
+.v2-app .stamp-target {
+  background: var(--track);
+  padding: 12px;
+  font-size: 14px;
+}
+.v2-app .stamp-target small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+}
+.v2-app .stamp-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.v2-app .stamp-picker button {
+  min-height: 105px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 4px;
+}
+.v2-app .stamp-picker button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.v2-app .stamp-picker button > span {
+  font-size: 32px;
+}
+.v2-app .stamp-picker strong {
+  font-size: 12px;
+}
+.v2-app .stamp-picker small {
+  font-size: 11px;
+}
+.v2-app .stamp-success {
+  min-height: 20px;
+  font-size: 12px;
+  color: var(--accent);
+}
+.v2-app .stamp-filters {
+  display: flex;
+  gap: 4px;
+  margin: 12px 0;
+}
+.v2-app .stamp-filters button {
+  min-width: 44px;
+  min-height: 44px;
+  background: var(--track);
+}
+.v2-app .stamp-filters [aria-pressed="true"] {
+  color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+.v2-app .stamp-person {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.v2-app .stamp-person > span:last-child {
+  font-size: 24px;
+}
+.v2-app .stamp-pages {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.v2-app .stamp-pages button {
+  min-height: 44px;
+}
+.v2-app .stamp-inbox-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  padding: 16px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  line-height: 1.7;
+}
+.v2-app .stamp-inbox-emoji {
+  font-size: 30px;
+  flex-shrink: 0;
+}
+.v2-app .stamp-inbox-row small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.v2-app .stamp-empty {
+  padding: 40px 10px;
+  text-align: center;
+  color: var(--muted);
+}
+.v2-app .stamp-receipt-slot {
+  min-height: 72px;
+  position: relative;
+  margin: 4px 0 8px;
+}
+.v2-app .stamp-receipt {
+  width: 100%;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--line);
+  background: transparent;
+  text-align: left;
+}
+.v2-app .stamp-arrived {
+  background: var(--panel);
+  border-left-color: var(--accent);
+}
+.v2-app .stamp-receipt-icon {
+  font-size: 25px;
+}
+.v2-app .stamp-receipt-copy {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+.v2-app .stamp-receipt-copy small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v2-app .stamp-unread {
+  font-size: 12px;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.v2-app .stamp-result {
+  margin: 20px 0;
+}
+.v2-app .stamp-sr {
+  position: absolute;
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.v2-app .stamp-receipt-error {
+  font-size: 11px;
+  margin: 0;
+}
+.v2-app .stamp-receipt-copy {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
