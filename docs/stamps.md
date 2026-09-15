@@ -35,6 +35,6 @@
 
 ## 画面
 
-[選択パネル](images/stamps/picker.png) · [記録中の受信](images/stamps/arrival.png) · [受信一覧](images/stamps/inbox.png) · [終了後](images/stamps/result.png)
+[選択パネル](images/stamps/picker.png) · [記録中の受信](images/stamps/arrival.png) · [受信一覧](images/stamps/inbox.png) · [終了後](images/stamps/result.png) · [高さ720pxの記録画面](images/stamps/compact-320.png)
 
-架空のテストユーザーがローカルDBへ保存したデータを、実際のアプリで表示した画像。
+架空のテストユーザーがローカルDBへ保存したデータを、実際のアプリで表示した画像。compact-320は既存の記録テスト用データで小画面の配置を確認したもの。

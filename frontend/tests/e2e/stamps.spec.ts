@@ -109,6 +109,7 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
     await panel.getByRole("button", { name: "選んだスタンプを取り消す", exact: true }).click();
     await pageA.bringToFront();
     await expect(receipt).toContainText("0個", { timeout: 20000 });
+    await pageA.setViewportSize({ width: 320, height: 720 });
     for (const kind of ["fire", "muscle", "eyes"])
       expect(
         (
@@ -119,6 +120,12 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
         ).ok(),
       ).toBe(true);
     await expect(receipt).toContainText("ほか2件", { timeout: 20000 });
+    expect(await pageA.evaluate(() => document.documentElement.scrollHeight)).toBe(720);
+    await expect(
+      pageA.getByRole("button", { name: "トレーニング終了", exact: true }),
+    ).toBeInViewport({ ratio: 1 });
+    await pageA.screenshot({ path: "test-results/stamps-compact.png", fullPage: true });
+    await pageA.setViewportSize({ width: 390, height: 844 });
     await receipt.getByRole("button").click();
     await expect(inbox.locator(".stamp-inbox-row")).toHaveCount(3);
     await inbox.getByRole("button", { name: "閉じる", exact: true }).click();

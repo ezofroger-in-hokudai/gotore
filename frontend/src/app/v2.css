@@ -2837,3 +2837,43 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 高さが小さい端末では既存ヘッダー内に収め、入力領域を減らさない。 */
+.v2-app .stamp-receipt-copy small {
+  font-size: 12px;
+}
+@media (max-height: 780px) {
+  .recording-view .session-screen:has(> .stamp-receipt-slot) {
+    position: relative;
+  }
+  .recording-view .session-screen:has(> .stamp-receipt-slot) > .section-heading {
+    justify-content: flex-end;
+    min-height: 48px;
+  }
+  .recording-view .session-screen:has(> .stamp-receipt-slot) > .section-heading > .eyebrow {
+    display: none;
+  }
+  .recording-view .stamp-receipt-slot {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% - 144px);
+    min-height: 48px;
+    margin: 0;
+  }
+  .recording-view .stamp-receipt {
+    min-height: 48px;
+    padding: 4px;
+    gap: 4px;
+    border: 0;
+  }
+  .recording-view .stamp-receipt-icon {
+    font-size: 20px;
+  }
+  .recording-view .stamp-receipt-copy {
+    font-size: 12px;
+  }
+  .recording-view .stamp-receipt-copy small {
+    display: none;
+  }
+}
