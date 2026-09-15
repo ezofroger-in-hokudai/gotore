@@ -24,18 +24,23 @@ def shift_month(value: date, months: int) -> date:
     return date(index // 12, index % 12 + 1, 1)
 
 
-def analytics_window(period: Period, offset: int, today: date) -> AnalyticsWindow:
+def analytics_window(
+    period: Period, offset: int, today: date, anchor: date | None = None
+) -> AnalyticsWindow:
+    reference = anchor or today
+    if reference < EARLIEST or reference > today:
+        raise ValueError("基準日は2000年以降、今日までを指定してください")
     if offset < 0 or (period == "all" and offset):
         raise ValueError("期間を正しく指定してください")
     if period == "all":
         return AnalyticsWindow(period, 0, EARLIEST, today, None, None, False)
     if period == "week":
-        start = today - timedelta(days=today.weekday() + 7 * offset)
+        start = reference - timedelta(days=reference.weekday() + 7 * offset)
         full_end = start + timedelta(days=6)
         previous_start = start - timedelta(days=7)
     else:
         months = {"month": 1, "quarter": 3, "year": 12}[period]
-        start = shift_month(today.replace(day=1), -(months - 1) - months * offset)
+        start = shift_month(reference.replace(day=1), -(months - 1) - months * offset)
         full_end = shift_month(start, months) - timedelta(days=1)
         previous_start = shift_month(start, -months)
     if full_end < EARLIEST:

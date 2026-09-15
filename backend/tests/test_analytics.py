@@ -91,3 +91,15 @@ def test_week_series_limit_includes_partial_weeks():
         False,
     )
     assert len(result["series"].get("week", [])) <= 156
+
+
+def test_anchor_selects_complete_past_month_and_week_without_future_records():
+    from app.domain.analytics import analytics_window
+
+    current = date(2026, 9, 15)
+    window = analytics_window("quarter", 0, current, date(2026, 8, 10))
+    assert (window.start, window.end) == (date(2026, 6, 1), date(2026, 8, 31))
+    assert analytics_window("week", 0, current, date(2026, 9, 10)).end == date(2026, 9, 13)
+    assert analytics_window("month", 0, current, current).end == current
+    with pytest.raises(ValueError):
+        analytics_window("month", 0, current, date(2026, 10, 1))

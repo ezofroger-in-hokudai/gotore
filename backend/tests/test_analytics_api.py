@@ -171,3 +171,52 @@ def test_active_sets_undo_and_heartbeat_projection(client, connection):
     assert undone.status_code == 200, undone.text
     assert client.get(endpoint).json()["totals"]["sets"] == 0
     assert client.get(endpoint).json()["exercises"] == []
+
+
+def test_unified_group_calendar_member_and_record_filters(client, connection):
+    group = create_group(client)
+    gid = group["id"]
+    client.post(
+        "/api/groups/join", headers={"X-Test-User": "B"}, json={"invite_code": group["invite_code"]}
+    )
+    a = save(client, group=gid, day="2026-09-02")
+    b = save(client, user="B", group=gid, day="2026-09-02", weight=80)
+    save(client, user="B", weight=900, day="2026-09-03")
+    save(client, group=gid, day="2026-08-02", weight=40)
+    base = f"/api/groups/{gid}"
+    calendar = client.get(base + "/workouts/activity?month=2026-09")
+    assert calendar.status_code == 200, calendar.text
+    assert calendar.json()["total_volume"] == 1400
+    assert calendar.json()["active_days"] == 1
+    assert calendar.json()["total_sets"] == 2
+    analytics = client.get(base + f"/analytics?exercise=ベンチ&member_id={USERS['B']}").json()
+    assert analytics["totals"]["volume"] == 800
+    assert analytics["totals"]["weight"] == 80
+    records = client.get(
+        base
+        + "/workouts?date_from=2026-09-01&date_to=2026-09-05"
+        + f"&member_id={USERS['B']}&exercise=ベンチ"
+    ).json()
+    assert [r["id"] for r in records] == [b["id"]]
+    assert client.get(base + "/workouts?date_from=2026-09-01").status_code == 422
+    assert (
+        client.get(
+            base + "/workouts/activity?month=2026-09", headers={"X-Test-User": "C"}
+        ).status_code
+        == 404
+    )
+    assert client.get(base + "/analytics?anchor=2026-08-10").json()["totals"]["volume"] == 400
+    assert client.get("/api/workouts?exercise=不存在").json() == []
+    members = client.get(base).json()["members"]
+    joined = next(m["joined_at"] for m in members if m["id"] == str(USERS["B"]))
+    assert (
+        client.delete(
+            base + f"/members/{USERS['B']}", params={"expected_joined_at": joined}
+        ).status_code
+        == 204
+    )
+    assert client.get(base + "/workouts/activity?month=2026-09").json()["total_volume"] == 600
+    assert [r["id"] for r in client.get(base + "/workouts?performed_on=2026-09-02").json()] == [
+        a["id"]
+    ]
+    assert client.get(base + f"/analytics?member_id={USERS['B']}").json()["totals"]["sets"] == 0
