@@ -64,3 +64,7 @@
 - 個人の記録にも`exercise`の絞り込みを追加。グループも含め、一覧から開く詳細は該当トレーニング全体を表示する。
 
 ローカルE2EのWebポートが使えない場合は`PLAYWRIGHT_PORT=3167 make test-e2e`で変更できる。通常/CIの既定は3100のまま。
+
+### 実装画面（架空データ）
+
+[個人カレンダー](images/unified-history/personal-calendar.png) · [個人の週グラフ](images/unified-history/personal-graph.png) · [週の実施日](images/unified-history/personal-days.png) · [グループカレンダー](images/unified-history/group-calendar.png) · [グループのメンバー別重量](images/unified-history/group-weight.png)
