@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const frontendPort = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
 const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_SERVER === "1" && !process.env.CI;
 
 export default defineConfig({
@@ -11,7 +12,7 @@ export default defineConfig({
   use: {
     ...devices["Desktop Chrome"],
     viewport: { width: 390, height: 844 },
-    baseURL: "http://127.0.0.1:3100",
+    baseURL: `http://127.0.0.1:${frontendPort}`,
     actionTimeout: 15_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
@@ -24,8 +25,8 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
-      command: "bunx next dev --hostname 127.0.0.1 --port 3100",
-      url: "http://127.0.0.1:3100",
+      command: `bunx next dev --hostname 127.0.0.1 --port ${frontendPort}`,
+      url: `http://127.0.0.1:${frontendPort}`,
       env: {
         BACKEND_INTERNAL_URL: "http://127.0.0.1:8100",
         NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "true",

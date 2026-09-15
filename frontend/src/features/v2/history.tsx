@@ -1,15 +1,7 @@
 import type { Workout } from "@/lib/api";
 import { useEffect, useState } from "react";
-import { ActivityCalendar } from "../activity/activity-calendar";
-import { dateLabel } from "../activity/calendar";
-import { dates } from "../analytics/chart";
-import { AnalyticsPanel } from "../analytics/panel";
-import { LoadingState } from "../loading/loading-state";
-import { BestFlame } from "../training/best-flame";
-import { today } from "../training/draft";
-import { RecordList } from "../training/record-list";
-import { ResourceError } from "../training/resource-error";
-import { useResource } from "../training/use-resource";
+import type { useResource } from "../training/use-resource";
+import { HistoryBrowser } from "./history-browser";
 
 export function History({
   guideTarget,
@@ -32,164 +24,38 @@ export function History({
   onReuse: (record: Workout) => void;
   onDeleted: () => void;
 }) {
-  const [tab, setTab] = useState<"records" | "graph">("records");
-  const [range, setRange] = useState<{ start: string; end: string } | null>(null);
-  const [month, setMonth] = useState(() => today().slice(0, 7));
-  const [date, setDate] = useState("");
-  const [page, setPage] = useState(0);
-  const [detail, setDetail] = useState<string | null>(null);
+  const [tab, setTab] = useState<"calendar" | "graph">("calendar");
   useEffect(() => {
-    if (guideTarget?.target !== "calendar" && guideTarget?.target !== "graph") return;
-    setDetail(null);
-    setTab(guideTarget.target === "graph" ? "graph" : "records");
+    if (guideTarget?.target === "calendar" || guideTarget?.target === "graph")
+      setTab(guideTarget.target);
   }, [guideTarget]);
-  const useRecent = page === 0 && !date && !range;
-  const filteredRecords = useResource<Workout[]>(
-    `/workouts?offset=${page * 50}${date ? `&performed_on=${date}` : range ? `&date_from=${range.start}&date_to=${range.end}` : ""}`,
-    refreshKey,
-    false,
-    true,
-    { enabled: active && !useRecent, prefetch: prefetch && !useRecent, retainOnRefresh: true },
-  );
-  const records = useRecent ? recent : filteredRecords;
-  const current = records.data?.find((record) => record.id === detail);
-  const detailView = current ? (
-    <section className="history-detail">
-      <ResourceError resource={records} />
-      <button type="button" className="text-button back-button" onClick={() => setDetail(null)}>
-        ‹ 履歴
-      </button>
-      <RecordList
-        records={[current]}
+  return (
+    <section className="history-screen">
+      <h1>履歴</h1>
+      <div className="analytics-tabs" aria-label="履歴の表示">
+        <button type="button" aria-pressed={tab === "calendar"} onClick={() => setTab("calendar")}>
+          カレンダー
+        </button>
+        <button
+          type="button"
+          data-tour="graph"
+          aria-pressed={tab === "graph"}
+          onClick={() => setTab("graph")}
+        >
+          グラフ
+        </button>
+      </div>
+      <HistoryBrowser
         userId={userId}
-        empty=""
-        personal
+        recent={recent}
+        active={active}
+        prefetch={prefetch}
+        refreshKey={refreshKey}
+        tab={tab}
         onEdit={onEdit}
         onReuse={onReuse}
-        onDeleted={() => {
-          setDetail(null);
-          onDeleted();
-        }}
+        onDeleted={onDeleted}
       />
     </section>
-  ) : null;
-  return (
-    <>
-      {detailView}
-      <section className="history-screen" hidden={Boolean(current)}>
-        <h1>履歴</h1>
-        <div className="analytics-tabs" aria-label="履歴の表示">
-          <button type="button" aria-pressed={tab === "records"} onClick={() => setTab("records")}>
-            記録
-          </button>
-          <button
-            data-tour="graph"
-            type="button"
-            aria-pressed={tab === "graph"}
-            onClick={() => setTab("graph")}
-          >
-            グラフ
-          </button>
-        </div>
-        <div hidden={tab !== "graph"}>
-          <AnalyticsPanel
-            active={active && tab === "graph" && !current}
-            prefetch={(active || prefetch) && !current}
-            refreshKey={refreshKey}
-            onRecords={(start, end) => {
-              setRange({ start, end });
-              setDate("");
-              setPage(0);
-              setTab("records");
-            }}
-          />
-        </div>
-        <div hidden={tab !== "records"}>
-          <ActivityCalendar
-            month={month}
-            onMonthChange={setMonth}
-            selectedDate={date}
-            onSelect={(value) => {
-              setDate(value);
-              setRange(null);
-              setPage(0);
-            }}
-            refreshKey={refreshKey}
-            active={active}
-            prefetch={prefetch}
-          />
-          <div className="section-heading">
-            <h2>{date ? dateLabel(date) : range ? dates(range.start, range.end) : "最近の記録"}</h2>
-            {(date || range) && (
-              <button
-                className="text-button"
-                type="button"
-                onClick={() => {
-                  setDate("");
-                  setRange(null);
-                  setPage(0);
-                }}
-              >
-                すべての記録
-              </button>
-            )}
-          </div>
-          <ResourceError resource={records} />
-          {records.loading && !records.data && !records.error ? (
-            <LoadingState label="記録一覧を読み込み中" />
-          ) : null}
-          <div className="v2-rows">
-            {records.data?.map((record) => (
-              <button
-                className="v2-row history-row"
-                type="button"
-                key={record.id}
-                onClick={() => setDetail(record.id)}
-              >
-                <div>
-                  {(!date || (record.started_at && !record.ended_at)) && (
-                    <strong>
-                      {!date && record.performed_on.replaceAll("-", "/")}
-                      {record.started_at && !record.ended_at
-                        ? `${date ? "" : " · "}トレーニング中`
-                        : ""}
-                    </strong>
-                  )}
-                  <p>{record.exercises.map((e) => e.name).join(" / ")}</p>
-                </div>
-                <span className="history-best-meta">
-                  {!!record.best_sets?.length && <BestFlame />}
-                  {record.exercises.reduce((count, e) => count + e.sets.length, 0)} SETS ›
-                </span>
-              </button>
-            ))}
-          </div>
-          {records.data?.length === 0 && (
-            <p className="muted">{date ? "この日は記録なし" : "まだ記録がありません"}</p>
-          )}
-          {(page > 0 || records.data?.length === 50) && (
-            <div className="pagination">
-              <button
-                type="button"
-                className="secondary"
-                disabled={!page || records.loading}
-                onClick={() => setPage(page - 1)}
-              >
-                新しい記録
-              </button>
-              <span>{page + 1}ページ</span>
-              <button
-                type="button"
-                className="secondary"
-                disabled={records.data?.length !== 50 || records.loading}
-                onClick={() => setPage(page + 1)}
-              >
-                以前の記録
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
-    </>
   );
 }
