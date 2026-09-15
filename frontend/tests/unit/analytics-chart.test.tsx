@@ -22,7 +22,7 @@ test("重量とRMは欠測をまたいで実測点をつなぎ、欠測点や数
     const html = renderToStaticMarkup(<AnalyticsChart points={points} metric={metric} />);
     expect(html.match(/class="chart-line"/g)?.length).toBe(1);
     expect(html.match(/class="chart-dot"/g)?.length).toBe(2);
-    expect(html).toContain("実際の記録点を線でつないでいます");
+    expect(html).not.toContain("記録を見る");
   }
   expect(points.map((p) => p.weight)).toEqual([null, 60, null, 80, null]);
 });
@@ -31,11 +31,23 @@ test("総負荷とセット数は未記録日の0を残し、重量の実測が1
   const points = [point(1, 60), point(2, null), point(3, 80)];
   for (const metric of ["volume", "sets"] as const) {
     const html = renderToStaticMarkup(<AnalyticsChart points={points} metric={metric} />);
-    expect(html.match(/class="chart-dot"/g)?.length).toBe(3);
+    expect(html.match(/class="chart-bar"/g)?.length).toBe(3);
+    expect(html).not.toContain('class="chart-line"');
+    expect(html).toContain('height="0"');
   }
   const html = renderToStaticMarkup(
     <AnalyticsChart points={[point(1, null), point(2, 60), point(3, null)]} metric="weight" />,
   );
   expect(html.match(/class="chart-dot"/g)?.length).toBe(1);
   expect(html).not.toContain(" L");
+});
+
+test("位置選択用スライダーを表示せず、グラフから期間を選べる", () => {
+  const html = renderToStaticMarkup(
+    <AnalyticsChart points={[point(1, 60), point(2, 80)]} metric="weight" />,
+  );
+  expect(html).not.toContain('type="range"');
+  expect(html).not.toContain("スライダー");
+  expect(html).toContain('aria-label="グラフの期間選択"');
+  expect(html).toContain('tabindex="0"');
 });

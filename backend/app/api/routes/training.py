@@ -69,8 +69,31 @@ def renew_invite_code(group_id: UUID, data: InviteCodeRenew, service: Service):
 
 
 @router.get("/groups/{group_id}/workouts", response_model=list[WorkoutResponse])
-def group_workouts(group_id: UUID, service: Service, limit: Limit = 50, offset: Offset = 0):
-    return service.workouts(group_id, limit, offset)
+def group_workouts(
+    group_id: UUID,
+    service: Service,
+    limit: Limit = 50,
+    offset: Offset = 0,
+    performed_on: date | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    exercise: str | None = Query(default=None, max_length=80),
+    member_id: UUID | None = None,
+):
+    try:
+        return service.workouts(
+            group_id, limit, offset, performed_on, date_from, date_to, exercise, member_id
+        )
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+
+
+@router.get("/groups/{group_id}/workouts/activity", response_model=MonthlyActivity)
+def group_monthly_activity(group_id: UUID, month: str, service: Service):
+    try:
+        return service.activity(month, group_id)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
 
 
 @router.get("/groups/{group_id}/workouts/{workout_id}", response_model=WorkoutResponse)
@@ -86,9 +109,10 @@ def workouts(
     performed_on: date | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    exercise: str | None = Query(default=None, max_length=80),
 ):
     try:
-        return service.workouts(None, limit, offset, performed_on, date_from, date_to)
+        return service.workouts(None, limit, offset, performed_on, date_from, date_to, exercise)
     except ValueError as error:
         raise HTTPException(422, str(error)) from None
 

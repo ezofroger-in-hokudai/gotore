@@ -13,7 +13,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { AnalyticsPanel } from "../analytics/panel";
 import { LoadingState } from "../loading/loading-state";
 import { BestFlame } from "../training/best-flame";
 import { GroupNameForm } from "../training/group-name-form";
@@ -22,6 +21,7 @@ import { MembershipPanel } from "../training/membership-panel";
 import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
+import { HistoryBrowser } from "./history-browser";
 import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
 import { GROUP_REFRESH_MS, activityRefreshMs } from "./refresh-interval";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
@@ -482,7 +482,9 @@ export function CommunityScreen({
   onHome: () => void;
   onReorder: () => void;
 }) {
-  const [analyticsTab, setAnalyticsTab] = useState<"feed" | "graph" | "ranking">("feed");
+  const [analyticsTab, setAnalyticsTab] = useState<"feed" | "calendar" | "graph" | "ranking">(
+    "feed",
+  );
   const [mode, setMode] = useState<Mode>(initialDetail ? "detail" : "list");
   useEffect(() => {
     if (guideTarget?.target === "groups") setMode("list");
@@ -681,6 +683,13 @@ export function CommunityScreen({
                   <div className="analytics-tabs" aria-label="グループの表示">
                     <button
                       type="button"
+                      aria-pressed={analyticsTab === "calendar"}
+                      onClick={() => setAnalyticsTab("calendar")}
+                    >
+                      カレンダー
+                    </button>
+                    <button
+                      type="button"
                       aria-pressed={analyticsTab === "feed"}
                       onClick={() => setAnalyticsTab("feed")}
                     >
@@ -702,13 +711,15 @@ export function CommunityScreen({
                     </button>
                   </div>
                   <div hidden={analyticsTab === "feed"}>
-                    <AnalyticsPanel
+                    <HistoryBrowser
                       key={selected}
+                      userId={userId}
                       scope={`/groups/${selected}`}
+                      members={group.members}
                       active={active && analyticsTab !== "feed"}
-                      prefetch={active}
+                      prefetch={false}
                       refreshKey={refreshKey}
-                      ranking={analyticsTab === "ranking"}
+                      tab={analyticsTab === "feed" ? "calendar" : analyticsTab}
                     />
                   </div>
                   <div hidden={analyticsTab !== "feed"}>

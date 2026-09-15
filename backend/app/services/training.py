@@ -36,11 +36,11 @@ class TrainingService:
     def save_workout(self, workout: WorkoutInput):
         return self.repository.save_workout(self.user.id, workout)
 
-    def activity(self, month: str):
+    def activity(self, month: str, group_id: UUID | None = None):
         start, end = month_bounds(month)
         days = [
             ActivityDay.model_validate(row)
-            for row in self.repository.activity(self.user.id, start, end)
+            for row in self.repository.activity(self.user.id, start, end, group_id)
         ]
         return MonthlyActivity(
             month=month,
@@ -59,6 +59,8 @@ class TrainingService:
         performed_on: date | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
+        exercise: str | None = None,
+        member_id: UUID | None = None,
     ):
         if performed_on is not None:
             validate_activity_date(performed_on)
@@ -68,7 +70,15 @@ class TrainingService:
             validate_activity_date(date_from)
             validate_activity_date(date_to)
         records = self.repository.workouts(
-            self.user.id, group_id, limit, offset, performed_on, date_from, date_to
+            self.user.id,
+            group_id,
+            limit,
+            offset,
+            performed_on,
+            date_from,
+            date_to,
+            exercise,
+            member_id,
         )
         return self.repository.with_bests(records)
 

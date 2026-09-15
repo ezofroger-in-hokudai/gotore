@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseHistoryMonth } from "./history-period-helper";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test("編集の競合・キャンセル・保存で新規下書きを保持し、削除を確認する", async ({ page }) => {
@@ -85,7 +86,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   );
   const openRecords = async () => {
     await navigate(page, "履歴");
-    await page.getByLabel("月", { exact: true }).fill("2026-01");
+    await chooseHistoryMonth(page, "2026-01");
     await page.getByRole("button", { name: "2026年1月1日、総負荷480kg、1件", exact: true }).click();
     await page.locator(".history-row").click();
   };
@@ -109,7 +110,9 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await expect(page.getByRole("status").filter({ hasText: "更新しました" })).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), draftKey)).toBe(draft);
   await page.getByRole("button", { name: "‹ 履歴", exact: true }).click();
-  await expect(page.getByLabel("月", { exact: true })).toHaveValue("2026-01");
+  await expect(page.locator('.activity-calendar:visible input[type="month"]')).toHaveValue(
+    "2026-01",
+  );
   await expect(
     page.getByRole("button", {
       name: "2026年1月1日、総負荷560kg、1件",
@@ -130,7 +133,9 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await page.getByRole("button", { name: "削除する", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(0);
   expect(await page.evaluate((key) => localStorage.getItem(key), memoKey)).toBeNull();
-  await expect(page.getByLabel("月", { exact: true })).toHaveValue("2026-01");
+  await expect(page.locator('.activity-calendar:visible input[type="month"]')).toHaveValue(
+    "2026-01",
+  );
   await expect(
     page.getByRole("button", {
       name: "2026年1月1日、記録なし、0件",

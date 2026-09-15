@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { moveHistoryMonth } from "./history-period-helper";
 import { mockTraining, navigate, openGroup } from "./mock-training";
 
 const retained = "更新できませんでした。前回の内容を表示しています。";
@@ -140,7 +141,7 @@ test("履歴とカレンダーは同じ取得先の値を保持し、別月と40
   ).toHaveCount(2);
   await expect(page.locator(".history-row")).toContainText("保持する種目");
   await expect(page.locator(".activity-totals")).toContainText("600");
-  await page.getByRole("button", { name: "前の月", exact: true }).click();
+  await moveHistoryMonth(page, -1);
   await expect(page.locator(".activity-totals")).not.toContainText("600");
   status = 404;
   await navigate(page, "設定");

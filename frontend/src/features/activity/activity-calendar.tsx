@@ -4,6 +4,8 @@ import { LoadingState } from "../loading/loading-state";
 
 import type { BodyPart, MonthlyActivity } from "@/lib/api";
 import { useState } from "react";
+import { PeriodPicker } from "../analytics/period-picker";
+import { usePeriodSwipe } from "../analytics/use-period-swipe";
 import { PART_FILTERS } from "../exercises/body-parts";
 import { today } from "../training/draft";
 import { ResourceError } from "../training/resource-error";
@@ -20,6 +22,7 @@ export function ActivityCalendar({
   refreshKey,
   active = true,
   prefetch = false,
+  scope = "",
 }: {
   month: string;
   onMonthChange: (value: string) => void;
@@ -28,12 +31,13 @@ export function ActivityCalendar({
   refreshKey: number;
   active?: boolean;
   prefetch?: boolean;
+  scope?: string;
 }) {
   const [parts, setParts] = useState<BodyPart[]>([]);
   const currentDay = today();
   const currentMonth = currentDay.slice(0, 7);
   const activity = useResource<MonthlyActivity>(
-    `/workouts/activity?month=${month}`,
+    `${scope}/workouts/activity?month=${month}`,
     refreshKey,
     active,
     true,
@@ -63,8 +67,14 @@ export function ActivityCalendar({
     onSelect("");
   }
 
+  const swipe = usePeriodSwipe((direction) => changeMonth(shiftMonth(month, direction)));
   return (
     <section className="panel activity-calendar" aria-label="活動カレンダー">
+      <PeriodPicker
+        anchor={`${month}-01`}
+        period="month"
+        onChange={(value) => changeMonth(value.slice(0, 7))}
+      />
       <fieldset
         className="activity-part-filters"
         data-tour="calendar"
@@ -87,36 +97,6 @@ export function ActivityCalendar({
           </button>
         ))}
       </fieldset>
-      <div className="activity-month">
-        <button
-          type="button"
-          className="secondary"
-          aria-label="前の月"
-          disabled={month <= "2000-01"}
-          onClick={() => changeMonth(shiftMonth(month, -1))}
-        >
-          ←
-        </button>
-        <label className="grow">
-          <span className="sr-only">月</span>
-          <input
-            type="month"
-            min="2000-01"
-            max={currentMonth}
-            value={month}
-            onChange={(event) => changeMonth(event.target.value)}
-          />
-        </label>
-        <button
-          type="button"
-          className="secondary"
-          aria-label="次の月"
-          disabled={month >= currentMonth}
-          onClick={() => changeMonth(shiftMonth(month, 1))}
-        >
-          →
-        </button>
-      </div>
       <ResourceError resource={activity} />
       {activity.loading && !activity.data && !activity.error ? (
         <LoadingState label="活動カレンダーを読み込み中" compact />
@@ -150,7 +130,7 @@ export function ActivityCalendar({
             <span key={day}>{day}</span>
           ))}
         </div>
-        <div className="activity-grid">
+        <div className="activity-grid" {...swipe}>
           {calendarDays(month).map((day, index) => {
             // biome-ignore lint/suspicious/noArrayIndexKey: 空白セルは固定の曜日位置を表す。
             if (!day) return <span key={`blank-${index}`} aria-hidden="true" />;

@@ -122,3 +122,11 @@ jobs:
 
       - name: Test record sharing across browsers
         run: make test-e2e
+
+      - name: Save unified history review images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-history-screenshots
+          path: frontend/test-results/unified-*.png
+          if-no-files-found: ignore

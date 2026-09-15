@@ -15,6 +15,7 @@ class AnalyticsRepository:
         window: AnalyticsWindow,
         exercise: str | None,
         group_id: UUID | None = None,
+        member_id: UUID | None = None,
     ):
         # 閲覧者の参加行をロックし、取得中の退出・除外と競合しないようにする。
         with self.connection.transaction():
@@ -27,7 +28,10 @@ class AnalyticsRepository:
                         WHERE s.workout_id = w.id AND s.group_id = %(group_id)s))"""
             else:
                 scope = "w.user_id = %(user_id)s"
+            if member_id is not None:
+                scope += " AND w.user_id = %(member_id)s"
             params = {
+                "member_id": member_id,
                 "user_id": user_id,
                 "group_id": group_id,
                 "exercise": exercise,

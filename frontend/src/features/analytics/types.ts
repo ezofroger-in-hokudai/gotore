@@ -56,8 +56,17 @@ export const units: Record<RankMetric, string> = {
   rm_growth: "kg",
   rm_percent: "%",
 };
-export function analyticsPath(scope: string, period: Period, offset: number, exercise: string) {
+export function analyticsPath(
+  scope: string,
+  period: Period,
+  offset: number,
+  exercise: string,
+  anchor = "",
+  member = "",
+) {
   const query = new URLSearchParams({ period, offset: String(offset) });
+  if (anchor) query.set("anchor", anchor);
+  if (member) query.set("member_id", member);
   if (exercise) query.set("exercise", exercise);
   return `${scope}/analytics?${query}`;
 }
