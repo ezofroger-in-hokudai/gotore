@@ -4,7 +4,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-StampKind = Literal["clap", "fire", "muscle", "eyes"]
+StampKind = Literal[
+    "clap", "fire", "muscle", "eyes",
+    "encourage", "push", "bad", "amazing", "praise", "tengu",
+]
 
 
 class StampItem(BaseModel):
@@ -28,7 +31,19 @@ class StampTarget(BaseModel):
     performed_on: date
 
 
+class StampSummary(BaseModel):
+    counts: dict[StampKind, int] = Field(default_factory=dict)
+    mine: list[StampKind]
+    can_send: bool
+
+
+class StampBatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workout_ids: list[UUID] = Field(min_length=1, max_length=50)
+
+
 class StampList(BaseModel):
+    counts: dict[StampKind, int] = Field(default_factory=dict)
     target: StampTarget | None = None
     items: list[StampItem]
     total: int

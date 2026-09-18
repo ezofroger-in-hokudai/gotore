@@ -1,4 +1,14 @@
+export const stampChoices = [
+  { id: "encourage", emoji: "💪", label: "がんばれ" },
+  { id: "push", emoji: "🔥", label: "まだまだ" },
+  { id: "bad", emoji: "👎", label: "バッド" },
+  { id: "amazing", emoji: "🤩", label: "すごい" },
+  { id: "praise", emoji: "👏", label: "えらい" },
+  { id: "tengu", emoji: "👺", label: "天狗" },
+] as const;
+
 export const stampKinds = [
+  ...stampChoices,
   { id: "clap", emoji: "👏", label: "おつかれ！" },
   { id: "fire", emoji: "🔥", label: "ナイス！" },
   { id: "muscle", emoji: "💪", label: "一緒にがんばろう" },
@@ -20,7 +30,13 @@ export type StampItem = {
   announced: boolean;
   mine: boolean;
 };
+export type StampSummary = {
+  counts: Partial<Record<StampKind, number>>;
+  mine: StampKind[];
+  can_send: boolean;
+};
 export type StampList = {
+  counts?: Partial<Record<StampKind, number>>;
   target?: { group_name: string; performed_on: string } | null;
   items: StampItem[];
   total: number;

@@ -61,6 +61,18 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
   });
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/stamps/summary"))
+      return route.fulfill({
+        json: Object.fromEntries(
+          route
+            .request()
+            .postDataJSON()
+            .workout_ids.map((id: string) => [
+              id,
+              { counts: {}, mine: [], can_send: id !== state.session?.id },
+            ]),
+        ),
+      });
     if (path === "/api/stamps/inbox")
       return route.fulfill({
         json: {
