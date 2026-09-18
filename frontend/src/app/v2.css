@@ -3283,3 +3283,10 @@
 .recording-memos {
   border-radius: 12px;
 }
+/* 文字拡大時も終了操作を省略せず、幅の中で折り返す。 */
+.recording-view .recording-header .finish-training {
+  flex-shrink: 1;
+  max-width: 45%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
