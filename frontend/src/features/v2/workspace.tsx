@@ -164,7 +164,7 @@ function WorkspaceContent({ session }: { session: Session }) {
       )}
       <header className="app-header">
         <button className="wordmark" type="button" onClick={() => navigate("home")}>
-          GO <span>TORE</span>
+          E-GO<span>TORE</span>
         </button>
       </header>
       <main className="main-content">

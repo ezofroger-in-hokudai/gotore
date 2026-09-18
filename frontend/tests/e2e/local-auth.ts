@@ -19,7 +19,7 @@ export function localAuth() {
     url.port !== "59321" ||
     url.protocol !== "http:"
   ) {
-    throw new Error("アカウント作成テストはGO TOREのローカルSupabase専用です。");
+    throw new Error("アカウント作成テストはE-GOTOREのローカルSupabase専用です。");
   }
   if (!data.SERVICE_ROLE_KEY || !data.ANON_KEY) throw new Error("ローカルAuthキーがありません。");
   const options = { auth: { persistSession: false, autoRefreshToken: false } };

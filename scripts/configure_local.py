@@ -25,7 +25,7 @@ def main():
         if urlparse(data[name]).hostname not in {"127.0.0.1", "localhost", "::1"}:
             raise SystemExit("このコマンドはローカルSupabase専用です。")
     files = {
-        "backend/.env": f"APP_NAME=GO TORE API\nDATABASE_URL={data['DB_URL']}\n"
+        "backend/.env": f"APP_NAME=E-GOTORE API\nDATABASE_URL={data['DB_URL']}\n"
         f"SUPABASE_URL={data['API_URL']}\nSUPABASE_ANON_KEY={data['ANON_KEY']}\n",
         "frontend/.env.local": "BACKEND_INTERNAL_URL=http://localhost:8000\n"
         f"NEXT_PUBLIC_SUPABASE_URL={data['API_URL']}\n"

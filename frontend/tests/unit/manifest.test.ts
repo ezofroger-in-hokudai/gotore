@@ -4,8 +4,8 @@ import manifest from "../../src/app/manifest";
 
 test("ホーム画面の名前・起動先・表示モードとアイコンを定義する", () => {
   const value = manifest();
-  assert.equal(value.name, "GO TORE");
-  assert.equal(value.short_name, "GO TORE");
+  assert.equal(value.name, "E-GOTORE");
+  assert.equal(value.short_name, "E-GOTORE");
   assert.equal(value.start_url, "/");
   assert.equal(value.scope, "/");
   assert.equal(value.display, "standalone");

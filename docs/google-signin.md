@@ -26,8 +26,8 @@
 
 ### 1. Google CloudでWeb用のログインを登録する
 
-1. [Google Cloud Console](https://console.cloud.google.com/)を開く。上部のプロジェクト選択からGO TORE用のプロジェクトを選ぶか「新しいプロジェクト」で作成する。AndroidアプリやGoogle Playへの登録は不要。
-2. [Google Auth Platform](https://console.cloud.google.com/auth/overview)を開き、「開始」が出たらアプリ名をGO TORE、サポートメールと連絡先を管理者が受け取れるアドレスにする。
+1. [Google Cloud Console](https://console.cloud.google.com/)を開く。上部のプロジェクト選択からE-GOTORE用のプロジェクトを選ぶか「新しいプロジェクト」で作成する。AndroidアプリやGoogle Playへの登録は不要。
+2. [Google Auth Platform](https://console.cloud.google.com/auth/overview)を開き、「開始」が出たらアプリ名をE-GOTORE、サポートメールと連絡先を管理者が受け取れるアドレスにする。
 3. 「対象（Audience）」を **外部（External）** にする。「内部（Internal）」は組織内限定なので使わない。
 4. 「データアクセス（Data Access）」のスコープは **openid / …/auth/userinfo.email / …/auth/userinfo.profile** の3つだけにする。Gmail、Drive、Calendarなどは追加しない。
 5. 「ブランディング（Branding）」のホームページは `https://egotore.com/`、承認済みドメインは `egotore.com`。プライバシーポリシー等を入力する場合は実在して内容が正しい公開ページを使い、架空のURLを入れない。今回はカスタムロゴを追加しない。Googleから追加確認を要求された場合は要求内容を確認し、未確認のブランドを審査済みと扱わない。
@@ -53,7 +53,7 @@
 
 ### 3. VercelでGoogleボタンを表示する
 
-1. [Vercel Dashboard](https://vercel.com/dashboard) → GO TOREのプロジェクト → **Settings → Environment Variables**。
+1. [Vercel Dashboard](https://vercel.com/dashboard) → E-GOTOREのプロジェクト → **Settings → Environment Variables**。
 2. Productionに `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` をConfigとして設定する（公開してよい切替値）。GoogleのClient SecretはVercelへ設定せずSupabase側だけで扱う。
 3. 本PRがmainに統合されたコードを再デプロイする。NEXT_PUBLIC_値はビルド時に取り込まれるため、環境変数を保存しただけではボタンは変わらない。
 4. `https://egotore.com/` を開き、「Googleで続ける」が表示されることを確認する。
