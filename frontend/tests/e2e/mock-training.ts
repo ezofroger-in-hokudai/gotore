@@ -342,3 +342,28 @@ export async function openRecord(page: Page) {
   await navigate(page, "履歴");
   await page.locator(".history-row").first().click();
 }
+
+export async function showRecordingMemos(page: Page) {
+  const toggle = page.getByRole("button", { name: "メモを常に表示", exact: true });
+  if (await toggle.isVisible()) await toggle.click();
+}
+
+export async function expectRecordingBest(page: Page, value: string) {
+  const focused = (await page.locator(":focus").count())
+    ? await page.locator(":focus").elementHandle()
+    : null;
+  await page.locator(".exercise-information").click();
+  await expect(page.locator(".personal-bests")).toContainText(value);
+  await page
+    .getByRole("dialog", { name: "種目情報", exact: true })
+    .getByRole("button", { name: "閉じる", exact: true })
+    .click();
+  await expect(page.getByRole("dialog", { name: "種目情報", exact: true })).toHaveCount(0);
+  if (focused && (await focused.evaluate((element) => element.isConnected))) await focused.focus();
+}
+
+export async function openRecordingCatalog(page: Page) {
+  if (!(await page.getByRole("button", { name: "種目一覧", exact: true }).isVisible()))
+    await page.locator(".exercise-information").click();
+  await page.getByRole("button", { name: "種目一覧", exact: true }).click();
+}

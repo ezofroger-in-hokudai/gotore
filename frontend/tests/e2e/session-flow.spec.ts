@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { showRecordingMemos } from "./mock-training";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test("保存の応答待ちでも連続追加・編集でき、順序通り同期する", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
+  await showRecordingMemos(page);
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -47,6 +49,7 @@ test("保存の応答待ちでも連続追加・編集でき、順序通り同�
 test("未送信の複数セットは再起動後も残り、再送できる", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
+  await showRecordingMemos(page);
   state.failSave = true;
   for (const weight of [70, 75]) {
     await page.getByRole("spinbutton", { name: "重量", exact: true }).fill(String(weight));
@@ -55,6 +58,7 @@ test("未送信の複数セットは再起動後も残り、再送できる", as
   await expect(page.locator(".sync-status")).toContainText("未送信");
   await page.reload();
   await openTraining(page);
+  await showRecordingMemos(page);
   await expect(page.getByRole("heading", { name: "SET 3", exact: true })).toBeVisible();
   expect(state.saves).toBe(0);
   state.failSave = false;
@@ -65,6 +69,7 @@ test("未送信の複数セットは再起動後も残り、再送できる", as
 test("メモと保存がスクロールなしで見え、指を離す前に重量が連続更新する", async ({ page }) => {
   await mockTraining(page);
   await startTraining(page);
+  await showRecordingMemos(page);
   await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "前回のメモを編集", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "今回のメモを編集", exact: true })).toBeVisible();
@@ -109,6 +114,7 @@ test("常時表示の種目メモは再起動しても下書きと競合元revis
     return route.fulfill({ json: memo });
   });
   await startTraining(page);
+  await showRecordingMemos(page);
   await page.getByRole("button", { name: "種目メモを編集", exact: true }).click();
   const field = page.getByRole("textbox", { name: "種目メモ", exact: true });
   await expect(field).toHaveValue("肩甲骨を寄せる");
@@ -116,6 +122,7 @@ test("常時表示の種目メモは再起動しても下書きと競合元revis
   memo = { content: "別端末で修正", revision: 2 };
   await page.reload();
   await openTraining(page);
+  await showRecordingMemos(page);
   await expect(field).toHaveValue("足の位置を確認する");
   await page.getByRole("button", { name: "種目メモを保存", exact: true }).click();
   await expect(page.locator(".inline-memo").getByRole("alert")).toContainText("変更済み");
@@ -131,6 +138,7 @@ test("常時表示の種目メモは再起動しても下書きと競合元revis
 test("文字拡大時は縦に読めるまま、入力と終了を隠さない", async ({ page }) => {
   await mockTraining(page);
   await startTraining(page);
+  await showRecordingMemos(page);
   await page.setViewportSize({ width: 320, height: 720 });
   await page.evaluate(() => {
     const nodes = Array.from(
@@ -177,6 +185,7 @@ test("メモは本文だけを表示してタッチで編集し、空の前回�
     return route.fulfill({ json: memo });
   });
   await startTraining(page);
+  await showRecordingMemos(page);
   const exercise = page.getByRole("button", { name: "種目メモを編集", exact: true });
   const previous = page.getByRole("button", { name: "前回のメモを編集", exact: true });
   await expect(exercise).toHaveText("胸を張って押す");
@@ -206,6 +215,7 @@ test("メモは本文だけを表示してタッチで編集し、空の前回�
   previousMemo = { content: "   ", revision: 2 };
   await page.reload();
   await openTraining(page);
+  await showRecordingMemos(page);
   await expect(exercise).toBeVisible();
   await expect(previous).toHaveCount(0);
 });

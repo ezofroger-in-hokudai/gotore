@@ -1,10 +1,12 @@
 import { type ElementHandle, expect, test } from "@playwright/test";
+import { expectRecordingBest, showRecordingMemos } from "./mock-training";
 import { mockTraining, navigate, openTraining } from "./mock-training";
 
 test("開始前は入力を出さず、開始待ちの種目選択と入力で保存要求を出さない", async ({ page }) => {
   const state = await mockTraining(page);
   let focusedField: ElementHandle<HTMLElement | SVGElement> | null = null;
   await openTraining(page);
+  await showRecordingMemos(page);
   await expect(page.getByRole("button", { name: /^スクワット/ })).toHaveCount(0);
   await expect(page.getByRole("spinbutton")).toHaveCount(0);
   let release = () => {};
@@ -37,7 +39,7 @@ test("開始前は入力を出さず、開始待ちの種目選択と入力で�
       .elementHandle();
     await page.getByRole("spinbutton", { name: "回数", exact: true }).press("Enter");
     await expect.poll(() => comparisonStarted).toBe(true);
-    await expect(page.locator(".personal-bests")).toContainText("80");
+    await expectRecordingBest(page, "80");
     expect(state.session).toBeNull();
     expect(state.saves).toBe(0);
   } finally {
@@ -63,6 +65,7 @@ test("種目をタップする前に比較を取得し、選択と再選択で�
 }) => {
   await mockTraining(page);
   await openTraining(page);
+  await showRecordingMemos(page);
   const reads: string[] = [];
   await page.route("**/api/exercises/context?*", (route) => {
     const url = new URL(route.request().url());
@@ -73,12 +76,15 @@ test("種目をタップする前に比較を取得し、選択と再選択で�
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   await expect.poll(() => reads.includes("スクワット")).toBe(true);
   await page.getByRole("button", { name: /^スクワット/ }).click();
+  await showRecordingMemos(page);
   await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page.getByRole("button", { name: /^ベンチプレス/ }).click();
+  await showRecordingMemos(page);
   await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page.getByRole("button", { name: /^スクワット/ }).click();
+  await showRecordingMemos(page);
   await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeEnabled();
   expect(reads.filter((name) => name === "スクワット")).toHaveLength(1);
 });
@@ -86,8 +92,10 @@ test("種目をタップする前に比較を取得し、選択と再選択で�
 test("非表示中の候補取得を止め、復帰後の失敗では古い比較を隠す", async ({ page }) => {
   await mockTraining(page);
   await openTraining(page);
+  await showRecordingMemos(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   await page.getByRole("button", { name: /^ベンチプレス/ }).click();
+  await showRecordingMemos(page);
   await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeEnabled();
   await page.evaluate(() => {
     Object.defineProperty(document, "hidden", { configurable: true, value: true });
@@ -106,16 +114,17 @@ test("非表示中の候補取得を止め、復帰後の失敗では古い比�
     Object.defineProperty(document, "hidden", { configurable: true, value: false });
     document.dispatchEvent(new Event("visibilitychange"));
   });
-  await expect(page.locator(".session-context").getByRole("alert")).toContainText(
+  await expect(page.locator(".session-screen").getByRole("alert")).toContainText(
     "比較を取得できません",
   );
-  await expect(page.locator(".personal-bests")).toContainText("—");
+  await expectRecordingBest(page, "—");
   await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toHaveCount(0);
   await page.unroute("**/api/exercises/context?*");
   await page
-    .locator(".session-context")
+    .locator(".session-screen")
     .getByRole("button", { name: "再試行", exact: true })
     .click();
+  await showRecordingMemos(page);
   await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeEnabled();
 });
 
@@ -125,6 +134,7 @@ for (const savedInput of [true, false]) {
   }) => {
     const state = await mockTraining(page);
     await openTraining(page);
+    await showRecordingMemos(page);
     await expect(
       page.getByRole("button", { name: "トレーニングを開始", exact: true }),
     ).toBeEnabled();

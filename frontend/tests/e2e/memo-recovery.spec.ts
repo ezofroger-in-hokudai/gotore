@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { showRecordingMemos } from "./mock-training";
 import { mockTraining, openRecord, startTraining } from "./mock-training";
 
 test("未保存メモを終了時に案内し、履歴でも元の版を保って復元する", async ({ page }) => {
@@ -20,6 +21,7 @@ test("未保存メモを終了時に案内し、履歴でも元の版を保っ�
     return route.fulfill({ json: memo });
   });
   await startTraining(page);
+  await showRecordingMemos(page);
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect.poll(() => state.saves).toBe(1);
   const key = `gotore:memo-input:v1:${state.user.id}:/workouts/${state.session?.id}/memo`;
@@ -86,6 +88,7 @@ test("未保存メモを終了時に案内し、履歴でも元の版を保っ�
 test("端末保存できないメモを履歴から復元できると案内しない", async ({ page }) => {
   await mockTraining(page);
   await startTraining(page);
+  await showRecordingMemos(page);
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;

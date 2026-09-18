@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { openRecordingCatalog } from "./mock-training";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 async function catalog(page: import("@playwright/test").Page) {
-  await page.getByRole("button", { name: "種目一覧", exact: true }).click();
+  await openRecordingCatalog(page);
 }
 test("種目追加・削除の失敗を再試行でき、削除後も入力を保持する", async ({ page }) => {
   const state = await mockTraining(page);
@@ -19,7 +20,7 @@ test("種目追加・削除の失敗を再試行でき、削除後も入力を�
   await page.getByRole("button", { name: "追加", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("追加しました");
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
-  await page.getByRole("button", { name: "種目を変更", exact: true }).click();
+  await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page.getByRole("button", { name: /^ケーブルロウ/ }).click();
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("30");
   await catalog(page);
@@ -80,7 +81,7 @@ test("空白・長すぎる名前を送信せず、種目ごとにセットを�
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "種目を変更", exact: true }).click();
+  await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page.getByRole("button", { name: /^スクワット/ }).click();
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect(page.getByText("保存しました", { exact: true })).toBeVisible();

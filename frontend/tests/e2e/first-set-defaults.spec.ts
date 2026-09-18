@@ -31,7 +31,7 @@ test("前回の最初の重量・回数を初期値にし、入力だけでは�
   await expect.poll(() => state.session?.exercises[0]?.sets).toEqual([{ weight: 65, reps: 8 }]);
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page.getByRole("button", { name: /^スクワット/ }).click();
-  await page.getByRole("button", { name: "種目を変更", exact: true }).click();
+  await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page.getByRole("button", { name: /^ベンチプレス/ }).click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("65");
 });
@@ -163,7 +163,7 @@ test("切り替え前の種目の遅い応答で現在の初期値を変えな�
   });
   try {
     await startTraining(page);
-    await page.getByRole("button", { name: "種目を変更", exact: true }).click();
+    await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
     await page.getByRole("button", { name: /^スクワット/ }).click();
     const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
     await expect(weight).toHaveValue("100");

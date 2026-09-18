@@ -3,10 +3,12 @@ import { mockTraining, navigate, openTraining, startTraining } from "./mock-trai
 
 test.use({ viewport: { width: 390, height: 720 } });
 
-test("説明行を省いてRMを横に並べ、右の主ボタンで次セットへ進む", async ({ page }) => {
+test("今回の値に前回を添え、右の主ボタンで次セットへ進む", async ({ page }) => {
   await mockTraining(page);
   await startTraining(page);
   await expect(page.getByText("重量 × 回数 / RM", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await expect(page.locator(".rm-estimate")).toBeVisible();
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 720 });
     const primary = await page
@@ -14,11 +16,12 @@ test("説明行を省いてRMを横に並べ、右の主ボタンで次セット
       .boundingBox();
     const next = await page.getByRole("button", { name: "次の種目へ", exact: true }).boundingBox();
     expect(primary?.x).toBeGreaterThan(next?.x ?? 0);
-    const value = page.locator(".set-measurement").first();
-    const weight = await value.locator("span").boundingBox();
-    const rm = await value.locator("small").boundingBox();
-    expect(Math.abs((weight?.y ?? 0) - (rm?.y ?? 0))).toBeLessThan(6);
-    expect(rm?.x).toBeGreaterThan(weight?.x ?? 0);
+    const row = page.locator(".comparison-row").first();
+    const current = await row.locator(".set-measurement").boundingBox();
+    const previous = await row.locator(".previous-set").boundingBox();
+    expect(Math.abs((current?.y ?? 0) - (previous?.y ?? 0))).toBeLessThan(6);
+    expect(previous?.x).toBeGreaterThan(current?.x ?? 0);
+    await expect(row.locator(".previous-set")).toContainText("前回 80kg × 8回");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
 });
