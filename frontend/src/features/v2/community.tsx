@@ -127,7 +127,7 @@ export function CommunityHome({
           グループ一覧
         </button>
       </div>
-      <StampInboxButton groupId={selected || undefined} />
+      <StampInboxButton groupId={selected || undefined} active={active} />
       {trainingAction}
       {loading ? (
         <>
@@ -704,7 +704,7 @@ export function CommunityScreen({
             <>
               <ResourceError resource={detail} />
               <h1>{group.name}</h1>
-              <StampInboxButton groupId={selected} />
+              <StampInboxButton groupId={selected} active={active} />
 
               {mode === "detail" && (
                 <>

@@ -4,6 +4,7 @@ import { LoadingState } from "../loading/loading-state";
 import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
+import { StampSummaryRow } from "./stamp-summary-row";
 import { type StampList, inboxPath, stampKinds } from "./types";
 
 export function StampInbox({
@@ -134,14 +135,30 @@ export function StampInbox({
   );
 }
 
-export function StampInboxButton({ groupId }: { groupId?: string }) {
+export function StampInboxButton({
+  groupId,
+  active = true,
+}: { groupId?: string; active?: boolean }) {
   const [open, setOpen] = useState(false);
+  const resource = useResource<StampList>(inboxPath(groupId), 0, 10000, false, { enabled: active });
   return (
-    <>
-      <button type="button" className="text-button stamp-inbox-entry" onClick={() => setOpen(true)}>
-        届いたスタンプ
-      </button>
-      {open && <StampInbox groupId={groupId} onClose={() => setOpen(false)} />}
-    </>
+    <section className="stamp-inbox-summary" aria-label="届いたスタンプ">
+      <span className="stamp-live-empty">届いたスタンプ</span>
+      <StampSummaryRow
+        data={resource.error ? null : resource.data}
+        onOpen={() => setOpen(true)}
+        detailsLabel="届いたスタンプ"
+        onRetry={resource.error ? resource.retry : undefined}
+      />
+      {open && active && (
+        <StampInbox
+          groupId={groupId}
+          onClose={() => {
+            setOpen(false);
+            resource.retry();
+          }}
+        />
+      )}
+    </section>
   );
 }

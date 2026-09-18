@@ -160,6 +160,7 @@ def test_inbox_pagination_only_marks_visible_ids(client, connection):
         )
     first = client.get("/api/stamps/inbox").json()
     assert first["total"] == 52 and len(first["items"]) == 50 and first["has_more"]
+    assert first["counts"]["clap"] == 52
     client.post("/api/stamps/seen", json={"ids": [r["id"] for r in first["items"]], "read": True})
     last = client.get("/api/stamps/inbox?offset=50").json()
     assert last["unread"] == 2 and len(last["items"]) == 2 and not last["has_more"]

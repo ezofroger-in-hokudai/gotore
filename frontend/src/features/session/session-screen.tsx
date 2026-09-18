@@ -396,7 +396,7 @@ function ActiveTraining({
           onClick={() => setFinishOpen(true)}
         >
           <span aria-hidden="true">□ </span>
-          {selecting ? "トレーニング終了" : "終了"}
+          トレーニング終了
         </button>
       </div>
       {selecting && session && (

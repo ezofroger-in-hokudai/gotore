@@ -3187,3 +3187,106 @@
 .stamp-job button {
   margin-right: 8px;
 }
+
+.stamp-live-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 48px;
+}
+.stamp-live-list {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.stamp-live-list .inline-stamp-touch {
+  flex: 0 0 auto;
+}
+.stamp-live-list .inline-stamp-pill {
+  white-space: nowrap;
+}
+.stamp-live-details {
+  position: relative;
+  flex: 0 0 48px;
+}
+.stamp-live-unread {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.stamp-live-new .inline-stamp-pill {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.stamp-live-empty {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.stamp-live-error {
+  color: var(--accent);
+  font-size: 12px;
+}
+.stamp-receipt-slot.stamp-live {
+  min-height: 48px;
+  min-width: 0;
+}
+.stamp-inbox-summary {
+  margin-bottom: 10px;
+  min-width: 0;
+}
+.stamp-result .stamp-live-row {
+  margin: 8px 0;
+}
+.v2-app .stamp-target,
+.v2-sheet .stamp-target,
+.v2-app .stamp-inbox-row,
+.v2-sheet .stamp-inbox-row,
+.v2-app .stamp-person,
+.v2-sheet .stamp-person {
+  border-radius: 14px;
+}
+.v2-app .stamp-inbox-row,
+.v2-sheet .stamp-inbox-row,
+.v2-app .stamp-person,
+.v2-sheet .stamp-person {
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.inline-stamp-touch,
+.inline-stamp-choice {
+  border-radius: 999px;
+}
+.v2-app .stamp-inbox-emoji,
+.v2-sheet .stamp-inbox-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+  border-radius: 999px;
+  background: var(--track);
+}
+.recording-view .memo-toggle {
+  border-radius: 12px;
+}
+.recording-memos {
+  border-radius: 12px;
+}
+/* 文字拡大時も終了操作を省略せず、幅の中で折り返す。 */
+.recording-view .recording-header .finish-training {
+  flex-shrink: 1;
+  max-width: 45%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
