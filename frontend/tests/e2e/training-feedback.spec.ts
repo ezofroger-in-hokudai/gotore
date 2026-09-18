@@ -35,7 +35,7 @@ test("タップ後も色が戻り、受付セットと次の番号・保存待�
   expect(state.session?.exercises[0].sets).toHaveLength(2);
 });
 
-test("種目追加はリスト末尾、次種目と終了は枠のあるボタンで操作できる", async ({ page }) => {
+test("種目追加はリスト末尾、次種目と終了を押しやすいボタンで操作できる", async ({ page }) => {
   await mockTraining(page);
   await startTraining(page);
   const next = page.getByRole("button", { name: "次の種目へ", exact: true });
@@ -46,7 +46,9 @@ test("種目追加はリスト末尾、次種目と終了は枠のあるボタ�
     await expect(next).toBeInViewport();
     await expect(finish).toBeInViewport();
     await expect(next).toHaveCSS("border-top-style", "solid");
-    await expect(finish).toHaveCSS("border-top-style", "solid");
+    const finishBox = await finish.boundingBox();
+    expect(finishBox?.width).toBeGreaterThanOrEqual(48);
+    expect(finishBox?.height).toBeGreaterThanOrEqual(48);
     const a = await save.boundingBox();
     const b = await next.boundingBox();
     expect(a?.y).toBe(b?.y);
