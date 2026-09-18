@@ -2,7 +2,8 @@ import { api } from "@/lib/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useResource } from "../training/use-resource";
 import { StampInbox } from "./inbox";
-import { type StampItem, type StampList, inboxPath, stampKinds } from "./types";
+import { StampSummaryRow } from "./stamp-summary-row";
+import { type StampItem, type StampList, inboxPath } from "./types";
 
 export function StampReceipt({
   workoutId,
@@ -66,47 +67,20 @@ export function StampReceipt({
   const latest = visibleFlash[0];
   return (
     <section
-      className={live ? "stamp-receipt-slot" : "stamp-result"}
+      className={live ? "stamp-receipt-slot stamp-live" : "stamp-result"}
       aria-label={live ? "記録中のスタンプ" : "今回届いたスタンプ"}
     >
       {!live && <h2>今回届いたスタンプ</h2>}
-      <button
-        type="button"
-        className={`stamp-receipt${latest ? " stamp-arrived" : ""}`}
-        onClick={() => setOpen(true)}
-      >
-        <span className="stamp-receipt-icon">
-          {latest ? stampKinds.find((s) => s.id === latest.kind)?.emoji : "♡"}
-        </span>
-        <span className="stamp-receipt-copy">
-          {latest
-            ? `${latest.display_name}から${visibleFlash.length > 1 ? ` ほか${visibleFlash.length - 1}件` : ""}`
-            : "届いたスタンプ"}
-          <small>
-            {latest ? latest.group_name : data ? `${data.people}人から ${data.total}個` : ""}
-          </small>
-        </span>
-        <span className="stamp-unread">{data?.unread ? `未読 ${data.unread}` : "見る"} ›</span>
-      </button>
+      <StampSummaryRow
+        data={data}
+        newKinds={visibleFlash.map((item) => item.kind)}
+        onOpen={() => setOpen(true)}
+        onRetry={resource.error ? resource.retry : undefined}
+        onRetryAcknowledgement={ackError ? () => void acknowledge() : undefined}
+      />
       <span className="stamp-sr" aria-live="polite">
         {latest ? `${latest.display_name}からスタンプが届きました` : ""}
       </span>
-      {resource.error && (
-        <p className="error stamp-receipt-error" role="alert">
-          スタンプを取得できません
-          <button type="button" onClick={resource.retry}>
-            再試行
-          </button>
-        </p>
-      )}
-      {ackError && (
-        <p className="error stamp-receipt-error">
-          受信状態を保存できません
-          <button type="button" onClick={() => void acknowledge()}>
-            再試行
-          </button>
-        </p>
-      )}
       {open && active && (
         <StampInbox
           workoutId={workoutId}

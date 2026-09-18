@@ -78,15 +78,19 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
     await expect(panel).toHaveCount(0);
     await pageA.bringToFront();
     const receipt = pageA.getByRole("region", { name: "記録中のスタンプ", exact: true });
-    await expect(receipt).toContainText("ミオから", { timeout: 20000 });
-    await expect(receipt).toContainText("未読 1");
+    await expect(
+      receipt.getByRole("button", { name: "えらい 1件の詳細", exact: true }),
+    ).toBeVisible({ timeout: 20000 });
+    await expect(
+      receipt.getByRole("button", { name: /届いたスタンプの詳細/ }),
+    ).toHaveAccessibleName("届いたスタンプの詳細・未読1件");
     await expect(pageA.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("62.5");
     expect(
       (await pageA.getByRole("spinbutton", { name: "重量", exact: true }).boundingBox())?.y,
     ).toBe(before?.y);
     await pageA.screenshot({ path: "test-results/stamps-arrival.png", fullPage: true });
-    await expect(receipt).not.toContainText("ミオから", { timeout: 8000 });
-    await receipt.getByRole("button").click();
+    await expect(receipt.locator(".stamp-live-new")).toHaveCount(0, { timeout: 8000 });
+    await receipt.getByRole("button", { name: /届いたスタンプの詳細/ }).click();
     const inbox = pageA.getByRole("dialog", { name: "今回届いたスタンプ", exact: true });
     await expect(inbox).toContainText("ミオ");
     await pageA.screenshot({ path: "test-results/stamps-inbox.png", fullPage: true });
@@ -104,11 +108,13 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
       )
       .toBe(0);
     await inbox.getByRole("button", { name: "閉じる", exact: true }).click();
-    await expect(receipt).not.toContainText("未読");
+    await expect(
+      receipt.getByRole("button", { name: /届いたスタンプの詳細/ }),
+    ).toHaveAccessibleName("届いたスタンプの詳細");
     await pageB.bringToFront();
     await pageB.getByRole("button", { name: "えらい 1件", exact: true }).click();
     await pageA.bringToFront();
-    await expect(receipt).toContainText("0個", { timeout: 20000 });
+    await expect(receipt).toContainText("スタンプなし", { timeout: 20000 });
     await pageA.setViewportSize({ width: 320, height: 720 });
     for (const kind of ["fire", "muscle", "eyes"])
       expect(
@@ -119,14 +125,14 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
           )
         ).ok(),
       ).toBe(true);
-    await expect(receipt).toContainText("ほか2件", { timeout: 20000 });
+    await expect(receipt.locator(".stamp-live-list button")).toHaveCount(3, { timeout: 20000 });
     expect(await pageA.evaluate(() => document.documentElement.scrollHeight)).toBe(720);
     await expect(
       pageA.getByRole("button", { name: "トレーニング終了", exact: true }),
     ).toBeInViewport({ ratio: 1 });
     await pageA.screenshot({ path: "test-results/stamps-compact.png", fullPage: true });
     await pageA.setViewportSize({ width: 390, height: 844 });
-    await receipt.getByRole("button").click();
+    await receipt.getByRole("button", { name: /届いたスタンプの詳細/ }).click();
     await expect(inbox.locator(".stamp-inbox-row")).toHaveCount(3);
     await inbox.getByRole("button", { name: "閉じる", exact: true }).click();
     await pageA.getByRole("button", { name: "トレーニング終了", exact: true }).click();
@@ -135,8 +141,10 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
       .getByRole("button", { name: "終了する", exact: true })
       .click();
     await expect(
-      pageA.getByRole("region", { name: "今回届いたスタンプ", exact: true }),
-    ).toContainText("3個");
+      pageA
+        .getByRole("region", { name: "今回届いたスタンプ", exact: true })
+        .locator(".stamp-live-list button"),
+    ).toHaveCount(3);
     await pageA.screenshot({ path: "test-results/stamps-result.png", fullPage: true });
     for (const width of [320, 390, 430]) {
       await pageA.setViewportSize({ width, height: 844 });
