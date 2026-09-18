@@ -80,6 +80,15 @@ export function useGroupActivity(
   displayed.current = { path, data };
   return {
     data,
+    card: (id: string) => {
+      const cached = cache.read(`/groups/${id}/activity`);
+      const fresh = cached?.data && Date.now() - cached.savedAt < 60_000;
+      return {
+        data: fresh ? (cached.data ?? null) : null,
+        error: cached?.error ?? "",
+        refreshing: !!cached?.loading || !!cached?.error || !fresh,
+      };
+    },
     loading: entry?.loading ?? !!path,
     refreshing: !!data && (data === unverified.current || !!entry?.error || changedPath),
     error: entry?.error ?? "",
