@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.dependencies import training_service
 from app.infrastructure.stamps import StampRepository
-from app.schemas.stamps import StampKind, StampList, StampSeen
+from app.schemas.stamps import StampBatch, StampKind, StampList, StampSeen, StampSummary
 from app.services.training import TrainingService
 
 router = APIRouter(tags=["stamps"])
@@ -47,3 +47,10 @@ def inbox(
 def seen(body: StampSeen, service: Service):
     StampRepository(service.repository).seen(service.user.id, body.ids, body.read)
     return Response(status_code=204)
+
+
+@router.post("/groups/{group_id}/stamps/summary", response_model=dict[UUID, StampSummary])
+def summaries(group_id: UUID, body: StampBatch, service: Service):
+    return StampRepository(service.repository).summaries(
+        service.user.id, group_id, body.workout_ids
+    )

@@ -57,21 +57,24 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
     const before = await pageA.getByRole("spinbutton", { name: "重量", exact: true }).boundingBox();
     await pageB.bringToFront();
     await pageB.reload();
-    await pageB.getByRole("button", { name: "タクミの記録のスタンプを開く", exact: true }).click();
+    await pageB.getByRole("button", { name: "タクミの記録にスタンプを追加", exact: true }).click();
     const panel = pageB.getByRole("dialog", { name: "スタンプ", exact: true });
-    await expect(panel.locator(".stamp-picker button")).toHaveCount(4);
+    await expect(panel.locator(".inline-stamp-choice")).toHaveCount(6);
     await pageB.screenshot({ path: "test-results/stamps-picker.png", fullPage: true });
-    const endpoint = `/api/groups/${group.id}/workouts/${active.id}/stamps/clap`;
+    const endpoint = `/api/groups/${group.id}/workouts/${active.id}/stamps/praise`;
     let fail = true;
     await pageB.route(`**${endpoint}`, (route) =>
       fail
         ? route.fulfill({ status: 503, json: { detail: "送れませんでした" } })
         : route.continue(),
     );
-    await panel.getByRole("button", { name: "👏 を送る", exact: true }).click();
-    await expect(panel.getByRole("alert")).toContainText("送れませんでした");
+    await panel.getByRole("button", { name: "えらい", exact: true }).click();
+    await expect(pageB.locator(".inline-stamp-error")).toContainText("送れませんでした");
     fail = false;
-    await panel.getByRole("button", { name: "再試行", exact: true }).click();
+    await pageB
+      .locator(".inline-stamp-error")
+      .getByRole("button", { name: "再試行", exact: true })
+      .click();
     await expect(panel).toHaveCount(0);
     await pageA.bringToFront();
     const receipt = pageA.getByRole("region", { name: "記録中のスタンプ", exact: true });
@@ -102,11 +105,8 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
       .toBe(0);
     await inbox.getByRole("button", { name: "閉じる", exact: true }).click();
     await expect(receipt).not.toContainText("未読");
-    await pageB.getByRole("button", { name: "タクミの記録のスタンプを開く", exact: true }).click();
-    await expect(
-      panel.getByRole("button", { name: "選んだスタンプを取り消す", exact: true }),
-    ).toBeVisible();
-    await panel.getByRole("button", { name: "選んだスタンプを取り消す", exact: true }).click();
+    await pageB.bringToFront();
+    await pageB.getByRole("button", { name: "えらい 1件", exact: true }).click();
     await pageA.bringToFront();
     await expect(receipt).toContainText("0個", { timeout: 20000 });
     await pageA.setViewportSize({ width: 320, height: 720 });

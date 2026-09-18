@@ -24,7 +24,6 @@ export function SharedWorkoutDetail({
         </p>
       ) : record.data ? (
         <>
-          <RecordList records={[record.data]} empty="" />
           {groupId && (
             <StampControl
               key={`${groupId}:${record.data.id}`}
@@ -33,6 +32,7 @@ export function SharedWorkoutDetail({
               name={record.data.display_name}
             />
           )}
+          <RecordList records={[record.data]} empty="" />
         </>
       ) : (
         <LoadingState label="記録の詳細を読み込み中" />

@@ -102,6 +102,15 @@ export function HistoryBrowser({
             ‹ 履歴
           </button>
           <ResourceError resource={records} />
+          {scope && (
+            <StampControl
+              active={active}
+              key={`${scope}:${current.id}`}
+              groupId={scope.split("/").at(-1) || ""}
+              workoutId={current.id}
+              name={current.display_name}
+            />
+          )}
           <RecordList
             records={[current]}
             userId={userId}
@@ -114,14 +123,6 @@ export function HistoryBrowser({
               onDeleted();
             }}
           />
-          {scope && (
-            <StampControl
-              key={`${scope}:${current.id}`}
-              groupId={scope.split("/").at(-1) || ""}
-              workoutId={current.id}
-              name={current.display_name}
-            />
-          )}
         </section>
       )}
       <div hidden={!!current}>

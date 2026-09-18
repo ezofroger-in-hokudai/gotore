@@ -175,3 +175,54 @@ def test_stamps_are_not_accessible_directly_from_browser_roles(client, connectio
         with pytest.raises(psycopg.errors.InsufficientPrivilege), connection.transaction():
             connection.execute("SET LOCAL ROLE " + role)
             connection.execute("SELECT * FROM public.gotore_workout_stamps").fetchall()
+
+
+def test_batch_counts_new_kinds_and_scope(client):
+    group, record, path = setup(client)
+    batch = f"/api/groups/{group['id']}/stamps/summary"
+    for kind in ("encourage", "push", "bad", "amazing", "praise", "tengu", "clap"):
+        assert client.put(path + "/" + kind, headers=B).status_code == 200
+    result = client.post(batch, headers=B, json={"workout_ids": [record["id"]]})
+    assert result.status_code == 200
+    summary = result.json()[record["id"]]
+    assert summary["counts"]["tengu"] == 1
+    assert summary["counts"]["clap"] == 1
+    assert len(summary["mine"]) == 7
+    assert summary["can_send"] is True
+    assert client.post(batch, json={"workout_ids": [record["id"]]}).json()[record["id"]][
+        "can_send"
+    ] is False
+    assert client.post(batch, headers=C, json={"workout_ids": [record["id"]]}).status_code == 404
+    private = client.post("/api/workouts", json=payload()).json()
+    assert client.post(batch, headers=B, json={"workout_ids": [private["id"]]}).json() == {}
+    assert client.post(batch, json={"workout_ids": [record["id"]] * 51}).status_code == 422
+    assert client.get(path, headers=B).json()["counts"]["tengu"] == 1
+
+
+def test_batch_counts_are_not_limited_to_first_page(client, connection):
+    from uuid import uuid4
+
+    group, record, path = setup(client)
+    for _ in range(55):
+        user = uuid4()
+        connection.execute("INSERT INTO auth.users(id) VALUES (%s)", (user,))
+        connection.execute(
+            "INSERT INTO public.gotore_profiles(id,display_name) VALUES (%s,'テスト')", (user,)
+        )
+        connection.execute(
+            "INSERT INTO public.gotore_group_members(group_id,user_id) VALUES (%s,%s)",
+            (group["id"], user),
+        )
+        connection.execute(
+            "INSERT INTO public.gotore_workout_stamps"
+            "(workout_id,recipient_id,group_id,sender_id,kind) VALUES (%s,%s,%s,%s,'tengu')",
+            (record["id"], USERS["A"], group["id"], user),
+        )
+    data = client.get(path, headers=B).json()
+    assert len(data["items"]) == 50 and data["counts"]["tengu"] == 55
+    result = client.post(
+        f"/api/groups/{group['id']}/stamps/summary",
+        headers=B,
+        json={"workout_ids": [record["id"]]},
+    ).json()
+    assert result[record["id"]]["counts"]["tengu"] == 55

@@ -10,6 +10,7 @@ import { SessionScreen } from "../session/session-screen";
 import { TrainingOverview } from "../session/training-overview";
 import { useSession } from "../session/use-session";
 import { WorkoutResult } from "../session/workout-result";
+import { StampProvider } from "../stamps/stamp-provider";
 import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
@@ -26,7 +27,9 @@ type View = "home" | "record" | "history" | "settings" | "groups" | "edit" | "re
 export function Workspace({ session }: { session: Session }) {
   return (
     <AvatarProvider key={session.user.id}>
-      <WorkspaceContent session={session} />
+      <StampProvider userId={session.user.id}>
+        <WorkspaceContent session={session} />
+      </StampProvider>
     </AvatarProvider>
   );
 }
