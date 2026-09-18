@@ -68,7 +68,7 @@ for (const change of ["編集中の回数", "選択種目"]) {
     if (change === "編集中の回数") {
       await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("9");
     } else {
-      await page.getByRole("button", { name: "種目を変更", exact: true }).click();
+      await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
       page.once("dialog", (dialog) => dialog.accept());
       await page.getByRole("button", { name: /^スクワット/ }).click();
     }

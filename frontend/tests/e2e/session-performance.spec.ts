@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { expectRecordingBest, showRecordingMemos } from "./mock-training";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 for (const destination of ["ホーム", "設定"]) {
   test(`保存完了時に${destination}なら比較を取得せず、記録へ戻ると更新する`, async ({ page }) => {
     const state = await mockTraining(page);
     await startTraining(page);
+    await showRecordingMemos(page);
     await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeEnabled();
     const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
     await weight.fill("77.5");
@@ -52,13 +54,14 @@ for (const destination of ["ホーム", "設定"]) {
       await page.waitForTimeout(250);
       expect(allContexts).toBe(0);
       await openTraining(page);
+      await showRecordingMemos(page);
       await expect.poll(() => contexts).toBe(1);
-      await expect(page.locator(".personal-bests")).toContainText("80");
+      await expectRecordingBest(page, "80");
       await expect(page.getByRole("textbox", { name: "種目メモ", exact: true })).toHaveValue(
         "種目の下書き",
       );
       releaseContext();
-      await expect(page.locator(".personal-bests")).toContainText("99");
+      await expectRecordingBest(page, "99");
       expect(contexts).toBe(1);
       await expect(weight).toHaveValue("77.5");
       await expect(page.getByRole("textbox", { name: "今回のメモ", exact: true })).toHaveValue(
@@ -79,6 +82,7 @@ test("保存待ちの全セット一覧を離れた後はBEST取得を延期し�
 }) => {
   const state = await mockTraining(page);
   await startTraining(page);
+  await showRecordingMemos(page);
   let bests = 0;
   const revisions: number[] = [];
   await page.route("**/api/sessions/*/bests", (route) => {
@@ -108,6 +112,7 @@ test("保存待ちの全セット一覧を離れた後はBEST取得を延期し�
     await page.waitForTimeout(250);
     expect(bests).toBe(1);
     await openTraining(page);
+    await showRecordingMemos(page);
     await expect.poll(() => bests).toBe(2);
     expect(revisions).toEqual([1, 2]);
     expect(state.saves).toBe(1);

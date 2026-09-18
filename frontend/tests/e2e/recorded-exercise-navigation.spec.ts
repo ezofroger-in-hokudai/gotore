@@ -19,13 +19,13 @@ test("記録済み種目から1タップで復帰し、未保存入力は確認�
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("82.5");
-  await page.getByRole("button", { name: "種目を変更", exact: true }).click();
+  await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   page.once("dialog", (dialog) => dialog.dismiss());
   await overview.getByRole("button", { name: "記録に戻る：ベンチプレス" }).click();
   await expect(overview).toBeVisible();
   await overview.getByRole("button", { name: "記録に戻る：スクワット" }).click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("82.5");
-  await page.getByRole("button", { name: "種目を変更", exact: true }).click();
+  await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   page.once("dialog", (dialog) => dialog.accept());
   await overview.getByRole("button", { name: "記録に戻る：ベンチプレス" }).click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("60");

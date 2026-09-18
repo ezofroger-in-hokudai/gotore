@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { showRecordingMemos } from "./mock-training";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test("全セットを一覧で確認し、追加操作を表示したまま次の種目を記録する", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
+  await showRecordingMemos(page);
   for (let i = 0; i < 8; i++) {
     await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
     await expect(page.getByRole("heading", { name: `SET ${i + 2}`, exact: true })).toBeVisible();
@@ -66,6 +68,7 @@ test("開始応答を待ちながら入力でき、失敗後の再試行でも�
     return route.fallback();
   });
   await openTraining(page);
+  await showRecordingMemos(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   try {
     await page.getByRole("button", { name: /^スクワット/ }).click({ timeout: 2000 });
@@ -129,6 +132,7 @@ test("履歴の読み込み前から日付グリッドを表示し、再訪で�
 test("保存後の比較再取得中も種目メモと入力位置を保持する", async ({ page }) => {
   await mockTraining(page);
   await startTraining(page);
+  await showRecordingMemos(page);
   const memo = page.getByRole("button", { name: "種目メモを編集", exact: true });
   await expect(memo).toBeEnabled();
   await expect(page.getByRole("button", { name: "今回のメモを編集", exact: true })).toBeEnabled();
@@ -155,6 +159,7 @@ test("保存後の比較再取得中も種目メモと入力位置を保持す�
 test("ホームは再訪時に活動を保持し、権限エラー時は古い共有内容を隠す", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
+  await showRecordingMemos(page);
   await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   await navigate(page, "ホーム");

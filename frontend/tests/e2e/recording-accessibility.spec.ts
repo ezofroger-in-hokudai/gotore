@@ -16,7 +16,7 @@ for (const width of [320, 390, 430]) {
       "次の種目へ",
       "トレーニング終了",
       "セット1を編集",
-      "今回のメモを編集",
+      "メモを常に表示",
     ];
     for (const name of labels) {
       const button = page.getByRole("button", { name, exact: true });
