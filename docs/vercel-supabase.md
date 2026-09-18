@@ -72,7 +72,7 @@ Vercel向けのNext.js buildのみを確認する場合は `cd frontend && VERCE
 
 公開後に確認すること:
 
-- `/` がGO TORE、`/manifest.webmanifest` とアイコンが正しく配信される。
+- `/` がE-GOTORE、`/manifest.webmanifest` とアイコンが正しく配信される。
 - `/api/health` がAPIのJSONを返す。未認証の `/api/groups` は401になる。
 - 管理者が発行した2ユーザーでログイン・グループ作成／参加・記録共有・再ログインができる。共有外のユーザーには見えない。メール自己登録はAuth hookで拒否され、Googleの新規登録・再ログインは別途確認する。
 - 通信失敗時に入力を保持し、保存の再送で重複しない。

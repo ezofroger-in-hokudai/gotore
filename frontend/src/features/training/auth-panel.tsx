@@ -56,7 +56,7 @@ export function AuthPanel() {
   return (
     <main className="auth-page">
       <div className="wordmark">
-        GO<span>TORE</span>
+        E-GO<span>TORE</span>
       </div>
       <div className="auth-intro">
         <h1>仲間と、合トレ。</h1>

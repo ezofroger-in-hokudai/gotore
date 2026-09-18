@@ -2353,3 +2353,17 @@
 - 検証: 修正CSSを既存記録テストの画面へ適用し、320/390/430pxで文書高さ720px・スクロール0・終了ボタンを含む操作領域が画面内に収まることを確認。実ブラウザの送受信は全体実行中にも成功。PR #163をドラフトで提出、backend/frontend CI成功。5枚の画像を用意。
 - 影響範囲・関連ファイル: frontend/src/app/v2.css、docs/stamps.md・images/stamps/。DB/API変更なし。
 - 未解決事項・次のアクション: 全体実行の失敗を整理し、修正後の記録関連テスト・最終CIを確認する。本番migrationは未適用。
+
+## 2026-09-18 17:59
+- 変更内容・目的: ユーザーの追加指定により、表示名をE-GOTOREへ統一。#164と独立したmain起点のブランチでロゴ、ページ/PWAメタ情報、API既定名、ローカル環境生成、現行運用資料を更新する。
+- 影響範囲・関連ファイル: frontendのauth-panel/workspace/layout/manifest/app-icon、backend/core/config、docker-compose、scripts/configure_local、READMEと運用docs。
+- 検証: manifestの期待値を先に更新し、旧名称による失敗を確認。名称は単純な表示変更で追加の業務ロジックテストは作らず、既存manifest/配信テストと画面確認で検証する。
+- 未解決事項: make check・画面画像をこれから確認。Google側の登録済みアプリ名など外部設定はコードでは変更されない。既存インストール済みアイコン名の更新は端末依存。
+- 次のアクション: 検証結果と実画面画像を独立PRにまとめる。データ移行なし。
+
+## 2026-09-18 17:59
+- 変更内容・目的: E-GOTOREへの統一を完了。ログイン/ホーム画像を追加し、320/390/430pxで表示・横あふれ・ホームへの遷移、タイトル・manifest・Apple用名称・PNG配信を確認した。
+- 検証: make check成功（backend93成功・DB依存161スキップ、frontend83成功、lint/型/build）。ブラウザテスト2件成功。git diff --check成功。初回buildは依存の外部symlinkをNext.jsが拒否したため実体コピーで解消。追加E2Eの整形指摘を修正後に共通チェックを再実行済み。未起動ポートへの接続待ちは開発サーバーの先行起動で解消。
+- 影響範囲・関連ファイル: 名称の表示・設定・資料、home-screen/manifestテスト、docs/images/e-gotore/。
+- 未解決事項: ローカルDocker停止のためDB統合はCIで確認。実端末の既存ホームアイコン名とGoogle側登録名は未変更。
+- 次のアクション: 画像付き独立PRでCIを確認。#164と別々にレビューする。

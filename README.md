@@ -1,4 +1,4 @@
-# GO TORE
+# E-GOTORE
 
 離れていても仲間と合トレしている感覚を目指す、トレーニングアプリです。
 初版は「作成 → 記録する → 仲間に共有する」までを実装しています。
@@ -65,7 +65,7 @@ make db-start
 make env-local
 ```
 
-`db-start` はGO TORE専用のSupabase（プロジェクトID: `gotore`）を起動し、初回はmigrationを適用します。
+`db-start` はE-GOTORE専用のSupabase（プロジェクトID: `gotore`）を起動し、初回はmigrationを適用します。
 DB・認証の基本動作をローカルで試すために、クラウドサービスのアカウントは不要です。
 
 `env-local` は起動済みのローカルSupabaseから接続情報を読み、`backend/.env` と `frontend/.env.local` を作成します。
@@ -87,7 +87,7 @@ make frontend
 
 | 確認先 | 用途 |
 | --- | --- |
-| http://localhost:3000 | GO TOREのログイン画面 |
+| http://localhost:3000 | E-GOTOREのログイン画面 |
 | http://localhost:8000/docs | API仕様・Swagger UI |
 | http://localhost:8000/openapi.json | API定義 |
 | http://localhost:8000/api/health | ヘルスチェック |
@@ -182,7 +182,7 @@ chmod 600 backend/.env frontend/.env.local
 | `OPENAI_API_KEY` | backend・停止中 | OpenAIの秘密キー。ブラウザへ公開しない。スコア機能停止中は未使用 |
 | `SCORE_MODEL` | backend・停止中 | 停止前の設定を保持。既定 `gpt-5-nano` |
 | `SCORE_DAILY_LIMIT` / `GOAL_PROPOSAL_DAILY_LIMIT` | backend・停止中 | 停止前の利用上限設定を保持。アプリからの呼び出しなし |
-| `APP_NAME` / `APP_VERSION` / `APP_ENV` | backend・任意 | APIの表示情報。既定は `GO TORE API` / `0.1.0` / `development` |
+| `APP_NAME` / `APP_VERSION` / `APP_ENV` | backend・任意 | APIの表示情報。既定は `E-GOTORE API` / `0.1.0` / `development` |
 | `APP_HOST` / `APP_PORT` | backend・任意 | 設定項目はあるが、起動ポートはMakefileのuvicorn引数で指定。ここだけ変えても待受先は変わらない |
 | `TEST_DATABASE_URL` | テスト実行時の環境変数 | `_test` で終わる専用DB。[検証](#検証)のコマンドで渡す。backend/.envに追記しない |
 

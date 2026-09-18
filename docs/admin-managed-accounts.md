@@ -38,7 +38,7 @@ DBのTable EditorやSQLでauth.usersへ直接INSERTしない。public.gotore_pro
 - `supabase/config.toml` はGoogle自己登録用のhookを有効にする。メール自己登録は拒否し、メール確認は維持する。既存環境は `make db-migrate` で関数を追加してから `make db-stop` → `make db-start` で反映する。通常のstopはデータを保持する。`--no-backup` や `make db-reset` は使わない。
 - ローカルアカウントもStudio（http://localhost:59323）のAuthenticationから確認済みで作成する。メール送信は不要。
 - `make test-e2e` はローカルCLIのstatusから取得した管理キーをテストプロセス内だけで使い、管理者APIでランダムなメールアドレスのテストユーザーを作成する。キーを環境ファイル・ブラウザ・ログへ書かない。
-- E2Eの管理者操作はGO TORE専用のloopback:59321に限定し、クラウドのAuthには実行しない。テスト用アカウントと共有記録はローカルDBに残る。
+- E2Eの管理者操作はE-GOTORE専用のloopback:59321に限定し、クラウドのAuthには実行しない。テスト用アカウントと共有記録はローカルDBに残る。
 - メール自己登録APIの拒否、Googleの認証復帰と初回表示名、ログイン失敗の案内、管理者作成の2ユーザーによる共有と再ログインを検証する。
 
 ## 残る制約・自己登録を再開するとき

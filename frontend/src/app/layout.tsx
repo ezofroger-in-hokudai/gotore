@@ -3,10 +3,10 @@ import "./globals.css";
 import "./v2.css";
 
 export const metadata: Metadata = {
-  title: "GO TORE — 離れていても、合トレ。",
-  description: "仲間とトレーニングを記録・共有するGO TORE",
-  applicationName: "GO TORE",
-  appleWebApp: { capable: true, title: "GO TORE", statusBarStyle: "default" },
+  title: "E-GOTORE — 離れていても、合トレ。",
+  description: "仲間とトレーニングを記録・共有するE-GOTORE",
+  applicationName: "E-GOTORE",
+  appleWebApp: { capable: true, title: "E-GOTORE", statusBarStyle: "default" },
   icons: { icon: "/app-icons/192?v=wombat-a", apple: "/apple-icon?v=wombat-a" },
 };
 

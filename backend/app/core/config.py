@@ -9,7 +9,7 @@ def is_header_token(value: str) -> bool:
 
 
 class Settings(BaseSettings):
-    app_name: str = "GO TORE API"
+    app_name: str = "E-GOTORE API"
     app_version: str = "0.1.0"
     app_env: str = "development"
     app_host: str = "0.0.0.0"

@@ -18,7 +18,7 @@ export function appIcon(size: number) {
         height={size}
         viewBox="0 0 100 100"
         role="img"
-        aria-label="GO TOREのウォンバット"
+        aria-label="E-GOTOREのウォンバット"
       >
         <g transform="translate(-43 -29) scale(1.1)">{WombatBody()}</g>
       </svg>
