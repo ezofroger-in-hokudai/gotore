@@ -1,207 +1,180 @@
-import { api } from "@/lib/api";
 import { useState } from "react";
 import { LoadingState } from "../loading/loading-state";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
-import { type StampKind, type StampList, stampKinds } from "./types";
+import { useStamps } from "./stamp-provider";
+import { type StampKind, type StampList, stampChoices, stampKinds } from "./types";
 
 export function StampControl({
   groupId,
   workoutId,
   name,
-}: { groupId: string; workoutId: string; name: string }) {
-  const [open, setOpen] = useState(false);
+  active = true,
+}: {
+  groupId: string;
+  workoutId: string;
+  name: string;
+  active?: boolean;
+}) {
+  const store = useStamps(groupId, workoutId, active);
+  const data = store.view(groupId, workoutId);
+  const jobs = store.forRecord(groupId, workoutId);
+  const [open, setOpen] = useState<"picker" | "details" | null>(null);
   const [offset, setOffset] = useState(0);
-  const [selected, setSelected] = useState<StampKind>("clap");
-  const [members, setMembers] = useState(false);
-  const [filter, setFilter] = useState<StampKind | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [attempt, setAttempt] = useState<{ kind: StampKind; remove: boolean } | null>(null);
-  const path = `/groups/${groupId}/workouts/${workoutId}/stamps`;
-  const resource = useResource<StampList>(`${path}?offset=${offset}`, 0, 10000, false, {
-    enabled: open,
-  });
-  const data = resource.error ? null : resource.data;
-  async function send(kind: StampKind, remove: boolean) {
-    if (busy) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
-    setAttempt({ kind, remove });
-    try {
-      await api(`${path}/${kind}`, { method: remove ? "DELETE" : "PUT" });
-      const fresh = await api<StampList>(`${path}?offset=${offset}`);
-      resource.updateData(() => fresh);
-      setNotice(remove ? "取り消しました" : "送りました");
-      setAttempt(null);
-      setOpen(false);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "送れませんでした");
-    } finally {
-      setBusy(false);
-    }
+  const resource = useResource<StampList>(
+    `/groups/${groupId}/workouts/${workoutId}/stamps?offset=${offset}`,
+    0,
+    10000,
+    false,
+    { enabled: active && open === "details" },
+  );
+  const people = resource.error ? null : resource.data;
+  const error = store.get(groupId, workoutId).error;
+  function send(kind: StampKind) {
+    if (store.toggle(groupId, workoutId, kind, name)) setOpen(null);
+  }
+  function reaction(kind: (typeof stampKinds)[number], picker = false) {
+    const selected = data?.mine.includes(kind.id) ?? false;
+    const pending = jobs.some((job) => job.kind === kind.id && job.state === "pending");
+    return (
+      <button
+        key={kind.id}
+        type="button"
+        className={picker ? "inline-stamp-choice" : "inline-stamp-touch"}
+        aria-label={`${kind.label}${picker ? "" : ` ${data?.counts[kind.id] ?? 0}件`}`}
+        aria-pressed={selected}
+        disabled={!data?.can_send || jobs.some((job) => job.kind === kind.id)}
+        onClick={() => send(kind.id)}
+      >
+        <span className="inline-stamp-pill">
+          <span aria-hidden="true">{kind.emoji}</span>
+          {!picker && <span>{data?.counts[kind.id] ?? 0}</span>}
+          {pending ? (
+            <span className="loading-spinner" role="status" aria-label="スタンプを送信中" />
+          ) : (
+            selected && (
+              <span className="inline-stamp-check" aria-hidden="true">
+                ✓
+              </span>
+            )
+          )}
+        </span>
+      </button>
+    );
   }
   return (
-    <div className="stamp-control">
-      <button
-        type="button"
-        className="stamp-open"
-        onClick={() => {
-          setOpen(true);
-          setOffset(0);
-          setMembers(false);
-          setNotice("");
-          setError("");
-        }}
-        aria-label={`${name}の記録のスタンプを開く`}
-      >
-        スタンプ{data ? ` · ${data.total}` : " ＋"}
-      </button>
-      {!open && notice && <output className="stamp-success">{notice}</output>}
-      {open && (
+    <div className="inline-stamps" aria-label={`${name}の記録のスタンプ`}>
+      <div className="inline-stamp-row">
+        {data &&
+          stampKinds
+            .filter(
+              (kind) =>
+                (data.counts[kind.id] ?? 0) > 0 ||
+                jobs.some((job) => job.kind === kind.id && job.state === "pending"),
+            )
+            .map((kind) => reaction(kind))}
+        {data?.can_send && (
+          <button
+            type="button"
+            className="inline-stamp-touch"
+            aria-label={`${name}の記録にスタンプを追加`}
+            onClick={() => setOpen("picker")}
+          >
+            <span className="inline-stamp-pill inline-stamp-circle">＋</span>
+          </button>
+        )}
+        {data && (
+          <button
+            type="button"
+            className="inline-stamp-touch"
+            aria-label={`${name}のリアクションの詳細`}
+            onClick={() => {
+              setOffset(0);
+              setOpen("details");
+            }}
+          >
+            <span className="inline-stamp-more">…</span>
+          </button>
+        )}
+        {!data && !error && <LoadingState label="スタンプを読み込み中" />}
+      </div>
+      {error && (
+        <p className="inline-stamp-error" role="alert">
+          {error}
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => void store.refresh(groupId, [workoutId])}
+          >
+            再試行
+          </button>
+        </p>
+      )}
+      {jobs
+        .filter((job) => job.state === "failed")
+        .map((job) => (
+          <p className="inline-stamp-error" role="alert" key={job.id}>
+            送れませんでした
+            <button type="button" className="secondary" onClick={() => store.retry(job.id)}>
+              再試行
+            </button>
+          </p>
+        ))}
+      {active && open && (
         <Sheet
-          title={members ? "スタンプを押した人" : "スタンプ"}
-          onClose={() => {
-            if (!busy) setOpen(false);
-          }}
+          title={open === "picker" ? "スタンプ" : "リアクション"}
+          onClose={() => setOpen(null)}
         >
           <p className="stamp-target">
             <strong>{name}の記録</strong>
-            {data?.target && (
-              <small>
-                {data.target.group_name} · {data.target.performed_on}
-              </small>
-            )}
           </p>
-          {resource.error && (
-            <p className="error" role="alert">
-              {resource.error}
-              <button type="button" onClick={resource.retry}>
-                再試行
-              </button>
-            </p>
-          )}
-          {!data && !resource.error && <LoadingState label="スタンプを読み込み中" />}
-          {data && (
+          {open === "picker" ? (
+            <div className="inline-stamp-picker">
+              {stampChoices.map((kind) => reaction(kind, true))}
+            </div>
+          ) : (
             <>
-              {!members && data.can_send && (
-                <>
-                  <div className="stamp-picker">
-                    {stampKinds.map((stamp) => (
-                      <button
-                        key={stamp.id}
-                        type="button"
-                        disabled={busy}
-                        aria-pressed={selected === stamp.id}
-                        onClick={() => {
-                          setSelected(stamp.id);
-                          setNotice("");
-                        }}
-                      >
-                        <span>{stamp.emoji}</span>
-                        <strong>{stamp.label}</strong>
-                        <small>{data.mine.includes(stamp.id) ? "送信済み ✓" : "　"}</small>
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    className="primary full"
-                    onClick={() => void send(selected, data.mine.includes(selected))}
-                  >
-                    {busy ? (
-                      <LoadingState label="スタンプを送信中" />
-                    ) : data.mine.includes(selected) ? (
-                      "選んだスタンプを取り消す"
-                    ) : (
-                      `${stampKinds.find((s) => s.id === selected)?.emoji} を送る`
-                    )}
-                  </button>
-                </>
-              )}
-              <output className="stamp-success">{notice}</output>
-              {error && (
+              {resource.error && (
                 <p className="error" role="alert">
-                  {error}
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => attempt && void send(attempt.kind, attempt.remove)}
-                  >
+                  {resource.error}
+                  <button type="button" className="secondary" onClick={resource.retry}>
                     再試行
                   </button>
                 </p>
               )}
-              {!members ? (
-                <button
-                  type="button"
-                  className="text-button full"
-                  onClick={() => {
-                    setMembers(true);
-                    setFilter(null);
-                  }}
-                >
-                  押した人を見る · {data.total}
-                </button>
-              ) : (
-                <>
-                  <div className="stamp-filters">
-                    <button type="button" aria-pressed={!filter} onClick={() => setFilter(null)}>
-                      すべて
-                    </button>
-                    {stampKinds.map((s) => (
-                      <button
-                        type="button"
-                        key={s.id}
-                        aria-label={s.label}
-                        aria-pressed={filter === s.id}
-                        onClick={() => setFilter(s.id)}
-                      >
-                        {s.emoji}
-                      </button>
-                    ))}
-                  </div>
-                  {data.items
-                    .filter((item) => !filter || item.kind === filter)
-                    .map((item) => (
-                      <div className="stamp-person" key={item.id}>
-                        <span>
-                          {item.display_name}
-                          {item.mine && "（あなた）"}
-                        </span>
-                        <span>{stampKinds.find((s) => s.id === item.kind)?.emoji}</span>
-                      </div>
-                    ))}
-                  {!data.items.length && <p className="muted">まだスタンプはありません</p>}
-                  <div className="stamp-pages">
-                    {offset > 0 && (
-                      <button type="button" onClick={() => setOffset(offset - 50)}>
-                        前の50件
-                      </button>
-                    )}
-                    {data.has_more && (
-                      <button type="button" onClick={() => setOffset(offset + 50)}>
-                        次の50件
-                      </button>
-                    )}
-                  </div>
-                  {data.can_send && (
-                    <button
-                      type="button"
-                      className="text-button full"
-                      onClick={() => {
-                        setOffset(0);
-                        setMembers(false);
-                      }}
-                    >
-                      スタンプを選ぶ
-                    </button>
-                  )}
-                </>
-              )}
+              {!people && !resource.error && <LoadingState label="リアクションを読み込み中" />}
+              {people?.items.map((item) => (
+                <div className="stamp-person" key={item.id}>
+                  <span>
+                    {item.display_name}
+                    {item.mine && "（あなた）"}
+                  </span>
+                  <span aria-label={stampKinds.find((kind) => kind.id === item.kind)?.label}>
+                    {stampKinds.find((kind) => kind.id === item.kind)?.emoji}
+                  </span>
+                </div>
+              ))}
+              {people && !people.items.length && <p className="muted">まだスタンプはありません</p>}
+              <div className="stamp-pages">
+                {offset > 0 && (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setOffset(offset - 50)}
+                  >
+                    前の50件
+                  </button>
+                )}
+                {people?.has_more && (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setOffset(offset + 50)}
+                  >
+                    次の50件
+                  </button>
+                )}
+              </div>
             </>
           )}
         </Sheet>

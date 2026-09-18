@@ -455,6 +455,7 @@ function Feed({
                 </span>
               </button>
               <StampControl
+                active={active}
                 key={`${data.group_id}:${item.workout_id}`}
                 groupId={data.group_id}
                 workoutId={item.workout_id}

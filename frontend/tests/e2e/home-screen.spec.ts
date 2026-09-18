@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { mockTraining } from "./mock-training";
 
 test("ホーム画面用のメタ情報と各サイズのPNGを配信する", async ({ page, request }) => {
   await page.goto("/");
@@ -12,7 +13,7 @@ test("ホーム画面用のメタ情報と各サイズのPNGを配信する", as
   );
   await expect(page.locator('meta[name="apple-mobile-web-app-title"]')).toHaveAttribute(
     "content",
-    "GO TORE",
+    "E-GOTORE",
   );
   await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
     "content",
@@ -22,6 +23,9 @@ test("ホーム画面用のメタ情報と各サイズのPNGを配信する", as
   expect(manifest.ok()).toBe(true);
   const webManifest = await manifest.json();
   expect(webManifest.display).toBe("standalone");
+  expect(webManifest.name).toBe("E-GOTORE");
+  expect(webManifest.short_name).toBe("E-GOTORE");
+  await expect(page).toHaveTitle("E-GOTORE — 離れていても、合トレ。");
   const iconPaths: string[] = webManifest.icons.map((icon: { src: string }) => icon.src);
   await expect(page.locator('link[rel="icon"]').first()).toHaveAttribute("href", iconPaths[0]);
   const apple = await page.locator('link[rel="apple-touch-icon"]').getAttribute("href");
@@ -45,4 +49,29 @@ test("ホーム画面用のメタ情報と各サイズのPNGを配信する", as
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
+});
+
+test("ログインとホームでE-GOTOREを表示する", async ({ page }) => {
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 720 });
+    await page.goto("/");
+    await expect(page.locator(".wordmark")).toHaveText("E-GOTORE");
+    await expect(page.locator(".wordmark")).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  }
+  await page.screenshot({ path: "../docs/images/e-gotore/login-430.png", fullPage: true });
+  await mockTraining(page);
+  const logo = page.getByRole("button", { name: "E-GOTORE", exact: true });
+  await expect(logo).toBeVisible();
+  await logo.click();
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 720 });
+    await expect(logo).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  }
+  await page.screenshot({ path: "../docs/images/e-gotore/home-430.png", fullPage: true });
 });

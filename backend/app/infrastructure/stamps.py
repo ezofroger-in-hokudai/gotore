@@ -92,6 +92,9 @@ class StampRepository:
                     LIMIT 50 OFFSET %(offset)s)
                 SELECT count(*)::integer AS total,
                     count(DISTINCT sender_id)::integer AS people,
+                    coalesce((SELECT jsonb_object_agg(kind,n) FROM
+                      (SELECT kind,count(*)::integer n FROM visible GROUP BY kind) totals),
+                      '{}'::jsonb) AS counts,
                     coalesce(array_agg(DISTINCT kind) FILTER (WHERE sender_id=%(user)s),
                       ARRAY[]::text[]) AS mine,
                     count(*) FILTER (WHERE read_at IS NULL)::integer AS unread,
@@ -111,6 +114,38 @@ class StampRepository:
                 "target": target,
                 "has_more": offset + 50 < row["total"],
             }
+
+    def summaries(self, user_id, group_id, workout_ids):
+        with self.connection.transaction():
+            self.repository.group(user_id, group_id, lock_membership=True)
+            # 表示対象を先に絞り、全件の種類別集計を1回のSQLで返す。
+            rows = self.connection.execute(
+                """WITH workouts AS MATERIALIZED (
+                    SELECT w.id,w.user_id FROM public.gotore_workouts w
+                    JOIN public.gotore_group_members m
+                      ON m.group_id=%(group)s AND m.user_id=w.user_id
+                    WHERE w.id=ANY(%(ids)s) AND (w.group_id=%(group)s OR EXISTS (
+                      SELECT 1 FROM public.gotore_workout_shares s
+                      WHERE s.workout_id=w.id AND s.group_id=%(group)s))
+                    AND EXISTS (SELECT 1 FROM jsonb_array_elements(w.exercises) e
+                      WHERE jsonb_array_length(e->'sets')>0)
+                ), counts AS MATERIALIZED (
+                    SELECT r.workout_id,r.kind,count(*)::integer n,
+                      bool_or(r.sender_id=%(user)s) mine
+                    FROM public.gotore_workout_stamps r
+                    JOIN workouts w ON w.id=r.workout_id
+                    JOIN public.gotore_group_members m
+                      ON m.group_id=r.group_id AND m.user_id=r.sender_id
+                    WHERE r.group_id=%(group)s GROUP BY r.workout_id,r.kind
+                ) SELECT w.id,w.user_id<>%(user)s can_send,
+                  coalesce((SELECT jsonb_object_agg(c.kind,c.n) FROM counts c
+                    WHERE c.workout_id=w.id),'{}'::jsonb) counts,
+                  coalesce((SELECT array_agg(c.kind) FROM counts c
+                    WHERE c.workout_id=w.id AND c.mine),ARRAY[]::text[]) mine
+                FROM workouts w""",
+                {"user": user_id, "group": group_id, "ids": workout_ids},
+            ).fetchall()
+            return {str(row["id"]): {k: v for k, v in row.items() if k != "id"} for row in rows}
 
     def seen(self, user_id: UUID, ids: list[UUID], read: bool):
         self.connection.execute(

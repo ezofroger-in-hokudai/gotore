@@ -3058,3 +3058,132 @@
   width: 100%;
   min-width: 0;
 }
+
+/* 小さな見た目と、指で押せる範囲を分ける。 */
+.inline-stamp-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 2px;
+  min-height: 48px;
+}
+.inline-stamp-touch,
+.inline-stamp-choice {
+  min-width: 48px;
+  min-height: 48px;
+  border: 0;
+  background: transparent;
+  padding: 0 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+.inline-stamp-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 30px;
+  min-width: 40px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 13px;
+  line-height: 1;
+}
+.inline-stamp-pill > span:first-child {
+  font-size: 17px;
+}
+.inline-stamp-touch[aria-pressed="true"] .inline-stamp-pill,
+.inline-stamp-choice[aria-pressed="true"] .inline-stamp-pill {
+  border-color: #ce706c;
+  background: #c9544812;
+  color: var(--accent);
+}
+.inline-stamp-circle {
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+  font-size: 20px;
+}
+.inline-stamp-check {
+  font-size: 10px;
+}
+.inline-stamp-more {
+  font-size: 23px;
+}
+.inline-stamp-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  gap: 4px;
+}
+.inline-stamp-choice .inline-stamp-pill {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  position: relative;
+}
+.inline-stamp-choice .inline-stamp-pill > span:first-child {
+  font-size: 24px;
+}
+.inline-stamp-choice .inline-stamp-check {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+}
+.inline-stamp-error {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--accent);
+}
+.inline-stamp-error .secondary {
+  padding: 4px 12px;
+  min-height: 36px;
+}
+.loading-spinner {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: stamp-spin .8s linear infinite;
+}
+@keyframes stamp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation: none;
+    border-style: dotted;
+  }
+}
+.stamp-outbox-notice {
+  position: fixed;
+  z-index: 45;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 2px 12px #0002;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.stamp-job {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+.stamp-job button {
+  margin-right: 8px;
+}

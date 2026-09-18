@@ -3,9 +3,9 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "GO TORE",
-    short_name: "GO TORE",
-    description: "仲間とトレーニングを記録・共有するGO TORE",
+    name: "E-GOTORE",
+    short_name: "E-GOTORE",
+    description: "仲間とトレーニングを記録・共有するE-GOTORE",
     lang: "ja",
     start_url: "/",
     scope: "/",
