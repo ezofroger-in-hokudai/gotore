@@ -76,3 +76,7 @@ http://127.0.0.1:3186/ を開きます。認証やDBは不要です。
 [他画面向けのボタン検討見本](workshop.html) / [明色画像](workshop-preview.png) / [暗色画像](workshop-dark.png)。検証は `node docs/styles/workshop-check.cjs`（4幅・両テーマ・文字200%・ボタン操作）。現行メモの操作確認は `node docs/styles/check.cjs` です。
 
 継続先は [Draft PR #191](https://github.com/ezofroger-in-hokudai/gotore/pull/191)。独立HTMLのためVercelのアプリプレビューには含まれません。上記ローカル配信で `/workshop.html` を開いてください。
+
+## メモと終了の改善例（追加依頼）
+
+現行を起点とする方針を保ち、ユーザーの追加依頼で入口の見た目・配置を再検討。[現行/A/Bの比較](header-options.html)と[比較画像](header-options.png)。Aは同じ行でボタンの見た目を揃え、Bは種目名と操作を2段に分けます。本文の枠と編集方式は維持する想定。どちらも未採用で、アプリへの反映はありません。
