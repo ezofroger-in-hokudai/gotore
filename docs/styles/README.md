@@ -68,3 +68,13 @@ http://127.0.0.1:3186/ を開きます。認証やDBは不要です。
 ## 見本の検証
 
 リポジトリルートで `make install-frontend` 後、`node docs/styles/check.cjs` を実行します。Chromiumが未準備の場合はfrontendで `bunx playwright install chromium` を実行してください。320/390/430/1280px、テーマ、メモ編集、反応の操作を確認し、preview.pngを更新します。
+
+## ボタンとメモを具体的に比べる
+
+[操作できる比較見本](workshop.html) / [候補値・使い分け・適用手順](component-decisions.md)
+
+黄色系メモと通常の面を同じ配置で切り替え、ライト/ダーク、ボタンの状態、編集シートの下書き保持・保存失敗・再試行を試せます。採用前の案で、再読込するとデータは初期化されます。数値入力は変更対象に含めていません。
+
+追加検証は `node docs/styles/workshop-check.cjs`。Chromiumで4幅・両テーマ・メモ2案・文字200%・編集の対象分離・下書き保持・失敗再試行・空欄化を確認します。画像は [明色](workshop-preview.png) / [暗色](workshop-dark.png)。実機Safari・ソフトウェアキーボード・本番データ保存は未検証です。
+
+継続先は [Draft PR #191](https://github.com/ezofroger-in-hokudai/gotore/pull/191)。このHTMLはdocs配下の独立見本のため、通常のアプリのVercelプレビューには含まれません。上記のローカル配信で `/workshop.html` を開いてください。
