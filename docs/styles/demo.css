@@ -1,0 +1,24 @@
+/* カタログの外枠だけを装飾し、見本のアプリ用部品は上書きしない。 */
+.catalog-header,.catalog-tools,.catalog-nav,.catalog-main,.catalog-footer{max-width:1100px;margin:auto;padding:24px}
+.catalog-header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding-top:56px}
+.catalog-header h1{font-size:clamp(24px,4vw,36px);letter-spacing:-.04em;margin:12px 0}
+.catalog-header p,.catalog-description p,.catalog-note,.catalog-footer{color:var(--muted)}
+.catalog-kicker{font-size:11px;font-weight:700;letter-spacing:.16em;color:var(--accent)}
+.catalog-tools,.catalog-nav{display:flex;flex-wrap:wrap;gap:20px;padding-top:12px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.catalog-tools label{display:flex;align-items:center;gap:8px;font-size:14px}
+.catalog-tools select{background:var(--panel);color:var(--text);padding:8px;border:1px solid var(--line);border-radius:8px}
+.catalog-tools input{width:auto}.catalog-nav a{font-size:14px}
+.catalog-section{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,460px);gap:32px;padding:40px 0;border-bottom:1px solid var(--line);align-items:start}
+.catalog-description h2,.catalog-decisions h2{font-size:24px;margin:10px 0}.catalog-description code{font-size:12px;overflow-wrap:anywhere}
+.specimen.v2-app{width:min(100%,var(--specimen-width,390px));max-width:100%;min-height:0;margin:0 auto;padding:12px;border:1px solid var(--line);border-radius:16px}
+.demo-stack{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:24px}.demo-context{padding:16px 0}.catalog-note{font-size:13px}
+.catalog-decisions{padding:40px 0}.catalog-footer{font-size:12px;border-top:1px solid var(--line)}
+.catalog-main output:empty{display:none}.catalog-main output{font-size:12px;color:var(--muted)}
+.swatch{display:flex;align-items:center;gap:12px;padding:8px 0;font-size:12px}.swatch-color{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;flex-shrink:0}.swatch code{margin-left:auto}
+.show-targets .specimen button{outline:1px dashed #477dcc;outline-offset:1px}
+#memo-editor[hidden],#memo-text[hidden],#senders[hidden]{display:none}
+@media(max-width:720px){.catalog-header{display:block;padding-top:24px}.catalog-section{grid-template-columns:minmax(0,1fr);gap:16px;padding:28px 0}.catalog-header,.catalog-tools,.catalog-nav,.catalog-main,.catalog-footer{padding-left:12px;padding-right:12px}.catalog-tools{gap:12px}}
+/* 全画面入力用の高さだけを外し、配置見本を内容の高さで並べる。 */
+.specimen .recording-view .entering-sets{height:auto;min-height:0}
+.catalog-tools label{display:flex;flex-direction:row;align-items:center}
+.catalog-tools input[type="checkbox"]{min-height:0;height:18px;width:18px;margin:0}
