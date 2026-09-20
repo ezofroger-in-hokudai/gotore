@@ -2442,3 +2442,18 @@
 ## 2026-09-19 00:18 文字拡大修正の再検証
 - 検証: session-flow/visible-setsの10件成功。CIで失敗した全要素の文字2倍時に横幅320pxを保ち、数値入力・保存・トレーニング終了を縦スクロールで操作できることを確認。CSS lintとgit diff --check成功。
 - 次のアクション: PR #182へ修正をpushし、更新後CIで全201件を再確認する。新migration不要。
+
+
+## 2026-09-20 23:28 設定の目安箱を実装（#189）
+- 変更内容・目的: ユーザーが#189の優先実装と設定からの送信を指定し、閲覧先を任せたため既存Supabaseの管理画面を採用。main a71b96d起点の独立worktree /tmp/gotore-suggestion-box、feat/189-suggestion-boxで実装。本文1〜2000文字、認証済み送信者、作成専用API、再送ID、24時間20件の上限、RLS/権限剥奪を追加。管理者はTable Editorで本文/送信者と対応状態を確認する。
+- 影響範囲・関連ファイル: backendのsuggestionドメイン/保存/APIと登録、frontendの設定/目安箱/CSS、migration 20260920070000_suggestions.sql、API/DB・ブラウザテスト、docs/suggestion-box.md・画像・資料一覧・current-state・task.md。Google連携やアプリ内管理者ロール、新環境変数は追加なし。
+- 検証: APIの先行テストで未実装404を確認後、実装して追加8件成功。専用_test DBでmake check成功（backend264件・frontend92件、lint/型/build）。ブラウザ5件で失敗再送/同一ID/空白拒否/送信中開閉/320・390・430pxを確認し画像を目視確認。ローカルSupabaseのmigration追加適用・DB lint成功、実DBでもanon/authenticatedのSELECT/INSERT禁止とRLSを確認。既存データのresetなし。実AuthのE2Eは実行中。
+- 検証経緯: 最初の依存セットアップはキャッシュ権限制約により失敗し昇格で成功。最初のmake checkは作業ルートでの整形がfrontend設定を読まなかったため失敗し、frontendから整形後に全件成功。UIテストの起動待ちが長く、先行テストの完了はUI実装後となったためUIのred確認とは扱わない。専用一時設定は削除し、テストは標準Playwright設定へ統合。
+- 未解決事項: 実機Safariは未確認。未送信内容は設定内の開閉では保持するが、設定離脱/再読込を跨ぐ永続化は初版対象外で画面に案内。返信/添付/通知/本人履歴は#189で後続検討。本番migration・マージ・デプロイは未実施。
+- 次のアクション: 実認証E2Eと最終差分を確認し、画像・管理手順・反映条件付きPRを作成する。週次#149へユーザーの優先変更を記録済み、レビュー担当は未定。
+
+## 2026-09-20 23:30 目安箱の実認証検証を完了
+- 変更内容・目的: 標準Playwright設定で目安箱と既存設定UIのE2Eを検証。実ログイン→投稿→同一ID再送→読取APIなしの確認まで成功し、運営管理者相当のDB読取で架空投稿とstatus=newを確認。
+- 検証: 設定UI4件・目安箱5件・実認証1件の計10件成功。実認証テスト追加後のfrontend lint/型検査も成功。画像/文書リンクとgit diff --check確認。
+- 影響範囲: 専用テストデータはローカルSupabaseだけに作成。生成されたnext-env.d.tsは元へ戻し、一時Playwright設定は削除済み。
+- 未解決事項・次のアクション: 実機Safari・本番反映は未実施。レビュー用PRを作成し、migration適用後の公開を別途行う。全E2Eの一括再実行は行わず、変更対象の設定/投稿と既存権限のDB検証を実施。

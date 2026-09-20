@@ -4,6 +4,7 @@ import { CatalogPanel } from "../exercises/catalog-panel";
 import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { AvatarPanel } from "../settings/avatar-panel";
 import { SettingsPanel } from "../settings/settings-panel";
+import { SuggestionBox, useSuggestionBox } from "../settings/suggestion-box";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "./sheet";
 
@@ -54,9 +55,10 @@ export function Preferences({
   onLogout: () => void;
   signingOut: boolean;
 }) {
-  const [sheet, setSheet] = useState<"name" | "avatar" | "theme" | "haptic" | "exercises" | null>(
-    null,
-  );
+  const [sheet, setSheet] = useState<
+    "name" | "avatar" | "theme" | "haptic" | "exercises" | "suggestion" | null
+  >(null);
+  const suggestion = useSuggestionBox();
   const profile = useResource<{ display_name: string }>("/me");
   const avatar = useResource<AvatarImage>("/me/avatar");
   return (
@@ -112,6 +114,15 @@ export function Preferences({
       </div>
       <h2>サポート</h2>
       <div className="v2-rows">
+        <button
+          className="v2-row"
+          type="button"
+          aria-label="目安箱"
+          onClick={() => setSheet("suggestion")}
+        >
+          <span>目安箱</span>
+          <span aria-hidden="true">›</span>
+        </button>
         <button className="v2-row" type="button" data-tour="replay" onClick={onGuide}>
           使い方 <span>›</span>
         </button>
@@ -127,19 +138,23 @@ export function Preferences({
       {sheet && (
         <Sheet
           title={
-            sheet === "exercises"
-              ? "種目一覧"
-              : sheet === "avatar"
-                ? "プロフィール画像"
-                : sheet === "name"
-                  ? "表示名"
-                  : sheet === "theme"
-                    ? "外観"
-                    : "触覚フィードバック"
+            sheet === "suggestion"
+              ? "目安箱"
+              : sheet === "exercises"
+                ? "種目一覧"
+                : sheet === "avatar"
+                  ? "プロフィール画像"
+                  : sheet === "name"
+                    ? "表示名"
+                    : sheet === "theme"
+                      ? "外観"
+                      : "触覚フィードバック"
           }
           onClose={() => setSheet(null)}
         >
-          {sheet === "exercises" ? (
+          {sheet === "suggestion" ? (
+            <SuggestionBox state={suggestion} />
+          ) : sheet === "exercises" ? (
             <CatalogPanel catalog={catalog} />
           ) : sheet === "avatar" ? (
             <AvatarPanel

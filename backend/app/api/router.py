@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import analytics, avatars, exercise_catalog, sessions, stamps
+from app.api.routes import analytics, avatars, exercise_catalog, sessions, stamps, suggestions
 from app.api.routes.health import router as health_router
 from app.api.routes.training import router as training_router
 
@@ -15,3 +15,5 @@ api_router.include_router(avatars.router)
 api_router.include_router(analytics.router)
 
 api_router.include_router(stamps.router)
+
+api_router.include_router(suggestions.router)
