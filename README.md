@@ -376,3 +376,7 @@ SCORE・AI・ランキング・スタンプ・公開環境の運用・ネイテ�
 トレーニング終了後は保存した総負荷kg・種目数・セット数を表示します。2026-09-13の方針変更により、採点・AIコメント・個人目標・グループ配点を停止しました。キーが設定済みでもアプリからAIは呼び出しません。過去の得点・目標データは保持します。
 
 `20260913010000_pause_score_observation.sql` は採点専用の記録観測トリガーだけを停止します。ローカルは `make db-migrate` を使用し、DBリセットは不要です。画面・集計は [活動ヒートマップ](docs/activity-heatmap.md)、停止前の経緯は [SCOREの実装仕様](docs/score-implementation.md) を参照してください。
+
+## テストの待ち時間を減らす
+
+反復中は `make check-fast`、対象を絞る場合は `make test-e2e E2E_ARGS='visible-sets.spec.ts memo-recovery.spec.ts'`。レビュー前の `make check` とCIの全E2Eは維持します。並列数・対象選択・実測は [テスト手順](docs/testing.md) を参照してください。

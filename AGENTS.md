@@ -31,7 +31,7 @@
 - 依存の初期セットアップ: `make install`。通常のセットアップでlockfileを変更しないこと。
 - ローカル起動: 別ターミナルで `make backend` と `make frontend`。
 - アプリ変更の検証: `make check`（backend lint／test、frontend lint／単体test／build）。DB統合テストには `TEST_DATABASE_URL` に専用の `_test` DBを指定すること。
-- 記録・共有フローの変更では `make test-e2e` を実行すること。ローカルSupabaseと環境ファイルを先に用意すること。テスト用のアカウント・記録が作成される。
+- 開発中は `make check-fast` と `make test-e2e E2E_ARGS='対象.spec.ts'` で反復し、レビュー前に `make check` と変更関連のE2Eを実行すること。コード変更を含むPRのCIで全E2E成功を必須とする。資料だけのPRは差分確認とする。CIが使えない場合は記録・共有・共通UI・テスト基盤の変更でローカル全E2Eを実行する。選び方と記録方法は `docs/testing.md` に従う。ローカルSupabaseと環境ファイルを先に用意すること。テスト用のアカウント・記録が作成される。
 - 文書・テンプレートのみの変更は、リンク、コマンド、テンプレート構造、`git diff --check`を確認すること。テストを先に書かない理由も `progress.md` に残すこと。
 - `make db-reset` はローカルDBを再作成してデータを削除する。対象とデータへの影響を確認してから実行すること。
 - 未実施・失敗した検証は成功と記載せず、理由と残作業を記録すること。

@@ -614,8 +614,21 @@
   font-size: 19px;
 }
 .wheel-arrow {
+  display: inline-flex;
+  width: 14px;
+  height: 10px;
+  align-items: center;
+  justify-content: center;
   color: var(--text);
-  font-size: 14px;
+}
+.wheel-arrow-svg {
+  display: block;
+  width: 14px;
+  height: 10px;
+  fill: currentColor;
+}
+.wheel-arrow-svg-down {
+  transform: rotate(180deg);
 }
 .rm-estimate {
   text-align: center;

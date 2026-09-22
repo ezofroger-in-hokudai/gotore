@@ -6,8 +6,36 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run_checks: ${{ steps.scope.outputs.run_checks }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check diff and classify documentation-only PRs
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git diff --check "$BASE_SHA...$HEAD_SHA"
+            git diff --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" | python3 scripts/ci_scope.py >> "$GITHUB_OUTPUT"
+          else
+            echo "run_checks=true" >> "$GITHUB_OUTPUT"
+          fi
+
   backend:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_checks != 'false') }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -48,6 +76,8 @@ jobs:
         run: uv run --locked pytest
 
   frontend:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_checks != 'false') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -76,6 +106,8 @@ jobs:
         run: bun run test
 
   database:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_checks != 'false') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

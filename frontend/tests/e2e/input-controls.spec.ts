@@ -12,6 +12,16 @@ test("矢印は重量1kg・回数1回ずつ調整し、保存せず上下限を�
   await moreWeight.click();
   await expect(weight).toHaveValue("78.5");
   await expect(moreWeight.locator(".wheel-arrow")).toBeVisible();
+  const upArrow = moreWeight.locator(".wheel-arrow-svg");
+  const downArrow = lessWeight.locator(".wheel-arrow-svg");
+  await expect(upArrow).toHaveAttribute("viewBox", "0 0 12 8");
+  await expect(downArrow).toHaveAttribute("viewBox", "0 0 12 8");
+  await expect(upArrow).toHaveAttribute("width", "14");
+  await expect(downArrow).toHaveAttribute("width", "14");
+  await expect(upArrow).toHaveAttribute("height", "10");
+  await expect(downArrow).toHaveAttribute("height", "10");
+  await expect(upArrow).not.toHaveClass(/wheel-arrow-svg-down/);
+  await expect(downArrow).toHaveClass(/wheel-arrow-svg-down/);
   await lessWeight.click();
   await expect(weight).toHaveValue("77.5");
   await reps.fill("8");
