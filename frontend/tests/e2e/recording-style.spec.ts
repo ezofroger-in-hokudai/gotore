@@ -25,6 +25,12 @@ for (const width of [320, 390, 430]) {
     await startTraining(page);
     await page.setViewportSize({ width, height: 844 });
     await expect(page.getByText("前回 60kg × 8回", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "前回の全セットをコピー" })).toBeVisible();
+    const copyPreviousSet = page.getByRole("button", { name: "前回のセット3をコピー" });
+    await expect(copyPreviousSet).toBeVisible();
+    await copyPreviousSet.click();
+    await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("57.5");
+    await expect(page.getByRole("spinbutton", { name: "回数", exact: true })).toHaveValue("10");
     for (const theme of ["light", "dark"]) {
       await page.evaluate((value) => {
         document.documentElement.dataset.theme = value;
