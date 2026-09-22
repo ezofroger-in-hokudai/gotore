@@ -89,7 +89,7 @@ make check
 ```
 
 これはbackendのlint・テストとfrontendのlint・単体テスト・buildを実行します。
-DB統合テストは `TEST_DATABASE_URL` に専用DBを設定して実行します。記録・共有フローの変更では `make test-e2e` も実行します。準備方法はREADMEを参照してください。
+DB統合テストは `TEST_DATABASE_URL` に専用DBを設定して実行します。開発中は `make check-fast` と対象指定のE2Eで反復し、レビュー前は `make check` と変更関連のE2Eを実行します。コード変更を含むPRのCIでは全E2Eを実行し、成功後にマージします。資料だけのPRは差分確認を行います。CIが使えない場合の全件実行と検証範囲は [テスト手順](docs/testing.md) を参照してください。準備方法はREADMEを参照してください。
 文書・テンプレートだけの変更では、リンク・記載したコマンド・テンプレート構造・`git diff --check`を確認し、不要なアプリテストは追加しません。
 テストを先に書けない場合は理由を `progress.md` に記録します。
 
