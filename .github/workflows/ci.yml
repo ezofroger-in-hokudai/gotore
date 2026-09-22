@@ -152,8 +152,8 @@ jobs:
         working-directory: frontend
         run: bunx playwright install --with-deps chromium
 
-      - name: Test record sharing across browsers
-        run: make test-e2e
+      - name: Test selected end-to-end flows
+        run: make test-e2e-ci
 
       - name: Save unified history review images
         if: always()

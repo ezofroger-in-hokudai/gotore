@@ -28,6 +28,9 @@ test-frontend:
 test-e2e:
 	cd frontend && bun run test:e2e $(E2E_ARGS)
 
+test-e2e-ci:
+	cd frontend && bun run test:e2e:ci
+
 typecheck-frontend:
 	cd frontend && bun run typecheck
 

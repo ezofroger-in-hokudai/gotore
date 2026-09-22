@@ -8,6 +8,7 @@
     "lint": "biome check .",
     "test": "bun test tests/unit",
     "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test tests/e2e/recording-style.spec.ts",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0 --port 3000",
     "typecheck": "next typegen && tsc --noEmit --incremental false"

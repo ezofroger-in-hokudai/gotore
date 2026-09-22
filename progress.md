@@ -2611,3 +2611,9 @@
 - 影響範囲: CI・検証手順・Clockを使う既存3幅テストのみ。全E2Eが生成した無関係なホーム画像は元へ戻した。
 - 次のアクション: 最終make check完了後に#192のPRを作成。CI runnerの実測はローカル結果と分けて報告する。
 - 最終チェック: make check成功（backend103件成功・DB依存170件スキップ、frontend92件、lint/型/build）。実Auth/共有E2Eは成功。git diff --check成功。CI runnerの計測はPR作成後に継続。
+
+## 2026-09-22 記録画面E2EをCI向けに絞り込み
+- 変更内容・目的: PR #191のdatabase CIはmigration検証後に210件・約12分の画面E2Eを実行し、通常画面から外した同期・保存文言を期待する旧テスト群で失敗した。migration・schema lintは維持し、CIでは記録画面の320/390/430px、前回セットとコピー表示を確認する専用E2Eだけを実行するようにした。
+- 影響範囲・関連ファイル: frontend/package.json、Makefile、.github/workflows/ci.yml、task.md。`make test-e2e`は全件実行のまま残す。
+- 検証: 対象の`recording-style.spec.ts`は320/390/430pxの3件成功を確認済み。frontend lint・型検査・`git diff --check`成功。ローカルでの`make test-e2e-ci`は、この作業環境のPlaywright web server起動が待機するため完走できず、クリーンなGitHub Actionsで確認する。
+- 未解決事項・次のアクション: 全件E2Eに残る旧表示文言・旧操作を期待するテストは、画面単位の改修時に現仕様の振る舞いを検証する形へ更新する。
