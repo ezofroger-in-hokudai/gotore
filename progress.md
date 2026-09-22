@@ -1,5 +1,13 @@
 # progress.md
 
+## 2026-09-22
+- 変更内容: 記録中の重量・回数入力にある増減矢印をUnicode文字から共通inline SVGへ変更し、下矢印は同じSVGを180度回転して表示する実装と寸法の回帰テストを追加。
+- 目的: iOS Safari / WebKitとAndroid Chromiumで異なるUnicodeグリフの視覚サイズに依存せず、上下矢印を同じ大きさにする。
+- 影響範囲: 記録画面の重量・回数の矢印表示のみ。ボタンのクリック領域、aria-label、disabled制御、値変更・ドラッグ・ホイール処理は変更しない。
+- 関連ファイル: frontend/src/features/session/number-wheel.tsx、frontend/src/app/v2.css、frontend/tests/e2e/input-controls.spec.ts
+- 未解決事項: iOS実機での表示確認は未実施。
+- 検証結果: `git diff --check` は成功。`make check-fast` は環境に `uv` がないためバックエンドlint開始時点で停止し、フロントエンドlint・単体テスト・型チェック・E2Eは未実施。
+
 ## 2026-09-14 01:29
 - 変更内容: 追加指定でアニメーションを起動時の認証状態確認だけに絞る。ウォンバット2案・現行ハムスター・ラッコを、動きと小さなアイコンで比較する。
 - 目的: 各画面の読み込みを簡潔に戻し、アプリの顔を選んでから起動表示とアイコンを統一する。

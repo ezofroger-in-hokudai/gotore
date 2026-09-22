@@ -1,5 +1,24 @@
 import { type RefObject, useEffect, useRef, useState } from "react";
 
+function WheelArrow({ direction }: { direction: "up" | "down" }) {
+  return (
+    <span className="wheel-arrow" aria-hidden="true">
+      <svg
+        className={
+          direction === "down" ? "wheel-arrow-svg wheel-arrow-svg-down" : "wheel-arrow-svg"
+        }
+        viewBox="0 0 12 8"
+        width="14"
+        height="10"
+        focusable="false"
+        aria-hidden="true"
+      >
+        <path d="M6 0 12 8H0Z" />
+      </svg>
+    </span>
+  );
+}
+
 export function NumberWheel({
   label,
   unit,
@@ -134,9 +153,7 @@ export function NumberWheel({
           shift(1);
         }}
       >
-        <span className="wheel-arrow" aria-hidden="true">
-          ▴
-        </span>
+        <WheelArrow direction="up" />
       </button>
       <input
         ref={field}
@@ -174,9 +191,7 @@ export function NumberWheel({
           shift(-1);
         }}
       >
-        <span className="wheel-arrow" aria-hidden="true">
-          ▾
-        </span>
+        <WheelArrow direction="down" />
       </button>
     </div>
   );
