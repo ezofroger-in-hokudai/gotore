@@ -5,6 +5,7 @@ for (const width of [320, 390, 430]) {
   test(`${width}pxで受信スタンプを常時表示し入力位置を保って詳細と既読を確認する`, async ({
     page,
   }) => {
+    await page.clock.install();
     await page.setViewportSize({ width, height: 720 });
     await mockTraining(page);
     let received = false;
@@ -60,6 +61,8 @@ for (const width of [320, 390, 430]) {
     const receipt = page.getByRole("region", { name: "記録中のスタンプ", exact: true });
     await expect(receipt).toContainText("スタンプなし");
     received = true;
+    // ポーリング周期は維持し、ブラウザ内の時間だけ進める。
+    await page.clock.fastForward(10_000);
     await expect(
       receipt.getByRole("button", { name: "がんばれ 55件の詳細", exact: true }),
     ).toBeVisible({ timeout: 20000 });
@@ -80,7 +83,8 @@ for (const width of [320, 390, 430]) {
       path: `test-results/stamp-receipt-inline-${width}.png`,
       fullPage: true,
     });
-    await expect(receipt.locator(".stamp-live-new")).toHaveCount(0, { timeout: 8000 });
+    await page.clock.fastForward(5_000);
+    await expect(receipt.locator(".stamp-live-new")).toHaveCount(0);
     await expect(
       receipt.getByRole("button", { name: "がんばれ 55件の詳細", exact: true }),
     ).toBeVisible();
@@ -97,6 +101,7 @@ for (const width of [320, 390, 430]) {
     await expect(more).toHaveAccessibleName("届いたスタンプの詳細");
     expect((await input.boundingBox())?.y).toBe(y);
     failed = true;
+    await page.clock.fastForward(10_000);
     await expect(
       receipt.getByRole("button", { name: "スタンプ取得を再試行", exact: true }),
     ).toBeVisible({ timeout: 20000 });
