@@ -1,0 +1,73 @@
+/* #186: 採用したメモB案と終了操作。記録画面の密度と入力領域を維持する。 */
+.recording-view .recording-header {
+  gap: 8px;
+}
+.recording-view .recording-header .memo-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 64px;
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+}
+.recording-view .recording-header .memo-toggle[aria-pressed="true"] {
+  background: var(--track);
+}
+.recording-view .recording-header .finish-training,
+.recording-finish-actions .secondary {
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+}
+.recording-view .recording-header .finish-training {
+  max-width: 128px;
+}
+.recording-view .recording-memos {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 4px 0;
+  color: var(--text);
+}
+.recording-view .recording-memos .memo-caption {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+.recording-view .recording-memos .memo-text {
+  color: var(--text);
+}
+.recording-memo-icon {
+  flex-shrink: 0;
+}
+.recording-finish-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.recording-finish-actions button {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  overflow-wrap: anywhere;
+}
+/* 狭い画面でも種目名と5セット分の領域を確保する。 */
+@media (max-width: 360px) {
+  .recording-view .recording-header {
+    gap: 4px;
+  }
+  .recording-view .recording-header .memo-toggle {
+    gap: 2px;
+    padding-inline: 6px;
+  }
+  .recording-view .recording-header .finish-training {
+    padding-inline: 6px;
+  }
+}

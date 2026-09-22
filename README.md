@@ -286,7 +286,7 @@ make test-e2e
 LinuxでブラウザのOS依存が不足する場合は `frontend/` で `bunx playwright install --with-deps chromium` を実行します（OSパッケージ導入の権限が必要）。
 
 E2EはローカルSupabaseと設定済みの環境ファイルを使い、APIを8100番・Webを3100番で一時起動します。
-中断後に自分が起動した同じテスト用サーバーが残っている場合だけ、`PLAYWRIGHT_REUSE_SERVER=1 make test-e2e` で再利用できます。別のアプリや通常開発用サーバーには使わないでください。CIでは再利用しません。
+中断後に自分が起動した同じテスト用サーバーが残っている場合だけ、`PLAYWRIGHT_REUSE_SERVER=1 make test-e2e` で再利用できます。別のアプリや通常開発用サーバーには使わないでください。CIでは再利用しません。別のローカル検証とポートが重なる場合は、`PLAYWRIGHT_PORT`（既定3100）と`PLAYWRIGHT_BACKEND_PORT`（既定8100）で専用ポートを指定できます。
 メール自己登録の拒否、Google認証の復帰・初回表示名設定、管理者作成ユーザーの別ブラウザでのログイン・参加・共有、下書き復元、通信失敗後の再送、再ログインを確認します。
 ホーム画面用のmanifest・メタ情報・各サイズのPNGアイコン配信も確認します。
 ローカルDBに `gotore-…@example.test` のテストアカウントとその記録を作成します。既存ユーザーのデータは削除しません。

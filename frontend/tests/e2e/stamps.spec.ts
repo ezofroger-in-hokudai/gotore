@@ -1,6 +1,7 @@
 import { type Page, expect, test } from "@playwright/test";
 import { createTestUser, localAuth, testPassword } from "./local-auth";
 import { navigate, startTraining } from "./mock-training";
+import { backendUrl } from "./test-server";
 
 async function login(page: Page, name: string, email: string) {
   await createTestUser(name, email);
@@ -29,7 +30,7 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
   try {
     const authA = await login(pageA, "タクミ", `stamp-${run}-a@example.test`);
     const authB = await login(pageB, "ミオ", `stamp-${run}-b@example.test`);
-    const groupResponse = await pageA.request.post("http://127.0.0.1:8100/api/groups", {
+    const groupResponse = await pageA.request.post(`${backendUrl}/api/groups`, {
       headers: authA,
       data: { name: "北大トレーニング部" },
     });
@@ -37,7 +38,7 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
     const group = await groupResponse.json();
     expect(
       (
-        await pageB.request.post("http://127.0.0.1:8100/api/groups/join", {
+        await pageB.request.post(`${backendUrl}/api/groups/join`, {
           headers: authB,
           data: { invite_code: group.invite_code },
         })
@@ -51,7 +52,7 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
     await pageA.getByRole("button", { name: "次のセットへ", exact: true }).click();
     await expect(pageA.getByText("保存しました", { exact: true })).toBeVisible();
     const active = await (
-      await pageA.request.get("http://127.0.0.1:8100/api/sessions/active", { headers: authA })
+      await pageA.request.get(`${backendUrl}/api/sessions/active`, { headers: authA })
     ).json();
     await pageA.getByRole("spinbutton", { name: "重量", exact: true }).fill("62.5");
     const before = await pageA.getByRole("spinbutton", { name: "重量", exact: true }).boundingBox();
@@ -99,10 +100,9 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
         async () =>
           (
             await (
-              await pageA.request.get(
-                `http://127.0.0.1:8100/api/stamps/inbox?workout_id=${active.id}`,
-                { headers: authA },
-              )
+              await pageA.request.get(`${backendUrl}/api/stamps/inbox?workout_id=${active.id}`, {
+                headers: authA,
+              })
             ).json()
           ).unread,
       )
@@ -120,7 +120,7 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
       expect(
         (
           await pageB.request.put(
-            `http://127.0.0.1:8100/api/groups/${group.id}/workouts/${active.id}/stamps/${kind}`,
+            `${backendUrl}/api/groups/${group.id}/workouts/${active.id}/stamps/${kind}`,
             { headers: authB },
           )
         ).ok(),

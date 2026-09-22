@@ -381,11 +381,14 @@ function ActiveTraining({
             type="button"
             className="memo-toggle"
             aria-label={memoOpen ? "メモを畳む" : "メモを常に表示"}
+            aria-expanded={memoOpen}
             aria-pressed={memoOpen}
             aria-controls="recording-memos"
             onClick={() => setMemoOpen(!memoOpen)}
           >
-            <span aria-hidden="true">{memoOpen ? "✓" : "▤"}</span> メモ
+            <MemoIcon />
+            <span>メモ</span>
+            <span aria-hidden="true">{memoOpen ? "▴" : "▾"}</span>
           </button>
         )}
         <button
@@ -395,7 +398,6 @@ function ActiveTraining({
           disabled={!session || controller.busy}
           onClick={() => setFinishOpen(true)}
         >
-          <span aria-hidden="true">□ </span>
           トレーニング終了
         </button>
       </div>
@@ -610,7 +612,9 @@ function ActiveTraining({
             aria-label="記録のメモ"
             hidden={!memoOpen}
           >
-            <span className="memo-caption">メモ · 自分だけ</span>
+            <span className="memo-caption">
+              <MemoIcon /> メモ · 自分だけ
+            </span>
             <div className="exercise-memo-slot">
               {context.data ? (
                 <InlineMemo
@@ -949,6 +953,7 @@ function ActiveTraining({
       {finishOpen && session && (
         <Sheet
           title="トレーニング終了"
+          showCloseButton={false}
           onClose={() => {
             if (!controller.busy) setFinishOpen(false);
           }}
@@ -958,32 +963,42 @@ function ActiveTraining({
             <output>
               {memoDraftState === "stored"
                 ? "未保存のメモがあります。この端末に残し、終了後は履歴から保存できます。"
-                : "未保存のメモを端末に保持できていません。閉じるで戻ってメモを保存してください。"}
+                : "未保存のメモを端末に保持できていません。記録に戻るでメモを保存してください。"}
             </output>
           )}
-          <button
-            className="primary full"
-            type="button"
-            disabled={controller.busy}
-            onClick={async () => {
-              try {
-                const finished = await controller.finish(() => {
-                  // 終了で入力画面が消える前に、確認シートの自動「戻る」を解除する。
-                  const state = { ...window.history.state };
-                  state.gotoreSheet = undefined;
-                  window.history.replaceState(state, "");
-                });
+          <div className="recording-finish-actions">
+            <button
+              className="secondary"
+              type="button"
+              disabled={controller.busy}
+              onClick={() => setFinishOpen(false)}
+            >
+              記録に戻る
+            </button>
+            <button
+              className="primary"
+              type="button"
+              disabled={controller.busy}
+              onClick={async () => {
                 try {
-                  if (storageKey) localStorage.removeItem(storageKey);
-                } catch {}
-                onFinished(finished);
-              } catch {
-                setFinishOpen(false);
-              }
-            }}
-          >
-            {controller.busy ? "終了中…" : "終了する"}
-          </button>
+                  const finished = await controller.finish(() => {
+                    // 終了で入力画面が消える前に、確認シートの自動「戻る」を解除する。
+                    const state = { ...window.history.state };
+                    state.gotoreSheet = undefined;
+                    window.history.replaceState(state, "");
+                  });
+                  try {
+                    if (storageKey) localStorage.removeItem(storageKey);
+                  } catch {}
+                  onFinished(finished);
+                } catch {
+                  setFinishOpen(false);
+                }
+              }}
+            >
+              {controller.busy ? "終了中…" : "終了する"}
+            </button>
+          </div>
         </Sheet>
       )}
     </section>
@@ -1008,5 +1023,23 @@ function SetMeasurement({
         </b>
       </small>
     </span>
+  );
+}
+
+function MemoIcon() {
+  return (
+    <svg
+      className="recording-memo-icon"
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5" />
+    </svg>
   );
 }

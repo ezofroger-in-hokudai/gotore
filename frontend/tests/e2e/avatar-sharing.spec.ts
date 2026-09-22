@@ -1,6 +1,7 @@
 import { type Page, expect, test } from "@playwright/test";
 import { createTestUser, localAuth, testPassword } from "./local-auth";
 import { navigate } from "./mock-training";
+import { backendUrl } from "./test-server";
 
 async function login(page: Page, name: string, email: string) {
   await createTestUser(name, email);
@@ -29,23 +30,23 @@ test("実画像は設定で保存後に仲間へ表示され、退出後と未�
     const pageB = await b.newPage();
     const authA = await login(pageA, "画像テストA", `gotore-avatar-${run}-a@example.test`);
     const authB = await login(pageB, "画像テストB", `gotore-avatar-${run}-b@example.test`);
-    const groupResponse = await pageA.request.post("http://127.0.0.1:8100/api/groups", {
+    const groupResponse = await pageA.request.post(`${backendUrl}/api/groups`, {
       headers: authA,
       data: { name: "画像の共有テスト" },
     });
     expect(groupResponse.status()).toBe(201);
     const group = await groupResponse.json();
-    const join = await pageB.request.post("http://127.0.0.1:8100/api/groups/join", {
+    const join = await pageB.request.post(`${backendUrl}/api/groups/join`, {
       headers: authB,
       data: { invite_code: group.invite_code },
     });
     expect(join.ok()).toBe(true);
-    const started = await pageA.request.post("http://127.0.0.1:8100/api/sessions", {
+    const started = await pageA.request.post(`${backendUrl}/api/sessions`, {
       headers: authA,
       data: { id: crypto.randomUUID() },
     });
     const session = await started.json();
-    const save = await pageA.request.patch(`http://127.0.0.1:8100/api/sessions/${session.id}`, {
+    const save = await pageA.request.patch(`${backendUrl}/api/sessions/${session.id}`, {
       headers: authA,
       data: {
         expected_revision: session.revision,
@@ -66,15 +67,15 @@ test("実画像は設定で保存後に仲間へ表示され、退出後と未�
     const record = pageB.getByRole("article");
     await expect(record.locator(".person-avatar img")).toBeVisible();
     await expect(record.locator(".avatar-live-dot")).toBeVisible();
-    const imagePath = `http://127.0.0.1:8100/api/profiles/${group.owner_id}/avatar`;
+    const imagePath = `${backendUrl}/api/profiles/${group.owner_id}/avatar`;
     expect((await pageB.request.get(imagePath, { headers: authB })).status()).toBe(200);
     expect((await pageB.request.get(imagePath)).status()).toBe(401);
     const detail = await (
-      await pageB.request.get(`http://127.0.0.1:8100/api/groups/${group.id}`, { headers: authB })
+      await pageB.request.get(`${backendUrl}/api/groups/${group.id}`, { headers: authB })
     ).json();
     const self = detail.members.find((member: { id: string }) => member.id !== group.owner_id);
     const left = await pageB.request.delete(
-      `http://127.0.0.1:8100/api/groups/${group.id}/membership?${new URLSearchParams({ expected_joined_at: self.joined_at })}`,
+      `${backendUrl}/api/groups/${group.id}/membership?${new URLSearchParams({ expected_joined_at: self.joined_at })}`,
       { headers: authB },
     );
     expect(left.status()).toBe(204);

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./v2.css";
+import "../styles/recording-controls.css";
 
 export const metadata: Metadata = {
   title: "E-GOTORE — 離れていても、合トレ。",

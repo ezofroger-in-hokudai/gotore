@@ -4,7 +4,8 @@ export function Sheet({
   title,
   onClose,
   children,
-}: { title: string; onClose: () => void; children: ReactNode }) {
+  showCloseButton = true,
+}: { title: string; onClose: () => void; children: ReactNode; showCloseButton?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const key = useId();
   const mounted = useRef(false);
@@ -46,9 +47,11 @@ export function Sheet({
       <div className="sheet-handle" />
       <div className="section-heading">
         <h2>{title}</h2>
-        <button className="text-button" type="button" onClick={onClose}>
-          閉じる
-        </button>
+        {showCloseButton && (
+          <button className="text-button" type="button" onClick={onClose}>
+            閉じる
+          </button>
+        )}
       </div>
       {children}
     </dialog>

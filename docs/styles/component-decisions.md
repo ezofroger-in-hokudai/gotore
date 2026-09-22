@@ -63,3 +63,7 @@
 ### 採用結果
 
 ユーザー「Bで行きましょう」により、メモは枠・背景色なし＋下側の区切り線に決定。[採用見本](header-selected.html) / [更新画像](header-selected.png)。メモ入口のアイコンと文字、終了の形は維持。比較用memo-optionsは候補の履歴として残す。実アプリへの適用は未実施。
+
+## 実アプリへの反映
+
+採用したメモB案と終了の2ボタンを記録画面へ反映。`frontend/src/styles/recording-controls.css`を追加し、既存のテーマ変数で暗色にも対応。上記の「未実施」は検討時点の記録です。独立HTMLは参考見本として保持し、実装確認は[実画面画像](../images/design-standard/)と`recording-style.spec.ts`で行います。共通化の全画面展開は引き続き#186で追跡します。
