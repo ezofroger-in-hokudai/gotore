@@ -9,7 +9,13 @@ export function StampReceipt({
   workoutId,
   active = true,
   live = true,
-}: { workoutId: string; active?: boolean; live?: boolean }) {
+  presentation = "summary",
+}: {
+  workoutId: string;
+  active?: boolean;
+  live?: boolean;
+  presentation?: "summary" | "toast";
+}) {
   const resource = useResource<StampList>(
     inboxPath(undefined, workoutId),
     0,
@@ -65,6 +71,23 @@ export function StampReceipt({
       ? flash.filter((item) => data.items.some((current) => current.id === item.id))
       : [];
   const latest = visibleFlash[0];
+  if (live && presentation === "toast")
+    return (
+      <section className="stamp-toast-slot" aria-label="記録中のスタンプ">
+        {visibleFlash.slice(0, 3).map((item, index) => (
+          <span
+            className="stamp-toast"
+            style={{ animationDelay: `${index * 180}ms` }}
+            key={item.id}
+          >
+            {item.display_name}　{item.kind === "push" || item.kind === "fire" ? "🔥" : "💪"}
+          </span>
+        ))}
+        <span className="stamp-sr" aria-live="polite">
+          {latest ? `${latest.display_name}からスタンプが届きました` : ""}
+        </span>
+      </section>
+    );
   return (
     <section
       className={live ? "stamp-receipt-slot stamp-live" : "stamp-result"}

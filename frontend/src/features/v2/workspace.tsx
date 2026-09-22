@@ -226,11 +226,15 @@ function WorkspaceContent({ session }: { session: Session }) {
             active={view === "home"}
             trainingAction={
               <section className="home-training" aria-label="トレーニングの状況">
-                <p className="muted">
-                  {training.session
-                    ? `進行中 · ${training.session.exercises.reduce((count, exercise) => count + exercise.sets.length, 0)}セット${training.pending ? " · 同期中" : ""}`
-                    : "記録は開始時の所属グループに共有。メモは自分だけ。"}
-                </p>
+                {training.session && (
+                  <p className="muted">
+                    {training.session.exercises.reduce(
+                      (count, exercise) => count + exercise.sets.length,
+                      0,
+                    )}
+                    セット
+                  </p>
+                )}
                 {!resumable && (
                   <details className="home-review">
                     <summary>前回を振り返る</summary>
