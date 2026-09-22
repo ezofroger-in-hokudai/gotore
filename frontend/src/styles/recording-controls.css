@@ -1,0 +1,196 @@
+/* #186: 採用したメモB案と終了操作。記録画面の密度と入力領域を維持する。 */
+.recording-view .recording-header {
+  gap: 8px;
+}
+.recording-view .recording-header .memo-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 64px;
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+}
+.recording-view .recording-header .memo-toggle[aria-pressed="true"] {
+  background: var(--track);
+}
+.recording-view .recording-header .finish-training,
+.recording-finish-actions .secondary {
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+}
+.recording-view .recording-header .finish-training {
+  max-width: 128px;
+}
+.recording-view .recording-memos {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 4px 0;
+  color: var(--text);
+}
+.recording-view .recording-memos .memo-caption {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+.recording-view .recording-memos .memo-text {
+  color: var(--text);
+}
+.recording-memo-icon {
+  flex-shrink: 0;
+}
+.recording-view .set-entry .entry-memo-toggle {
+  margin-left: auto;
+  min-width: 64px;
+  min-height: 40px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.recording-view .entering-sets .set-entry .section-heading > .entry-memo-toggle {
+  grid-column: 2;
+  grid-row: 1;
+}
+.recording-view .entering-sets .set-entry .section-heading > .input-toggle {
+  grid-column: 3;
+  grid-row: 1;
+}
+.recording-view .set-entry .input-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-size: 18px;
+}
+.recording-view .recording-exercise-heading {
+  min-width: 0;
+}
+.recording-view .exercise-memo-preview {
+  display: flex;
+  max-width: 100%;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+}
+.recording-view .exercise-memo-preview span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recording-view .comparison-row button.best-set {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.recording-view .entering-sets .comparison-row {
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+}
+.recording-view .entering-sets .comparison-row > button {
+  justify-content: flex-start;
+}
+.recording-view .previous-set {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.recording-view .previous-copy {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+}
+.recording-view .all-copy {
+  margin-left: auto;
+}
+.recording-view .set-entry fieldset.input-collapsed {
+  padding-block: 8px;
+}
+.recording-view .set-entry fieldset.input-collapsed .wheels,
+.recording-view .set-entry fieldset.input-collapsed .set-actions {
+  display: none;
+}
+.recording-view .set-comparison {
+  position: relative;
+}
+.recording-view .stamp-toast-slot {
+  position: absolute;
+  z-index: 2;
+  top: 36px;
+  right: 8px;
+  pointer-events: none;
+}
+.recording-view .stamp-toast {
+  display: block;
+  width: fit-content;
+  min-height: 36px;
+  margin: 4px 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid #e4c875;
+  border-radius: 999px;
+  background: #fff8dd;
+  color: #5e4300;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 20%);
+  animation: recording-stamp-arrival 2.5s ease-out both;
+}
+@keyframes recording-stamp-arrival {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  15%,
+  80% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+.recording-finish-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.recording-finish-actions button {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  overflow-wrap: anywhere;
+}
+/* 狭い画面でも種目名と5セット分の領域を確保する。 */
+@media (max-width: 360px) {
+  .recording-view .recording-header {
+    gap: 4px;
+  }
+  .recording-view .recording-header .memo-toggle {
+    gap: 2px;
+    padding-inline: 6px;
+  }
+  .recording-view .recording-header .finish-training {
+    padding-inline: 6px;
+  }
+}

@@ -1,6 +1,7 @@
 import { type Page, expect, test } from "@playwright/test";
 import type { Analytics, Point } from "../../src/features/analytics/types";
 import { mockTraining, navigate, openGroup } from "./mock-training";
+import { backendUrl } from "./test-server";
 
 function fixture(url: URL, group = false): Analytics {
   const exercise = url.searchParams.get("exercise");
@@ -185,7 +186,7 @@ test("実DBの個人グラフは非公開も集計し、グループのランキ
   const signed = await publicAuth.signInWithPassword({ email, password: testPassword });
   if (!signed.data.session) throw new Error("テスト用ログインに失敗しました");
   const headers = { Authorization: `Bearer ${signed.data.session.access_token}` };
-  const groupResponse = await page.request.post("http://127.0.0.1:8100/api/groups", {
+  const groupResponse = await page.request.post(`${backendUrl}/api/groups`, {
     headers,
     data: { name: "集計確認部" },
   });
@@ -196,7 +197,7 @@ test("実DBの個人グラフは非公開も集計し、グループのランキ
     [group.id, 80],
     [null, 60],
   ] as const) {
-    const response = await page.request.post("http://127.0.0.1:8100/api/workouts", {
+    const response = await page.request.post(`${backendUrl}/api/workouts`, {
       headers,
       data: {
         id: crypto.randomUUID(),

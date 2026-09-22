@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { backendPort, backendUrl } from "./tests/e2e/test-server";
 const frontendPort = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
 const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_SERVER === "1" && !process.env.CI;
 
@@ -19,8 +20,8 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "cd ../backend && uv run --locked uvicorn app.main:app --host 127.0.0.1 --port 8100",
-      url: "http://127.0.0.1:8100/api/health",
+      command: `cd ../backend && uv run --locked uvicorn app.main:app --host 127.0.0.1 --port ${backendPort}`,
+      url: `${backendUrl}/api/health`,
       reuseExistingServer,
       timeout: 30_000,
     },
@@ -28,7 +29,7 @@ export default defineConfig({
       command: `bunx next dev --hostname 127.0.0.1 --port ${frontendPort}`,
       url: `http://127.0.0.1:${frontendPort}`,
       env: {
-        BACKEND_INTERNAL_URL: "http://127.0.0.1:8100",
+        BACKEND_INTERNAL_URL: backendUrl,
         NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "true",
       },
       reuseExistingServer,

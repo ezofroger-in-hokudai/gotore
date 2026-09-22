@@ -83,4 +83,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [設定の目安箱](suggestion-box.md): 非公開の投稿、再送・入力制約、Supabase管理画面での確認手順。
 
+- [スタイル見本と統一基準の検討](styles/README.md): #186の現行デモ・基準の検討案。Draft PRで採用事項を整理する。
 - [testing.md](testing.md): 開発中の対象テスト、レビュー前とCIの全件検証、並列数と計測。
