@@ -138,7 +138,7 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
     await pageA.getByRole("button", { name: "トレーニング終了", exact: true }).click();
     await pageA
       .getByRole("dialog", { name: "トレーニング終了", exact: true })
-      .getByRole("button", { name: "終了する", exact: true })
+      .getByRole("button", { name: "今日のトレーニング終了", exact: true })
       .click();
     await expect(
       pageA

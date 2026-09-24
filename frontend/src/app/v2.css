@@ -3806,6 +3806,22 @@
   font-size: 10px;
   font-weight: 400;
 }
+.recording-view .unified-comparison-table .current-set-cell {
+  display: block;
+  position: relative;
+  padding-right: 28px;
+}
+.recording-view .unified-comparison-table .current-set-cell > button:first-child {
+  width: 100%;
+  padding-right: 4px;
+}
+.recording-view .unified-comparison-table .delete-set {
+  position: absolute;
+  inset: 0 0 0 auto;
+}
+.recording-view .finish-confirm {
+  white-space: nowrap;
+}
 .recording-view .comparison-missing {
   color: var(--muted);
   font-size: 12px;

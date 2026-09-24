@@ -82,7 +82,7 @@ test("終了を待っていることを表示し、失敗時は保存済みセ�
     return route.fallback();
   });
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).tap();
-  await page.getByRole("button", { name: "終了する", exact: true }).tap();
+  await page.getByRole("button", { name: "今日のトレーニング終了", exact: true }).tap();
   try {
     await expect(page.getByRole("button", { name: "終了中…", exact: true })).toBeDisabled();
     expect(state.finished).toHaveLength(0);
@@ -94,7 +94,7 @@ test("終了を待っていることを表示し、失敗時は保存済みセ�
   expect(state.session?.exercises[0].sets).toHaveLength(1);
   fail = false;
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).tap();
-  await page.getByRole("button", { name: "終了する", exact: true }).tap();
+  await page.getByRole("button", { name: "今日のトレーニング終了", exact: true }).tap();
   await expect.poll(() => state.finished.length).toBe(1);
   await navigate(page, "履歴");
   await expect(

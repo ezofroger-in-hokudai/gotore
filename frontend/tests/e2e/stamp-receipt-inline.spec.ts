@@ -126,7 +126,7 @@ for (const width of [320, 390, 430]) {
     await finish.click();
     await page
       .getByRole("dialog", { name: "トレーニング終了", exact: true })
-      .getByRole("button", { name: "終了する", exact: true })
+      .getByRole("button", { name: "今日のトレーニング終了", exact: true })
       .click();
     const result = page.getByRole("region", { name: "トレーニング結果", exact: true });
     await expect(result.locator(".stamp-live-list button")).toHaveCount(6);

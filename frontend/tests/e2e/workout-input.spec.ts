@@ -29,7 +29,7 @@ test("未保存入力と保存済みセットをタブ切替・再起動後も�
     "60.5",
   );
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
-  await page.getByRole("button", { name: "終了する", exact: true }).click();
+  await page.getByRole("button", { name: "今日のトレーニング終了", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "おつかれさまでした。", exact: true }),
   ).toBeVisible();

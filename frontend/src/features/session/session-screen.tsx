@@ -791,10 +791,10 @@ function ActiveTraining({
             disabled={controller.busy}
             onClick={() => setFinishOpen(false)}
           >
-            記録に戻る
+            まだ続ける
           </button>
           <button
-            className="primary full"
+            className="primary full finish-confirm"
             type="button"
             disabled={controller.busy}
             onClick={async () => {
@@ -814,7 +814,7 @@ function ActiveTraining({
               }
             }}
           >
-            {controller.busy ? "終了中…" : "終了する"}
+            {controller.busy ? "終了中…" : "今日のトレーニング終了"}
           </button>
         </Sheet>
       )}

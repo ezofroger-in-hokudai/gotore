@@ -88,7 +88,7 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     }
     await pageA.bringToFront();
     await pageA.getByRole("button", { name: "トレーニング終了", exact: true }).click();
-    await pageA.getByRole("button", { name: "終了する", exact: true }).click();
+    await pageA.getByRole("button", { name: "今日のトレーニング終了", exact: true }).click();
     await navigate(pageA, "履歴");
     await expect(pageA.locator(".history-row")).toHaveCount(1);
     await pageA.locator(".history-row").click();

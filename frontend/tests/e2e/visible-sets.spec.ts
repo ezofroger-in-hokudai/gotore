@@ -86,6 +86,6 @@ test("畳んだメモの未保存入力を保持し、種目情報と終了確�
   const finish = page.getByRole("dialog", { name: "トレーニング終了", exact: true });
   await expect(finish).toBeVisible();
   await page.screenshot({ path: "test-results/visible-sets-finish.png" });
-  await finish.getByRole("button", { name: "記録に戻る", exact: true }).click();
+  await finish.getByRole("button", { name: "まだ続ける", exact: true }).click();
   await expect(memo).toHaveValue("肩甲骨を寄せてゆっくり下ろす");
 });
