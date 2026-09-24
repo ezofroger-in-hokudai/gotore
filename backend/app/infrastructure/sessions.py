@@ -327,7 +327,10 @@ class SessionRepository(TrainingRepository):
                 (session_id, name),
             ).fetchone() or {"content": "", "revision": 0}
             if current["revision"] != memo.expected_revision:
-                if current["revision"] == memo.expected_revision + 1 and current["content"] == memo.content:
+                if (
+                    current["revision"] == memo.expected_revision + 1
+                    and current["content"] == memo.content
+                ):
                     return current
                 raise Conflict("メモは変更済みです。読み直してください")
             if current["content"] == memo.content:
