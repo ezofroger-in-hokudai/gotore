@@ -250,10 +250,11 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
-            catalog={catalog}
             active={view === "record"}
             controller={training}
             userId={session.user.id}
+            recent={recentRecords}
+            onHistory={() => navigate("history")}
             haptic={preferences.haptic}
             onFinished={(record) => {
               setFinished(record);

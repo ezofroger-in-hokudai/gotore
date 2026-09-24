@@ -2617,3 +2617,10 @@
 - 影響範囲・関連ファイル: frontend/package.json、Makefile、.github/workflows/ci.yml、task.md。`make test-e2e`は全件実行のまま残す。
 - 検証: 対象の`recording-style.spec.ts`は320/390/430pxの3件成功を確認済み。frontend lint・型検査・`git diff --check`成功。ローカルでの`make test-e2e-ci`は、この作業環境のPlaywright web server起動が待機するため完走できず、クリーンなGitHub Actionsで確認する。
 - 未解決事項・次のアクション: 全件E2Eに残る旧表示文言・旧操作を期待するテストは、画面単位の改修時に現仕様の振る舞いを検証する形へ更新する。
+
+## 2026-09-24 実機ログイン後の記録画面クラッシュを修正
+
+- 変更内容・目的: 同一Wi-Fi上の実機でNext.jsの開発リソースを読み込める許可オリジンを追加し、ログイン後に記録画面が描画される際、親画面から前回履歴と履歴遷移を渡していなかった統合漏れを修正した。履歴取得中でも開始前画面を安全に表示する。
+- 影響範囲・関連ファイル: frontend/next.config.mjs、frontend/src/features/v2/workspace.tsx、frontend/src/app/v2.css。ローカル専用のSupabase接続先は実機から到達可能なWi-Fiアドレスへ変更したが、秘密値を含むためGit管理対象外。
+- 検証: frontend lint、型検査、セット操作の単体テスト8件、git diff --checkが成功。実機のログイン後画面は利用者による再読み込み確認待ち。
+- 未解決事項・次のアクション: 実機で `http://192.168.9.48:3000` を再読み込みし、ログイン後に記録画面へ進めることを確認する。ローカルGoogle OAuthはClient ID/Secret未設定のため今回の確認対象外。
