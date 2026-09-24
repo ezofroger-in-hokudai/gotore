@@ -7,6 +7,7 @@ from app.api.compressed_request import GzipRoute
 from app.api.dependencies import training_service
 from app.domain.session import ExerciseMemoInput, SessionRevision, SessionStart, SessionUpdate
 from app.domain.workout import Name
+from app.domain.workout_memo import WorkoutMemoInput
 from app.infrastructure.sessions import SessionRepository
 from app.schemas.session import (
     ExerciseContext,
@@ -95,3 +96,15 @@ def exercise_context(name: Name, service: Service, session_id: UUID | None = Non
 @router.put("/exercises/memo", response_model=WorkoutMemoResponse)
 def exercise_memo(data: ExerciseMemoInput, service: Service):
     return repository(service).save_exercise_memo(service.user.id, data)
+
+
+@router.get("/sessions/{session_id}/exercise-memo", response_model=WorkoutMemoResponse)
+def session_exercise_memo(session_id: UUID, name: Name, service: Service):
+    return repository(service).session_exercise_memo(service.user.id, session_id, name)
+
+
+@router.put("/sessions/{session_id}/exercise-memo", response_model=WorkoutMemoResponse)
+def save_session_exercise_memo(
+    session_id: UUID, name: Name, data: WorkoutMemoInput, service: Service
+):
+    return repository(service).save_session_exercise_memo(service.user.id, session_id, name, data)

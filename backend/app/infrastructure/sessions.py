@@ -12,6 +12,7 @@ from app.domain.session import (
     latest_change,
 )
 from app.domain.workout import workout_summary
+from app.domain.workout_memo import WorkoutMemoInput
 from app.infrastructure.personal_records import PersonalRecordRepository
 from app.infrastructure.training_repository import TrainingRepository
 
@@ -298,6 +299,46 @@ class SessionRepository(TrainingRepository):
                 SET content = EXCLUDED.content, revision = EXCLUDED.revision
                 RETURNING content, revision""",
                 (user_id, data.name, data.content, row["revision"] + 1),
+            ).fetchone()
+
+    def session_exercise_memo(self, user_id: UUID, session_id: UUID, name: str):
+        record = self.connection.execute(
+            "SELECT id FROM public.gotore_workouts WHERE id = %s AND user_id = %s",
+            (session_id, user_id),
+        ).fetchone()
+        if record is None:
+            raise NotFound("記録を操作できません")
+        return self.connection.execute(
+            """SELECT content, revision FROM public.gotore_session_exercise_memos
+            WHERE workout_id = %s AND name = %s""",
+            (session_id, name),
+        ).fetchone() or {"content": "", "revision": 0}
+
+    def save_session_exercise_memo(
+        self, user_id: UUID, session_id: UUID, name: str, memo: WorkoutMemoInput
+    ):
+        with self.connection.transaction():
+            record = self.owned_workout(user_id, session_id)
+            if record is None:
+                raise NotFound("記録を操作できません")
+            current = self.connection.execute(
+                """SELECT content, revision FROM public.gotore_session_exercise_memos
+                WHERE workout_id = %s AND name = %s""",
+                (session_id, name),
+            ).fetchone() or {"content": "", "revision": 0}
+            if current["revision"] != memo.expected_revision:
+                if current["revision"] == memo.expected_revision + 1 and current["content"] == memo.content:
+                    return current
+                raise Conflict("メモは変更済みです。読み直してください")
+            if current["content"] == memo.content:
+                return current
+            return self.connection.execute(
+                """INSERT INTO public.gotore_session_exercise_memos
+                (workout_id, name, content, revision) VALUES (%s, %s, %s, %s)
+                ON CONFLICT (workout_id, name) DO UPDATE
+                SET content = EXCLUDED.content, revision = EXCLUDED.revision
+                RETURNING content, revision""",
+                (session_id, name, memo.content, current["revision"] + 1),
             ).fetchone()
 
     def activity_members(self, user_id: UUID, group_id: UUID | None = None):

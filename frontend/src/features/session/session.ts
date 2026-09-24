@@ -73,6 +73,35 @@ export function updateSet(
   });
 }
 
+export function appendSets(exercises: Exercise[], name: string, values: Exercise["sets"]) {
+  if (!values.length) return exercises;
+  const positions = exercises.flatMap((exercise, index) => (exercise.name === name ? [index] : []));
+  if (!positions.length) {
+    if (exercises.length >= 20) throw new Error("種目は20件までです。");
+    if (values.length > 30) throw new Error("セットは30件までです。");
+    return [...exercises, { name, sets: values }];
+  }
+  const target = positions.at(-1) as number;
+  if (exercises[target].sets.length + values.length > 30) throw new Error("セットは30件までです。");
+  return exercises.map((exercise, index) =>
+    index === target ? { ...exercise, sets: [...exercise.sets, ...values] } : exercise,
+  );
+}
+
+export function removeSet(exercises: Exercise[], name: string, index: number) {
+  let remaining = index;
+  return exercises.flatMap((exercise) => {
+    if (exercise.name !== name) return [exercise];
+    if (remaining >= exercise.sets.length) {
+      remaining -= exercise.sets.length;
+      return [exercise];
+    }
+    const sets = exercise.sets.filter((_, setIndex) => setIndex !== remaining);
+    remaining = -1;
+    return sets.length ? [{ ...exercise, sets }] : [];
+  });
+}
+
 export type SessionInput = {
   name: string;
   weight: string;

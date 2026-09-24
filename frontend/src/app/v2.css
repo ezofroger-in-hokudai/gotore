@@ -1837,6 +1837,26 @@
   fill: var(--muted);
 }
 
+/* 前後値を薄く残し、矢印は大きく動かす補助操作にする。 */
+.recording-view .number-wheel {
+  display: grid;
+  grid-template-rows: 16px 16px 18px 36px 18px 16px;
+}
+.recording-view .wheel-neighbor { height: 16px; min-height: 16px; line-height: 16px; font-size: 10px; }
+.recording-view .wheel-value { display: block; height: 18px; color: var(--muted); font-size: 12px; line-height: 18px; opacity: 0.65; }
+.recording-view .number-wheel input { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+.comparison-current-heading { display: flex; align-items: center; justify-content: space-between; }
+.previous-copy, .delete-set { border: 0; background: transparent; color: var(--muted); }
+.previous-copy { width: 32px; min-height: 32px; font-size: 16px; }
+.comparison-lists { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; min-height: 0; }
+.recording-view .previous-comparison-table, .recording-view .comparison-table { overflow-y: auto; overscroll-behavior-y: contain; min-height: 0; max-height: 192px; }
+.recording-view .comparison-row { grid-template-columns: 18px minmax(0, 1fr) 32px; }
+.recording-view .previous-row { grid-template-columns: 18px minmax(0, 1fr); color: var(--muted); }
+.recording-view .previous-row .set-measurement { color: var(--muted); }
+.recording-view .delete-set { width: 32px; min-height: 39px; padding: 0; font-size: 13px; }
+.new-set-target { width: 100%; min-height: 39px; padding: 0 2px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--muted); text-align: left; font-size: 11px; }
+.comparison-empty { margin: 0; padding: 10px 0; color: var(--muted); font-size: 11px; }
+
 .home-training {
   margin: 0 0 20px;
 }

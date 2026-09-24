@@ -106,6 +106,13 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     }
     if (path.endsWith("/bests"))
       return route.fulfill({ json: { revision: state.session?.revision, sets: [] } });
+    if (path.endsWith("/exercise-memo")) {
+      if (route.request().method() === "GET")
+        return route.fulfill({ json: { content: "", revision: 0 } });
+      return route.fulfill({
+        json: { content: route.request().postDataJSON().content, revision: 1 },
+      });
+    }
     if (path.startsWith("/api/sessions/")) {
       if (path.endsWith("/heartbeat")) return route.fulfill({ status: 204 });
       if (!state.session) return route.fulfill({ status: 409, json: { detail: "終了済み" } });
