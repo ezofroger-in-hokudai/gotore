@@ -7,7 +7,7 @@ test("全セットを一覧で確認し、追加操作を表示したまま次�
   await startTraining(page);
   await showRecordingMemos(page);
   for (let i = 0; i < 8; i++) {
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect(page.getByRole("heading", { name: `SET ${i + 2}`, exact: true })).toBeVisible();
   }
   await expect(page.locator(".comparison-row")).toHaveCount(8);
@@ -21,7 +21,7 @@ test("全セットを一覧で確認し、追加操作を表示したまま次�
   await expect(page.getByRole("button", { name: "セット8を編集", exact: true })).toBeInViewport();
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 720 });
-    await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeInViewport();
+    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeInViewport();
     await expect(page.getByRole("button", { name: "次の種目へ", exact: true })).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
@@ -34,7 +34,7 @@ test("全セットを一覧で確認し、追加操作を表示したまま次�
   await page.getByText("セットの詳細", { exact: true }).click();
   await page.screenshot({ path: "test-results/session-overview.png", fullPage: true });
   await page.getByRole("button", { name: /^スクワット/ }).click();
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect
     .poll(() => state.session?.exercises.map((e) => e.name))
     .toEqual(["ベンチプレス", "スクワット"]);
@@ -45,7 +45,7 @@ test("全セットを一覧で確認し、追加操作を表示したまま次�
   await expect(page.getByRole("status")).toContainText("追加しました");
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
   await page.getByRole("button", { name: /^ケーブルロウ/ }).click();
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect
     .poll(() => state.session?.exercises.map((e) => e.name))
     .toEqual(["ベンチプレス", "スクワット", "ケーブルロウ"]);
@@ -77,7 +77,7 @@ test("開始応答を待ちながら入力でき、失敗後の再試行でも�
       .fill("42.5", { timeout: 2000 });
     await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("8");
     await page.getByRole("spinbutton", { name: "回数", exact: true }).press("Enter");
-    await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeDisabled();
   } finally {
     release();
   }
@@ -135,7 +135,7 @@ test("保存後の比較再取得中も種目メモと入力位置を保持す�
   await showRecordingMemos(page);
   const memo = page.getByRole("button", { name: "種目メモを編集", exact: true });
   await expect(memo).toBeEnabled();
-  await expect(page.getByRole("button", { name: "今回のメモを編集", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "今日のメモを編集", exact: true })).toBeEnabled();
   const before = await page.locator(".set-entry").boundingBox();
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
@@ -145,7 +145,7 @@ test("保存後の比較再取得中も種目メモと入力位置を保持す�
     await gate;
     await route.fallback();
   });
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   try {
     await expect(memo).toBeVisible({ timeout: 1000 });
@@ -160,7 +160,7 @@ test("ホームは再訪時に活動を保持し、権限エラー時は古い�
   const state = await mockTraining(page);
   await startTraining(page);
   await showRecordingMemos(page);
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   await navigate(page, "ホーム");
   await expect(page.locator(".community-feed")).toContainText("ベンチプレス");

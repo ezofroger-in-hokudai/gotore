@@ -60,6 +60,36 @@ def test_session_round_trips_stay_bounded_with_multiple_groups(client, connectio
     assert counted.calls <= 5
 
 
+def test_today_activity_collects_visible_groups_in_one_response(client, connection):
+    first = create_group(client)
+    second = client.post("/api/groups", json={"name": "夜トレ部"}).json()
+    for group in (first, second):
+        response = client.post(
+            "/api/groups/join",
+            json={"invite_code": group["invite_code"]},
+            headers={"X-Test-User": "B"},
+        )
+        assert response.status_code == 200
+    repo = SessionRepository(connection)
+    workout = repo.start(USERS["B"], uuid4())
+    repo.save_session(
+        USERS["B"],
+        workout["id"],
+        SessionUpdate(
+            expected_revision=1,
+            exercises=[{"name": "ベンチプレス", "sets": [{"weight": 80, "reps": 8}]}],
+        ),
+    )
+
+    response = client.get("/api/groups/today-activity")
+
+    assert response.status_code == 200, response.text
+    groups = {item["group_id"]: item for item in response.json()["groups"]}
+    assert set(groups) == {first["id"], second["id"]}
+    assert all(len(item["feed"]) == 1 for item in groups.values())
+    assert all(item["feed"][0]["user_id"] == str(USERS["B"]) for item in groups.values())
+
+
 def test_ordinary_feed_does_not_fetch_each_members_private_history(client, connection):
     group = create_group(client)
     counted = CountingConnection(connection)

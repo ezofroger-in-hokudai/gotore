@@ -1,4 +1,5 @@
 import type { Workout } from "@/lib/api";
+import { dateLabel } from "../activity/calendar";
 import { LoadingState } from "../loading/loading-state";
 import { StampControl } from "../stamps/stamp-control";
 import { RecordList } from "../training/record-list";
@@ -14,7 +15,7 @@ export function SharedWorkoutDetail({
   onClose: () => void;
 }) {
   return (
-    <Sheet title="記録の詳細" onClose={onClose}>
+    <Sheet title={record.data ? dateLabel(record.data.performed_on) : "記録"} onClose={onClose}>
       {record.error ? (
         <p role="alert" className="error">
           {record.error}
@@ -24,18 +25,24 @@ export function SharedWorkoutDetail({
         </p>
       ) : record.data ? (
         <>
-          {groupId && (
-            <StampControl
-              key={`${groupId}:${record.data.id}`}
-              groupId={groupId}
-              workoutId={record.data.id}
-              name={record.data.display_name}
-            />
-          )}
-          <RecordList records={[record.data]} empty="" />
+          <RecordList
+            records={[record.data]}
+            empty=""
+            showDate={false}
+            headerControl={(workout) =>
+              groupId ? (
+                <StampControl
+                  key={`${groupId}:${workout.id}`}
+                  groupId={groupId}
+                  workoutId={workout.id}
+                  name={workout.display_name}
+                />
+              ) : null
+            }
+          />
         </>
       ) : (
-        <LoadingState label="記録の詳細を読み込み中" />
+        <LoadingState label="記録を読み込み中" />
       )}
     </Sheet>
   );

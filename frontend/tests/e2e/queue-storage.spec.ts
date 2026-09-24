@@ -8,7 +8,7 @@ test("旧形式の未送信セットを保持して差分へ移行し、再起�
   await startTraining(page);
   const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
   await weight.fill("80");
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect.poll(() => state.session?.exercises[0]?.sets.length).toBe(1);
   const base = structuredClone(state.session);
   if (!base) throw new Error("開始していません");
@@ -39,7 +39,7 @@ test("旧形式の未送信セットを保持して差分へ移行し、再起�
   await expect(page.getByRole("button", { name: "セット3を編集", exact: true })).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBe(legacy);
   await weight.fill("87.5");
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect
     .poll(() =>
       page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null")?.version, key),

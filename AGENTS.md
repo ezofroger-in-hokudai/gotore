@@ -30,6 +30,8 @@
 
 - 依存の初期セットアップ: `make install`。通常のセットアップでlockfileを変更しないこと。
 - ローカル起動: 別ターミナルで `make backend` と `make frontend`。
+- WSL上でローカルSupabaseを使う場合: Docker Desktopの公開ポートをWSL自身から利用するため、Windowsの `%USERPROFILE%\\.wslconfig` は標準の `networkingMode=nat` と `localhostForwarding=true` を使う。`networkingMode=mirrored` はSupabase CLIが待つ `127.0.0.1:59321`〜`:59327` をタイムアウトさせることがあるため使用しない。設定変更後は `wsl.exe --shutdown` を実行して再接続し、`nc -zv 127.0.0.1 59322` と `make db-start` で確認する。変更前には `.wslconfig` をバックアップする。
+- 同一LANでの開発確認: Windowsの `0.0.0.0:3001` をその時点のWSL IPの `3001` へportproxyし、Windows Defender FirewallでTCP `3001`（画面）と`59321`（ローカルAuth）をプライベートネットワークから受信許可する。WSL再起動後はIPが変わる可能性があるため、`hostname -I` と `netsh interface portproxy show v4tov4` の中継先を照合する。PCから `http://<WindowsのLAN IP>:3001` と `/auth/v1/health` が200でも、最後に実機スマホから確認する。
 - アプリ変更の検証: `make check`（backend lint／test、frontend lint／単体test／build）。DB統合テストには `TEST_DATABASE_URL` に専用の `_test` DBを指定すること。
 - 開発中は `make check-fast` と `make test-e2e E2E_ARGS='対象.spec.ts'` で反復し、レビュー前に `make check` と変更関連のE2Eを実行すること。コード変更を含むPRのCIで全E2E成功を必須とする。資料だけのPRは差分確認とする。CIが使えない場合は記録・共有・共通UI・テスト基盤の変更でローカル全E2Eを実行する。選び方と記録方法は `docs/testing.md` に従う。ローカルSupabaseと環境ファイルを先に用意すること。テスト用のアカウント・記録が作成される。
 - 文書・テンプレートのみの変更は、リンク、コマンド、テンプレート構造、`git diff --check`を確認すること。テストを先に書かない理由も `progress.md` に残すこと。
@@ -73,6 +75,12 @@
 - ファイル名は固定とみなさず、作業前に `docs/` フォルダ全体を確認すること。
 - 実装は `docs/` 配下の内容を優先すること。
 - `docs/` と `progress.md`、既存実装、またはテストの内容に矛盾がある場合は、実装を進める前にユーザへ確認すること。
+
+## UI・デザイン判断の記録
+- 画面のプレビューやユーザーとの検討で合意・却下した判断は、同じ変更で該当機能の設計資料へ更新する。資料がなければ `docs/design/<機能名>.md` を作り、`docs/design/README.md` と `docs/README.md` から参照できるようにする。
+- 次のプレビュー作成・実装の前に、その設計資料を必ず読み、すでに選ばれた配置・文言・操作や、明確に却下された案を、ユーザーの再指定なしに提案し直したり戻したりしない。
+- 設計資料には、現在の採用案、守る表示・操作ルール、保留中の判断、対応するプレビューを画面・状態ごとに記す。採用したプレビューは `-adopted.html` などの固定名で残し、実装・画面確認・レビューでは必ずそのプレビューと照合する。`progress.md` には時系列の経緯と検証結果を残し、設計資料は現在の判断の参照元とする。
+- 横断的な色・余白・部品の基準は `docs/design-system.md` を優先する。画面固有の決定がその基準を具体化する場合は、画面の設計資料から参照する。
 
 ---
 

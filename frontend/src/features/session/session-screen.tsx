@@ -1,9 +1,21 @@
 "use client";
 
-import type { ExerciseOption, SessionBests, TrainingSession } from "@/lib/api";
+import type {
+  BodyPart,
+  ExerciseOption,
+  SessionBests,
+  TodayActivity,
+  TrainingSession,
+  Workout,
+} from "@/lib/api";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { dateLabel } from "../activity/calendar";
+import { BODY_PARTS, BODY_PART_LABELS, normalizeBodyPart } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
+import { StampControl } from "../stamps/stamp-control";
+import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
+import { Avatar } from "../v2/avatar";
 import { Sheet } from "../v2/sheet";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
@@ -30,6 +42,7 @@ export function SessionScreen({
   onHistory,
   onFinished,
   haptic,
+  catalog,
 }: {
   active: boolean;
   controller: SessionController;
@@ -38,9 +51,9 @@ export function SessionScreen({
   onHistory: () => void;
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
+  catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
 }) {
   const { session } = controller;
-  const catalog = useResource<ExerciseOption[]>("/exercise-options", 0, false, true);
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
   if (!session && !controller.startingId)
     return (
@@ -126,7 +139,9 @@ function ActiveTraining({
   const [finishOpen, setFinishOpen] = useState(false);
   const [error, setError] = useState("");
   const [storageWarning, setStorageWarning] = useState(false);
-  const [query, setQuery] = useState("");
+  const [selectedParts, setSelectedParts] = useState<BodyPart[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<string>("all");
+  const [openedPeer, setOpenedPeer] = useState<{ groupId: string; workoutId: string } | null>(null);
   const overviewBests = useResource<SessionBests>(
     sessionId ? `/sessions/${sessionId}/bests` : null,
     controller.confirmedRevision,
@@ -139,15 +154,37 @@ function ActiveTraining({
       ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
       : [],
   );
-  const names = Array.from(
-    new Set([...(catalog.data ?? []).map((e) => e.name), ...exercises.map((e) => e.name)]),
-  );
+  const candidates = (catalog.data ?? [])
+    .filter(
+      (option) =>
+        selectedParts.length === 0 ||
+        selectedParts.includes(normalizeBodyPart(option.primary_body_part)),
+    )
+    .toSorted((left, right) => {
+      const leftUsed = exercises.some((exercise) => exercise.name === left.name);
+      const rightUsed = exercises.some((exercise) => exercise.name === right.name);
+      return Number(rightUsed) - Number(leftUsed) || left.name.localeCompare(right.name, "ja");
+    });
   const context = useExerciseContext(
     sessionId,
     input.name,
-    names.filter((name) => name !== input.name && (!selecting || name.includes(query.trim()))),
+    candidates.map((candidate) => candidate.name).filter((name) => name !== input.name),
     controller.confirmedRevision,
     active,
+  );
+  const todayActivity = useResource<TodayActivity>(
+    sessionId ? "/groups/today-activity" : null,
+    controller.confirmedRevision,
+    10_000,
+    true,
+    { enabled: active && selecting, retainOnRefresh: true },
+  );
+  const peerRecord = useResource<Workout>(
+    openedPeer ? `/groups/${openedPeer.groupId}/workouts/${openedPeer.workoutId}` : null,
+    0,
+    false,
+    true,
+    { enabled: active && !!openedPeer, retainOnRefresh: true },
   );
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
   const previous = context.data?.previous?.sets ?? [];
@@ -194,6 +231,9 @@ function ActiveTraining({
       document.removeEventListener("visibilitychange", hidden);
     };
   }, [persistInput]);
+  useEffect(() => {
+    if (!active) persistInput();
+  }, [active, persistInput]);
   // 応答だけ失われた保存は、再起動時にサーバーと照合して二重追加を防ぐ。
   useEffect(() => {
     if (!storageKey) return;
@@ -288,6 +328,40 @@ function ActiveTraining({
     }
   }
 
+  function openExerciseSelection() {
+    // 次の種目・画面遷移でも、未確定の数値入力は先に端末へ残す。
+    persistInput();
+    setSelecting(true);
+  }
+
+  function chooseExercise(name: string) {
+    if (
+      input.dirty &&
+      input.name !== name &&
+      !window.confirm("未保存の入力を破棄して種目を変更しますか？")
+    )
+      return;
+    if (input.name === name) {
+      setSelecting(false);
+      return;
+    }
+    const latest = exercises
+      .filter((exercise) => exercise.name === name)
+      .flatMap((exercise) => exercise.sets)
+      .at(-1);
+    const first = latest ?? context.firstPreviousSet(name);
+    setInput({
+      name,
+      revision,
+      weight: String(first?.weight ?? 20),
+      reps: String(first?.reps ?? 10),
+      awaitingPrevious: !first,
+      editing: null,
+      dirty: false,
+    });
+    setSelecting(false);
+  }
+
   return (
     <section className={`session-screen${selecting ? "" : " entering-sets"}`}>
       {storageWarning && (
@@ -297,43 +371,89 @@ function ActiveTraining({
       )}
       {selecting ? (
         <>
-          <div className="section-heading">
+          <div className="section-heading selection-heading session-header">
             <h1>種目を選択</h1>
-            <button className="text-button" type="button" onClick={() => setCatalogOpen(true)}>
-              種目一覧
+            <button
+              type="button"
+              className="text-button finish-training"
+              disabled={!session || controller.busy}
+              onClick={() => setFinishOpen(true)}
+            >
+              今日のトレーニング終了
             </button>
           </div>
-          <section className="session-overview" aria-label="今回のトレーニング">
-            <h2>今回のトレーニング</h2>
-            {exercises.length ? (
-              exercises.map((exercise, index) => (
-                <div key={`${exercise.name}-${index}`}>
-                  <h3>
-                    {exercise.name} · {exercise.sets.length}セット
-                  </h3>
-                  <ol>
-                    {exercise.sets.map((value, i) => (
-                      <li
-                        key={`set-${i + 1}`}
-                        className={
-                          bestPositions.has(`${index}:${i}`) ? "record-celebration" : undefined
-                        }
-                      >
-                        {bestPositions.has(`${index}:${i}`) && (
-                          <span role="img" aria-label="最高記録">
-                            🔥{" "}
+          <section className="training-peers" aria-label="今日の仲間">
+            <div className="peer-groups" role="tablist" aria-label="仲間のグループ">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedGroup === "all"}
+                onClick={() => setSelectedGroup("all")}
+              >
+                すべて
+              </button>
+              {(todayActivity.data?.groups ?? []).map((group) => (
+                <button
+                  type="button"
+                  role="tab"
+                  key={group.group_id}
+                  aria-selected={selectedGroup === group.group_id}
+                  onClick={() => setSelectedGroup(group.group_id)}
+                >
+                  {group.name}
+                </button>
+              ))}
+            </div>
+            <div className="peer-avatars">
+              {todayActivity.data
+                ? peerItems(todayActivity.data, selectedGroup).map((peer) => (
+                    <button
+                      className="peer-avatar-button"
+                      type="button"
+                      key={`${peer.groupId}:${peer.workoutId}`}
+                      aria-label={`${peer.name}の今日の記録を開く`}
+                      onClick={() =>
+                        setOpenedPeer({ groupId: peer.groupId, workoutId: peer.workoutId })
+                      }
+                    >
+                      <span className="peer-avatar-wrap">
+                        <Avatar
+                          userId={peer.userId}
+                          name={peer.name}
+                          version={peer.avatarVersion}
+                          live={peer.live}
+                        />
+                        {peer.best && (
+                          <span className="peer-best" aria-label="最高記録を更新">
+                            🔥
                           </span>
                         )}
-                        {i + 1}: {value.weight}kg × {value.reps}回
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              ))
-            ) : (
-              <p className="muted">まだセットがありません</p>
-            )}
+                      </span>
+                    </button>
+                  ))
+                : ["first", "second", "third"].map((key) => (
+                    <span className="peer-avatar-placeholder" key={key} />
+                  ))}
+            </div>
           </section>
+          <details className="today-training" aria-label="今日のトレーニング">
+            <summary>
+              <span>今日のトレーニング</span>
+              <span>{sessionSummary(exercises)}</span>
+              <span aria-hidden="true">…</span>
+            </summary>
+            {exercises.map((exercise, index) => (
+              <section key={`${exercise.name}-${index}`}>
+                <h2>{exercise.name}</h2>
+                {exercise.sets.map((value, setIndex) => (
+                  <p key={`${exercise.name}-${setIndex}`}>
+                    <span>SET {setIndex + 1}</span>
+                    <SetMeasurement weight={value.weight} reps={value.reps} />
+                  </p>
+                ))}
+              </section>
+            ))}
+          </details>
           {overviewBests.error && (
             <p className="error" role="alert">
               {overviewBests.error}
@@ -342,14 +462,24 @@ function ActiveTraining({
               </button>
             </p>
           )}
-          <label className="search-label">
-            種目を検索
-            <input
-              placeholder="種目名で検索"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
+          <div className="session-body-parts" aria-label="部位で絞り込み">
+            {BODY_PARTS.map((part) => (
+              <button
+                type="button"
+                key={part}
+                aria-pressed={selectedParts.includes(part)}
+                onClick={() =>
+                  setSelectedParts((current) =>
+                    current.includes(part)
+                      ? current.filter((value) => value !== part)
+                      : [...current, part],
+                  )
+                }
+              >
+                {BODY_PART_LABELS[part]}
+              </button>
+            ))}
+          </div>
           {catalog.error && (
             <p role="alert" className="error">
               {catalog.error}
@@ -358,66 +488,45 @@ function ActiveTraining({
               </button>
             </p>
           )}
-          <div className="v2-rows">
-            {names
-              .filter((name) => name.includes(query.trim()))
-              .map((name) => (
-                <button
-                  type="button"
-                  className="v2-row"
-                  key={name}
-                  onClick={() => {
-                    if (
-                      input.dirty &&
-                      input.name !== name &&
-                      !window.confirm("未保存の入力を破棄して種目を変更しますか？")
-                    )
-                      return;
-                    if (input.name === name) {
-                      setSelecting(false);
-                      return;
-                    }
-                    const latest = exercises
-                      .filter((e) => e.name === name)
-                      .flatMap((e) => e.sets)
-                      .at(-1);
-                    const first = latest ?? context.firstPreviousSet(name);
-                    setInput({
-                      name,
-                      revision,
-                      weight: String(first?.weight ?? 20),
-                      reps: String(first?.reps ?? 10),
-                      awaitingPrevious: !first,
-                      editing: null,
-                      dirty: false,
-                    });
-                    setSelecting(false);
-                  }}
-                >
-                  <span>{name}</span>
-                  <span className="muted">
-                    {exercises.find((e) => e.name === name)?.sets.length || ""} ›
-                  </span>
-                </button>
-              ))}
+          <div className="v2-rows exercise-picker-list">
+            {candidates.map((option) => (
+              <button
+                type="button"
+                className="v2-row"
+                key={option.id}
+                onClick={() => chooseExercise(option.name)}
+              >
+                <span className="exercise-picker-title">
+                  <strong>{option.name}</strong>
+                  <small className="muted">
+                    {previousDays(context.previousPerformedOn(option.name))}
+                  </small>
+                </span>
+                <span className="muted">›</span>
+              </button>
+            ))}
           </div>
-          {!names.length && !catalog.loading && (
-            <p className="muted">種目一覧から種目を追加してください。</p>
+          {!candidates.length && !catalog.loading && (
+            <p className="muted">この部位の種目はありません</p>
           )}
-          <button className="secondary full" type="button" onClick={() => setCatalogOpen(true)}>
-            新しい種目を追加
+          <button
+            className="exercise-add-button"
+            type="button"
+            onClick={() => setCatalogOpen(true)}
+          >
+            ＋ 種目を追加
           </button>
         </>
       ) : (
         <>
           <div className="session-context">
-            <header className="recording-header">
+            <header className="recording-header session-header">
               <h1>
                 <button
                   className="exercise-information"
                   type="button"
                   disabled={blocking}
-                  onClick={() => setSelecting(true)}
+                  onClick={openExerciseSelection}
                 >
                   {input.name}
                 </button>
@@ -431,8 +540,8 @@ function ActiveTraining({
                 今日のトレーニング終了
               </button>
             </header>
-            <section className="recording-memos memo-plain" aria-label="種目メモ">
-              <span className="memo-caption">種目メモ</span>
+            <section className="recording-memos memo-plain memo-inline-row" aria-label="種目メモ">
+              <span className="memo-caption">種目メモ：</span>
               {context.data ? (
                 <InlineMemo
                   key={input.name}
@@ -442,6 +551,7 @@ function ActiveTraining({
                   initial={context.data.memo}
                   userId={userId}
                   onSaved={context.retry}
+                  singleLine
                 />
               ) : (
                 <span className="memo-text muted">メモを読み込み中…</span>
@@ -462,19 +572,21 @@ function ActiveTraining({
                 <h2>
                   今回 <small>タップで編集</small>
                 </h2>
-                <button
-                  type="button"
-                  className="previous-copy"
-                  aria-label="前回の全セットをコピー"
-                  disabled={!previous.length || blocking}
-                  onClick={() => void copyPreviousSets()}
-                >
-                  ⧉
-                </button>
               </div>
-              <h2 className="comparison-previous-heading">
-                前回 <small>{context.data?.previous?.performed_on.replaceAll("-", "/")}</small>
-              </h2>
+              <div className="comparison-previous-heading">
+                <h2>
+                  前回 <small>{context.data?.previous?.performed_on.replaceAll("-", "/")}</small>
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="previous-copy"
+                aria-label="前回の全セットをコピー"
+                disabled={!previous.length || blocking}
+                onClick={() => void copyPreviousSets()}
+              >
+                ⧉
+              </button>
             </div>
             <section
               className="comparison-table unified-comparison-table"
@@ -486,12 +598,13 @@ function ActiveTraining({
                 return (
                   <div className="comparison-row" key={`set-${index + 1}`}>
                     <span>{index + 1}</span>
-                    <div className="current-set-cell">
+                    <div
+                      className={`current-set-cell${input.editing === index ? " editing-set" : ""}`}
+                    >
                       {current ? (
                         <>
                           <button
                             type="button"
-                            className={input.editing === index ? "editing-set" : ""}
                             disabled={controller.busy}
                             aria-label={`セット${index + 1}を編集`}
                             onClick={() => {
@@ -522,76 +635,74 @@ function ActiveTraining({
                               setInputOpen(true);
                             }}
                           >
-                            <SetMeasurement weight={current.weight} reps={current.reps} />
-                          </button>
-                          <button
-                            type="button"
-                            className="delete-set"
-                            disabled={controller.busy}
-                            aria-label={`セット${index + 1}を削除`}
-                            onClick={() => void deleteSet(index)}
-                          >
-                            <svg aria-hidden="true" viewBox="0 0 24 24">
-                              <path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13M10 11v5m4-5v5" />
-                            </svg>
+                            <span className="current-set-selection">
+                              <SetMeasurement weight={current.weight} reps={current.reps} />
+                            </span>
                           </button>
                         </>
                       ) : (
                         <span className="comparison-missing">—</span>
                       )}
                     </div>
+                    {current && (
+                      <button
+                        type="button"
+                        className="delete-set"
+                        disabled={controller.busy}
+                        aria-label={`セット${index + 1}を削除`}
+                        onClick={() => void deleteSet(index)}
+                      >
+                        <svg aria-hidden="true" viewBox="0 0 24 24">
+                          <path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13M10 11v5m4-5v5" />
+                        </svg>
+                      </button>
+                    )}
+                    {!current && <span className="delete-set-placeholder" aria-hidden="true" />}
                     <div className="previous-set-cell">
                       {prior ? (
-                        <>
-                          <SetMeasurement weight={prior.weight} reps={prior.reps} />
-                          <button
-                            type="button"
-                            className="previous-copy"
-                            aria-label={`前回のセット${index + 1}をコピー`}
-                            onClick={() => void copyPreviousIntoNextSet(prior)}
-                          >
-                            ⧉
-                          </button>
-                        </>
+                        <SetMeasurement weight={prior.weight} reps={prior.reps} />
                       ) : (
                         <span className="comparison-missing">—</span>
                       )}
                     </div>
+                    {prior && (
+                      <button
+                        type="button"
+                        className="previous-copy"
+                        aria-label={`前回のセット${index + 1}をコピー`}
+                        onClick={() => void copyPreviousIntoNextSet(prior)}
+                      >
+                        ⧉
+                      </button>
+                    )}
+                    {!prior && <span className="previous-copy-placeholder" aria-hidden="true" />}
                   </div>
                 );
               })}
-              <button
-                className="new-set-target"
-                type="button"
-                aria-label={`SET ${sets.length + 1} 新しいセット`}
-                disabled={blocking}
-                onClick={() => {
-                  setInput({ ...input, revision, editing: null, dirty: false });
-                  setInputOpen(true);
-                }}
-              >
-                ＋
-              </button>
               {!previous.length && !sets.length && (
                 <p className="comparison-empty">まだセットがありません</p>
               )}
             </section>
           </div>
           <div className="recording-entry-dock">
-            <section className="today-exercise-memo memo-strip memo-plain" aria-label="今日のメモ">
-              <h2>今日のメモ</h2>
+            <section
+              className="today-exercise-memo memo-strip memo-plain memo-inline-row"
+              aria-label="今日のメモ"
+            >
+              <span className="memo-caption">今日のメモ：</span>
               {sessionId ? (
                 <InlineMemo
                   title="今日のメモ"
                   path={`/sessions/${sessionId}/exercise-memo?name=${encodeURIComponent(input.name)}`}
                   userId={userId}
+                  singleLine
                 />
               ) : (
                 <span className="memo-text muted">メモを読み込み中…</span>
               )}
             </section>
             <form
-              className="set-entry"
+              className={`set-entry${input.editing === null ? "" : " editing-input"}`}
               onSubmit={(e) => {
                 e.preventDefault();
                 void save();
@@ -614,11 +725,15 @@ function ActiveTraining({
                 disabled={blocking || stale || controller.status === "conflict"}
               >
                 <div className="set-entry-heading">
-                  <h2>
-                    {input.editing === null
-                      ? `SET ${sets.length + 1}`
-                      : `SET ${input.editing + 1} を編集`}
-                  </h2>
+                  <h2>{`SET ${input.editing === null ? sets.length + 1 : input.editing + 1}`}</h2>
+                  <div className="set-entry-labels" aria-hidden="true">
+                    <span className="number-wheel-label">
+                      重量 <small>kg</small>
+                    </span>
+                    <span className="number-wheel-label">
+                      回数 <small>回</small>
+                    </span>
+                  </div>
                   <button
                     type="button"
                     className="input-toggle"
@@ -641,6 +756,7 @@ function ActiveTraining({
                     step={0.5}
                     arrowStep={5}
                     min={0}
+                    showLabel={false}
                     onChange={(weight) => {
                       setInput({
                         ...input,
@@ -662,6 +778,7 @@ function ActiveTraining({
                     step={1}
                     arrowStep={5}
                     min={1}
+                    showLabel={false}
                     onChange={(reps) => {
                       setInput({
                         ...input,
@@ -674,15 +791,15 @@ function ActiveTraining({
                       });
                     }}
                   />
+                  <p className={`rm-estimate${candidate ? " record-candidate" : ""}`}>
+                    1RM <strong>{rm ?? "—"}</strong> kg
+                  </p>
                 </div>
-                <p className={`rm-estimate${candidate ? " record-candidate" : ""}`}>
-                  1RM <strong>{rm ?? "—"}</strong> kg
-                </p>
                 <div className="set-actions">
                   <button
                     className="secondary next-exercise"
                     type="button"
-                    onClick={() => setSelecting(true)}
+                    onClick={openExerciseSelection}
                   >
                     次の種目へ
                   </button>
@@ -690,16 +807,9 @@ function ActiveTraining({
                     className="primary"
                     type="submit"
                     disabled={!session || controller.busy}
-                    aria-label={input.editing === null ? "次のセットへ" : "変更を保存"}
+                    aria-label={input.editing === null ? "セットを追加" : "変更を保存"}
                   >
-                    <span>
-                      {blocking
-                        ? "保存中…"
-                        : input.editing === null
-                          ? "次のセットへ"
-                          : "変更を保存"}
-                    </span>
-                    <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
+                    {blocking ? "保存中…" : input.editing === null ? "セットを追加" : "変更を保存"}
                   </button>
                 </div>
               </fieldset>
@@ -713,13 +823,47 @@ function ActiveTraining({
         </>
       )}
       {catalogOpen && (
-        <Sheet title="種目一覧" onClose={() => setCatalogOpen(false)}>
+        <Sheet title="種目を追加" onClose={() => setCatalogOpen(false)}>
           <ExerciseCatalog
             options={catalog.data ?? []}
             expanded
+            startAdding
             disabled={controller.busy}
             onChanged={catalog.retry}
+            onAdded={() => setCatalogOpen(false)}
+            initialPrimary={selectedParts.length === 1 ? selectedParts[0] : undefined}
           />
+        </Sheet>
+      )}
+      {openedPeer && (
+        <Sheet
+          title={peerRecord.data ? dateLabel(peerRecord.data.performed_on) : "記録"}
+          onClose={() => setOpenedPeer(null)}
+        >
+          {peerRecord.error ? (
+            <p className="error" role="alert">
+              {peerRecord.error}
+              <button type="button" className="text-button" onClick={peerRecord.retry}>
+                再試行
+              </button>
+            </p>
+          ) : peerRecord.data ? (
+            <RecordList
+              records={[peerRecord.data]}
+              empty=""
+              showDate={false}
+              headerControl={(workout) => (
+                <StampControl
+                  groupId={openedPeer.groupId}
+                  workoutId={workout.id}
+                  name={workout.display_name}
+                  direct
+                />
+              )}
+            />
+          ) : (
+            <div className="peer-record-placeholder" aria-label="記録を読み込み中" />
+          )}
         </Sheet>
       )}
       {(controller.status === "offline" || controller.status === "conflict") && (
@@ -830,5 +974,65 @@ function SetMeasurement({ weight, reps }: { weight: number; reps: number }) {
       </span>
       <small>RM {displayEstimatedRM(weight, reps) ?? "—"}</small>
     </span>
+  );
+}
+
+function sessionSummary(exercises: TrainingSession["exercises"]) {
+  const sets = exercises.reduce((total, exercise) => total + exercise.sets.length, 0);
+  const volume = exercises.reduce(
+    (total, exercise) =>
+      total + exercise.sets.reduce((sum, value) => sum + value.weight * value.reps, 0),
+    0,
+  );
+  return `${exercises.length}種目　${sets}セット　${volume.toLocaleString("ja-JP")}kg`;
+}
+
+function previousDays(performedOn: string | undefined) {
+  if (!performedOn) return "";
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
+  const days = Math.max(
+    0,
+    Math.floor(
+      (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${performedOn}T00:00:00Z`)) / 86_400_000,
+    ),
+  );
+  return days >= 10 ? "10日以上前" : `${days}日前`;
+}
+
+function peerItems(data: TodayActivity, selectedGroup: string) {
+  const peers = new Map<
+    string,
+    {
+      groupId: string;
+      workoutId: string;
+      userId: string;
+      name: string;
+      avatarVersion?: string | null;
+      live: boolean;
+      best: boolean;
+      updatedAt: string;
+    }
+  >();
+  for (const group of data.groups) {
+    if (selectedGroup !== "all" && selectedGroup !== group.group_id) continue;
+    for (const feed of group.feed) {
+      const current = peers.get(feed.user_id);
+      if (current && current.updatedAt >= feed.updated_at) continue;
+      const member = group.members.find((item) => item.id === feed.user_id);
+      peers.set(feed.user_id, {
+        groupId: group.group_id,
+        workoutId: feed.workout_id,
+        userId: feed.user_id,
+        name: feed.display_name,
+        avatarVersion: member?.avatar_version,
+        live: member?.live ?? false,
+        best: feed.best,
+        updatedAt: feed.updated_at,
+      });
+    }
+  }
+  return [...peers.values()].toSorted(
+    (left, right) =>
+      Number(right.live) - Number(left.live) || right.updatedAt.localeCompare(left.updatedAt),
   );
 }

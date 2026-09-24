@@ -51,6 +51,22 @@ function fixture() {
   };
 }
 describe("画面から独立したスタンプ送信", () => {
+  test("詳細内の選択は閉じるまで送らず、最終状態だけを送る", async () => {
+    const f = fixture();
+    await f.store.refresh("g", ["w"]);
+    expect(f.store.toggle("g", "w", "praise", "名前", true)).toBe(true);
+    expect(f.store.view("g", "w")?.mine).toContain("praise");
+    expect(f.calls.filter((call) => call.method === "PUT")).toHaveLength(0);
+    expect(f.store.toggle("g", "w", "praise", "名前", true)).toBe(true);
+    expect(f.store.view("g", "w")?.mine).not.toContain("praise");
+    expect(f.store.jobs).toHaveLength(0);
+    expect(f.store.toggle("g", "w", "praise", "名前", true)).toBe(true);
+    f.store.flush("g", "w");
+    await tick();
+    expect(f.calls.filter((call) => call.method === "PUT")).toHaveLength(1);
+    expect(f.store.jobs).toHaveLength(0);
+    f.store.stop();
+  });
   test("即時反映・同じ種類の連打防止・別種類は操作可能", async () => {
     const f = fixture();
     await f.store.refresh("g", ["w"]);
@@ -120,6 +136,17 @@ describe("画面から独立したスタンプ送信", () => {
       Array.from({ length: 101 }, (_, i) => String(i)),
     );
     expect(f.calls.map((call) => call.ids?.length)).toEqual([50, 50, 1]);
+    f.store.stop();
+  });
+  test("同じ記録は別の表示グループでも一つのスタンプ状態を共有する", async () => {
+    const f = fixture();
+    f.setSummary({ counts: { fire: 1 }, mine: [], can_send: true });
+    await f.store.refresh("group-a", ["workout"]);
+    expect(f.store.view("group-b", "workout")?.counts.fire).toBe(1);
+    expect(f.store.toggle("group-b", "workout", "praise", "名前")).toBe(true);
+    await tick();
+    expect(f.store.view("group-a", "workout")?.counts.praise).toBe(1);
+    expect(f.calls.some((call) => call.path.startsWith("/groups/group-b/"))).toBe(true);
     f.store.stop();
   });
   test("端末保存が失敗したら送信しない", async () => {

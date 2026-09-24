@@ -166,12 +166,9 @@ test("ホーム準備後は共有詳細の取得中も移動や閉じる操作�
       exact: true,
     });
     await open.click();
-    const dialog = page.getByRole("dialog", {
-      name: "記録の詳細",
-      exact: true,
-    });
+    const dialog = page.getByRole("dialog", { name: "記録", exact: true });
     const loading = dialog.getByRole("status", {
-      name: "記録の詳細を読み込み中",
+      name: "記録を読み込み中",
     });
     await expect(loading).toBeVisible();
     await expect(loading.locator("svg")).toHaveCount(0);

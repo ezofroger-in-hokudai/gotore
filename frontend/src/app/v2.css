@@ -92,7 +92,7 @@
 .v2-app .primary,
 .v2-app .secondary {
   min-height: 46px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
   padding: 11px 16px;
 }
@@ -551,10 +551,6 @@
   font-size: 13px;
   border-radius: 8px;
 }
-.comparison-row .editing-set {
-  background: var(--accent-soft);
-  outline: 1px solid var(--accent);
-}
 .set-entry {
   background: var(--panel);
   padding: 16px;
@@ -577,7 +573,7 @@
   text-align: center;
   touch-action: pan-x;
 }
-.number-wheel label {
+.number-wheel-label {
   font-size: 11px;
   color: var(--muted);
   display: flex;
@@ -804,7 +800,7 @@
 .recording-view .session-screen {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 .recording-view .session-screen > .section-heading {
   margin: 0;
@@ -921,7 +917,7 @@
   user-select: none;
   gap: 0;
 }
-.recording-view .number-wheel label {
+.recording-view .number-wheel-label {
   margin: 0;
   font-size: 0.75rem;
   line-height: 16px;
@@ -1261,7 +1257,7 @@
 .analytics-tabs,
 .analytics-grains {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   padding: 4px;
   background: var(--track);
   border-radius: 12px;
@@ -1837,16 +1833,17 @@
   fill: var(--muted);
 }
 
-/* 前後値を薄く残し、矢印は大きく動かす補助操作にする。 */
+/* 数値欄とは間隔を空け、矢印だけを少し押しやすくする。 */
 .recording-view .number-wheel {
   display: grid;
-  grid-template-rows: 16px 16px 18px 36px 18px 16px;
+  grid-template-rows: 16px 24px 36px 24px;
+  row-gap: 7px;
 }
 .recording-view .wheel-neighbor {
-  height: 16px;
-  min-height: 16px;
-  line-height: 16px;
-  font-size: 10px;
+  height: 24px;
+  min-height: 24px;
+  line-height: 24px;
+  font-size: 12px;
 }
 .recording-view .wheel-value {
   display: block;
@@ -1906,17 +1903,6 @@
   min-height: 39px;
   padding: 0;
   font-size: 13px;
-}
-.new-set-target {
-  width: 100%;
-  min-height: 39px;
-  padding: 0 2px;
-  border: 0;
-  border-top: 1px solid var(--line);
-  background: transparent;
-  color: var(--muted);
-  text-align: left;
-  font-size: 11px;
 }
 .comparison-empty {
   margin: 0;
@@ -2214,6 +2200,7 @@
   font-weight: 400;
   margin-left: 6px;
 }
+.exercise-option-form h3,
 .body-part-editor h3 {
   font-size: 22px;
   margin-bottom: 4px;
@@ -2293,6 +2280,30 @@
   gap: 8px;
   margin-bottom: 12px;
   overflow-wrap: anywhere;
+}
+.record-author-avatar {
+  position: relative;
+  flex: 0 0 auto;
+}
+.record-author .avatar.is-live {
+  border: 2px solid var(--accent);
+}
+.record-author-live {
+  position: absolute;
+  right: -2px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--accent);
+}
+.record-author-best {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 14px;
+  line-height: 1;
 }
 .record-overview {
   display: flex;
@@ -2421,7 +2432,7 @@
 .recording-view .eyebrow {
   font-size: 0.75rem;
 }
-.recording-view .number-wheel label {
+.recording-view .number-wheel-label {
   line-height: 1.5;
 }
 .recording-view .comparison-row {
@@ -3199,9 +3210,10 @@
 }
 .inline-stamp-touch[aria-pressed="true"] .inline-stamp-pill,
 .inline-stamp-choice[aria-pressed="true"] .inline-stamp-pill {
-  border-color: #ce706c;
-  background: #c9544812;
+  border-color: var(--accent);
+  background: #fde3e1;
   color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .inline-stamp-circle {
   width: 30px;
@@ -3576,7 +3588,6 @@
   grid-template-areas:
     "heading"
     "wheels"
-    "rm"
     "feedback"
     "actions";
   width: 100%;
@@ -3587,11 +3598,18 @@
 }
 .recording-view .set-entry .wheels {
   grid-area: wheels;
+  position: relative;
 }
 .recording-view .set-entry .rm-estimate {
-  grid-area: rm;
+  position: absolute;
+  z-index: 1;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
   margin: 0;
   text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
 }
 .recording-view .set-entry .save-feedback {
   grid-area: feedback;
@@ -3604,7 +3622,6 @@
 }
 .recording-view .entering-sets .set-entry .set-entry-heading,
 .recording-view .entering-sets .set-entry .wheels,
-.recording-view .entering-sets .set-entry .rm-estimate,
 .recording-view .entering-sets .set-entry .save-feedback,
 .recording-view .entering-sets .set-entry .set-actions {
   grid-column: auto;
@@ -3615,9 +3632,6 @@
 }
 .recording-view .entering-sets .set-entry .wheels {
   grid-area: wheels;
-}
-.recording-view .entering-sets .set-entry .rm-estimate {
-  grid-area: rm;
 }
 .recording-view .entering-sets .set-entry .save-feedback {
   grid-area: feedback;
@@ -3711,18 +3725,21 @@
 }
 .recording-view .recording-memos.memo-plain .inline-memo textarea,
 .recording-view .today-exercise-memo .inline-memo textarea {
+  height: 32px;
   min-height: 32px;
   padding: 2px 0 5px;
   border: 0;
-  border-bottom: 1px solid var(--line);
   border-radius: 0;
   background: transparent;
-  box-shadow: none;
+  outline: 1px solid transparent;
+  outline-offset: 2px;
+  resize: none;
+  font-size: 12px;
+  line-height: 1.6;
 }
 .recording-view .recording-memos.memo-plain .inline-memo textarea:focus-visible,
 .recording-view .today-exercise-memo .inline-memo textarea:focus-visible {
-  outline: 0;
-  border-bottom: 2px solid var(--accent);
+  outline-color: var(--accent);
 }
 .recording-view .today-exercise-memo.memo-plain {
   margin: 2px 0 0;
@@ -3755,11 +3772,15 @@
   overscroll-behavior-y: contain;
 }
 .recording-view .unified-comparison-table .comparison-row {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr);
+  display: flex;
   align-items: stretch;
   min-height: 44px;
-  gap: 4px;
+  gap: 6px;
+}
+.recording-view .unified-comparison-table .comparison-row > span:first-child {
+  flex: 0 0 6px;
+  min-width: 0;
+  overflow: visible;
 }
 .recording-view .unified-comparison-table .current-set-cell {
   display: grid;
@@ -3768,8 +3789,7 @@
   min-width: 0;
 }
 .recording-view .unified-comparison-table .previous-set-cell {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 28px;
+  display: block;
   align-items: center;
   min-width: 0;
   color: var(--muted);
@@ -3785,11 +3805,18 @@
   color: var(--muted);
   font-size: 15px;
 }
+.recording-view .unified-comparison-table .comparison-row > .previous-copy {
+  flex: 0 0 28px;
+}
 .recording-view .unified-comparison-table .current-set-cell > button:first-child {
   min-width: 0;
   min-height: 44px;
 }
 .recording-view .unified-comparison-table .delete-set {
+  position: static;
+  inset: auto;
+  grid-column: 3;
+  grid-row: 1;
   width: 28px;
   min-height: 44px;
 }
@@ -3808,16 +3835,57 @@
 }
 .recording-view .unified-comparison-table .current-set-cell {
   display: block;
+  flex: 0 0 calc((100% - 86px) / 2);
   position: relative;
-  padding-right: 28px;
+  padding-right: 0;
+}
+.recording-view .unified-comparison-table .previous-set-cell {
+  flex: 0 0 calc((100% - 86px) / 2);
 }
 .recording-view .unified-comparison-table .current-set-cell > button:first-child {
   width: 100%;
   padding-right: 4px;
 }
 .recording-view .unified-comparison-table .delete-set {
-  position: absolute;
-  inset: 0 0 0 auto;
+  position: static;
+  inset: auto;
+  flex: 0 0 28px;
+}
+.recording-view .unified-comparison-table .delete-set-placeholder,
+.recording-view .unified-comparison-table .previous-copy-placeholder {
+  flex: 0 0 28px;
+}
+.recording-view .comparison-heading {
+  display: grid;
+  grid-template-columns:
+    6px
+    minmax(0, calc((100% - 86px) / 2))
+    28px
+    minmax(0, calc((100% - 86px) / 2))
+    28px;
+  align-items: center;
+  gap: 6px;
+}
+.recording-view .comparison-current-heading {
+  grid-column: 2;
+}
+.recording-view .comparison-previous-heading {
+  display: flex;
+  grid-column: 4;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+  gap: 2px;
+}
+.recording-view .comparison-previous-heading h2 {
+  min-width: 0;
+}
+.recording-view .comparison-heading > .previous-copy {
+  grid-column: 5;
+  grid-row: 1;
+  min-height: 28px;
+  /* 行内のコピー操作と同じ右端にそろえ、全セット/個別を迷わず使い分けられるようにする。 */
+  transform: translateX(4px);
 }
 .recording-view .finish-confirm {
   white-space: nowrap;
@@ -3862,22 +3930,455 @@
 
 /* 前後の数値は表示せず、上下の矢印と直接入力だけを残す。 */
 .recording-view .number-wheel {
-  grid-template-rows: 16px 18px 48px 18px;
+  grid-template-rows: 24px 7px 48px 7px 24px;
+  row-gap: 0;
+}
+.recording-view .number-wheel .wheel-neighbor:first-of-type {
+  grid-row: 1;
+}
+.recording-view .number-wheel input {
+  grid-row: 3;
+}
+.recording-view .number-wheel .wheel-neighbor:last-of-type {
+  grid-row: 5;
 }
 .recording-view .number-wheel .wheel-neighbor {
-  height: 18px;
-  min-height: 18px;
-  line-height: 18px;
+  height: 24px;
+  min-height: 24px;
+  line-height: 24px;
+}
+.recording-view .set-entry fieldset {
+  gap: 3px;
+}
+.recording-view .set-entry-heading {
+  position: relative;
+  min-height: 24px;
+}
+.recording-view .input-toggle {
+  width: 28px;
+  min-height: 24px;
+}
+.recording-view .number-wheel-label {
+  align-self: center;
+  margin: 0;
+}
+.recording-view .set-actions button {
+  min-height: 44px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.recording-view .set-actions .primary {
+  flex-direction: row;
+  justify-content: center;
 }
 .recording-view .set-entry-heading h2 {
   flex: 1 1 auto;
+  position: relative;
+  z-index: 1;
+}
+.recording-view .set-entry-labels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  position: absolute;
+  inset: 0;
+  gap: 8px;
+}
+.recording-view .set-entry-labels .number-wheel-label {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.recording-view .set-entry-heading .input-toggle {
+  position: relative;
+  z-index: 1;
+}
+.recording-view .set-entry fieldset.input-collapsed .set-entry-labels {
+  display: none;
+}
+.recording-view .set-entry .wheels .rm-estimate {
+  margin: 0;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  top: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.recording-view .unified-comparison-table .current-set-selection {
+  display: inline-flex;
+  min-width: 0;
+  position: relative;
+}
+.recording-view .unified-comparison-table .current-set-cell.editing-set .current-set-selection {
+  isolation: isolate;
+}
+.recording-view
+  .unified-comparison-table
+  .current-set-cell.editing-set
+  .current-set-selection::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -10px -8px;
+  border: 1px solid #efcaca;
+  border-radius: 6px;
+  background: #fff5f5;
+}
+.recording-view .unified-comparison-table .current-set-selection .set-measurement {
+  position: relative;
+  z-index: 1;
+}
+.recording-view .memo-inline-row {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  gap: 4px;
+  padding: 0;
+}
+.recording-view .memo-inline-row .memo-caption {
+  display: block;
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.recording-view .memo-inline-row .inline-memo {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.recording-view .memo-inline-row .memo-text {
+  width: 100%;
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  line-height: 24px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recording-view .memo-inline-row .inline-memo.single-line textarea {
+  display: block;
+  width: 100%;
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  outline: 0;
+  font-size: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  line-height: 24px;
+  resize: none;
+  white-space: pre;
+}
+.recording-view .memo-inline-row .inline-memo.single-line textarea:focus-visible {
+  outline: 0;
+}
+/* 種目・今日のメモとも、表示時と編集中の高さを完全に同じにする。 */
+.recording-view .memo-inline-row.recording-memos.memo-plain .memo-text,
+.recording-view .memo-inline-row.today-exercise-memo.memo-plain .memo-text {
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  line-height: 24px;
+}
+.recording-view .memo-inline-row.recording-memos.memo-plain .inline-memo.single-line textarea,
+.recording-view .memo-inline-row.today-exercise-memo.memo-plain .inline-memo.single-line textarea {
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  outline: 0;
+  line-height: 24px;
+}
+.v2-sheet .stamp-detail-target {
+  display: flex;
+  align-items: flex-start;
+  min-height: 52px;
+  padding: 12px 0 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.v2-sheet .stamp-reaction-row {
+  display: flex;
+  align-items: center;
+  min-height: 62px;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.v2-sheet .stamp-reaction-emoji {
+  width: 32px;
+  flex: 0 0 32px;
+  text-align: center;
+  font-size: 21px;
+}
+.v2-sheet .stamp-avatar-stack {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding-right: 4px;
+}
+.v2-sheet .stamp-avatar-stack .person-avatar {
+  width: 29px;
+  height: 29px;
+  min-height: 29px;
+  margin-left: -7px;
+  border: 2px solid var(--panel);
+}
+.v2-sheet .stamp-avatar-stack .person-avatar:first-child {
+  margin-left: 0;
 }
 
-/* 種目ではなく、今日のトレーニング全体を終了する主操作。 */
-.recording-view .session-screen .recording-header .finish-training {
+/* 同じ終了操作は、種目選択・入力のどちらでも同じ位置と見た目にする。 */
+.recording-view .session-screen .session-header {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.recording-view .session-screen .session-header h1 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.recording-view .session-screen .session-header .finish-training {
+  flex: 0 0 auto;
+  min-height: 40px;
   max-width: none;
-  border-color: var(--accent);
-  background-color: var(--accent);
-  color: white;
+  padding: 4px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
   white-space: nowrap;
+}
+
+/* 種目を選ぶ間は、候補の操作を最優先にし、仲間の取得で高さを変えない。 */
+.recording-view .session-screen:not(.entering-sets) {
+  gap: 0;
+}
+.recording-view .selection-heading {
+  /* session-headerが選択・入力の終了操作を共通化する。 */
+}
+.today-training {
+  border-bottom: 1px solid var(--line);
+}
+.today-training > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 24px;
+  align-items: center;
+  min-height: 48px;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+.today-training > summary::-webkit-details-marker {
+  display: none;
+}
+.today-training > summary > span:nth-child(2) {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.today-training > summary > span:last-child {
+  color: var(--muted);
+  text-align: right;
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+.today-training > section {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.today-training h2 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+.today-training p {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  min-height: 28px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.today-training .set-measurement {
+  color: var(--text);
+}
+.training-peers {
+  min-height: 111px;
+  border-bottom: 1px solid var(--line);
+}
+.peer-groups {
+  display: flex;
+  gap: 16px;
+  min-height: 42px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.peer-groups::-webkit-scrollbar {
+  display: none;
+}
+.peer-groups button {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 10px 0 7px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+.peer-groups button[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+.peer-avatars {
+  display: flex;
+  align-items: center;
+  min-height: 69px;
+  gap: 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.peer-avatars::-webkit-scrollbar {
+  display: none;
+}
+.peer-avatar-button {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  min-height: 56px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+}
+.peer-avatar-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.peer-avatar-wrap .person-avatar {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+}
+.peer-best {
+  position: absolute;
+  top: -10px;
+  right: -11px;
+  font-size: 14px;
+  line-height: 1;
+}
+.peer-avatar-placeholder {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  margin: 0 5px;
+  border-radius: 50%;
+  background: var(--track);
+}
+.session-body-parts {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  margin-top: 12px;
+  gap: 2px;
+  padding: 4px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.session-body-parts button {
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 0 5px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.session-body-parts button[aria-pressed="true"] {
+  border-color: #efcaca;
+  background: #fff5f5;
+  color: var(--accent);
+  font-weight: 700;
+}
+.recording-view .exercise-picker-list {
+  margin: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.recording-view .exercise-picker-list .v2-row {
+  position: relative;
+  min-height: 57px;
+  padding: 8px 0;
+  background: transparent;
+}
+.recording-view .exercise-picker-list .exercise-picker-title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.recording-view .exercise-picker-list .exercise-picker-title small {
+  position: absolute;
+  top: calc(50% + 9px);
+  left: 0;
+}
+.recording-view .exercise-picker-list .v2-row > span:last-child {
+  margin-left: auto;
+}
+.exercise-picker-list .v2-row strong,
+.exercise-picker-list .v2-row small {
+  display: block;
+}
+.exercise-picker-list .v2-row small {
+  margin-top: 2px;
+  font-size: 11px;
+}
+.exercise-add-button {
+  width: 100%;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 700;
+}
+.peer-record-placeholder {
+  min-height: 280px;
+  background: linear-gradient(90deg, var(--track), var(--panel), var(--track));
 }

@@ -149,7 +149,7 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
 test("今回の種目に戻れて、未保存入力の保護と削除済み種目の選択を維持する", async ({ page }) => {
   const state = await prepare(page);
   await startTraining(page);
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page

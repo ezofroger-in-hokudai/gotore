@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ja">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GO TORE — 種目選択の見せ方</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f2f3f5;
+      --panel: #fff;
+      --ink: #1e2229;
+      --muted: #68707b;
+      --line: #d9dde2;
+      --red: #d32f2f;
+      --soft-red: #fff0ef;
+      --green: #1e7048;
+    }
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #15171b;
+      --panel: #20242b;
+      --ink: #f3f4f6;
+      --muted: #a8afb9;
+      --line: #3b414b;
+      --soft-red: #3a2325;
+      --green: #83d9a9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Noto Sans JP", sans-serif;
+    }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    button:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
+    .intro { max-width: 1320px; margin: auto; padding: 36px 24px 16px; }
+    .eyebrow { color: var(--red); font-weight: 800; font-size: 12px; letter-spacing: .13em; }
+    h1 { margin: 8px 0 6px; font-size: clamp(23px, 4vw, 32px); letter-spacing: -.04em; }
+    .intro p { margin: 0; color: var(--muted); max-width: 720px; }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+    .controls button, .mode button {
+      min-height: 40px; padding: 7px 12px; border: 1px solid var(--line); background: var(--panel); border-radius: 99px;
+    }
+    .controls button[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+    .controls .theme { margin-left: auto; }
+    .grid { max-width: 1320px; display: grid; grid-template-columns: repeat(4, minmax(250px, 1fr)); gap: 20px; padding: 8px 24px 44px; margin: auto; }
+    .option h2 { margin: 8px 0 3px; font-size: 17px; letter-spacing: -.02em; }
+    .option > p { margin: 0 0 12px; min-height: 59px; color: var(--muted); font-size: 13px; }
+    .pick { color: var(--red); font-size: 12px; font-weight: 800; }
+    .phone { max-width: 430px; margin: auto; overflow: hidden; border: 1px solid #313640; border-radius: 26px; background: var(--panel); box-shadow: 0 16px 32px #0001; }
+    .status { display: flex; justify-content: space-between; padding: 11px 18px 3px; font-size: 11px; font-weight: 750; }
+    .screen { min-height: 720px; padding: 8px 16px 20px; }
+    .top { display:flex; align-items:center; justify-content:space-between; min-height: 42px; }
+    .brand { font-size: 11px; font-style: italic; font-weight: 900; letter-spacing: .13em; }
+    .bell { position:relative; border: 0; background: none; min-width: 42px; min-height: 42px; padding: 0; font-size: 19px; }
+    .dot { position:absolute; right: 8px; top: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--red); border: 1px solid var(--panel); }
+    .hero { margin: 8px 0 17px; }
+    .hero small, .label { color: var(--muted); font-size: 11px; }
+    .hero h3 { font-size: 22px; letter-spacing: -.05em; margin: 1px 0; }
+    .progress { display:flex; align-items:end; gap: 8px; }
+    .progress b { font-size: 27px; letter-spacing: -.06em; line-height: 1; }
+    .progress span { color: var(--green); font-size: 12px; font-weight: 750; padding-bottom: 2px; }
+    .bar { height: 5px; background: var(--line); margin-top: 10px; overflow:hidden; }
+    .bar i { display:block; width: 68%; height:100%; background: var(--red); }
+    .presence { display:flex; align-items:center; gap: 7px; min-height: 38px; margin: 5px 0 16px; }
+    .avatars { display:flex; padding-left: 5px; }
+    .avatar { width: 25px; height:25px; display:grid; place-items:center; border-radius:50%; background:#dfe6ed; color:#34404b; border: 2px solid var(--panel); margin-left:-5px; font-size:10px; font-weight:800; }
+    .presence span:last-child { color: var(--muted); font-size: 12px; }
+    .section { display:flex; align-items:baseline; justify-content:space-between; margin: 17px 0 8px; }
+    .section h4 { margin: 0; font-size: 13px; }
+    .section button { border:0; background:none; padding:4px 0; color:var(--muted); font-size:11px; }
+    .favorite { display:grid; grid-template-columns: 1fr auto; width:100%; text-align:left; background:var(--panel); border: 1px solid var(--line); padding: 12px 11px; min-height: 62px; margin: 6px 0; }
+    .favorite span { min-width: 0; }
+    .favorite strong { font-size: 14px; }
+    .favorite small { display:block; color: var(--muted); font-size: 11px; margin-top:2px; }
+    .favorite .last { color:var(--muted); font-size:11px; align-self:center; text-align:right; white-space:nowrap; }
+    .part-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .part { min-height: 61px; padding: 6px 2px; background:var(--panel); border:1px solid var(--line); font-size: 11px; }
+    .part b { display:block; font-size: 18px; margin-bottom: 2px; }
+    .part[data-active="true"] { background: var(--soft-red); border-color: var(--red); color: var(--red); }
+    .current { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 12px; }
+    .current-row { display:flex; align-items:center; justify-content:space-between; gap:7px; min-height:42px; }
+    .current-row strong { font-size: 13px; }
+    .current-row small { color:var(--muted); font-size:11px; }
+    .circle { width: 74px; height:74px; border-radius:50%; border: 7px solid var(--line); border-top-color:var(--red); display:grid; place-items:center; text-align:center; margin: 4px auto 14px; }
+    .circle b { display:block; font-size:16px; line-height:1; }
+    .circle small { font-size:9px; color:var(--muted); }
+    .cards { display:flex; gap:7px; overflow:hidden; }
+    .quick-card { min-width: 118px; min-height:86px; padding: 10px; text-align:left; background: var(--panel); border:1px solid var(--line); }
+    .quick-card b { display:block; font-size:13px; }
+    .quick-card small { color:var(--muted); display:block; font-size:10px; margin-top:6px; }
+    .wide-part { display:grid; grid-template-columns: 30px 1fr auto; gap:8px; align-items:center; width:100%; min-height:50px; padding:7px 2px; border:0; border-bottom:1px solid var(--line); background:transparent; text-align:left; }
+    .wide-part b { font-size:19px; text-align:center; }
+    .wide-part small { color:var(--muted); font-size:10px; }
+    .wide-part span:last-child { color:var(--muted); }
+    .add { display:flex; justify-content:center; align-items:center; gap:7px; width:100%; min-height:46px; margin-top:14px; border:1px dashed var(--muted); background:transparent; color:var(--muted); font-size:12px; }
+    .add b { font-size:19px; font-weight:400; }
+    .sheet-demo { margin-top: 14px; padding: 13px; border:1px solid var(--line); background: var(--bg); }
+    .sheet-demo h5 { margin:0 0 5px; font-size:13px; }
+    .sheet-demo p { margin:0; font-size:11px; color:var(--muted); }
+    .sheet-demo .add { margin-top:9px; background:var(--panel); }
+    .note { max-width: 1320px; margin: -20px auto 32px; padding:0 24px; color:var(--muted); font-size:12px; }
+    @media (max-width: 1120px) { .grid { grid-template-columns: repeat(2, minmax(280px, 1fr)); } }
+    @media (max-width: 620px) { .intro { padding: 22px 16px 12px; } .controls .theme { margin-left:0; } .grid { grid-template-columns: 1fr; padding: 4px 0 30px; } .option > h2, .option > p { margin-left:16px; margin-right:16px; } .option > p { min-height: auto; } .phone { max-width:none; border-left:0; border-right:0; border-radius:0; } }
+  </style>
+  <header class="intro">
+    <span class="eyebrow">GO TORE / 画面比較・試作</span>
+    <h1>次の種目を、迷わず選ぶ。</h1>
+    <p>種目名検索は置かず、部位・よく行う種目・今日の進み具合だけを見せます。数値と人物は架空の表示です。</p>
+    <div class="controls" aria-label="比較する案">
+      <button data-option="all" aria-pressed="true">4案を比較</button>
+      <button data-option="A" aria-pressed="false">A</button>
+      <button data-option="B" aria-pressed="false">B</button>
+      <button data-option="C" aria-pressed="false">C</button>
+      <button data-option="D" aria-pressed="false">D</button>
+      <button class="theme" data-theme>ダーク表示</button>
+    </div>
+  </header>
+  <main class="grid" id="grid"></main>
+  <p class="note">共通方針：右上の●は「届いたスタンプ」の通知入口だけ。受信内容はここに並べず、押して通知一覧を開く想定です。いま鍛えている人は固定高さの小さな列にし、通信で画面が上下しません。</p>
+  <script>
+    const data = {
+      A: { title: "最近から始める", copy: "いちばん短い案。いつもの種目を先に出し、迷ったときだけ部位を開く。", body: "recent" },
+      B: { title: "部位を主役にする", copy: "よく行う種目と8部位を同じ強さで見せる。部位から探す感覚を明確にする。", body: "parts" },
+      C: { title: "今日のペースを見る", copy: "総負荷と普段との比率を中心に置く。頑張り具合を見ながら次を選ぶ。", body: "pace" },
+      D: { title: "追加を別入口にする", copy: "種目を追加する操作を一覧の末尾から外す。選択と管理の役割を分ける。", body: "add" }
+    };
+    const favs = [
+      ["ベンチプレス", "胸", "前回 72.5kg × 8"],
+      ["ラットプルダウン", "背中", "前回 55kg × 10"],
+      ["レッグプレス", "脚", "前回 140kg × 10"]
+    ];
+    const parts = [["胸","◒",3],["背中","⌁",2],["脚","◓",2],["肩","◑",1],["腕","⌇",1],["腹筋","◔",0],["お尻","◐",0],["その他","＋",0]];
+    const favorite = ([name, part, last]) => `<button class="favorite"><span><strong>${name}</strong><small>${part}</small></span><span class="last">${last}<br>›</span></button>`;
+    const partGrid = () => `<div class="part-grid">${parts.map(([name, icon, count], index) => `<button class="part" data-part="${name}" data-active="${index === 0}"><b>${icon}</b>${name}${count ? `<small> ${count}</small>` : ""}</button>`).join("")}</div>`;
+    const presence = () => `<div class="presence"><div class="avatars"><i class="avatar">タ</i><i class="avatar">ミ</i><i class="avatar">ユ</i></div><span>いま 3人がトレーニング中</span></div>`;
+    const current = () => `<div class="current"><div class="current-row"><span><strong>ベンチプレス</strong><small>　3セット</small></span><button>続ける　›</button></div><div class="current-row"><span><strong>ラットプルダウン</strong><small>　2セット</small></span><button>続ける　›</button></div></div>`;
+    function shell(content) { return `<div class="phone"><div class="status"><span>9:41</span><span>● ▰</span></div><div class="screen"><header class="top"><span class="brand">GO TORE</span><button class="bell" aria-label="届いたスタンプ">♧<i class="dot"></i></button></header>${content}</div></div>`; }
+    function hero(extra = "") { return `<section class="hero"><small>今日のトレーニング</small><h3>2種目　5セット</h3><div class="progress"><b>3,240 <small>kg</small></b><span>いつもの 68%</span></div><div class="bar"><i></i></div>${extra}</section>`; }
+    function build(kind) {
+      if (kind === "recent") return shell(`${hero(presence())}<div class="section"><h4>よく行う種目</h4><button>すべて ›</button></div>${favs.slice(0,2).map(favorite).join("")}<div class="section"><h4>部位から選ぶ</h4></div>${partGrid()}${current()}`);
+      if (kind === "parts") return shell(`${hero(presence())}<div class="section"><h4>部位から選ぶ</h4><button>履歴 ›</button></div>${partGrid()}<div class="section"><h4>胸でよく行う</h4></div>${favorite(favs[0])}${favorite(["ダンベルフライ", "胸", "前回 14kg × 12"])}${current()}`);
+      if (kind === "pace") return shell(`<div class="hero"><small>今日のトレーニング</small><div class="circle"><span><b>68%</b><small>いつもの量</small></span></div><div class="progress"><b>3,240 <small>kg</small></b><span>いいペース</span></div><div class="bar"><i></i></div></div>${presence()}<div class="section"><h4>次によく行う種目</h4></div><div class="cards">${favs.map(([n,p,l])=>`<button class="quick-card"><b>${n}</b><small>${p}<br>${l}</small></button>`).join("")}</div><div class="section"><h4>部位を変える</h4></div>${partGrid()}${current()}`);
+      return shell(`${hero(presence())}<div class="section"><h4>よく行う種目</h4></div>${favs.slice(0,2).map(favorite).join("")}<div class="section"><h4>部位から選ぶ</h4></div>${parts.slice(0,5).map(([name,icon,count]) => `<button class="wide-part"><b>${icon}</b><span><strong>${name}</strong><small>　よく行う ${count || 1}種目</small></span><span>›</span></button>`).join("")}<button class="add" data-add><b>＋</b>種目を追加・管理</button><div class="sheet-demo" hidden><h5>種目を追加・管理</h5><p>新しい種目を作る　/　登録済みの種目を編集</p><button class="add"><b>＋</b>新しい種目を作る</button></div>${current()}`);
+    }
+    let selected = "all";
+    function render() { document.querySelector("#grid").innerHTML = Object.entries(data).filter(([key]) => selected === "all" || selected === key).map(([key, value]) => `<section class="option"><h2>${key} · ${value.title} ${key === "B" ? '<span class="pick">おすすめ</span>' : ""}</h2><p>${value.copy}</p>${build(value.body)}</section>`).join(""); }
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("button"); if (!button) return;
+      if (button.dataset.option) { selected = button.dataset.option; document.querySelectorAll("[data-option]").forEach(x => x.setAttribute("aria-pressed", String(x === button))); render(); }
+      if (button.dataset.theme !== undefined) { const dark = document.documentElement.dataset.theme !== "dark"; document.documentElement.dataset.theme = dark ? "dark" : ""; button.textContent = dark ? "ライト表示" : "ダーク表示"; }
+      if (button.dataset.part) { const phone = button.closest(".phone"); phone.querySelectorAll("[data-part]").forEach(x => x.dataset.active = String(x === button)); }
+      if (button.dataset.add !== undefined) { const sheet = button.parentElement.querySelector(".sheet-demo"); if (sheet) sheet.hidden = !sheet.hidden; }
+    });
+    render();
+  </script>
+</html>

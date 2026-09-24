@@ -132,6 +132,8 @@ function WorkspaceContent({ session }: { session: Session }) {
   function navigate(next: View, communityMode?: "detail" | "list") {
     if (next !== view)
       window.history.pushState({ gotoreView: next, groupId: selected, communityMode }, "");
+    // 設定で追加・分類変更した候補を、記録の選択画面へ戻る前に確認する。
+    if (next === "record") catalog.retry();
     setView(next);
     setNotice("");
     setEditing(null);
@@ -256,6 +258,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             recent={recentRecords}
             onHistory={() => navigate("history")}
             haptic={preferences.haptic}
+            catalog={catalog}
             onFinished={(record) => {
               setFinished(record);
               window.history.replaceState({ gotoreView: "result", groupId: selected }, "");

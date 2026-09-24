@@ -54,6 +54,7 @@ export function useExerciseContext(
   return {
     data: entry?.data ?? null,
     firstPreviousSet: (candidate: string) => cache.read(candidate)?.data?.previous?.sets[0],
+    previousPerformedOn: (candidate: string) => cache.read(candidate)?.data?.previous?.performed_on,
     error: entry?.error ?? "",
     retry: () => {
       cache.invalidate(name);

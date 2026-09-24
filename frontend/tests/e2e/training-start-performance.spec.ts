@@ -31,7 +31,7 @@ test("開始前は入力を出さず、開始待ちの種目選択と入力で�
     await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("6");
     await expect(page.locator(".session-screen.entering-sets")).toBeVisible({ timeout: 2000 });
     await expect(page.getByRole("region", { name: "全セットの比較", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeDisabled();
     await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toBeEnabled();
     await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("82.5");
     focusedField = await page
@@ -45,12 +45,12 @@ test("開始前は入力を出さず、開始待ちの種目選択と入力で�
   } finally {
     release();
   }
-  await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeEnabled();
   expect(await focusedField?.evaluate((element) => element.isConnected)).toBe(true);
   expect(await focusedField?.evaluate((element) => document.activeElement === element)).toBe(true);
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("82.5");
   await expect(page.getByRole("spinbutton", { name: "回数", exact: true })).toHaveValue("6");
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect.poll(() => state.saves).toBe(1);
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   expect(state.session?.exercises[0]).toEqual({
@@ -185,7 +185,7 @@ for (const savedInput of [true, false]) {
     } finally {
       release();
     }
-    await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeEnabled();
     await expect(
       page.getByRole("heading", { name: savedInput ? "ベンチプレス" : "スクワット", exact: true }),
     ).toBeVisible();

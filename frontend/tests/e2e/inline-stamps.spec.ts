@@ -116,7 +116,7 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await card.getByRole("button", { name: "ミオの記録詳細を開く" }).click();
-  const detail = page.getByRole("dialog", { name: "記録の詳細", exact: true });
+  const detail = page.getByRole("dialog");
   await expect(detail.locator(".record-set")).toHaveCount(3);
   await detail.getByRole("button", { name: "ミオの記録にスタンプを追加" }).click();
   const picker = page.getByRole("dialog", { name: "スタンプ", exact: true });
@@ -126,7 +126,7 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
     "aria-pressed",
     "true",
   );
-  await expect(detail.getByRole("status", { name: "スタンプを送信中" })).toBeVisible();
+  await expect(detail.getByRole("status", { name: "スタンプを送信中" })).toHaveCount(0);
   await page.screenshot({ path: "test-results/inline-stamps-detail.png", fullPage: true });
   await detail.getByRole("button", { name: "閉じる", exact: true }).click();
   await expect(detail).toHaveCount(0);

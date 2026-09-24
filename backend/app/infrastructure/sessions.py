@@ -391,15 +391,22 @@ class SessionRepository(TrainingRepository):
             groups.setdefault(member["group_id"], []).append(member)
         return [self.activity_summary(group_id, members) for group_id, members in groups.items()]
 
-    def group_activity(self, user_id: UUID, group_id: UUID):
+    def group_activity(self, user_id: UUID, group_id: UUID, *, today_only: bool = False):
         self.group(user_id, group_id)
         members = self.activity_members(user_id, group_id)
+        if today_only:
+            members = [member for member in members if member["today"]]
+        today = """
+              AND w.performed_on = (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date"""
         latest = self.connection.execute(
             """SELECT DISTINCT ON (w.user_id) w.*, p.display_name
             FROM public.gotore_workouts w JOIN public.gotore_profiles p ON p.id = w.user_id
             WHERE (w.group_id = %s OR EXISTS(SELECT 1 FROM public.gotore_workout_shares s
               WHERE s.workout_id = w.id AND s.group_id = %s))
               AND jsonb_array_length(w.exercises) > 0
+            """
+            + (today if today_only else "")
+            + """
             ORDER BY w.user_id, w.updated_at DESC, w.created_at DESC, w.id""",
             (group_id, group_id),
         ).fetchall()
@@ -444,3 +451,15 @@ class SessionRepository(TrainingRepository):
             )
         feed.sort(key=lambda item: item["updated_at"], reverse=True)
         return {**self.activity_summary(group_id, members), "feed": feed}
+
+    def today_activity(self, user_id: UUID):
+        # 画面初期表示はグループごとのHTTP往復を避け、当日分だけを一つの応答にまとめる。
+        return {
+            "groups": [
+                {
+                    **self.group_activity(user_id, group["id"], today_only=True),
+                    "name": group["name"],
+                }
+                for group in self.groups(user_id)
+            ]
+        }

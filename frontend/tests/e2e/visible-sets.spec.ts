@@ -24,7 +24,7 @@ for (const width of [320, 390, 430]) {
     );
     await startTraining(page);
     for (let i = 0; i < 8; i++) {
-      await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+      await page.getByRole("button", { name: "セットを追加", exact: true }).click();
       await expect(page.getByRole("heading", { name: `SET ${i + 2}`, exact: true })).toBeVisible();
     }
     const table = page.getByRole("region", { name: "全セットの比較" });
@@ -56,7 +56,7 @@ for (const width of [320, 390, 430]) {
     await weight.fill("72.5");
     await page.getByRole("button", { name: "変更を保存", exact: true }).click();
     await expect.poll(() => state.session?.exercises[0].sets[0].weight).toBe(72.5);
-    for (const name of ["次のセットへ", "次の種目へ", "トレーニング終了"]) {
+    for (const name of ["セットを追加", "次の種目へ", "トレーニング終了"]) {
       await expect(page.getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);

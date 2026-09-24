@@ -82,7 +82,7 @@ for (const owner of [true, false]) {
       await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
       await openTraining(page);
       await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeEnabled();
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,

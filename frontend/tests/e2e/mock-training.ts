@@ -67,10 +67,7 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
           route
             .request()
             .postDataJSON()
-            .workout_ids.map((id: string) => [
-              id,
-              { counts: {}, mine: [], can_send: id !== state.session?.id },
-            ]),
+            .workout_ids.map((id: string) => [id, { counts: {}, mine: [], can_send: true }]),
         ),
       });
     if (path === "/api/stamps/inbox")
@@ -214,6 +211,23 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
                   },
                 ]
               : [],
+        },
+      });
+    }
+    if (path === "/api/groups/today-activity") {
+      return route.fulfill({
+        json: {
+          groups: [
+            {
+              group_id: group.id,
+              name: group.name,
+              member_count: 1,
+              live_count: 0,
+              today_count: 0,
+              members: [],
+              feed: [],
+            },
+          ],
         },
       });
     }

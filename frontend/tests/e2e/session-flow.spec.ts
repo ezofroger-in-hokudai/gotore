@@ -20,11 +20,11 @@ test("保存の応答待ちでも連続追加・編集でき、順序通り同�
   });
   try {
     await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("70");
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect(page.getByRole("heading", { name: "SET 2", exact: true })).toBeVisible();
     expect(state.saves).toBe(0);
     await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("75");
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect(page.getByRole("heading", { name: "SET 3", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "セット2を編集", exact: true })).toContainText(
       "75kg",
@@ -53,7 +53,7 @@ test("未送信の複数セットは再起動後も残り、再送できる", as
   state.failSave = true;
   for (const weight of [70, 75]) {
     await page.getByRole("spinbutton", { name: "重量", exact: true }).fill(String(weight));
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   }
   await expect(page.locator(".sync-status")).toContainText("未送信");
   await page.reload();
@@ -66,14 +66,44 @@ test("未送信の複数セットは再起動後も残り、再送できる", as
   await expect.poll(() => state.saves).toBe(2);
 });
 
+test("次の種目以外の入口で選択画面へ移っても入力を端末へ残す", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
+  await weight.fill("72.5");
+  await page
+    .getByRole("heading", { name: "ベンチプレス", exact: true })
+    .getByRole("button")
+    .click();
+  await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toBeVisible();
+  const stored = await page.evaluate(
+    ({ userId, sessionId }) => {
+      return localStorage.getItem(`gotore:session-input:v2:${userId}:${sessionId}`);
+    },
+    { userId: state.user.id, sessionId: state.session?.id },
+  );
+  expect(JSON.parse(stored ?? "{}").weight).toBe("72.5");
+});
+
 test("メモと保存がスクロールなしで見え、指を離す前に重量が連続更新する", async ({ page }) => {
   await mockTraining(page);
   await startTraining(page);
   await showRecordingMemos(page);
   await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "前回のメモを編集", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "今回のメモを編集", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await expect(page.getByRole("button", { name: "今日のメモを編集", exact: true })).toBeVisible();
+  for (const name of ["種目メモ", "今日のメモ"] as const) {
+    expect(
+      await page.getByRole("region", { name, exact: true }).evaluate((row) => {
+        const label = row.querySelector(".memo-caption")?.getBoundingClientRect();
+        const value = row.querySelector(".memo-text")?.getBoundingClientRect();
+        return label && value
+          ? Math.abs(label.top + label.height / 2 - (value.top + value.height / 2))
+          : Number.POSITIVE_INFINITY;
+      }),
+    ).toBeLessThanOrEqual(1);
+  }
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.getByRole("heading", { name: "SET 2", exact: true })).toBeVisible();
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 720 });
@@ -84,7 +114,7 @@ test("メモと保存がスクロールなしで見え、指を離す前に重�
         viewport: innerHeight,
       })),
     ).toEqual({ width, height: 720, viewport: 720 });
-    await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeInViewport();
+    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeInViewport();
     await page.screenshot({ path: `test-results/session-compact-${width}.png`, fullPage: true });
   }
   const field = page.getByRole("spinbutton", { name: "重量", exact: true });
@@ -124,14 +154,14 @@ test("常時表示の種目メモは再起動しても下書きと競合元revis
   await openTraining(page);
   await showRecordingMemos(page);
   await expect(field).toHaveValue("足の位置を確認する");
-  await page.getByRole("button", { name: "種目メモを保存", exact: true }).click();
+  await field.press("Enter");
   await expect(page.locator(".inline-memo").getByRole("alert")).toContainText("変更済み");
   expect(memo.content).toBe("別端末で修正");
   page.once("dialog", (dialog) => dialog.accept());
   await page.locator(".inline-memo").getByRole("button", { name: "読み直す", exact: true }).click();
   await expect(field).toHaveValue("別端末で修正");
   await field.fill("合意後の内容");
-  await page.getByRole("button", { name: "種目メモを保存", exact: true }).click();
+  await field.press("Enter");
   await expect.poll(() => memo.content).toBe("合意後の内容");
 });
 
@@ -152,8 +182,8 @@ test("文字拡大時は縦に読めるまま、入力と終了を隠さない",
     });
   });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).scrollIntoViewIfNeeded();
-  await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeInViewport();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeInViewport();
   await page
     .getByRole("button", { name: "トレーニング終了", exact: true })
     .scrollIntoViewIfNeeded();
@@ -198,19 +228,19 @@ test("メモは本文だけを表示してタッチで編集し、空の前回�
   for (const text of [
     "種目メモ",
     "前回のメモ",
-    "今回のメモ",
+    "今日のメモ",
     "自分だけのメモ",
     "推定1RM",
     "このセットを保存",
     "トレーニングを終了",
   ])
     await expect(page.getByText(text, { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "トレーニング終了", exact: true })).toBeVisible();
   await page.screenshot({ path: "test-results/session-quiet-memos.png", fullPage: true });
   await exercise.click();
   await page.getByRole("textbox", { name: "種目メモ", exact: true }).fill("呼吸を整える");
-  await page.getByRole("button", { name: "種目メモを保存", exact: true }).click();
+  await page.getByRole("textbox", { name: "種目メモ", exact: true }).press("Enter");
   await expect(exercise).toHaveText("呼吸を整える");
   previousMemo = { content: "   ", revision: 2 };
   await page.reload();

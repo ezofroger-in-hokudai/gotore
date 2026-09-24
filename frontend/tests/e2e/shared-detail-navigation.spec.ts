@@ -59,7 +59,7 @@ for (const close of ["閉じる", "戻る"] as const) {
     await expect(open).toBeVisible();
     expect(await page.evaluate(() => history.length)).toBe(length);
     await open.click();
-    const dialog = page.getByRole("dialog", { name: "記録の詳細", exact: true });
+    const dialog = page.getByRole("dialog");
     await expect(dialog.locator(".record-set")).toHaveCount(1);
     if (close === "閉じる")
       await dialog.getByRole("button", { name: "閉じる", exact: true }).click();

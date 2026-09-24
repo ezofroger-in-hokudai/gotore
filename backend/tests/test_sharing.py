@@ -618,6 +618,8 @@ def test_exercise_catalog_has_database_constraints_and_rls(client, connection):
         )
     with connection.transaction(force_rollback=True):
         connection.execute("CREATE ROLE gotore_options_test NOLOGIN")
+        # 作成者も明示的に所属させないと、PostgreSQLではSET ROLEできない。
+        connection.execute("GRANT gotore_options_test TO postgres")
         connection.execute("GRANT USAGE ON SCHEMA public TO gotore_options_test")
         connection.execute("""GRANT SELECT, INSERT, DELETE ON public.gotore_exercise_options,
             public.gotore_exercise_catalogs TO gotore_options_test""")

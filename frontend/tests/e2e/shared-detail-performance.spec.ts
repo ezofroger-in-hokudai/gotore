@@ -74,7 +74,7 @@ test("表示中の詳細をLIVE優先で先読みし、終了済みは再取得�
   await expect.poll(() => requests.filter((id) => id === live.id).length).toBeGreaterThan(1);
   hold = true;
   await page.getByRole("button", { name: "終了した友達の記録詳細を開く", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "記録の詳細", exact: true });
+  const dialog = page.getByRole("dialog");
   await expect(dialog.locator(".record-set")).toHaveCount(1);
   await page.screenshot({ path: "test-results/shared-detail-prefetch.png", fullPage: true });
   fail = true;
@@ -290,7 +290,7 @@ test("開いた記録が最新フィードから外れた後も、共有解除�
   });
   await page.reload();
   await page.getByRole("button", { name: "友達Aの記録詳細を開く", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "記録の詳細", exact: true });
+  const dialog = page.getByRole("dialog");
   await expect(dialog.locator(".record-set")).toHaveCount(1);
   const before = reads;
   replaced = true;

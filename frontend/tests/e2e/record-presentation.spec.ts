@@ -7,12 +7,12 @@ test("今回の値に前回を添え、右の主ボタンで次セットへ進�
   await mockTraining(page);
   await startTraining(page);
   await expect(page.getByText("重量 × 回数 / RM", { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.locator(".rm-estimate")).toBeVisible();
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 720 });
     const primary = await page
-      .getByRole("button", { name: "次のセットへ", exact: true })
+      .getByRole("button", { name: "セットを追加", exact: true })
       .boundingBox();
     const next = await page.getByRole("button", { name: "次の種目へ", exact: true }).boundingBox();
     expect(primary?.x).toBeGreaterThan(next?.x ?? 0);
@@ -47,7 +47,7 @@ test("今回の一覧は確定した最高記録を炎で示し、再起動・�
   );
   await startTraining(page);
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("85");
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   const next = page.getByRole("button", { name: "次の種目へ", exact: true });
   const overview = page.getByRole("region", { name: "今回のトレーニング" });

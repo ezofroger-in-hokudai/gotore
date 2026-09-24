@@ -25,7 +25,7 @@ for (const width of [320, 390, 430]) {
     await table.evaluate((element) => {
       element.scrollTop = 48;
     });
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect.poll(() => table.evaluate((element) => element.scrollTop)).toBe(48);
   });
 }

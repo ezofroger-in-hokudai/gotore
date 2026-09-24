@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GO TORE — スタンプ詳細 A案</title>
+<style>
+  :root { --bg:#f4f4f5; --panel:#fff; --text:#17191d; --muted:#656a74; --line:#dedfe3; --accent:#d32f2f; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 -apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif; }
+  .intro { max-width:430px; margin:auto; padding:24px 16px 12px; }
+  .eyebrow { color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.12em; }
+  h1 { margin:5px 0; font-size:25px; letter-spacing:-.04em; }
+  .intro p { margin:0; color:var(--muted); font-size:13px; }
+  .phone { position:relative; min-height:720px; max-width:430px; margin:auto; overflow:hidden; border:1px solid #353a43; background:var(--bg); }
+  .background { padding:20px 16px; color:var(--muted); font-size:12px; }
+  .background i { display:block; width:68%; height:13px; margin:13px 0; background:var(--line); }
+  .sheet { position:absolute; inset:0; display:flex; align-items:end; background:#0004; }
+  .sheet-card { width:100%; min-height:470px; padding:16px; background:var(--panel); border-top:1px solid var(--line); }
+  .sheet-head { display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:1px solid var(--line); }
+  .sheet-head h2 { margin:0; font-size:18px; }
+  .close { width:44px; height:44px; margin:-10px -10px -10px 0; border:0; background:transparent; color:var(--muted); font-size:22px; }
+  .target { display:flex; align-items:start; justify-content:space-between; padding:12px 0 8px; }
+  .target b { font-size:14px; }
+  .best { color:var(--accent); font-size:15px; }
+  .reaction-row { display:flex; min-height:62px; align-items:center; gap:12px; border-bottom:1px solid var(--line); }
+  .emoji { width:32px; text-align:center; font-size:21px; }
+  .avatars { display:flex; align-items:center; margin-left:auto; padding-right:4px; }
+  .avatar { display:block; width:29px; height:29px; margin-left:-7px; border:2px solid var(--panel); border-radius:50%; background:linear-gradient(135deg,#8fa6c9,#d9cec0); }
+  .avatar.two { background:linear-gradient(135deg,#d1aa87,#574b4a); }
+  .avatar.three { background:linear-gradient(135deg,#e3bda4,#76645d); }
+  @media (max-width:430px) { .phone { border-right:0; border-left:0; } }
+</style>
+<header class="intro">
+  <span class="eyebrow">GO TORE / スタンプ詳細</span>
+  <h1>A　スタンプごとに見る</h1>
+  <p>日付の記録に対する反応を、絵文字と送信者のアイコンだけでまとめます。</p>
+</header>
+<main class="phone">
+  <div class="background">今日のトレーニング<i></i><i></i><i></i></div>
+  <div class="sheet">
+    <section class="sheet-card" aria-label="スタンプ詳細">
+      <header class="sheet-head"><h2>スタンプ</h2><button class="close" aria-label="閉じる">×</button></header>
+      <div class="target"><span><b>9.25　3種目　9セット　5,460kg</b></span><span class="best" aria-label="最高記録を更新">🔥</span></div>
+      <div class="reaction-row"><span class="emoji">💪</span><span class="avatars"><i class="avatar"></i><i class="avatar two"></i></span></div>
+      <div class="reaction-row"><span class="emoji">🔥</span><span class="avatars"><i class="avatar two"></i><i class="avatar three"></i></span></div>
+      <div class="reaction-row"><span class="emoji">👏</span><span class="avatars"><i class="avatar three"></i></span></div>
+    </section>
+  </div>
+</main>
+</html>

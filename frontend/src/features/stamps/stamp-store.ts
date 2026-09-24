@@ -7,7 +7,7 @@ export type StampJob = {
   name: string;
   kind: StampKind;
   present: boolean;
-  state: "pending" | "failed";
+  state: "staged" | "pending" | "failed";
   error: string;
 };
 export type StampEntry = { summary?: StampSummary; error: string; revision: number };
@@ -20,7 +20,8 @@ type Options = {
   id: () => string;
 };
 const empty: StampEntry = { error: "", revision: 0 };
-export const stampKey = (group: string, workout: string) => `${group}/${workout}`;
+// グループは記録を開く経路だけに使う。同じ記録のスタンプ状態は全グループで共有する。
+export const stampKey = (_group: string, workout: string) => workout;
 const message = (reason: unknown) =>
   reason instanceof Error ? reason.message : "送れませんでした。再試行してください。";
 const forbidden = (reason: unknown) =>
@@ -102,15 +103,15 @@ export class StampStore {
     this.entries.set(stampKey(group, workout), { ...old, ...update, revision: old.revision + 1 });
     this.publish();
   }
-  forRecord(group: string, workout: string) {
-    return this.jobs.filter((j) => j.group === group && j.workout === workout);
+  forRecord(_group: string, workout: string) {
+    return this.jobs.filter((j) => j.workout === workout);
   }
   view(group: string, workout: string): StampSummary | undefined {
     const base = this.get(group, workout).summary;
     if (!base) return;
     const counts = { ...base.counts };
     const mine = new Set(base.mine);
-    for (const j of this.forRecord(group, workout).filter((j) => j.state === "pending")) {
+    for (const j of this.forRecord(group, workout).filter((j) => j.state !== "failed")) {
       const was = mine.has(j.kind);
       counts[j.kind] = Math.max(0, (counts[j.kind] ?? 0) + Number(j.present) - Number(was));
       if (j.present) mine.add(j.kind);
@@ -151,7 +152,7 @@ export class StampStore {
           }
           if (
             versions.get(id) !== this.get(group, id).revision ||
-            this.forRecord(group, id).some((j) => j.state === "pending")
+            this.forRecord(group, id).some((j) => j.state !== "failed")
           )
             continue;
           this.set(group, id, { summary: data[id], error: "" });
@@ -179,29 +180,40 @@ export class StampStore {
       return false;
     }
   }
-  toggle(group: string, workout: string, kind: StampKind, name: string) {
+  toggle(group: string, workout: string, kind: StampKind, name: string, defer = false) {
     const summary = this.view(group, workout);
-    if (
-      !this.active ||
-      !summary?.can_send ||
-      this.forRecord(group, workout).some((j) => j.kind === kind)
-    )
-      return false;
+    if (!this.active || !summary?.can_send) return false;
+    const existing = this.forRecord(group, workout).find((job) => job.kind === kind);
+    if (existing && (!defer || existing.state !== "staged")) return false;
+    const present = !summary.mine.includes(kind);
+    if (existing) this.discard(existing.id);
+    // 詳細内で元の状態へ戻した場合は、送信する変更そのものを残さない。
+    const basePresent = this.get(group, workout).summary?.mine.includes(kind) ?? false;
+    if (defer && present === basePresent) return true;
     const job: StampJob = {
       id: this.options.id(),
       group,
       workout,
       kind,
       name,
-      present: !summary.mine.includes(kind),
-      state: "pending",
+      present,
+      state: defer ? "staged" : "pending",
       error: "",
     };
     if (!this.save(job)) return false;
     this.jobs = [...this.jobs, job];
     this.set(group, workout, { error: "" });
-    void this.send(job, false);
+    if (!defer) void this.send(job, false);
     return true;
+  }
+  flush(group: string, workout: string) {
+    for (const job of this.forRecord(group, workout).filter((value) => value.state === "staged")) {
+      const next = { ...job, state: "pending" as const, error: "" };
+      if (!this.save(next)) continue;
+      this.jobs = this.jobs.map((value) => (value.id === next.id ? next : value));
+      this.publish();
+      void this.send(next, false);
+    }
   }
   discard(id: string) {
     const job = this.jobs.find((j) => j.id === id);

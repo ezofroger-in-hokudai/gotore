@@ -6,13 +6,13 @@ for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 720 });
     await mockTraining(page);
     await startTraining(page);
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     const labels = [
       "重量を増やす",
       "重量を減らす",
       "回数を増やす",
       "回数を減らす",
-      "次のセットへ",
+      "セットを追加",
       "次の種目へ",
       "トレーニング終了",
       "セット1を編集",
@@ -107,7 +107,7 @@ for (const mode of ["文字200%", "キーボード相当の高さ", "safe area�
     for (const name of [
       "重量を増やす",
       "回数を減らす",
-      "次のセットへ",
+      "セットを追加",
       "次の種目へ",
       "トレーニング終了",
     ]) {

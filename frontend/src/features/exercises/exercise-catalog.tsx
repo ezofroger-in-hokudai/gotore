@@ -1,6 +1,12 @@
 "use client";
 
-import { ApiError, type BodyPartSelection, type ExerciseOption, api } from "@/lib/api";
+import {
+  ApiError,
+  type BodyPart,
+  type BodyPartSelection,
+  type ExerciseOption,
+  api,
+} from "@/lib/api";
 import { type FormEvent, useId, useState } from "react";
 import { BodyPartFields, BodyPartTags } from "./body-part-fields";
 import { type BodyPartFilter, PART_FILTERS, filterExercises, optionParts } from "./body-parts";
@@ -12,14 +18,18 @@ export function ExerciseCatalog({
   options,
   disabled,
   onChanged,
+  onAdded,
   expanded = false,
   startAdding = false,
+  initialPrimary,
 }: {
   options: ExerciseOption[];
   disabled: boolean;
   onChanged: (change?: CatalogChange) => void;
+  onAdded?: () => void;
   expanded?: boolean;
   startAdding?: boolean;
+  initialPrimary?: BodyPart;
 }) {
   const [adding, setAdding] = useState(startAdding || options.length === 0);
   const [query, setQuery] = useState("");
@@ -27,7 +37,10 @@ export function ExerciseCatalog({
   const formId = useId();
   const visible = filterExercises(options, part, query);
   const [name, setName] = useState("");
-  const [parts, setParts] = useState<BodyPartSelection>(emptyParts);
+  const [parts, setParts] = useState<BodyPartSelection>(() => ({
+    primary_body_part: initialPrimary ?? emptyParts.primary_body_part,
+    secondary_body_parts: [],
+  }));
   const [editing, setEditing] = useState<ExerciseOption | null>(null);
   const [editParts, setEditParts] = useState<BodyPartSelection>(emptyParts);
   const [conflict, setConflict] = useState(false);
@@ -56,8 +69,9 @@ export function ExerciseCatalog({
       setName("");
       setParts(emptyParts);
       setNotice("追加しました。");
-      setAdding(false);
       onChanged({ saved });
+      if (onAdded) onAdded();
+      else setAdding(false);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "種目を追加できませんでした。");
     } finally {
@@ -174,6 +188,40 @@ export function ExerciseCatalog({
       </section>
     );
 
+  if (adding)
+    return (
+      <section className="exercise-option-form" aria-label="種目を追加">
+        <h3>種目を追加</h3>
+        <form id={formId} onSubmit={add}>
+          <fieldset disabled={busy}>
+            <label>
+              新しい種目
+              <input required value={name} onChange={(event) => setName(event.target.value)} />
+            </label>
+            <BodyPartFields value={parts} onChange={setParts} />
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <button className="primary full" type="submit">
+              {pending ? "追加中…" : "追加"}
+            </button>
+            <button
+              className="secondary full"
+              type="button"
+              onClick={() => {
+                setAdding(false);
+                setError("");
+              }}
+            >
+              キャンセル
+            </button>
+          </fieldset>
+        </form>
+      </section>
+    );
+
   return (
     <details className="panel exercise-catalog" open={expanded || undefined} aria-label="種目一覧">
       <summary hidden={expanded}>種目リスト</summary>
@@ -200,20 +248,6 @@ export function ExerciseCatalog({
           種目を追加
         </button>
       </div>
-      {adding && (
-        <form id={formId} onSubmit={add}>
-          <fieldset disabled={busy}>
-            <label>
-              新しい種目
-              <input required value={name} onChange={(event) => setName(event.target.value)} />
-            </label>
-            <BodyPartFields value={parts} onChange={setParts} />
-            <button className="secondary" type="submit">
-              追加
-            </button>
-          </fieldset>
-        </form>
-      )}
       <fieldset className="body-part-chips catalog-filters" aria-label="部位で絞り込み">
         {PART_FILTERS.map((filter) => (
           <button

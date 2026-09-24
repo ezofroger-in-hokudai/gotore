@@ -26,7 +26,11 @@ def test_send_scope_idempotency_and_self(client):
     assert data["can_send"] is True
     assert len(data["items"]) == 2
     assert all(r["sender_id"] == str(USERS["B"]) for r in data["items"])
-    assert client.put(path + "/clap").status_code == 409
+    # 自分の記録にも反応を残し、あとから受信一覧で確認できる。
+    assert client.put(path + "/clap").status_code == 200
+    own = client.get(path).json()
+    assert own["can_send"] is True
+    assert len(own["items"]) == 3
     assert client.put(path + "/invalid", headers=B).status_code == 422
     assert client.get(path, headers=C).status_code == 404
     other = create_group(client)
@@ -40,7 +44,7 @@ def test_send_scope_idempotency_and_self(client):
         ).status_code
         == 404
     )
-    assert client.delete(path + "/clap", headers=B).status_code == 204
+    assert client.delete(path + "/clap").status_code == 204
     assert client.delete(path + "/clap", headers=B).status_code == 204
     assert len(client.get(path).json()["items"]) == 1
 
@@ -74,7 +78,7 @@ def test_inbox_receipt_read_and_resend(client):
     assert client.get(inbox).json()["items"][0]["id"] != item["id"]
 
 
-def test_edit_leave_and_delete_remove_reactions(client, connection):
+def test_edit_leave_and_delete_preserve_or_remove_reactions_as_needed(client, connection):
     group, record, path = setup(client)
     client.put(path + "/clap", headers=B)
     connection.execute(
@@ -91,15 +95,16 @@ def test_edit_leave_and_delete_remove_reactions(client, connection):
         params={"expected_joined_at": member["joined_at"]},
     )
     assert response.status_code == 204
-    assert client.get("/api/stamps/inbox").json()["total"] == 0
+    # 退会後も反応は記録に残るが、退会中の送信者はそのグループから閲覧できない。
+    assert client.get("/api/stamps/inbox").json()["total"] == 1
+    assert client.get(path, headers=B).status_code == 404
     client.post("/api/groups/join", headers=B, json={"invite_code": group["invite_code"]})
-    assert client.get(path).json()["items"] == []
-    client.put(path + "/clap", headers=B)
+    assert len(client.get(path).json()["items"]) == 1
     connection.execute("DELETE FROM public.gotore_workouts WHERE id=%s", (record["id"],))
     assert client.get("/api/stamps/inbox").json()["total"] == 0
 
 
-def test_group_isolation_and_share_removal(client, connection):
+def test_stamp_is_shared_by_every_visible_group(client, connection):
     group, record, path = setup(client)
     other = create_group(client)
     client.post("/api/groups/join", headers=B, json={"invite_code": other["invite_code"]})
@@ -110,14 +115,17 @@ def test_group_isolation_and_share_removal(client, connection):
     other_path = f"/api/groups/{other['id']}/workouts/{record['id']}/stamps"
     client.put(path + "/clap", headers=B)
     client.put(other_path + "/fire", headers=B)
-    assert [r["kind"] for r in client.get(path).json()["items"]] == ["clap"]
-    assert [r["kind"] for r in client.get(other_path).json()["items"]] == ["fire"]
-    assert client.get("/api/stamps/inbox?group_id=" + group["id"]).json()["total"] == 1
+    # 同じ記録を見られるグループでは、同一のスタンプ一覧を読む。
+    assert {r["kind"] for r in client.get(path).json()["items"]} == {"clap", "fire"}
+    assert {r["kind"] for r in client.get(other_path).json()["items"]} == {"clap", "fire"}
+    client.put(other_path + "/clap", headers=B)
+    assert client.get(path, headers=B).json()["total"] == 2
+    assert client.get("/api/stamps/inbox?group_id=" + group["id"]).json()["total"] == 2
     connection.execute(
         "DELETE FROM public.gotore_workout_shares WHERE workout_id=%s AND group_id=%s",
         (record["id"], other["id"]),
     )
-    assert client.get("/api/stamps/inbox").json()["total"] == 1
+    assert client.get("/api/stamps/inbox").json()["total"] == 2
     assert client.get(other_path, headers=B).status_code == 404
 
 
@@ -154,9 +162,8 @@ def test_inbox_pagination_only_marks_visible_ids(client, connection):
         )
         connection.execute(
             "INSERT INTO public.gotore_workout_stamps "
-            "(workout_id,recipient_id,group_id,sender_id,kind) "
-            "VALUES (%s,%s,%s,%s,'clap')",
-            (wid, USERS["A"], group["id"], USERS["B"]),
+            "(workout_id,recipient_id,sender_id,kind) VALUES (%s,%s,%s,'clap')",
+            (wid, USERS["A"], USERS["B"]),
         )
     first = client.get("/api/stamps/inbox").json()
     assert first["total"] == 52 and len(first["items"]) == 50 and first["has_more"]
@@ -192,7 +199,7 @@ def test_batch_counts_new_kinds_and_scope(client):
     assert summary["can_send"] is True
     assert client.post(batch, json={"workout_ids": [record["id"]]}).json()[record["id"]][
         "can_send"
-    ] is False
+    ] is True
     assert client.post(batch, headers=C, json={"workout_ids": [record["id"]]}).status_code == 404
     private = client.post("/api/workouts", json=payload()).json()
     assert client.post(batch, headers=B, json={"workout_ids": [private["id"]]}).json() == {}
@@ -216,8 +223,8 @@ def test_batch_counts_are_not_limited_to_first_page(client, connection):
         )
         connection.execute(
             "INSERT INTO public.gotore_workout_stamps"
-            "(workout_id,recipient_id,group_id,sender_id,kind) VALUES (%s,%s,%s,%s,'tengu')",
-            (record["id"], USERS["A"], group["id"], user),
+            "(workout_id,recipient_id,sender_id,kind) VALUES (%s,%s,%s,'tengu')",
+            (record["id"], USERS["A"], user),
         )
     data = client.get(path, headers=B).json()
     assert len(data["items"]) == 50 and data["counts"]["tengu"] == 55

@@ -49,7 +49,7 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
     await startTraining(pageA);
     await pageA.getByRole("spinbutton", { name: "重量", exact: true }).fill("60");
     await pageA.getByRole("spinbutton", { name: "回数", exact: true }).fill("10");
-    await pageA.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await pageA.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect(pageA.getByText("保存しました", { exact: true })).toBeVisible();
     const active = await (
       await pageA.request.get(`${backendUrl}/api/sessions/active`, { headers: authA })

@@ -137,7 +137,7 @@ test("記録比較は未送信・古いrevisionで炎を出さず、保存と訂
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("95");
   await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("1");
   state.failSave = true;
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("未送信");
   const savedRow = page.getByRole("button", { name: "セット1を編集", exact: true });
   await expect(savedRow.getByRole("img")).toHaveCount(0);
@@ -147,7 +147,7 @@ test("記録比較は未送信・古いrevisionで炎を出さず、保存と訂
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
-    await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeInViewport();
+    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeInViewport();
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "test-results/personal-record-recording.png", fullPage: true });
