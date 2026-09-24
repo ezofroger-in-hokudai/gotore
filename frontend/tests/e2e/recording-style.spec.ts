@@ -68,7 +68,8 @@ for (const width of [320, 390, 430]) {
     await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "今日のトレーニング終了", exact: true }).click();
     const finish = page.getByRole("dialog", { name: "トレーニング終了", exact: true });
-    await expect(finish.getByRole("button")).toHaveCount(2);
+    await expect(finish.getByRole("button", { name: "記録に戻る", exact: true })).toBeVisible();
+    await expect(finish.getByRole("button", { name: "終了する", exact: true })).toBeVisible();
     if (width === 390) await page.screenshot({ path: "test-results/finish-dark.png" });
     await finish.getByRole("button", { name: "記録に戻る", exact: true }).click();
     await expect(finish).not.toBeVisible();
