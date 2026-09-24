@@ -786,6 +786,14 @@ function ActiveTraining({
               : "おつかれさまでした。保存したセットは履歴で確認できます。"}
           </p>
           <button
+            className="secondary full"
+            type="button"
+            disabled={controller.busy}
+            onClick={() => setFinishOpen(false)}
+          >
+            記録に戻る
+          </button>
+          <button
             className="primary full"
             type="button"
             disabled={controller.busy}

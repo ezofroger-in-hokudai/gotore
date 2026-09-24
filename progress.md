@@ -2688,3 +2688,10 @@
 - 影響範囲・関連ファイル: backend/app/infrastructure/sessions.py、progress.md。種目メモの保存・競合判定の業務仕様は変更しない。
 - 検証: GitHub Actionsの失敗ログでE501を確認。修正後に`ruff check . ../scripts`、backend pytest（103件成功・170件skip）、`git diff --check`が成功。
 - 未解決事項・次のアクション: この修正だけを追加コミットしてPR #194へpushし、CIの再実行結果を確認する。
+
+## 2026-09-24 PR #194 のdatabase E2Eを修正
+
+- 変更内容・目的: database CIのmigration適用・schema lintは通過した一方、記録画面E2Eが終了確認ダイアログの「記録に戻る」を見つけられず失敗した。仕様資料どおり、終了確認に記録へ戻る操作と終了する操作の2つを表示するよう復元した。
+- 影響範囲・関連ファイル: frontend/src/features/session/session-screen.tsx、progress.md。終了を確定せず確認シートを閉じる操作だけを追加し、セット保存・終了APIは変更しない。
+- 検証: CI失敗ログで320/390/430pxすべて同一の操作不足を確認。修正後にCI用recording-style E2E、frontend lint・型検査、`git diff --check`が成功。
+- 未解決事項・次のアクション: この修正だけを追加コミットしてPR #194へpushし、CIの再実行結果を確認する。
