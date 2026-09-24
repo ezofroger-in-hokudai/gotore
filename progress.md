@@ -1,5 +1,32 @@
 # progress.md
 
+## 2026-09-24 18:52 JST
+- 変更内容: 記録中の比較行のRMを、BEST判定とは分けて入力・表示ごとに計算する表示専用関数へ変更したため、11回以上でも表示する。最下段の新セット操作は視覚上 `＋` のみにした。編集中の任意セットを再タップすると新しい次セットへ戻るよう統一し、終了ボタンを赤い一行の「今日のトレーニング終了」に変更した。
+- 目的: RMを保存せず入力値の目安として常に見せ、編集解除と今日全体の終了操作を明確にする。
+- 影響範囲: RM表示、記録中のセット行、入力ドック、終了操作、単体/E2Eテスト。
+- 関連ファイル: frontend/src/features/session/session.ts、frontend/src/features/session/session-screen.tsx、frontend/src/app/v2.css、frontend/tests/unit/session.test.ts、frontend/tests/e2e/recording-style.spec.ts。
+- 検証結果: frontendで `bun run lint`、`bun run typecheck`、`bun test tests/unit/session.test.ts tests/unit/session-id.test.ts`、`git diff --check` は成功。`make test-e2e E2E_ARGS='recording-style.spec.ts'` を実行した。390px幅の実描画で、12回のRM表示、＋操作、セット1再タップ後の `SET 3`、赤い一行の終了ボタン（高さ40px・横幅390px）を確認した。
+- 未解決事項: 実機での最終操作感は未確認。バックエンドを含む `make check` と全E2Eは今回未実施。
+- 次のアクション: 実機で終了ボタンとコピー・編集解除を確認する。
+
+## 2026-09-24 18:36 JST
+- 変更内容: 前回セット行のコピーを、入力値だけを書き換える操作から、必ず今回の新しい次セットとして保存・追加する操作へ変更した。コピー後は入力ドックを開くが、数値入力へ自動フォーカスしない。通常の送信待ち件数・「同期中」は画面に表示しない。
+- 目的: コピー後にさらに「次のセットへ」を押す必要をなくし、編集中でも既存セットを誤更新せず次セットへ進める。保存待ちの表示による画面の揺れをなくす。
+- 影響範囲: 前回セットごとのコピー、入力ドック、通常の同期状態表示、記録画面E2E。
+- 関連ファイル: frontend/src/features/session/session-screen.tsx、frontend/tests/e2e/recording-style.spec.ts。
+- 検証結果: frontendで `bun run lint`、`bun run typecheck`、`bun test tests/unit/session.test.ts tests/unit/session-id.test.ts`、`git diff --check` は成功。`make test-e2e E2E_ARGS='recording-style.spec.ts'` を実行。390px幅の実描画で、前回セット1・3のコピーにより今回セットが2件へ増え、編集中でも入力が `SET 3` へ進み、「同期中」が表示されないことを確認した。
+- 未解決事項: 実機での最終操作感はユーザー確認待ち。バックエンドを含む `make check` と全E2Eは今回未実施。
+- 次のアクション: 実機の利用結果に応じて、比較行の文字密度と入力ドックの高さを調整する。
+
+## 2026-09-24 18:20 JST
+- 変更内容: 実機フィードバックを受け、記録入力を画面最下部のドックへ固定し、開閉できる入力欄を復元した。今回と前回を別スクロールから同じセット行で動く比較表へ変更し、前回の有無で位置が変わらない今回値直右へゴミ箱を固定した。前後値付きルーラーと保存完了表示、保存後の自動スクロールを削除した。前回セット行のコピーアイコンは、その行の値を必ず新しい次セットの入力へ入れて入力ドックを開く（数値欄へ自動フォーカスしない）動作へ戻した。編集中に最新セットを選んだ場合も、同じく次セット入力へ戻す。比較行のRMは保存せず、重量・回数から画面表示ごとに計算する。
+- 目的: 初期表示で入力が上に残る問題、比較列の分断、コピー後に追加操作が必要な問題を解消し、セット確認と次セット入力を両立する。
+- 影響範囲: 記録中の比較表、入力ドック、数値ホイール、前回セットコピー、種目/今日のメモのEnter保存、関連E2E。
+- 関連ファイル: frontend/src/features/session/session-screen.tsx、frontend/src/features/session/number-wheel.tsx、frontend/src/features/session/inline-memo.tsx、frontend/src/app/v2.css、frontend/tests/e2e/recording-style.spec.ts。
+- 検証結果: frontendで `bun run lint`、`bun run typecheck`、`bun test tests/unit/session.test.ts tests/unit/session-id.test.ts`、`git diff --check` は成功。`make test-e2e E2E_ARGS='recording-style.spec.ts'` を実行。390px幅のLAN向け実描画で、入力ドック、開閉、比較行の一体スクロール、コピー後の次セット化、ゴミ箱位置、RM表示、横幅390pxを確認した。
+- 未解決事項: 実機での最終操作感はユーザー確認待ち。バックエンドを含む `make check` と全E2Eは今回未実施。
+- 次のアクション: 実機の利用結果に応じて、比較行の文字密度と入力ドックの高さを調整する。
+
 ## 2026-09-24 17:37 JST
 - 変更内容: 合意済みの `docs/styles/memo-options.html` のB案と `docs/previews/sets-164-screen.html` を正として、記録中の上部を「種目名・メモ・トレーニング終了」に統一した。種目メモはメモ操作で開閉する、種目名直下の枠なし文章へ戻し、今回のセットを左・前回のセットを右に固定した。今日のメモは合意済みの入力直前に残し、同じ枠なしの編集スタイルにした。通常時の「同期済み・〇グループに共有」と開始前の共有説明を削除し、未送信・競合時だけ復旧操作を表示する。
 - 目的: 話し合って選んだプレビューにない補助表示を除き、種目メモの位置と記録画面の情報量を採用案へ揃える。

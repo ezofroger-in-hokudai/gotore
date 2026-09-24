@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   appendSets,
   bestUpdate,
+  displayEstimatedRM,
   estimatedRM,
   readSessionInput,
   removeSet,
@@ -15,6 +16,10 @@ describe("v2セットの業務ルール", () => {
     expect(estimatedRM(80, 1)).toBe(80);
     expect(estimatedRM(0, 10)).toBeNull();
     expect(estimatedRM(80, 11)).toBeNull();
+  });
+  test("記録中のRM表示は保存せず入力値から毎回計算する", () => {
+    expect(displayEstimatedRM(80, 12)).toBe(112);
+    expect(displayEstimatedRM(0, 12)).toBeNull();
   });
   test("初回と同値はBEST更新にしない", () => {
     expect(bestUpdate(80, 8, null)).toBe(false);

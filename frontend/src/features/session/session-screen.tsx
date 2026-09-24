@@ -11,8 +11,8 @@ import {
   type SessionInput,
   appendSets,
   bestUpdate,
+  displayEstimatedRM,
   emptyInput,
-  estimatedRM,
   readSessionInput,
   removeSet,
   setValue,
@@ -119,17 +119,14 @@ function ActiveTraining({
   }, [input, sessionId, onPreparingInput]);
   const [selecting, setSelecting] = useState(!input.name);
   const [catalogOpen, setCatalogOpen] = useState(false);
-  const comparisonTable = useRef<HTMLElement>(null);
+  const [inputOpen, setInputOpen] = useState(true);
   const repsField = useRef<HTMLInputElement>(null);
   const [conflictOpen, setConflictOpen] = useState(false);
   const adding = useRef(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [error, setError] = useState("");
-  const [feedback, setFeedback] = useState("");
-  const [submission, setSubmission] = useState<{ revision: number; set: number } | null>(null);
   const [storageWarning, setStorageWarning] = useState(false);
   const [query, setQuery] = useState("");
-  const [exerciseMemoOpen, setExerciseMemoOpen] = useState(true);
   const overviewBests = useResource<SessionBests>(
     sessionId ? `/sessions/${sessionId}/bests` : null,
     controller.confirmedRevision,
@@ -197,14 +194,6 @@ function ActiveTraining({
       document.removeEventListener("visibilitychange", hidden);
     };
   }, [persistInput]);
-  useEffect(() => {
-    if (
-      submission &&
-      controller.saved?.id === sessionId &&
-      controller.saved.revision >= submission.revision
-    )
-      setFeedback((current) => (current.startsWith("直前") ? current : "保存しました"));
-  }, [controller.saved, sessionId, submission]);
   // 応答だけ失われた保存は、再起動時にサーバーと照合して二重追加を防ぐ。
   useEffect(() => {
     if (!storageKey) return;
@@ -222,7 +211,6 @@ function ActiveTraining({
           editing: null,
           dirty: false,
         }));
-        setFeedback("前回の保存を確認しました");
       }
     } catch {
       setStorageWarning(true);
@@ -241,7 +229,6 @@ function ActiveTraining({
       const value = setValue(input.weight, input.reps);
       const nextExercises = updateSet(exercises, input.name, value, input.editing);
       const result = await controller.save(nextExercises, revision);
-      setSubmission({ revision: result.revision, set: (input.editing ?? sets.length) + 1 });
       const nextInput = { ...input, revision: result.revision, editing: null, dirty: false };
       setInput(nextInput);
       try {
@@ -249,11 +236,6 @@ function ActiveTraining({
       } catch {
         setStorageWarning(true);
       }
-      requestAnimationFrame(() => {
-        const table = comparisonTable.current;
-        if (table && input.editing === null) table.scrollTop = table.scrollHeight;
-      });
-      setFeedback(input.editing === null ? "追加しました" : "更新しました");
       if (haptic && typeof navigator.vibrate === "function") navigator.vibrate(15);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "保存できませんでした。");
@@ -267,7 +249,6 @@ function ActiveTraining({
     try {
       const result = await controller.save(appendSets(exercises, input.name, previous), revision);
       setInput((value) => ({ ...value, revision: result.revision, editing: null, dirty: false }));
-      setFeedback("前回の全セットをコピーしました");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "前回のセットをコピーできませんでした。");
     }
@@ -278,21 +259,34 @@ function ActiveTraining({
     try {
       const result = await controller.save(removeSet(exercises, input.name, index), revision);
       setInput((value) => ({ ...value, revision: result.revision, editing: null, dirty: false }));
-      setFeedback("セットを削除しました");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "セットを削除できませんでした。");
     }
   }
   const candidate =
     input.editing === null && bestUpdate(Number(input.weight), Number(input.reps), context.data);
-  const rm = estimatedRM(Number(input.weight), Number(input.reps));
-  const awaitingSave = submission && controller.confirmedRevision < submission.revision;
-  const celebrated =
-    !!submission &&
-    controller.saved?.revision === submission.revision &&
-    controller.saved.best_updated &&
-    feedback === "保存しました" &&
-    !awaitingSave;
+  const rm = displayEstimatedRM(Number(input.weight), Number(input.reps));
+  async function copyPreviousIntoNextSet(value: { weight: number; reps: number }) {
+    if (!session || controller.busy || adding.current) return;
+    adding.current = true;
+    setError("");
+    try {
+      const result = await controller.save(updateSet(exercises, input.name, value, null), revision);
+      setInput({
+        ...input,
+        revision: result.revision,
+        weight: String(value.weight),
+        reps: String(value.reps),
+        editing: null,
+        dirty: false,
+      });
+      setInputOpen(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "前回のセットをコピーできませんでした。");
+    } finally {
+      adding.current = false;
+    }
+  }
 
   return (
     <section className={`session-screen${selecting ? "" : " entering-sets"}`}>
@@ -398,8 +392,6 @@ function ActiveTraining({
                       dirty: false,
                     });
                     setSelecting(false);
-                    setFeedback("");
-                    setSubmission(null);
                   }}
                 >
                   <span>{name}</span>
@@ -431,56 +423,30 @@ function ActiveTraining({
                 </button>
               </h1>
               <button
-                className="memo-toggle"
-                type="button"
-                aria-controls="exercise-memo"
-                aria-pressed={exerciseMemoOpen}
-                onClick={() => setExerciseMemoOpen((open) => !open)}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  aria-hidden="true"
-                >
-                  <path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5" />
-                </svg>
-                <span>メモ</span>
-              </button>
-              <button
                 type="button"
                 className="text-button finish-training"
                 disabled={!session || controller.busy}
                 onClick={() => setFinishOpen(true)}
               >
-                トレーニング終了
+                今日のトレーニング終了
               </button>
             </header>
-            {exerciseMemoOpen && (
-              <section
-                id="exercise-memo"
-                className="recording-memos memo-plain"
-                aria-label="種目メモ"
-              >
-                <span className="memo-caption">種目メモ</span>
-                {context.data ? (
-                  <InlineMemo
-                    key={input.name}
-                    title="種目メモ"
-                    path="/exercises/memo"
-                    name={input.name}
-                    initial={context.data.memo}
-                    userId={userId}
-                    onSaved={context.retry}
-                  />
-                ) : (
-                  <span className="memo-text muted">メモを読み込み中…</span>
-                )}
-              </section>
-            )}
+            <section className="recording-memos memo-plain" aria-label="種目メモ">
+              <span className="memo-caption">種目メモ</span>
+              {context.data ? (
+                <InlineMemo
+                  key={input.name}
+                  title="種目メモ"
+                  path="/exercises/memo"
+                  name={input.name}
+                  initial={context.data.memo}
+                  userId={userId}
+                  onSaved={context.retry}
+                />
+              ) : (
+                <span className="memo-text muted">メモを読み込み中…</span>
+              )}
+            </section>
             {context.error && (
               <p className="error" role="alert">
                 {context.error}
@@ -510,202 +476,235 @@ function ActiveTraining({
                 前回 <small>{context.data?.previous?.performed_on.replaceAll("-", "/")}</small>
               </h2>
             </div>
-            <div className="comparison-lists" aria-label="全セットの比較">
-              <section
-                className="comparison-table"
-                ref={comparisonTable}
-                aria-label="今回の全セット"
-              >
-                {sets.map((value, index) => (
+            <section
+              className="comparison-table unified-comparison-table"
+              aria-label="今回と前回の全セット"
+            >
+              {Array.from({ length: Math.max(sets.length, previous.length) }, (_, index) => {
+                const current = sets[index];
+                const prior = previous[index];
+                return (
                   <div className="comparison-row" key={`set-${index + 1}`}>
                     <span>{index + 1}</span>
-                    <button
-                      type="button"
-                      className={input.editing === index ? "editing-set" : ""}
-                      disabled={controller.busy}
-                      aria-label={`セット${index + 1}を編集`}
-                      onClick={() => {
-                        setInput({
-                          ...input,
-                          revision,
-                          weight: String(value.weight),
-                          reps: String(value.reps),
-                          editing: index,
-                          dirty: false,
-                        });
-                        setFeedback("");
-                      }}
-                    >
-                      <SetMeasurement weight={value.weight} reps={value.reps} />
-                    </button>
-                    <button
-                      type="button"
-                      className="delete-set"
-                      disabled={controller.busy}
-                      aria-label={`セット${index + 1}を削除`}
-                      onClick={() => void deleteSet(index)}
-                    >
-                      <svg aria-hidden="true" viewBox="0 0 24 24">
-                        <path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13M10 11v5m4-5v5" />
-                      </svg>
-                    </button>
+                    <div className="current-set-cell">
+                      {current ? (
+                        <>
+                          <button
+                            type="button"
+                            className={input.editing === index ? "editing-set" : ""}
+                            disabled={controller.busy}
+                            aria-label={`セット${index + 1}を編集`}
+                            onClick={() => {
+                              if (
+                                input.editing !== null &&
+                                (input.editing === index || index === sets.length - 1)
+                              ) {
+                                const latest = sets.at(-1) ?? current;
+                                setInput({
+                                  ...input,
+                                  revision,
+                                  weight: String(latest.weight),
+                                  reps: String(latest.reps),
+                                  editing: null,
+                                  dirty: false,
+                                });
+                                setInputOpen(true);
+                                return;
+                              }
+                              setInput({
+                                ...input,
+                                revision,
+                                weight: String(current.weight),
+                                reps: String(current.reps),
+                                editing: index,
+                                dirty: false,
+                              });
+                              setInputOpen(true);
+                            }}
+                          >
+                            <SetMeasurement weight={current.weight} reps={current.reps} />
+                          </button>
+                          <button
+                            type="button"
+                            className="delete-set"
+                            disabled={controller.busy}
+                            aria-label={`セット${index + 1}を削除`}
+                            onClick={() => void deleteSet(index)}
+                          >
+                            <svg aria-hidden="true" viewBox="0 0 24 24">
+                              <path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13M10 11v5m4-5v5" />
+                            </svg>
+                          </button>
+                        </>
+                      ) : (
+                        <span className="comparison-missing">—</span>
+                      )}
+                    </div>
+                    <div className="previous-set-cell">
+                      {prior ? (
+                        <>
+                          <SetMeasurement weight={prior.weight} reps={prior.reps} />
+                          <button
+                            type="button"
+                            className="previous-copy"
+                            aria-label={`前回のセット${index + 1}をコピー`}
+                            onClick={() => void copyPreviousIntoNextSet(prior)}
+                          >
+                            ⧉
+                          </button>
+                        </>
+                      ) : (
+                        <span className="comparison-missing">—</span>
+                      )}
+                    </div>
                   </div>
-                ))}
-                <button
-                  className="new-set-target"
-                  type="button"
-                  disabled={blocking}
-                  onClick={() => setInput({ ...input, revision, editing: null, dirty: false })}
-                >
-                  ＋ SET {sets.length + 1} 新しいセット
-                </button>
-              </section>
-              <section className="previous-comparison-table" aria-label="前回の全セット">
-                {previous.map((value, index) => (
-                  <div className="comparison-row previous-row" key={`previous-${index + 1}`}>
-                    <span>{index + 1}</span>
-                    <SetMeasurement weight={value.weight} reps={value.reps} />
-                  </div>
-                ))}
-                {!previous.length && <p className="comparison-empty">前回の記録はありません</p>}
-              </section>
-            </div>
+                );
+              })}
+              <button
+                className="new-set-target"
+                type="button"
+                aria-label={`SET ${sets.length + 1} 新しいセット`}
+                disabled={blocking}
+                onClick={() => {
+                  setInput({ ...input, revision, editing: null, dirty: false });
+                  setInputOpen(true);
+                }}
+              >
+                ＋
+              </button>
+              {!previous.length && !sets.length && (
+                <p className="comparison-empty">まだセットがありません</p>
+              )}
+            </section>
           </div>
-          <section className="today-exercise-memo memo-strip memo-plain" aria-label="今日のメモ">
-            <h2>今日のメモ</h2>
-            {sessionId ? (
-              <InlineMemo
-                title="今日のメモ"
-                path={`/sessions/${sessionId}/exercise-memo?name=${encodeURIComponent(input.name)}`}
-                userId={userId}
-              />
-            ) : (
-              <span className="memo-text muted">メモを読み込み中…</span>
-            )}
-          </section>
-          <form
-            className="set-entry"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void save();
-            }}
-          >
-            {stale && (
-              <p className="error" role="alert">
-                別の保存があります。入力値は保持しています。保存済み行を選び直すか、新しいセットとして入力してください。
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={() => setInput({ ...input, editing: null, revision })}
-                >
-                  新しいセットとして入力
-                </button>
-              </p>
-            )}
-            <fieldset disabled={blocking || stale || controller.status === "conflict"}>
-              <div className="set-entry-heading">
-                <h2>
-                  {input.editing === null
-                    ? `SET ${sets.length + 1}`
-                    : `SET ${input.editing + 1} を編集`}
-                </h2>
-              </div>
-              <div className="wheels">
-                <NumberWheel
-                  label="重量"
-                  onEnter={() => {
-                    repsField.current?.focus();
-                    repsField.current?.select();
-                  }}
-                  unit="kg"
-                  value={input.weight}
-                  step={0.5}
-                  arrowStep={5}
-                  min={0}
-                  onChange={(weight) => {
-                    setInput({
-                      ...input,
-                      revision:
-                        input.dirty || input.editing !== null
-                          ? (input.revision ?? revision)
-                          : revision,
-                      weight,
-                      dirty: true,
-                    });
-                    setFeedback("");
-                  }}
+          <div className="recording-entry-dock">
+            <section className="today-exercise-memo memo-strip memo-plain" aria-label="今日のメモ">
+              <h2>今日のメモ</h2>
+              {sessionId ? (
+                <InlineMemo
+                  title="今日のメモ"
+                  path={`/sessions/${sessionId}/exercise-memo?name=${encodeURIComponent(input.name)}`}
+                  userId={userId}
                 />
-                <NumberWheel
-                  label="回数"
-                  inputRef={repsField}
-                  onEnter={() => repsField.current?.form?.requestSubmit()}
-                  unit="回"
-                  value={input.reps}
-                  step={1}
-                  arrowStep={5}
-                  min={1}
-                  onChange={(reps) => {
-                    setInput({
-                      ...input,
-                      revision:
-                        input.dirty || input.editing !== null
-                          ? (input.revision ?? revision)
-                          : revision,
-                      reps,
-                      dirty: true,
-                    });
-                    setFeedback("");
-                  }}
-                />
-              </div>
-              <p className={`rm-estimate${candidate ? " record-candidate" : ""}`}>
-                1RM <strong>{rm ?? "—"}</strong> kg <span>（1〜10回）</span>
-              </p>
-              <div className="save-feedback" aria-live="polite">
-                {feedback ? (
-                  <span className={celebrated ? "record-celebration" : undefined}>
-                    {celebrated && (
-                      <span role="img" aria-label="最高記録">
-                        🔥{" "}
-                      </span>
-                    )}
-                    {submission && !feedback.startsWith("直前") && (
-                      <span>SET {submission.set} · </span>
-                    )}
+              ) : (
+                <span className="memo-text muted">メモを読み込み中…</span>
+              )}
+            </section>
+            <form
+              className="set-entry"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void save();
+              }}
+            >
+              {stale && (
+                <p className="error" role="alert">
+                  別の保存があります。入力値は保持しています。保存済み行を選び直すか、新しいセットとして入力してください。
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setInput({ ...input, editing: null, revision })}
+                  >
+                    新しいセットとして入力
+                  </button>
+                </p>
+              )}
+              <fieldset
+                className={inputOpen ? undefined : "input-collapsed"}
+                disabled={blocking || stale || controller.status === "conflict"}
+              >
+                <div className="set-entry-heading">
+                  <h2>
+                    {input.editing === null
+                      ? `SET ${sets.length + 1}`
+                      : `SET ${input.editing + 1} を編集`}
+                  </h2>
+                  <button
+                    type="button"
+                    className="input-toggle"
+                    aria-label={inputOpen ? "入力欄をしまう" : "入力欄を開く"}
+                    aria-expanded={inputOpen}
+                    onClick={() => setInputOpen((open) => !open)}
+                  >
+                    <span aria-hidden="true">{inputOpen ? "⌄" : "⌃"}</span>
+                  </button>
+                </div>
+                <div className="wheels">
+                  <NumberWheel
+                    label="重量"
+                    onEnter={() => {
+                      repsField.current?.focus();
+                      repsField.current?.select();
+                    }}
+                    unit="kg"
+                    value={input.weight}
+                    step={0.5}
+                    arrowStep={5}
+                    min={0}
+                    onChange={(weight) => {
+                      setInput({
+                        ...input,
+                        revision:
+                          input.dirty || input.editing !== null
+                            ? (input.revision ?? revision)
+                            : revision,
+                        weight,
+                        dirty: true,
+                      });
+                    }}
+                  />
+                  <NumberWheel
+                    label="回数"
+                    inputRef={repsField}
+                    onEnter={() => repsField.current?.form?.requestSubmit()}
+                    unit="回"
+                    value={input.reps}
+                    step={1}
+                    arrowStep={5}
+                    min={1}
+                    onChange={(reps) => {
+                      setInput({
+                        ...input,
+                        revision:
+                          input.dirty || input.editing !== null
+                            ? (input.revision ?? revision)
+                            : revision,
+                        reps,
+                        dirty: true,
+                      });
+                    }}
+                  />
+                </div>
+                <p className={`rm-estimate${candidate ? " record-candidate" : ""}`}>
+                  1RM <strong>{rm ?? "—"}</strong> kg
+                </p>
+                <div className="set-actions">
+                  <button
+                    className="secondary next-exercise"
+                    type="button"
+                    onClick={() => setSelecting(true)}
+                  >
+                    次の種目へ
+                  </button>
+                  <button
+                    className="primary"
+                    type="submit"
+                    disabled={!session || controller.busy}
+                    aria-label={input.editing === null ? "次のセットへ" : "変更を保存"}
+                  >
                     <span>
-                      {awaitingSave
-                        ? controller.status === "offline" || controller.status === "conflict"
-                          ? "端末に保存 · 未送信"
-                          : "端末に保存 · 保存中…"
-                        : feedback}
+                      {blocking
+                        ? "保存中…"
+                        : input.editing === null
+                          ? "次のセットへ"
+                          : "変更を保存"}
                     </span>
-                  </span>
-                ) : (
-                  ""
-                )}
-              </div>
-              <div className="set-actions">
-                <button
-                  className="secondary next-exercise"
-                  type="button"
-                  onClick={() => setSelecting(true)}
-                >
-                  次の種目へ
-                </button>
-                <button
-                  className="primary"
-                  type="submit"
-                  disabled={!session || controller.busy}
-                  aria-label={input.editing === null ? "次のセットへ" : "変更を保存"}
-                >
-                  <span>
-                    {blocking ? "保存中…" : input.editing === null ? "次のセットへ" : "変更を保存"}
-                  </span>
-                  <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
-                </button>
-              </div>
-            </fieldset>
-          </form>
+                    <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
+                  </button>
+                </div>
+              </fieldset>
+            </form>
+          </div>
           {error && (
             <p role="alert" className="error">
               {error}
@@ -723,13 +722,9 @@ function ActiveTraining({
           />
         </Sheet>
       )}
-      {(controller.pending ||
-        controller.status === "offline" ||
-        controller.status === "conflict") && (
+      {(controller.status === "offline" || controller.status === "conflict") && (
         <div className="sync-status" aria-live="polite">
-          {controller.pending
-            ? `${controller.pending}件 ${controller.status === "offline" ? "未送信・端末に保持" : controller.status === "conflict" ? "要確認・端末に保持" : "同期中"}`
-            : "送信できていません"}
+          {controller.status === "offline" ? "未送信・端末に保持" : "要確認・端末に保持"}
           {controller.status === "offline" && (
             <button type="button" className="text-button" onClick={() => void controller.sync()}>
               再送
@@ -825,7 +820,7 @@ function SetMeasurement({ weight, reps }: { weight: number; reps: number }) {
       <span>
         {weight}kg × {reps}
       </span>
-      <small>RM {estimatedRM(weight, reps) ?? "—"}</small>
+      <small>RM {displayEstimatedRM(weight, reps) ?? "—"}</small>
     </span>
   );
 }

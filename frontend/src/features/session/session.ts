@@ -2,6 +2,13 @@ import type { Exercise, ExerciseContext } from "@/lib/api";
 
 export function estimatedRM(weight: number, reps: number): number | null {
   if (weight <= 0 || reps < 1 || reps > 10) return null;
+  return displayEstimatedRM(weight, reps);
+}
+
+// 記録中の目安表示は保存せず、その時点の入力値から毎回算出する。
+// BEST判定は従来どおり1〜10回だけを対象にする。
+export function displayEstimatedRM(weight: number, reps: number): number | null {
+  if (weight <= 0 || reps < 1 || !Number.isFinite(weight) || !Number.isFinite(reps)) return null;
   return Math.round((reps === 1 ? weight : weight * (1 + reps / 30)) * 10 + 1e-8) / 10;
 }
 

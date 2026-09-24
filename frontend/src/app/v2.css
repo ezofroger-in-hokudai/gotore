@@ -3677,11 +3677,12 @@
   flex: 0 0 auto;
   min-height: 40px;
   padding: 4px 8px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
 }
 .recording-view .recording-memos.memo-plain {
   height: auto;
@@ -3734,4 +3735,133 @@
   padding: 1px 0;
   font-size: 12px;
   line-height: 1.6;
+}
+
+/* 一覧と入力を分離し、セット比較は同じ行で前回値と一緒に動かす。 */
+.recording-view .session-screen.entering-sets {
+  height: calc(100dvh - 74px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: 0;
+}
+.recording-view .entering-sets .set-comparison {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.recording-view .unified-comparison-table {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.recording-view .unified-comparison-table .comparison-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 44px;
+  gap: 4px;
+}
+.recording-view .unified-comparison-table .current-set-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  min-width: 0;
+}
+.recording-view .unified-comparison-table .previous-set-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  min-width: 0;
+  color: var(--muted);
+}
+.recording-view .unified-comparison-table .previous-copy {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+}
+.recording-view .unified-comparison-table .current-set-cell > button:first-child {
+  min-width: 0;
+  min-height: 44px;
+}
+.recording-view .unified-comparison-table .delete-set {
+  width: 28px;
+  min-height: 44px;
+}
+.recording-view .unified-comparison-table .set-measurement {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 3px;
+  white-space: nowrap;
+}
+.recording-view .entering-sets .unified-comparison-table .set-measurement small {
+  display: inline;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+.recording-view .comparison-missing {
+  color: var(--muted);
+  font-size: 12px;
+}
+.recording-view .recording-entry-dock {
+  flex: 0 0 auto;
+  margin-top: auto;
+}
+.recording-view .recording-entry-dock .today-exercise-memo {
+  margin-top: 0;
+}
+.recording-view .set-entry-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+}
+.recording-view .input-toggle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+}
+.recording-view .set-entry fieldset.input-collapsed {
+  grid-template-areas: "heading";
+  min-height: 40px;
+}
+.recording-view .set-entry fieldset.input-collapsed > :not(.set-entry-heading) {
+  display: none;
+}
+
+/* 前後の数値は表示せず、上下の矢印と直接入力だけを残す。 */
+.recording-view .number-wheel {
+  grid-template-rows: 16px 18px 48px 18px;
+}
+.recording-view .number-wheel .wheel-neighbor {
+  height: 18px;
+  min-height: 18px;
+  line-height: 18px;
+}
+.recording-view .set-entry-heading h2 {
+  flex: 1 1 auto;
+}
+
+/* 種目ではなく、今日のトレーニング全体を終了する主操作。 */
+.recording-view .session-screen .recording-header .finish-training {
+  max-width: none;
+  border-color: var(--accent);
+  background-color: var(--accent);
+  color: white;
+  white-space: nowrap;
 }

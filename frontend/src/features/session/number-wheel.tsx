@@ -66,7 +66,6 @@ export function NumberWheel({
     }
   };
   const shift = (delta: number) => change(current.current + delta);
-  const display = (number: number) => String(Math.round(number * 10) / 10);
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
   return (
     <div
@@ -158,9 +157,6 @@ export function NumberWheel({
       >
         <WheelArrow direction="up" />
       </button>
-      <span className="wheel-value" aria-hidden="true">
-        {display((Number(value) || min) + step)}
-      </span>
       <input
         ref={field}
         id={`set-${unit}`}
@@ -187,9 +183,6 @@ export function NumberWheel({
           }
         }}
       />
-      <span className="wheel-value" aria-hidden="true">
-        {display(Math.max(min, (Number(value) || min) - step))}
-      </span>
       <button
         type="button"
         className="wheel-neighbor"

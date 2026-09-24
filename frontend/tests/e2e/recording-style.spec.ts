@@ -24,19 +24,33 @@ for (const width of [320, 390, 430]) {
     );
     await startTraining(page);
     await page.setViewportSize({ width, height: 844 });
-    const previousSets = page.getByRole("region", { name: "前回の全セット", exact: true });
-    const currentSets = page.getByRole("region", { name: "今回の全セット", exact: true });
-    await expect(previousSets.getByText("60kg × 8回", { exact: true }).first()).toBeVisible();
+    const comparison = page.getByRole("region", { name: "今回と前回の全セット", exact: true });
+    await expect(comparison.getByText("60kg × 8", { exact: false }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "前回の全セットをコピー" })).toBeVisible();
-    const previousBox = await previousSets.boundingBox();
-    const currentBox = await currentSets.boundingBox();
-    expect(currentBox?.x).toBeLessThan(previousBox?.x ?? 0);
+    await expect(
+      page.getByRole("button", { name: "前回のセット1をコピー", exact: true }),
+    ).toBeEnabled();
+    await page.getByRole("button", { name: "前回のセット1をコピー", exact: true }).click();
+    await expect(comparison.getByRole("button", { name: "セット1を編集" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "SET 2", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "前回の全セットをコピー" }).click();
-    await expect(currentSets.getByRole("button", { name: "セット3を編集" })).toContainText(
-      "57.5kg × 10回",
+    await expect(comparison.getByRole("button", { name: "セット4を編集" })).toContainText(
+      "57.5kg × 10",
     );
+    await comparison.getByRole("button", { name: "セット1を編集" }).click();
+    await expect(page.getByRole("heading", { name: "SET 1 を編集", exact: true })).toBeVisible();
+    await comparison.getByRole("button", { name: "セット1を編集" }).click();
+    await expect(page.getByRole("heading", { name: "SET 5", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "今日のメモを編集", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "今日のメモを編集", exact: true }).click();
+    const todayMemo = page.getByRole("textbox", { name: "今日のメモ", exact: true });
+    await todayMemo.fill("バーをまっすぐ下ろす");
+    await todayMemo.press("Enter");
+    await expect(todayMemo).toBeHidden();
+    await expect(page.getByRole("button", { name: "今日のメモを編集", exact: true })).toContainText(
+      "バーをまっすぐ下ろす",
+    );
     await expect(page.getByText("同期済み", { exact: false })).toHaveCount(0);
     await expect(page.getByText("グループに共有", { exact: false })).toHaveCount(0);
     for (const theme of ["light", "dark"]) {
@@ -46,12 +60,13 @@ for (const width of [320, 390, 430]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
       if (width === 390) await page.screenshot({ path: `test-results/recording-${theme}.png` });
     }
-    const memoToggle = page.getByRole("button", { name: "メモ", exact: true });
-    await memoToggle.click();
-    await expect(page.getByRole("region", { name: "種目メモ", exact: true })).toHaveCount(0);
-    await memoToggle.click();
-    await expect(page.getByRole("region", { name: "種目メモ", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
+    const inputToggle = page.getByRole("button", { name: "入力欄をしまう", exact: true });
+    await inputToggle.click();
+    await expect(page.getByRole("button", { name: "入力欄を開く", exact: true })).toBeVisible();
+    await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toBeHidden();
+    await page.getByRole("button", { name: "入力欄を開く", exact: true }).click();
+    await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "今日のトレーニング終了", exact: true }).click();
     const finish = page.getByRole("dialog", { name: "トレーニング終了", exact: true });
     await expect(finish.getByRole("button")).toHaveCount(2);
     if (width === 390) await page.screenshot({ path: "test-results/finish-dark.png" });
@@ -59,7 +74,7 @@ for (const width of [320, 390, 430]) {
     await expect(finish).not.toBeVisible();
     expect(state.finished).toHaveLength(0);
     await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
-    await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
+    await page.getByRole("button", { name: "今日のトレーニング終了", exact: true }).click();
     await finish.getByRole("button", { name: "終了する", exact: true }).click();
     await expect.poll(() => state.finished.length).toBe(1);
   });
