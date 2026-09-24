@@ -1,5 +1,41 @@
 # progress.md
 
+## 2026-09-24 18:52 JST
+- 変更内容: 記録中の比較行のRMを、BEST判定とは分けて入力・表示ごとに計算する表示専用関数へ変更したため、11回以上でも表示する。最下段の新セット操作は視覚上 `＋` のみにした。編集中の任意セットを再タップすると新しい次セットへ戻るよう統一し、終了ボタンを赤い一行の「今日のトレーニング終了」に変更した。
+- 目的: RMを保存せず入力値の目安として常に見せ、編集解除と今日全体の終了操作を明確にする。
+- 影響範囲: RM表示、記録中のセット行、入力ドック、終了操作、単体/E2Eテスト。
+- 関連ファイル: frontend/src/features/session/session.ts、frontend/src/features/session/session-screen.tsx、frontend/src/app/v2.css、frontend/tests/unit/session.test.ts、frontend/tests/e2e/recording-style.spec.ts。
+- 検証結果: frontendで `bun run lint`、`bun run typecheck`、`bun test tests/unit/session.test.ts tests/unit/session-id.test.ts`、`git diff --check` は成功。`make test-e2e E2E_ARGS='recording-style.spec.ts'` を実行した。390px幅の実描画で、12回のRM表示、＋操作、セット1再タップ後の `SET 3`、赤い一行の終了ボタン（高さ40px・横幅390px）を確認した。
+- 未解決事項: 実機での最終操作感は未確認。バックエンドを含む `make check` と全E2Eは今回未実施。
+- 次のアクション: 実機で終了ボタンとコピー・編集解除を確認する。
+
+## 2026-09-24 18:36 JST
+- 変更内容: 前回セット行のコピーを、入力値だけを書き換える操作から、必ず今回の新しい次セットとして保存・追加する操作へ変更した。コピー後は入力ドックを開くが、数値入力へ自動フォーカスしない。通常の送信待ち件数・「同期中」は画面に表示しない。
+- 目的: コピー後にさらに「次のセットへ」を押す必要をなくし、編集中でも既存セットを誤更新せず次セットへ進める。保存待ちの表示による画面の揺れをなくす。
+- 影響範囲: 前回セットごとのコピー、入力ドック、通常の同期状態表示、記録画面E2E。
+- 関連ファイル: frontend/src/features/session/session-screen.tsx、frontend/tests/e2e/recording-style.spec.ts。
+- 検証結果: frontendで `bun run lint`、`bun run typecheck`、`bun test tests/unit/session.test.ts tests/unit/session-id.test.ts`、`git diff --check` は成功。`make test-e2e E2E_ARGS='recording-style.spec.ts'` を実行。390px幅の実描画で、前回セット1・3のコピーにより今回セットが2件へ増え、編集中でも入力が `SET 3` へ進み、「同期中」が表示されないことを確認した。
+- 未解決事項: 実機での最終操作感はユーザー確認待ち。バックエンドを含む `make check` と全E2Eは今回未実施。
+- 次のアクション: 実機の利用結果に応じて、比較行の文字密度と入力ドックの高さを調整する。
+
+## 2026-09-24 18:20 JST
+- 変更内容: 実機フィードバックを受け、記録入力を画面最下部のドックへ固定し、開閉できる入力欄を復元した。今回と前回を別スクロールから同じセット行で動く比較表へ変更し、前回の有無で位置が変わらない今回値直右へゴミ箱を固定した。前後値付きルーラーと保存完了表示、保存後の自動スクロールを削除した。前回セット行のコピーアイコンは、その行の値を必ず新しい次セットの入力へ入れて入力ドックを開く（数値欄へ自動フォーカスしない）動作へ戻した。編集中に最新セットを選んだ場合も、同じく次セット入力へ戻す。比較行のRMは保存せず、重量・回数から画面表示ごとに計算する。
+- 目的: 初期表示で入力が上に残る問題、比較列の分断、コピー後に追加操作が必要な問題を解消し、セット確認と次セット入力を両立する。
+- 影響範囲: 記録中の比較表、入力ドック、数値ホイール、前回セットコピー、種目/今日のメモのEnter保存、関連E2E。
+- 関連ファイル: frontend/src/features/session/session-screen.tsx、frontend/src/features/session/number-wheel.tsx、frontend/src/features/session/inline-memo.tsx、frontend/src/app/v2.css、frontend/tests/e2e/recording-style.spec.ts。
+- 検証結果: frontendで `bun run lint`、`bun run typecheck`、`bun test tests/unit/session.test.ts tests/unit/session-id.test.ts`、`git diff --check` は成功。`make test-e2e E2E_ARGS='recording-style.spec.ts'` を実行。390px幅のLAN向け実描画で、入力ドック、開閉、比較行の一体スクロール、コピー後の次セット化、ゴミ箱位置、RM表示、横幅390pxを確認した。
+- 未解決事項: 実機での最終操作感はユーザー確認待ち。バックエンドを含む `make check` と全E2Eは今回未実施。
+- 次のアクション: 実機の利用結果に応じて、比較行の文字密度と入力ドックの高さを調整する。
+
+## 2026-09-24 17:37 JST
+- 変更内容: 合意済みの `docs/styles/memo-options.html` のB案と `docs/previews/sets-164-screen.html` を正として、記録中の上部を「種目名・メモ・トレーニング終了」に統一した。種目メモはメモ操作で開閉する、種目名直下の枠なし文章へ戻し、今回のセットを左・前回のセットを右に固定した。今日のメモは合意済みの入力直前に残し、同じ枠なしの編集スタイルにした。通常時の「同期済み・〇グループに共有」と開始前の共有説明を削除し、未送信・競合時だけ復旧操作を表示する。
+- 目的: 話し合って選んだプレビューにない補助表示を除き、種目メモの位置と記録画面の情報量を採用案へ揃える。
+- 影響範囲: 記録中のヘッダー、種目/今日のメモ、セット比較の左右順、通常同期表示、開始前説明、関連ブラウザ回帰テスト。
+- 関連ファイル: frontend/src/features/session/session-screen.tsx、frontend/src/app/v2.css、frontend/tests/e2e/recording-style.spec.ts。
+- 検証結果: frontendで `bun run lint`、`bun run typecheck`、`bun test tests/unit/session.test.ts tests/unit/session-id.test.ts`、`git diff --check` は成功。390px幅でLAN向け開発サーバーを実描画し、横幅390px・種目メモ表示・通常同期表示なしを確認した。`bunx playwright test tests/e2e/recording-style.spec.ts` も終了した。最初に付けた `--project=chromium` は、この設定にproject名がないため実行対象なしで失敗した。
+- 未解決事項: 実機での最終操作感はユーザー確認待ち。実Supabaseを用いる共有E2Eは今回実行していない。
+- 次のアクション: スマホから再読込して、メモの開閉・今日のメモ編集・セット保存を確認する。
+
 ## 2026-09-22
 - 変更内容: 記録中の重量・回数入力にある増減矢印をUnicode文字から共通inline SVGへ変更し、下矢印は同じSVGを180度回転して表示する実装と寸法の回帰テストを追加。
 - 目的: iOS Safari / WebKitとAndroid Chromiumで異なるUnicodeグリフの視覚サイズに依存せず、上下矢印を同じ大きさにする。
@@ -2617,3 +2653,45 @@
 - 影響範囲・関連ファイル: frontend/package.json、Makefile、.github/workflows/ci.yml、task.md。`make test-e2e`は全件実行のまま残す。
 - 検証: 対象の`recording-style.spec.ts`は320/390/430pxの3件成功を確認済み。frontend lint・型検査・`git diff --check`成功。ローカルでの`make test-e2e-ci`は、この作業環境のPlaywright web server起動が待機するため完走できず、クリーンなGitHub Actionsで確認する。
 - 未解決事項・次のアクション: 全件E2Eに残る旧表示文言・旧操作を期待するテストは、画面単位の改修時に現仕様の振る舞いを検証する形へ更新する。
+
+## 2026-09-24 実機ログイン後の記録画面クラッシュを修正
+
+- 変更内容・目的: 同一Wi-Fi上の実機でNext.jsの開発リソースを読み込める許可オリジンを追加し、ログイン後に記録画面が描画される際、親画面から前回履歴と履歴遷移を渡していなかった統合漏れを修正した。履歴取得中でも開始前画面を安全に表示する。
+- 影響範囲・関連ファイル: frontend/next.config.mjs、frontend/src/features/v2/workspace.tsx、frontend/src/app/v2.css。ローカル専用のSupabase接続先は実機から到達可能なWi-Fiアドレスへ変更したが、秘密値を含むためGit管理対象外。
+- 検証: frontend lint、型検査、セット操作の単体テスト8件、git diff --checkが成功。実機のログイン後画面は利用者による再読み込み確認待ち。
+- 未解決事項・次のアクション: 実機で `http://192.168.9.48:3000` を再読み込みし、ログイン後に記録画面へ進めることを確認する。ローカルGoogle OAuthはClient ID/Secret未設定のため今回の確認対象外。
+
+## 2026-09-24 HTTP実機でトレーニングを開始できない問題を修正
+
+- 変更内容・目的: バックエンドログに開始APIのPOSTがないことから、HTTPで開いた実機ではSecure Context限定の`crypto.randomUUID()`がAPI送信前に失敗することを特定した。Web Cryptoが使える通常環境は従来のUUIDを使い、HTTP確認時だけUUID v4形式の互換IDを生成するよう、開始IDとセット保存待ちIDを共通化した。
+- 影響範囲・関連ファイル: frontend/src/features/session/session-id.ts、use-session.ts、session-queue.ts、tests/unit/session-id.test.ts。API・DB・公開環境の動作は変更しない。
+- 検証: 互換IDの先行テストは未実装import失敗を確認後に実装。frontend lint、型検査、関連単体テスト10件、git diff --checkが成功。開始操作を含むPlaywrightは隔離テスト用8100番の残留プロセス競合で未実施。
+- 未解決事項・次のアクション: 実機でページを再読み込みし、開始時にバックエンドへ`POST /api/sessions`が出て種目選択へ進むことを確認する。テスト用ポート競合を解消してPlaywright回帰を追加実行する。
+
+## 2026-09-24 合意済みのセット比較レイアウトへ復元
+
+- 変更内容・目的: ユーザーの「旧画面を無視して話し合ったものへ完全に変える」指示に従い、main由来の旧セット行・種目メモ・前回メモの表示規則を記録入力から外した。前回の全セットを左、今回の全セットを右に固定し、各列だけをスクロールする。今日の種目メモを入力フォーム直前に置き、削除操作は絵文字でなく単色SVGのゴミ箱ピクトグラムにした。
+- 影響範囲・関連ファイル: frontend/src/features/session/session-screen.tsx、frontend/src/app/v2.css、frontend/tests/e2e/recording-style.spec.ts。前回全セットコピー、行編集、新しいセット入口、ルーラー入力、保存処理は維持する。
+- 検証: frontend lint・型検査、セット/IDの単体テスト10件、git diff --checkが成功。E2Eは390pxの左右列とコピー後の編集行を検証する期待値へ更新した。隔離テスト用ポートの競合により実行確認は継続する。
+- 未解決事項・次のアクション: 実機で前回が左・今回が右、各列の独立スクロール、今日のメモ、単色ゴミ箱を確認する。隔離E2Eのポート競合を解消して画面回帰を実行する。
+
+## 2026-09-24 記録入力の旧グリッド競合を解消
+
+- 変更内容・目的: 実機確認でルーラーがカード左側に縮み、操作が同じ行の右側へ入る崩れを確認した。旧CSSの1RM用2列指定がフォーム内に暗黙の列を作っていたため、記録入力を明示的な縦1列グリッドにして、ルーラー、RM、保存操作、終了操作の順に固定した。終了は右上から外し、保存操作の下に控えめに置いた。
+- 影響範囲・関連ファイル: frontend/src/features/session/session-screen.tsx、frontend/src/app/v2.css。セット保存・編集・終了の業務処理は変更しない。
+- 検証: frontend lint・型検査、単体テスト10件、git diff --checkが成功。`http://192.168.9.48:3000`を基準にモック通信で390pxを実ブラウザ描画し、前回列の左配置、ルーラー幅332px＝フォーム幅332px、操作ボタンと終了操作の縦順を数値とスクリーンショットで確認した。
+- 未解決事項・次のアクション: スマホで再読み込みして同じ配置を確認する。各列の独立スクロール、編集、全セットコピーを実データでも継続確認する。
+
+## 2026-09-24 PR #194 のbackend lintを修正
+
+- 変更内容・目的: GitHub Actionsのbackend lintで、種目メモの冪等保存判定がRuffの100文字制限を超えて失敗した。条件式を複数行に分け、処理は変更せずCIを通す。
+- 影響範囲・関連ファイル: backend/app/infrastructure/sessions.py、progress.md。種目メモの保存・競合判定の業務仕様は変更しない。
+- 検証: GitHub Actionsの失敗ログでE501を確認。修正後に`ruff check . ../scripts`、backend pytest（103件成功・170件skip）、`git diff --check`が成功。
+- 未解決事項・次のアクション: この修正だけを追加コミットしてPR #194へpushし、CIの再実行結果を確認する。
+
+## 2026-09-24 PR #194 のdatabase E2Eを修正
+
+- 変更内容・目的: database CIのmigration適用・schema lintは通過した一方、記録画面E2Eが終了確認ダイアログの「記録に戻る」を見つけられず失敗した。仕様資料どおり、終了確認に記録へ戻る操作と終了する操作の2つを表示するよう復元した。
+- 影響範囲・関連ファイル: frontend/src/features/session/session-screen.tsx、progress.md。終了を確定せず確認シートを閉じる操作だけを追加し、セット保存・終了APIは変更しない。
+- 検証: CI失敗ログで320/390/430pxすべて同一の操作不足を確認。修正後にCI用recording-style E2E、frontend lint・型検査、`git diff --check`が成功。
+- 未解決事項・次のアクション: この修正だけを追加コミットしてPR #194へpushし、CIの再実行結果を確認する。

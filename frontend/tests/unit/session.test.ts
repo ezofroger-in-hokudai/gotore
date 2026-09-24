@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
+  appendSets,
   bestUpdate,
+  displayEstimatedRM,
   estimatedRM,
   readSessionInput,
+  removeSet,
   setValue,
   updateSet,
 } from "../../src/features/session/session";
@@ -13,6 +16,10 @@ describe("v2セットの業務ルール", () => {
     expect(estimatedRM(80, 1)).toBe(80);
     expect(estimatedRM(0, 10)).toBeNull();
     expect(estimatedRM(80, 11)).toBeNull();
+  });
+  test("記録中のRM表示は保存せず入力値から毎回計算する", () => {
+    expect(displayEstimatedRM(80, 12)).toBe(112);
+    expect(displayEstimatedRM(0, 12)).toBeNull();
   });
   test("初回と同値はBEST更新にしない", () => {
     expect(bestUpdate(80, 8, null)).toBe(false);
@@ -64,4 +71,52 @@ test("旧記録からコピーした同名行も全セット順で編集し、�
   expect(after[0]).toEqual(before[0]);
   expect(after[1]).toEqual(before[1]);
   expect(after[2].sets[0].weight).toBe(77.5);
+});
+
+test("前回の全セットを現在の種目へ追加し、上限を超える場合は拒否する", () => {
+  const copied = appendSets([], "ベンチ", [
+    { weight: 60, reps: 10 },
+    { weight: 60, reps: 8 },
+  ]);
+  expect(copied).toEqual([
+    {
+      name: "ベンチ",
+      sets: [
+        { weight: 60, reps: 10 },
+        { weight: 60, reps: 8 },
+      ],
+    },
+  ]);
+  expect(() =>
+    appendSets([{ name: "ベンチ", sets: Array(29).fill({ weight: 60, reps: 8 }) }], "ベンチ", [
+      { weight: 60, reps: 8 },
+      { weight: 60, reps: 8 },
+    ]),
+  ).toThrow("セットは30件までです。");
+});
+
+test("セットを削除し、最後のセットなら種目も外す", () => {
+  const before = [
+    {
+      name: "ベンチ",
+      sets: [
+        { weight: 60, reps: 10 },
+        { weight: 60, reps: 8 },
+      ],
+    },
+    { name: "スクワット", sets: [{ weight: 100, reps: 5 }] },
+  ];
+  expect(removeSet(before, "ベンチ", 0)).toEqual([
+    { name: "ベンチ", sets: [{ weight: 60, reps: 8 }] },
+    { name: "スクワット", sets: [{ weight: 100, reps: 5 }] },
+  ]);
+  expect(removeSet(before, "スクワット", 0)).toEqual([
+    {
+      name: "ベンチ",
+      sets: [
+        { weight: 60, reps: 10 },
+        { weight: 60, reps: 8 },
+      ],
+    },
+  ]);
 });

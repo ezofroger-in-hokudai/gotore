@@ -1837,6 +1837,94 @@
   fill: var(--muted);
 }
 
+/* 前後値を薄く残し、矢印は大きく動かす補助操作にする。 */
+.recording-view .number-wheel {
+  display: grid;
+  grid-template-rows: 16px 16px 18px 36px 18px 16px;
+}
+.recording-view .wheel-neighbor {
+  height: 16px;
+  min-height: 16px;
+  line-height: 16px;
+  font-size: 10px;
+}
+.recording-view .wheel-value {
+  display: block;
+  height: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+  opacity: 0.65;
+}
+.recording-view .number-wheel input {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+.comparison-current-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.previous-copy,
+.delete-set {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.previous-copy {
+  width: 32px;
+  min-height: 32px;
+  font-size: 16px;
+}
+.comparison-lists {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+}
+.recording-view .previous-comparison-table,
+.recording-view .comparison-table {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  min-height: 0;
+  max-height: 192px;
+}
+.recording-view .comparison-row {
+  grid-template-columns: 18px minmax(0, 1fr) 32px;
+}
+.recording-view .previous-row {
+  grid-template-columns: 18px minmax(0, 1fr);
+  color: var(--muted);
+}
+.recording-view .previous-row .set-measurement {
+  color: var(--muted);
+}
+.recording-view .delete-set {
+  width: 32px;
+  min-height: 39px;
+  padding: 0;
+  font-size: 13px;
+}
+.new-set-target {
+  width: 100%;
+  min-height: 39px;
+  padding: 0 2px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  font-size: 11px;
+}
+.comparison-empty {
+  margin: 0;
+  padding: 10px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .home-training {
   margin: 0 0 20px;
 }
@@ -3323,4 +3411,457 @@
 }
 .suggestion-box .muted {
   font-size: 12px;
+}
+
+/* 記録入力は前回を左、今回を右に固定し、各列だけを独立してスクロールする。 */
+.recording-view .session-context {
+  max-height: none;
+  overflow: visible;
+}
+.recording-view .recording-topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 34px;
+  margin: 0;
+  gap: 8px;
+}
+.recording-view .recording-topbar .eyebrow {
+  min-width: 0;
+}
+.recording-view .recording-exercise-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px 8px;
+  min-height: 36px;
+}
+.recording-view .recording-exercise-heading h1 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.recording-view .recording-exercise-heading .text-button {
+  flex: 0 0 auto;
+  min-height: 32px;
+}
+.recording-view .entering-sets .set-comparison {
+  min-height: 0;
+  flex: 0 1 auto;
+}
+.recording-view .entering-sets .comparison-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  justify-content: normal;
+  min-height: 36px;
+  margin: 0;
+  gap: 8px;
+}
+.recording-view .comparison-current-heading {
+  grid-column: 1;
+  min-width: 0;
+}
+.recording-view .comparison-previous-heading {
+  grid-column: 2;
+}
+.recording-view .comparison-lists {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+}
+.recording-view .previous-comparison-table {
+  grid-column: 2;
+}
+.recording-view .comparison-table {
+  grid-column: 1;
+}
+.recording-view .previous-comparison-table,
+.recording-view .comparison-table {
+  max-height: 176px;
+  min-height: 88px;
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+.recording-view .entering-sets .comparison-row,
+.recording-view .entering-sets .previous-row {
+  grid-template-columns: 18px minmax(0, 1fr) 28px;
+  min-height: 39px;
+  gap: 4px;
+}
+.recording-view .entering-sets .previous-row {
+  grid-template-columns: 18px minmax(0, 1fr);
+}
+.recording-view .entering-sets .comparison-row button {
+  min-height: 39px;
+  padding: 2px 0;
+}
+.recording-view .entering-sets .delete-set {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-height: 39px;
+  padding: 0;
+}
+.recording-view .delete-set svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+.recording-view .memo-strip {
+  margin: 4px 0 0;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+.recording-view .memo-strip h2 {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.recording-view .memo-strip .memo-text {
+  min-height: 32px;
+  padding: 2px 0;
+}
+.recording-view .memo-strip .inline-memo textarea {
+  height: auto;
+  min-height: 32px;
+  padding: 2px 0 5px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.recording-view .memo-strip .inline-memo textarea:focus-visible {
+  outline: 0;
+  border-bottom: 2px solid var(--accent);
+}
+.recording-view .memo-strip .memo-actions {
+  justify-content: flex-start;
+  gap: 2px;
+}
+.recording-view .memo-strip .memo-actions .text-button {
+  min-height: 28px;
+  padding: 2px 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.recording-view .set-entry-heading {
+  display: block;
+  min-height: 32px;
+  margin: 0;
+}
+.recording-view .set-entry-heading h2 {
+  margin: 0;
+}
+.recording-view .wheels {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  width: 100%;
+  gap: 10px;
+}
+.recording-view .number-wheel {
+  width: 100%;
+  min-width: 0;
+}
+.recording-view .set-entry fieldset {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "heading"
+    "wheels"
+    "rm"
+    "feedback"
+    "actions";
+  width: 100%;
+  gap: 6px;
+}
+.recording-view .set-entry-heading {
+  grid-area: heading;
+}
+.recording-view .set-entry .wheels {
+  grid-area: wheels;
+}
+.recording-view .set-entry .rm-estimate {
+  grid-area: rm;
+  margin: 0;
+  text-align: center;
+}
+.recording-view .set-entry .save-feedback {
+  grid-area: feedback;
+  min-height: 0;
+  margin: 0;
+}
+.recording-view .set-entry .set-actions {
+  grid-area: actions;
+  width: 100%;
+}
+.recording-view .entering-sets .set-entry .set-entry-heading,
+.recording-view .entering-sets .set-entry .wheels,
+.recording-view .entering-sets .set-entry .rm-estimate,
+.recording-view .entering-sets .set-entry .save-feedback,
+.recording-view .entering-sets .set-entry .set-actions {
+  grid-column: auto;
+  grid-row: auto;
+}
+.recording-view .entering-sets .set-entry .set-entry-heading {
+  grid-area: heading;
+}
+.recording-view .entering-sets .set-entry .wheels {
+  grid-area: wheels;
+}
+.recording-view .entering-sets .set-entry .rm-estimate {
+  grid-area: rm;
+}
+.recording-view .entering-sets .set-entry .save-feedback {
+  grid-area: feedback;
+}
+.recording-view .entering-sets .set-entry .set-actions {
+  grid-area: actions;
+}
+
+/* 採用プレビューB: 種目名・メモ・終了を一行に置き、メモ本文は枠なしで直下に続ける。 */
+.recording-view .session-context {
+  flex: 0 0 auto;
+  max-height: none;
+  overflow: visible;
+}
+.recording-view .recording-header {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  gap: 4px;
+}
+.recording-view .recording-header h1 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.recording-view .recording-header .exercise-information {
+  width: 100%;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.recording-view .recording-header .memo-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid #b99450;
+  border-radius: 0;
+  background: #fff6df;
+  color: #765118;
+  font-size: 12px;
+}
+.recording-view .recording-header .memo-toggle[aria-pressed="true"] {
+  border-color: #a17b33;
+  background: #f3e3b6;
+  color: #62430f;
+}
+.recording-view .recording-header .finish-training {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+}
+.recording-view .recording-memos.memo-plain {
+  height: auto;
+  max-height: 100px;
+  overflow-y: auto;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  padding: 4px 0;
+  color: var(--text);
+}
+.recording-view .recording-memos.memo-plain .memo-caption {
+  display: block;
+  margin-bottom: 1px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.recording-view .recording-memos.memo-plain .memo-text {
+  min-height: 28px;
+  padding: 1px 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.recording-view .recording-memos.memo-plain .inline-memo textarea,
+.recording-view .today-exercise-memo .inline-memo textarea {
+  min-height: 32px;
+  padding: 2px 0 5px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.recording-view .recording-memos.memo-plain .inline-memo textarea:focus-visible,
+.recording-view .today-exercise-memo .inline-memo textarea:focus-visible {
+  outline: 0;
+  border-bottom: 2px solid var(--accent);
+}
+.recording-view .today-exercise-memo.memo-plain {
+  margin: 2px 0 0;
+  padding: 4px 0;
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
+}
+.recording-view .today-exercise-memo.memo-plain .memo-text {
+  min-height: 28px;
+  padding: 1px 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 一覧と入力を分離し、セット比較は同じ行で前回値と一緒に動かす。 */
+.recording-view .session-screen.entering-sets {
+  height: calc(100dvh - 74px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: 0;
+}
+.recording-view .entering-sets .set-comparison {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.recording-view .unified-comparison-table {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.recording-view .unified-comparison-table .comparison-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 44px;
+  gap: 4px;
+}
+.recording-view .unified-comparison-table .current-set-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  min-width: 0;
+}
+.recording-view .unified-comparison-table .previous-set-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  min-width: 0;
+  color: var(--muted);
+}
+.recording-view .unified-comparison-table .previous-copy {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+}
+.recording-view .unified-comparison-table .current-set-cell > button:first-child {
+  min-width: 0;
+  min-height: 44px;
+}
+.recording-view .unified-comparison-table .delete-set {
+  width: 28px;
+  min-height: 44px;
+}
+.recording-view .unified-comparison-table .set-measurement {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 3px;
+  white-space: nowrap;
+}
+.recording-view .entering-sets .unified-comparison-table .set-measurement small {
+  display: inline;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+.recording-view .comparison-missing {
+  color: var(--muted);
+  font-size: 12px;
+}
+.recording-view .recording-entry-dock {
+  flex: 0 0 auto;
+  margin-top: auto;
+}
+.recording-view .recording-entry-dock .today-exercise-memo {
+  margin-top: 0;
+}
+.recording-view .set-entry-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+}
+.recording-view .input-toggle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+}
+.recording-view .set-entry fieldset.input-collapsed {
+  grid-template-areas: "heading";
+  min-height: 40px;
+}
+.recording-view .set-entry fieldset.input-collapsed > :not(.set-entry-heading) {
+  display: none;
+}
+
+/* 前後の数値は表示せず、上下の矢印と直接入力だけを残す。 */
+.recording-view .number-wheel {
+  grid-template-rows: 16px 18px 48px 18px;
+}
+.recording-view .number-wheel .wheel-neighbor {
+  height: 18px;
+  min-height: 18px;
+  line-height: 18px;
+}
+.recording-view .set-entry-heading h2 {
+  flex: 1 1 auto;
+}
+
+/* 種目ではなく、今日のトレーニング全体を終了する主操作。 */
+.recording-view .session-screen .recording-header .finish-training {
+  max-width: none;
+  border-color: var(--accent);
+  background-color: var(--accent);
+  color: white;
+  white-space: nowrap;
 }

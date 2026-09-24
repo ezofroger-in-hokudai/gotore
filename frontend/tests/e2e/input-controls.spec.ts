@@ -1,16 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, startTraining } from "./mock-training";
 
-test("矢印は重量1kg・回数1回ずつ調整し、保存せず上下限を守る", async ({ page }) => {
+test("矢印は重量5kg・回数5回ずつ調整し、保存せず上下限を守る", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
   const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
   const reps = page.getByRole("spinbutton", { name: "回数", exact: true });
-  const moreWeight = page.getByRole("button", { name: "重量を増やす", exact: true });
-  const lessWeight = page.getByRole("button", { name: "重量を減らす", exact: true });
+  const moreWeight = page.getByRole("button", { name: "重量を5kg増やす", exact: true });
+  const lessWeight = page.getByRole("button", { name: "重量を5kg減らす", exact: true });
   await weight.fill("77.5");
   await moreWeight.click();
-  await expect(weight).toHaveValue("78.5");
+  await expect(weight).toHaveValue("82.5");
   await expect(moreWeight.locator(".wheel-arrow")).toBeVisible();
   const upArrow = moreWeight.locator(".wheel-arrow-svg");
   const downArrow = lessWeight.locator(".wheel-arrow-svg");
@@ -25,9 +25,9 @@ test("矢印は重量1kg・回数1回ずつ調整し、保存せず上下限を�
   await lessWeight.click();
   await expect(weight).toHaveValue("77.5");
   await reps.fill("8");
-  await page.getByRole("button", { name: "回数を増やす", exact: true }).click();
-  await expect(reps).toHaveValue("9");
-  await page.getByRole("button", { name: "回数を減らす", exact: true }).click();
+  await page.getByRole("button", { name: "回数を5回増やす", exact: true }).click();
+  await expect(reps).toHaveValue("13");
+  await page.getByRole("button", { name: "回数を5回減らす", exact: true }).click();
   await expect(reps).toHaveValue("8");
   await weight.fill("0");
   await expect(lessWeight).toBeDisabled();
@@ -36,9 +36,9 @@ test("矢印は重量1kg・回数1回ずつ調整し、保存せず上下限を�
   await expect(weight).toHaveValue("1000");
   await expect(moreWeight).toBeDisabled();
   await reps.fill("1");
-  await expect(page.getByRole("button", { name: "回数を減らす", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "回数を5回減らす", exact: true })).toBeDisabled();
   await reps.fill("1000");
-  await expect(page.getByRole("button", { name: "回数を増やす", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "回数を5回増やす", exact: true })).toBeDisabled();
   expect(state.saves).toBe(0);
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
@@ -89,7 +89,7 @@ test("ホイールは下に引くと増え、上に引くと減り、指を離�
   await page.emulateMedia({ reducedMotion: "reduce" });
   await startTraining(page);
   for (const [label, initial, increased] of [
-    ["重量", "80", "85"],
+    ["重量", "80", "81"],
     ["回数", "8", "10"],
   ]) {
     const field = page.getByRole("spinbutton", { name: label, exact: true });

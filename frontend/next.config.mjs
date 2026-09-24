@@ -2,6 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   devIndicators: false,
+  // 同一Wi-Fi上の実機から開発中の画面を確認できるようにする。
+  allowedDevOrigins: ["192.168.9.48"],
   async rewrites() {
     // Vercel Servicesではルートの設定がAPIを振り分ける。
     if (process.env.VERCEL === "1") return [];

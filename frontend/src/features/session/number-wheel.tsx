@@ -24,6 +24,7 @@ export function NumberWheel({
   unit,
   value,
   step,
+  arrowStep,
   min,
   onChange,
   inputRef,
@@ -33,6 +34,7 @@ export function NumberWheel({
   unit: string;
   value: string;
   step: number;
+  arrowStep: number;
   min: number;
   onChange: (value: string) => void;
   inputRef?: RefObject<HTMLInputElement | null>;
@@ -146,11 +148,11 @@ export function NumberWheel({
       <button
         type="button"
         className="wheel-neighbor"
-        aria-label={`${label}を増やす`}
+        aria-label={`${label}を${arrowStep}${unit}増やす`}
         disabled={Number(value) >= 1000}
         onClick={() => {
           cancelAnimationFrame(frame.current);
-          shift(1);
+          shift(arrowStep);
         }}
       >
         <WheelArrow direction="up" />
@@ -184,11 +186,11 @@ export function NumberWheel({
       <button
         type="button"
         className="wheel-neighbor"
-        aria-label={`${label}を減らす`}
+        aria-label={`${label}を${arrowStep}${unit}減らす`}
         disabled={Number(value) <= min}
         onClick={() => {
           cancelAnimationFrame(frame.current);
-          shift(-1);
+          shift(-arrowStep);
         }}
       >
         <WheelArrow direction="down" />

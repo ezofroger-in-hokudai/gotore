@@ -137,6 +137,11 @@ export function InlineMemo({
             placeholder="メモ"
             value={content}
             ref={field}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }}
             onChange={(event) => {
               setContent(event.target.value);
               dirty.current = true;
