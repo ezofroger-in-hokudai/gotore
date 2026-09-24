@@ -3419,10 +3419,12 @@
   overflow: visible;
 }
 .recording-view .recording-topbar {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 24px;
+  min-height: 34px;
   margin: 0;
+  gap: 8px;
 }
 .recording-view .recording-topbar .eyebrow {
   min-width: 0;
@@ -3455,8 +3457,11 @@
   gap: 8px;
 }
 .recording-view .comparison-current-heading {
-  grid-column: 2;
+  grid-column: 1;
   min-width: 0;
+}
+.recording-view .comparison-previous-heading {
+  grid-column: 2;
 }
 .recording-view .comparison-lists {
   display: grid;
@@ -3465,10 +3470,10 @@
   min-height: 0;
 }
 .recording-view .previous-comparison-table {
-  grid-column: 1;
+  grid-column: 2;
 }
 .recording-view .comparison-table {
-  grid-column: 2;
+  grid-column: 1;
 }
 .recording-view .previous-comparison-table,
 .recording-view .comparison-table {
@@ -3508,20 +3513,44 @@
   stroke-linejoin: round;
   stroke-width: 1.8;
 }
-.recording-view .today-exercise-memo {
+.recording-view .memo-strip {
   margin: 4px 0 0;
   padding: 7px 0;
   border-top: 1px solid var(--line);
 }
-.recording-view .today-exercise-memo h2 {
+.recording-view .memo-strip h2 {
   margin: 0 0 2px;
   color: var(--muted);
   font-size: 11px;
   font-weight: 600;
 }
-.recording-view .today-exercise-memo .memo-text {
+.recording-view .memo-strip .memo-text {
   min-height: 32px;
   padding: 2px 0;
+}
+.recording-view .memo-strip .inline-memo textarea {
+  height: auto;
+  min-height: 32px;
+  padding: 2px 0 5px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.recording-view .memo-strip .inline-memo textarea:focus-visible {
+  outline: 0;
+  border-bottom: 2px solid var(--accent);
+}
+.recording-view .memo-strip .memo-actions {
+  justify-content: flex-start;
+  gap: 2px;
+}
+.recording-view .memo-strip .memo-actions .text-button {
+  min-height: 28px;
+  padding: 2px 6px;
+  color: var(--muted);
+  font-size: 11px;
 }
 .recording-view .set-entry-heading {
   display: block;
@@ -3549,8 +3578,7 @@
     "wheels"
     "rm"
     "feedback"
-    "actions"
-    "finish";
+    "actions";
   width: 100%;
   gap: 6px;
 }
@@ -3578,8 +3606,7 @@
 .recording-view .entering-sets .set-entry .wheels,
 .recording-view .entering-sets .set-entry .rm-estimate,
 .recording-view .entering-sets .set-entry .save-feedback,
-.recording-view .entering-sets .set-entry .set-actions,
-.recording-view .entering-sets .set-entry .quiet-finish {
+.recording-view .entering-sets .set-entry .set-actions {
   grid-column: auto;
   grid-row: auto;
 }
@@ -3598,14 +3625,113 @@
 .recording-view .entering-sets .set-entry .set-actions {
   grid-area: actions;
 }
-.recording-view .entering-sets .set-entry .quiet-finish {
-  grid-area: finish;
+
+/* 採用プレビューB: 種目名・メモ・終了を一行に置き、メモ本文は枠なしで直下に続ける。 */
+.recording-view .session-context {
+  flex: 0 0 auto;
+  max-height: none;
+  overflow: visible;
 }
-.recording-view .quiet-finish {
-  grid-area: finish;
-  justify-self: center;
-  min-height: 32px;
-  padding: 2px 8px;
+.recording-view .recording-header {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  gap: 4px;
+}
+.recording-view .recording-header h1 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.recording-view .recording-header .exercise-information {
+  width: 100%;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.recording-view .recording-header .memo-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid #b99450;
+  border-radius: 0;
+  background: #fff6df;
+  color: #765118;
+  font-size: 12px;
+}
+.recording-view .recording-header .memo-toggle[aria-pressed="true"] {
+  border-color: #a17b33;
+  background: #f3e3b6;
+  color: #62430f;
+}
+.recording-view .recording-header .finish-training {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+.recording-view .recording-memos.memo-plain {
+  height: auto;
+  max-height: 100px;
+  overflow-y: auto;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  padding: 4px 0;
+  color: var(--text);
+}
+.recording-view .recording-memos.memo-plain .memo-caption {
+  display: block;
+  margin-bottom: 1px;
   color: var(--muted);
   font-size: 11px;
+  font-weight: 600;
+}
+.recording-view .recording-memos.memo-plain .memo-text {
+  min-height: 28px;
+  padding: 1px 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.recording-view .recording-memos.memo-plain .inline-memo textarea,
+.recording-view .today-exercise-memo .inline-memo textarea {
+  min-height: 32px;
+  padding: 2px 0 5px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.recording-view .recording-memos.memo-plain .inline-memo textarea:focus-visible,
+.recording-view .today-exercise-memo .inline-memo textarea:focus-visible {
+  outline: 0;
+  border-bottom: 2px solid var(--accent);
+}
+.recording-view .today-exercise-memo.memo-plain {
+  margin: 2px 0 0;
+  padding: 4px 0;
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
+}
+.recording-view .today-exercise-memo.memo-plain .memo-text {
+  min-height: 28px;
+  padding: 1px 0;
+  font-size: 12px;
+  line-height: 1.6;
 }

@@ -30,12 +30,15 @@ for (const width of [320, 390, 430]) {
     await expect(page.getByRole("button", { name: "前回の全セットをコピー" })).toBeVisible();
     const previousBox = await previousSets.boundingBox();
     const currentBox = await currentSets.boundingBox();
-    expect(previousBox?.x).toBeLessThan(currentBox?.x ?? 0);
+    expect(currentBox?.x).toBeLessThan(previousBox?.x ?? 0);
     await page.getByRole("button", { name: "前回の全セットをコピー" }).click();
     await expect(currentSets.getByRole("button", { name: "セット3を編集" })).toContainText(
       "57.5kg × 10回",
     );
+    await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "今日のメモを編集", exact: true })).toBeVisible();
+    await expect(page.getByText("同期済み", { exact: false })).toHaveCount(0);
+    await expect(page.getByText("グループに共有", { exact: false })).toHaveCount(0);
     for (const theme of ["light", "dark"]) {
       await page.evaluate((value) => {
         document.documentElement.dataset.theme = value;
@@ -43,9 +46,11 @@ for (const width of [320, 390, 430]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
       if (width === 390) await page.screenshot({ path: `test-results/recording-${theme}.png` });
     }
-    await page.getByRole("button", { name: "メモを開く", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "メモ", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "閉じる", exact: true }).click();
+    const memoToggle = page.getByRole("button", { name: "メモ", exact: true });
+    await memoToggle.click();
+    await expect(page.getByRole("region", { name: "種目メモ", exact: true })).toHaveCount(0);
+    await memoToggle.click();
+    await expect(page.getByRole("region", { name: "種目メモ", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
     const finish = page.getByRole("dialog", { name: "トレーニング終了", exact: true });
     await expect(finish.getByRole("button")).toHaveCount(2);

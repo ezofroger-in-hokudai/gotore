@@ -47,7 +47,6 @@ export function SessionScreen({
       <section className="start-training">
         <h1>トレーニング</h1>
         <p>今日も、自分のペースで。</p>
-        <p className="muted">開始時の全所属グループに共有します。メモは自分だけに保存されます。</p>
         <button
           className="primary full"
           type="button"
@@ -130,6 +129,7 @@ function ActiveTraining({
   const [submission, setSubmission] = useState<{ revision: number; set: number } | null>(null);
   const [storageWarning, setStorageWarning] = useState(false);
   const [query, setQuery] = useState("");
+  const [exerciseMemoOpen, setExerciseMemoOpen] = useState(true);
   const overviewBests = useResource<SessionBests>(
     sessionId ? `/sessions/${sessionId}/bests` : null,
     controller.confirmedRevision,
@@ -296,15 +296,6 @@ function ActiveTraining({
 
   return (
     <section className={`session-screen${selecting ? "" : " entering-sets"}`}>
-      <header className="recording-topbar">
-        <span className="eyebrow">
-          {session
-            ? `${session.performed_on.replaceAll("-", "/")} · トレーニング中`
-            : controller.busy
-              ? "開始中…"
-              : "開始を再試行してください"}
-        </span>
-      </header>
       {storageWarning && (
         <p className="error" role="alert">
           この端末に入力を保存できません。閉じる前にセットを保存してください。
@@ -428,36 +419,68 @@ function ActiveTraining({
       ) : (
         <>
           <div className="session-context">
-            <div className="recording-exercise-heading">
-              <h1>{input.name}</h1>
+            <header className="recording-header">
+              <h1>
+                <button
+                  className="exercise-information"
+                  type="button"
+                  disabled={blocking}
+                  onClick={() => setSelecting(true)}
+                >
+                  {input.name}
+                </button>
+              </h1>
               <button
-                className="text-button"
+                className="memo-toggle"
                 type="button"
-                disabled={blocking}
-                onClick={() => setSelecting(true)}
+                aria-controls="exercise-memo"
+                aria-pressed={exerciseMemoOpen}
+                onClick={() => setExerciseMemoOpen((open) => !open)}
               >
-                種目を変更
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  aria-hidden="true"
+                >
+                  <path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5" />
+                </svg>
+                <span>メモ</span>
               </button>
-              <button type="button" className="text-button" onClick={() => setCatalogOpen(true)}>
-                種目一覧
+              <button
+                type="button"
+                className="text-button finish-training"
+                disabled={!session || controller.busy}
+                onClick={() => setFinishOpen(true)}
+              >
+                トレーニング終了
               </button>
-            </div>
-            <div className="personal-bests">
-              <div>
-                <span>最高重量</span>
-                <strong>
-                  {context.data?.best_weight ?? "—"}
-                  <small> kg</small>
-                </strong>
-              </div>
-              <div>
-                <span>1RM</span>
-                <strong>
-                  {context.data?.best_rm ?? "—"}
-                  <small> kg</small>
-                </strong>
-              </div>
-            </div>
+            </header>
+            {exerciseMemoOpen && (
+              <section
+                id="exercise-memo"
+                className="recording-memos memo-plain"
+                aria-label="種目メモ"
+              >
+                <span className="memo-caption">種目メモ</span>
+                {context.data ? (
+                  <InlineMemo
+                    key={input.name}
+                    title="種目メモ"
+                    path="/exercises/memo"
+                    name={input.name}
+                    initial={context.data.memo}
+                    userId={userId}
+                    onSaved={context.retry}
+                  />
+                ) : (
+                  <span className="memo-text muted">メモを読み込み中…</span>
+                )}
+              </section>
+            )}
             {context.error && (
               <p className="error" role="alert">
                 {context.error}
@@ -469,9 +492,6 @@ function ActiveTraining({
           </div>
           <div className="set-comparison">
             <div className="comparison-heading">
-              <h2>
-                前回 <small>{context.data?.previous?.performed_on.replaceAll("-", "/")}</small>
-              </h2>
               <div className="comparison-current-heading">
                 <h2>
                   今回 <small>タップで編集</small>
@@ -486,17 +506,11 @@ function ActiveTraining({
                   ⧉
                 </button>
               </div>
+              <h2 className="comparison-previous-heading">
+                前回 <small>{context.data?.previous?.performed_on.replaceAll("-", "/")}</small>
+              </h2>
             </div>
             <div className="comparison-lists" aria-label="全セットの比較">
-              <section className="previous-comparison-table" aria-label="前回の全セット">
-                {previous.map((value, index) => (
-                  <div className="comparison-row previous-row" key={`previous-${index + 1}`}>
-                    <span>{index + 1}</span>
-                    <SetMeasurement weight={value.weight} reps={value.reps} />
-                  </div>
-                ))}
-                {!previous.length && <p className="comparison-empty">前回の記録はありません</p>}
-              </section>
               <section
                 className="comparison-table"
                 ref={comparisonTable}
@@ -546,9 +560,18 @@ function ActiveTraining({
                   ＋ SET {sets.length + 1} 新しいセット
                 </button>
               </section>
+              <section className="previous-comparison-table" aria-label="前回の全セット">
+                {previous.map((value, index) => (
+                  <div className="comparison-row previous-row" key={`previous-${index + 1}`}>
+                    <span>{index + 1}</span>
+                    <SetMeasurement weight={value.weight} reps={value.reps} />
+                  </div>
+                ))}
+                {!previous.length && <p className="comparison-empty">前回の記録はありません</p>}
+              </section>
             </div>
           </div>
-          <section className="today-exercise-memo" aria-label="今日のメモ">
+          <section className="today-exercise-memo memo-strip memo-plain" aria-label="今日のメモ">
             <h2>今日のメモ</h2>
             {sessionId ? (
               <InlineMemo
@@ -681,14 +704,6 @@ function ActiveTraining({
                   <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
                 </button>
               </div>
-              <button
-                type="button"
-                className="text-button quiet-finish"
-                disabled={!session || controller.busy}
-                onClick={() => setFinishOpen(true)}
-              >
-                トレーニングを終了
-              </button>
             </fieldset>
           </form>
           {error && (
@@ -708,36 +723,25 @@ function ActiveTraining({
           />
         </Sheet>
       )}
-      <div className="sync-status" aria-live="polite">
-        {!session ? (
-          controller.busy ? (
-            "開始中…"
-          ) : (
-            <button
-              type="button"
-              className="text-button"
-              disabled={!controller.ready}
-              onClick={() => void controller.start().catch(() => {})}
-            >
-              開始を再試行
+      {(controller.pending ||
+        controller.status === "offline" ||
+        controller.status === "conflict") && (
+        <div className="sync-status" aria-live="polite">
+          {controller.pending
+            ? `${controller.pending}件 ${controller.status === "offline" ? "未送信・端末に保持" : controller.status === "conflict" ? "要確認・端末に保持" : "同期中"}`
+            : "送信できていません"}
+          {controller.status === "offline" && (
+            <button type="button" className="text-button" onClick={() => void controller.sync()}>
+              再送
             </button>
-          )
-        ) : controller.pending ? (
-          `${controller.pending}件 ${controller.status === "offline" ? "未送信・端末に保持" : controller.status === "conflict" ? "要確認・端末に保持" : "同期中"}`
-        ) : (
-          `同期済み · ${session.shared_group_ids?.length ?? 0}グループに共有`
-        )}
-        {controller.status === "offline" && (
-          <button type="button" className="text-button" onClick={() => void controller.sync()}>
-            再送
-          </button>
-        )}
-        {controller.status === "conflict" && (
-          <button type="button" className="text-button" onClick={() => setConflictOpen(true)}>
-            未送信の記録を確認
-          </button>
-        )}
-      </div>
+          )}
+          {controller.status === "conflict" && (
+            <button type="button" className="text-button" onClick={() => setConflictOpen(true)}>
+              未送信の記録を確認
+            </button>
+          )}
+        </div>
+      )}
       {conflictOpen && (
         <Sheet title="未送信の記録" onClose={() => setConflictOpen(false)}>
           <p>別の更新があるため送信を止めています。以下は端末に残っている内容です。</p>

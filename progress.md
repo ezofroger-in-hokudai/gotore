@@ -1,5 +1,14 @@
 # progress.md
 
+## 2026-09-24 17:37 JST
+- 変更内容: 合意済みの `docs/styles/memo-options.html` のB案と `docs/previews/sets-164-screen.html` を正として、記録中の上部を「種目名・メモ・トレーニング終了」に統一した。種目メモはメモ操作で開閉する、種目名直下の枠なし文章へ戻し、今回のセットを左・前回のセットを右に固定した。今日のメモは合意済みの入力直前に残し、同じ枠なしの編集スタイルにした。通常時の「同期済み・〇グループに共有」と開始前の共有説明を削除し、未送信・競合時だけ復旧操作を表示する。
+- 目的: 話し合って選んだプレビューにない補助表示を除き、種目メモの位置と記録画面の情報量を採用案へ揃える。
+- 影響範囲: 記録中のヘッダー、種目/今日のメモ、セット比較の左右順、通常同期表示、開始前説明、関連ブラウザ回帰テスト。
+- 関連ファイル: frontend/src/features/session/session-screen.tsx、frontend/src/app/v2.css、frontend/tests/e2e/recording-style.spec.ts。
+- 検証結果: frontendで `bun run lint`、`bun run typecheck`、`bun test tests/unit/session.test.ts tests/unit/session-id.test.ts`、`git diff --check` は成功。390px幅でLAN向け開発サーバーを実描画し、横幅390px・種目メモ表示・通常同期表示なしを確認した。`bunx playwright test tests/e2e/recording-style.spec.ts` も終了した。最初に付けた `--project=chromium` は、この設定にproject名がないため実行対象なしで失敗した。
+- 未解決事項: 実機での最終操作感はユーザー確認待ち。実Supabaseを用いる共有E2Eは今回実行していない。
+- 次のアクション: スマホから再読込して、メモの開閉・今日のメモ編集・セット保存を確認する。
+
 ## 2026-09-22
 - 変更内容: 記録中の重量・回数入力にある増減矢印をUnicode文字から共通inline SVGへ変更し、下矢印は同じSVGを180度回転して表示する実装と寸法の回帰テストを追加。
 - 目的: iOS Safari / WebKitとAndroid Chromiumで異なるUnicodeグリフの視覚サイズに依存せず、上下矢印を同じ大きさにする。
