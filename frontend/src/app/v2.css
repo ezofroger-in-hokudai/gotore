@@ -3418,6 +3418,29 @@
   max-height: none;
   overflow: visible;
 }
+.recording-view .recording-topbar {
+  display: block;
+  align-items: center;
+  min-height: 24px;
+  margin: 0;
+}
+.recording-view .recording-topbar .eyebrow {
+  min-width: 0;
+}
+.recording-view .recording-exercise-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px 8px;
+  min-height: 36px;
+}
+.recording-view .recording-exercise-heading h1 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.recording-view .recording-exercise-heading .text-button {
+  flex: 0 0 auto;
+  min-height: 32px;
+}
 .recording-view .entering-sets .set-comparison {
   min-height: 0;
   flex: 0 1 auto;
@@ -3499,4 +3522,90 @@
 .recording-view .today-exercise-memo .memo-text {
   min-height: 32px;
   padding: 2px 0;
+}
+.recording-view .set-entry-heading {
+  display: block;
+  min-height: 32px;
+  margin: 0;
+}
+.recording-view .set-entry-heading h2 {
+  margin: 0;
+}
+.recording-view .wheels {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  width: 100%;
+  gap: 10px;
+}
+.recording-view .number-wheel {
+  width: 100%;
+  min-width: 0;
+}
+.recording-view .set-entry fieldset {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "heading"
+    "wheels"
+    "rm"
+    "feedback"
+    "actions"
+    "finish";
+  width: 100%;
+  gap: 6px;
+}
+.recording-view .set-entry-heading {
+  grid-area: heading;
+}
+.recording-view .set-entry .wheels {
+  grid-area: wheels;
+}
+.recording-view .set-entry .rm-estimate {
+  grid-area: rm;
+  margin: 0;
+  text-align: center;
+}
+.recording-view .set-entry .save-feedback {
+  grid-area: feedback;
+  min-height: 0;
+  margin: 0;
+}
+.recording-view .set-entry .set-actions {
+  grid-area: actions;
+  width: 100%;
+}
+.recording-view .entering-sets .set-entry .set-entry-heading,
+.recording-view .entering-sets .set-entry .wheels,
+.recording-view .entering-sets .set-entry .rm-estimate,
+.recording-view .entering-sets .set-entry .save-feedback,
+.recording-view .entering-sets .set-entry .set-actions,
+.recording-view .entering-sets .set-entry .quiet-finish {
+  grid-column: auto;
+  grid-row: auto;
+}
+.recording-view .entering-sets .set-entry .set-entry-heading {
+  grid-area: heading;
+}
+.recording-view .entering-sets .set-entry .wheels {
+  grid-area: wheels;
+}
+.recording-view .entering-sets .set-entry .rm-estimate {
+  grid-area: rm;
+}
+.recording-view .entering-sets .set-entry .save-feedback {
+  grid-area: feedback;
+}
+.recording-view .entering-sets .set-entry .set-actions {
+  grid-area: actions;
+}
+.recording-view .entering-sets .set-entry .quiet-finish {
+  grid-area: finish;
+}
+.recording-view .quiet-finish {
+  grid-area: finish;
+  justify-self: center;
+  min-height: 32px;
+  padding: 2px 8px;
+  color: var(--muted);
+  font-size: 11px;
 }

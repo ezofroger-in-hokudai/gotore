@@ -296,7 +296,7 @@ function ActiveTraining({
 
   return (
     <section className={`session-screen${selecting ? "" : " entering-sets"}`}>
-      <div className="section-heading">
+      <header className="recording-topbar">
         <span className="eyebrow">
           {session
             ? `${session.performed_on.replaceAll("-", "/")} · トレーニング中`
@@ -304,15 +304,7 @@ function ActiveTraining({
               ? "開始中…"
               : "開始を再試行してください"}
         </span>
-        <button
-          type="button"
-          className="secondary finish-training"
-          disabled={!session || controller.busy}
-          onClick={() => setFinishOpen(true)}
-        >
-          トレーニング終了
-        </button>
-      </div>
+      </header>
       {storageWarning && (
         <p className="error" role="alert">
           この端末に入力を保存できません。閉じる前にセットを保存してください。
@@ -436,7 +428,7 @@ function ActiveTraining({
       ) : (
         <>
           <div className="session-context">
-            <div className="section-heading">
+            <div className="recording-exercise-heading">
               <h1>{input.name}</h1>
               <button
                 className="text-button"
@@ -588,7 +580,7 @@ function ActiveTraining({
               </p>
             )}
             <fieldset disabled={blocking || stale || controller.status === "conflict"}>
-              <div className="section-heading">
+              <div className="set-entry-heading">
                 <h2>
                   {input.editing === null
                     ? `SET ${sets.length + 1}`
@@ -689,6 +681,14 @@ function ActiveTraining({
                   <small>SET {(input.editing ?? sets.length) + 1}を記録</small>
                 </button>
               </div>
+              <button
+                type="button"
+                className="text-button quiet-finish"
+                disabled={!session || controller.busy}
+                onClick={() => setFinishOpen(true)}
+              >
+                トレーニングを終了
+              </button>
             </fieldset>
           </form>
           {error && (
