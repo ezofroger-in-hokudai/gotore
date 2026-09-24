@@ -2617,3 +2617,7 @@
 - 影響範囲・関連ファイル: frontend/package.json、Makefile、.github/workflows/ci.yml、task.md。`make test-e2e`は全件実行のまま残す。
 - 検証: 対象の`recording-style.spec.ts`は320/390/430pxの3件成功を確認済み。frontend lint・型検査・`git diff --check`成功。ローカルでの`make test-e2e-ci`は、この作業環境のPlaywright web server起動が待機するため完走できず、クリーンなGitHub Actionsで確認する。
 - 未解決事項・次のアクション: 全件E2Eに残る旧表示文言・旧操作を期待するテストは、画面単位の改修時に現仕様の振る舞いを検証する形へ更新する。
+
+## 2026-09-22 PR #191のCI再実行を確認
+- 検証結果: database CIはmigration・schema lint・記録画面E2Eを含めて3分21秒で成功。backend、frontend、changes、Vercelも成功した。
+- 次のアクション: 旧画面仕様に依存する全件E2Eは、対象画面を改修する際に現行操作へ更新する。
