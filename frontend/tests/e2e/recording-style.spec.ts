@@ -24,20 +24,24 @@ for (const width of [320, 390, 430]) {
     );
     await startTraining(page);
     await page.setViewportSize({ width, height: 844 });
-    await expect(page.getByText("前回 60kg × 8回", { exact: true }).first()).toBeVisible();
+    const previousSets = page.getByRole("region", { name: "前回の全セット", exact: true });
+    const currentSets = page.getByRole("region", { name: "今回の全セット", exact: true });
+    await expect(previousSets.getByText("60kg × 8回", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "前回の全セットをコピー" })).toBeVisible();
-    const copyPreviousSet = page.getByRole("button", { name: "前回のセット3をコピー" });
-    await expect(copyPreviousSet).toBeVisible();
-    await copyPreviousSet.click();
-    await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("57.5");
-    await expect(page.getByRole("spinbutton", { name: "回数", exact: true })).toHaveValue("10");
+    const previousBox = await previousSets.boundingBox();
+    const currentBox = await currentSets.boundingBox();
+    expect(previousBox?.x).toBeLessThan(currentBox?.x ?? 0);
+    await page.getByRole("button", { name: "前回の全セットをコピー" }).click();
+    await expect(currentSets.getByRole("button", { name: "セット3を編集" })).toContainText(
+      "57.5kg × 10回",
+    );
+    await expect(page.getByRole("button", { name: "今日のメモを編集", exact: true })).toBeVisible();
     for (const theme of ["light", "dark"]) {
       await page.evaluate((value) => {
         document.documentElement.dataset.theme = value;
       }, theme);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
-      if (width === 390)
-        await page.screenshot({ path: `../docs/images/design-standard/recording-${theme}.png` });
+      if (width === 390) await page.screenshot({ path: `test-results/recording-${theme}.png` });
     }
     await page.getByRole("button", { name: "メモを開く", exact: true }).click();
     await expect(page.getByRole("dialog", { name: "メモ", exact: true })).toBeVisible();
@@ -45,8 +49,7 @@ for (const width of [320, 390, 430]) {
     await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
     const finish = page.getByRole("dialog", { name: "トレーニング終了", exact: true });
     await expect(finish.getByRole("button")).toHaveCount(2);
-    if (width === 390)
-      await page.screenshot({ path: "../docs/images/design-standard/finish-dark.png" });
+    if (width === 390) await page.screenshot({ path: "test-results/finish-dark.png" });
     await finish.getByRole("button", { name: "記録に戻る", exact: true }).click();
     await expect(finish).not.toBeVisible();
     expect(state.finished).toHaveLength(0);

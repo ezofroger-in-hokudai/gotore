@@ -3412,3 +3412,91 @@
 .suggestion-box .muted {
   font-size: 12px;
 }
+
+/* 記録入力は前回を左、今回を右に固定し、各列だけを独立してスクロールする。 */
+.recording-view .session-context {
+  max-height: none;
+  overflow: visible;
+}
+.recording-view .entering-sets .set-comparison {
+  min-height: 0;
+  flex: 0 1 auto;
+}
+.recording-view .entering-sets .comparison-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  justify-content: normal;
+  min-height: 36px;
+  margin: 0;
+  gap: 8px;
+}
+.recording-view .comparison-current-heading {
+  grid-column: 2;
+  min-width: 0;
+}
+.recording-view .comparison-lists {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+}
+.recording-view .previous-comparison-table {
+  grid-column: 1;
+}
+.recording-view .comparison-table {
+  grid-column: 2;
+}
+.recording-view .previous-comparison-table,
+.recording-view .comparison-table {
+  max-height: 176px;
+  min-height: 88px;
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+.recording-view .entering-sets .comparison-row,
+.recording-view .entering-sets .previous-row {
+  grid-template-columns: 18px minmax(0, 1fr) 28px;
+  min-height: 39px;
+  gap: 4px;
+}
+.recording-view .entering-sets .previous-row {
+  grid-template-columns: 18px minmax(0, 1fr);
+}
+.recording-view .entering-sets .comparison-row button {
+  min-height: 39px;
+  padding: 2px 0;
+}
+.recording-view .entering-sets .delete-set {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-height: 39px;
+  padding: 0;
+}
+.recording-view .delete-set svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+.recording-view .today-exercise-memo {
+  margin: 4px 0 0;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+.recording-view .today-exercise-memo h2 {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.recording-view .today-exercise-memo .memo-text {
+  min-height: 32px;
+  padding: 2px 0;
+}

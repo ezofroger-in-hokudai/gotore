@@ -466,32 +466,6 @@ function ActiveTraining({
                 </strong>
               </div>
             </div>
-            <div className="exercise-memo-slot">
-              {context.data ? (
-                <InlineMemo
-                  key={input.name}
-                  title="種目メモ"
-                  path="/exercises/memo"
-                  name={input.name}
-                  initial={context.data.memo}
-                  userId={userId}
-                  onSaved={context.retry}
-                />
-              ) : (
-                <span className="memo-text muted">
-                  {context.error ? "メモ未取得" : "メモを読み込み中…"}
-                </span>
-              )}
-            </div>
-            {context.data?.previous && (
-              <InlineMemo
-                key={context.data.previous.id}
-                title="前回のメモ"
-                path={`/workouts/${context.data.previous.id}/memo`}
-                userId={userId}
-                omitWhenEmpty
-              />
-            )}
             {context.error && (
               <p className="error" role="alert">
                 {context.error}
@@ -565,7 +539,9 @@ function ActiveTraining({
                       aria-label={`セット${index + 1}を削除`}
                       onClick={() => void deleteSet(index)}
                     >
-                      🗑
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13M10 11v5m4-5v5" />
+                      </svg>
                     </button>
                   </div>
                 ))}
@@ -580,15 +556,18 @@ function ActiveTraining({
               </section>
             </div>
           </div>
-          {sessionId ? (
-            <InlineMemo
-              title="今日のメモ"
-              path={`/sessions/${sessionId}/exercise-memo?name=${encodeURIComponent(input.name)}`}
-              userId={userId}
-            />
-          ) : (
-            <span className="memo-text muted">今日のメモ</span>
-          )}
+          <section className="today-exercise-memo" aria-label="今日のメモ">
+            <h2>今日のメモ</h2>
+            {sessionId ? (
+              <InlineMemo
+                title="今日のメモ"
+                path={`/sessions/${sessionId}/exercise-memo?name=${encodeURIComponent(input.name)}`}
+                userId={userId}
+              />
+            ) : (
+              <span className="memo-text muted">メモを読み込み中…</span>
+            )}
+          </section>
           <form
             className="set-entry"
             onSubmit={(e) => {

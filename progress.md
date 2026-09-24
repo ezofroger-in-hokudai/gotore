@@ -2631,3 +2631,10 @@
 - 影響範囲・関連ファイル: frontend/src/features/session/session-id.ts、use-session.ts、session-queue.ts、tests/unit/session-id.test.ts。API・DB・公開環境の動作は変更しない。
 - 検証: 互換IDの先行テストは未実装import失敗を確認後に実装。frontend lint、型検査、関連単体テスト10件、git diff --checkが成功。開始操作を含むPlaywrightは隔離テスト用8100番の残留プロセス競合で未実施。
 - 未解決事項・次のアクション: 実機でページを再読み込みし、開始時にバックエンドへ`POST /api/sessions`が出て種目選択へ進むことを確認する。テスト用ポート競合を解消してPlaywright回帰を追加実行する。
+
+## 2026-09-24 合意済みのセット比較レイアウトへ復元
+
+- 変更内容・目的: ユーザーの「旧画面を無視して話し合ったものへ完全に変える」指示に従い、main由来の旧セット行・種目メモ・前回メモの表示規則を記録入力から外した。前回の全セットを左、今回の全セットを右に固定し、各列だけをスクロールする。今日の種目メモを入力フォーム直前に置き、削除操作は絵文字でなく単色SVGのゴミ箱ピクトグラムにした。
+- 影響範囲・関連ファイル: frontend/src/features/session/session-screen.tsx、frontend/src/app/v2.css、frontend/tests/e2e/recording-style.spec.ts。前回全セットコピー、行編集、新しいセット入口、ルーラー入力、保存処理は維持する。
+- 検証: frontend lint・型検査、セット/IDの単体テスト10件、git diff --checkが成功。E2Eは390pxの左右列とコピー後の編集行を検証する期待値へ更新した。隔離テスト用ポートの競合により実行確認は継続する。
+- 未解決事項・次のアクション: 実機で前回が左・今回が右、各列の独立スクロール、今日のメモ、単色ゴミ箱を確認する。隔離E2Eのポート競合を解消して画面回帰を実行する。
