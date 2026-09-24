@@ -286,11 +286,13 @@
 }
 .carousel-dots {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
   margin: 10px 0 23px;
 }
 .carousel-dots button {
+  flex-shrink: 0;
   border: 0;
   padding: 0;
   height: 6px;

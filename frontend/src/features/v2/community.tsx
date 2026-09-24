@@ -25,7 +25,7 @@ import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { HistoryBrowser } from "./history-browser";
 import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
-import { GROUP_REFRESH_MS, activityRefreshMs, summaryRefreshMs } from "./refresh-interval";
+import { GROUP_REFRESH_MS, activityRefreshMs } from "./refresh-interval";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
 import { useGroupActivity } from "./use-group-activity";
@@ -94,18 +94,7 @@ export function CommunityHome({
     restored.current = groupIds;
   }, [groups, groupIds, selected, active, cardDrag.drag]);
   const activity = useGroupActivity(groups, selected, active, refreshKey);
-  const summaries = useResource<GroupSummary[]>(
-    "/groups/activity/summary",
-    refreshKey,
-    summaryRefreshMs,
-    true,
-    { enabled: active && groups.length > 1 },
-  );
-  const ready =
-    !loading &&
-    (!groups.length ||
-      ((!!activity.data || !!activity.error) &&
-        (groups.length < 2 || summaries.data !== null || !!summaries.error)));
+  const ready = !loading && (!groups.length || !!activity.data || !!activity.error);
   useEffect(() => {
     onReady?.(ready || failed);
   }, [ready, failed, onReady]);
@@ -179,14 +168,12 @@ export function CommunityHome({
                 group={group}
                 dragging={cardDrag.drag?.id === group.id}
                 style={cardDrag.style(group.id, index)}
-                active={active}
-                data={
-                  group.id === selected
-                    ? activity.data
-                    : (summaries.data?.find((item) => item.group_id === group.id) ?? null)
+                active={active && (group.id === selected || !!activity.card(group.id).data)}
+                data={group.id === selected ? activity.data : activity.card(group.id).data}
+                error={group.id === selected ? activity.error : activity.card(group.id).error}
+                refreshing={
+                  group.id === selected ? activity.refreshing : activity.card(group.id).refreshing
                 }
-                error={group.id === selected ? activity.error : summaries.error}
-                refreshing={group.id === selected ? activity.refreshing : summaries.refreshing}
                 onClick={() => {
                   onSelect(group.id);
                   onDetail();
@@ -205,9 +192,6 @@ export function CommunityHome({
             <p className="error" role="alert">
               {cardDrag.error}
             </p>
-          )}
-          {groups.length > 1 && (
-            <ResourceError resource={summaries} retryLabel="グループの状況を再試行" />
           )}
           <div className="carousel-dots">
             {groups.map((group, index) => (
