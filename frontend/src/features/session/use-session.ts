@@ -1,6 +1,7 @@
 import { type Exercise, type TrainingSession, api } from "@/lib/api";
 import { createSessionSender } from "@/lib/session-transport";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createSessionId } from "./session-id";
 import { SessionQueue } from "./session-queue";
 
 export function useSession(userId: string, onChanged: () => void) {
@@ -135,7 +136,7 @@ export function useSession(userId: string, onChanged: () => void) {
     start: async () => {
       if (!state.ready) throw new Error("保存済みのトレーニングを確認しています。");
       if (state.session) return state.session;
-      startId.current ??= crypto.randomUUID();
+      startId.current ??= createSessionId();
       const result = await mutate(() =>
         api<TrainingSession>("/sessions", {
           method: "POST",

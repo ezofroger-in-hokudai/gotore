@@ -7,6 +7,7 @@ import {
   readQueue,
   writeQueue,
 } from "./queue-storage";
+import { createSessionId } from "./session-id";
 export type QueueState = {
   session: TrainingSession | null;
   pending: number;
@@ -141,7 +142,7 @@ export class SessionQueue {
         ...record,
         pending: [
           ...record.pending,
-          { id: crypto.randomUUID(), change: queueChange(current.exercises, exercises) },
+          { id: createSessionId(), change: queueChange(current.exercises, exercises) },
         ],
       };
       this.write(next);

@@ -2624,3 +2624,10 @@
 - 影響範囲・関連ファイル: frontend/next.config.mjs、frontend/src/features/v2/workspace.tsx、frontend/src/app/v2.css。ローカル専用のSupabase接続先は実機から到達可能なWi-Fiアドレスへ変更したが、秘密値を含むためGit管理対象外。
 - 検証: frontend lint、型検査、セット操作の単体テスト8件、git diff --checkが成功。実機のログイン後画面は利用者による再読み込み確認待ち。
 - 未解決事項・次のアクション: 実機で `http://192.168.9.48:3000` を再読み込みし、ログイン後に記録画面へ進めることを確認する。ローカルGoogle OAuthはClient ID/Secret未設定のため今回の確認対象外。
+
+## 2026-09-24 HTTP実機でトレーニングを開始できない問題を修正
+
+- 変更内容・目的: バックエンドログに開始APIのPOSTがないことから、HTTPで開いた実機ではSecure Context限定の`crypto.randomUUID()`がAPI送信前に失敗することを特定した。Web Cryptoが使える通常環境は従来のUUIDを使い、HTTP確認時だけUUID v4形式の互換IDを生成するよう、開始IDとセット保存待ちIDを共通化した。
+- 影響範囲・関連ファイル: frontend/src/features/session/session-id.ts、use-session.ts、session-queue.ts、tests/unit/session-id.test.ts。API・DB・公開環境の動作は変更しない。
+- 検証: 互換IDの先行テストは未実装import失敗を確認後に実装。frontend lint、型検査、関連単体テスト10件、git diff --checkが成功。開始操作を含むPlaywrightは隔離テスト用8100番の残留プロセス競合で未実施。
+- 未解決事項・次のアクション: 実機でページを再読み込みし、開始時にバックエンドへ`POST /api/sessions`が出て種目選択へ進むことを確認する。テスト用ポート競合を解消してPlaywright回帰を追加実行する。
