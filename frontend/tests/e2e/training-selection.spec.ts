@@ -51,13 +51,12 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
   await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).click();
   const addSheet = page.getByRole("dialog", { name: "種目を追加", exact: true });
   await expect(addSheet.getByLabel("新しい種目", { exact: true })).toBeVisible();
+  await expect(addSheet.getByRole("heading", { name: "種目を追加", exact: true })).toHaveCount(1);
   await expect(addSheet.getByRole("searchbox")).toHaveCount(0);
   await addSheet.getByRole("button", { name: "閉じる", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "今日のトレーニング終了", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "トレーニング終了", exact: true })).toBeVisible();
   const selectingFinish = await page
-    .getByRole("button", { name: "今日のトレーニング終了", exact: true })
+    .getByRole("button", { name: "トレーニング終了", exact: true })
     .evaluate((button) => {
       const style = getComputedStyle(button);
       const box = button.getBoundingClientRect();
@@ -71,7 +70,7 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
     });
   await page.getByRole("button", { name: /^スクワット/ }).click();
   const recordingFinish = await page
-    .getByRole("button", { name: "今日のトレーニング終了", exact: true })
+    .getByRole("button", { name: "トレーニング終了", exact: true })
     .evaluate((button) => {
       const style = getComputedStyle(button);
       const box = button.getBoundingClientRect();

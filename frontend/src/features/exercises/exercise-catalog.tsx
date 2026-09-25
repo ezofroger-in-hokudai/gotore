@@ -22,6 +22,7 @@ export function ExerciseCatalog({
   expanded = false,
   startAdding = false,
   initialPrimary,
+  showAddHeading = true,
 }: {
   options: ExerciseOption[];
   disabled: boolean;
@@ -30,6 +31,8 @@ export function ExerciseCatalog({
   expanded?: boolean;
   startAdding?: boolean;
   initialPrimary?: BodyPart;
+  /** シートのタイトルが追加画面名を担う場合は、フォーム内に重ねて表示しない。 */
+  showAddHeading?: boolean;
 }) {
   const [adding, setAdding] = useState(startAdding || options.length === 0);
   const [query, setQuery] = useState("");
@@ -191,7 +194,7 @@ export function ExerciseCatalog({
   if (adding)
     return (
       <section className="exercise-option-form" aria-label="種目を追加">
-        <h3>種目を追加</h3>
+        {showAddHeading && <h3>種目を追加</h3>}
         <form id={formId} onSubmit={add}>
           <fieldset disabled={busy}>
             <label>

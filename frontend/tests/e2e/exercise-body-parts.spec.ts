@@ -95,7 +95,6 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
   const state = await prepare(page);
   await startTraining(page);
   await openRecordingCatalog(page);
-  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   await page.getByLabel("新しい種目", { exact: true }).fill("ケーブルロウ");
   await page.getByLabel("主な部位", { exact: true }).selectOption("back");
   await page.locator(".secondary-parts > summary").click();
@@ -189,7 +188,6 @@ test("種目一覧の再取得に失敗しても、読み込んだ候補で部�
   const state = await prepare(page);
   await startTraining(page);
   await openRecordingCatalog(page);
-  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   await page.getByLabel("新しい種目", { exact: true }).fill("追加種目");
   state.failOptions = true;
   await page.getByRole("button", { name: "追加", exact: true }).click();

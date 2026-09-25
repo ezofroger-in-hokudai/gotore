@@ -11,7 +11,7 @@ test("採点APIを使わず終了結果・履歴・ホーム・設定を表示�
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
-  await page.getByRole("button", { name: "今日のトレーニング終了", exact: true }).click();
+  await page.getByRole("button", { name: "終了する", exact: true }).click();
   const result = page.getByRole("region", { name: "トレーニング結果" });
   await expect(result).toBeVisible();
   await expect(result).not.toContainText(/TRAINING COMPLETE|今日の積み重ね/);

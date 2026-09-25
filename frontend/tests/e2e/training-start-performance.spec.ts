@@ -30,7 +30,9 @@ test("開始前は入力を出さず、開始待ちの種目選択と入力で�
     await page.getByRole("button", { name: /^スクワット/ }).click();
     await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("6");
     await expect(page.locator(".session-screen.entering-sets")).toBeVisible({ timeout: 2000 });
-    await expect(page.getByRole("region", { name: "全セットの比較", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "今回と前回の全セット", exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeDisabled();
     await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toBeEnabled();
     await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("82.5");

@@ -384,7 +384,7 @@ export async function expectRecordingBest(page: Page, value: string) {
 }
 
 export async function openRecordingCatalog(page: Page) {
-  if (!(await page.getByRole("button", { name: "種目一覧", exact: true }).isVisible()))
+  if (!(await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).isVisible()))
     await page.locator(".exercise-information").click();
-  await page.getByRole("button", { name: "種目一覧", exact: true }).click();
+  await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).click();
 }

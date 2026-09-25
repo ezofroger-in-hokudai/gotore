@@ -3789,7 +3789,7 @@
   min-width: 0;
 }
 .recording-view .unified-comparison-table .previous-set-cell {
-  display: block;
+  display: flex;
   align-items: center;
   min-width: 0;
   color: var(--muted);
@@ -3855,37 +3855,36 @@
 .recording-view .unified-comparison-table .previous-copy-placeholder {
   flex: 0 0 28px;
 }
-.recording-view .comparison-heading {
-  display: grid;
-  grid-template-columns:
-    6px
-    minmax(0, calc((100% - 86px) / 2))
-    28px
-    minmax(0, calc((100% - 86px) / 2))
-    28px;
+.recording-view .entering-sets .comparison-heading {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0;
+}
+.recording-view .comparison-heading::before {
+  content: "";
+  flex: 0 0 12px;
 }
 .recording-view .comparison-current-heading {
-  grid-column: 2;
+  /* 今回値ボタンの左内側余白（4px）と合わせる。 */
+  flex: 0 0 calc((100% - 86px) / 2);
+  padding-inline-start: 4px;
+  margin-right: 40px;
 }
 .recording-view .comparison-previous-heading {
   display: flex;
-  grid-column: 4;
+  flex: 0 0 calc((100% - 86px) / 2);
   align-items: center;
   justify-content: flex-start;
   min-width: 0;
-  gap: 2px;
+  margin-right: 6px;
 }
 .recording-view .comparison-previous-heading h2 {
   min-width: 0;
 }
 .recording-view .comparison-heading > .previous-copy {
-  grid-column: 5;
-  grid-row: 1;
+  flex: 0 0 28px;
   min-height: 28px;
-  /* 行内のコピー操作と同じ右端にそろえ、全セット/個別を迷わず使い分けられるようにする。 */
-  transform: translateX(4px);
+  transform: none;
 }
 .recording-view .finish-confirm {
   white-space: nowrap;
@@ -4181,7 +4180,8 @@
   /* session-headerが選択・入力の終了操作を共通化する。 */
 }
 .today-training {
-  border-bottom: 1px solid var(--line);
+  /* 直後の部位フィルターの上罫線と二重にしない。 */
+  border-bottom: 0;
 }
 .today-training > summary {
   display: grid;
@@ -4310,7 +4310,8 @@
 .session-body-parts {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  margin-top: 12px;
+  /* 今日のトレーニング直下の区切り線を、そのまま部位選択の上罫線にする。 */
+  margin-top: 0;
   gap: 2px;
   padding: 4px 0;
   border-top: 1px solid var(--line);

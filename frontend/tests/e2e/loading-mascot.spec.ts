@@ -166,7 +166,7 @@ test("ホーム準備後は共有詳細の取得中も移動や閉じる操作�
       exact: true,
     });
     await open.click();
-    const dialog = page.getByRole("dialog", { name: "記録", exact: true });
+    const dialog = page.getByRole("dialog");
     const loading = dialog.getByRole("status", {
       name: "記録を読み込み中",
     });

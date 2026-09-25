@@ -181,6 +181,29 @@
   min-height: 48px;
   overflow-wrap: anywhere;
 }
+/* v2の統合比較表は、前回の有無にかかわらずコピーと削除を固定列へ置く。 */
+.recording-view .unified-comparison-table .comparison-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 44px;
+  gap: 6px;
+}
+.recording-view .unified-comparison-table .comparison-row > span:first-child {
+  flex: 0 0 6px;
+  min-width: 0;
+  overflow: visible;
+}
+.recording-view .unified-comparison-table .current-set-cell,
+.recording-view .unified-comparison-table .previous-set-cell {
+  flex: 0 0 calc((100% - 86px) / 2);
+  min-width: 0;
+}
+.recording-view .unified-comparison-table .delete-set,
+.recording-view .unified-comparison-table .delete-set-placeholder,
+.recording-view .unified-comparison-table .comparison-row > .previous-copy,
+.recording-view .unified-comparison-table .previous-copy-placeholder {
+  flex: 0 0 28px;
+}
 /* 狭い画面でも種目名と5セット分の領域を確保する。 */
 @media (max-width: 360px) {
   .recording-view .recording-header {

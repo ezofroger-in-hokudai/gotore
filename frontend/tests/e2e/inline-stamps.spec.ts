@@ -153,7 +153,7 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
     "true",
   );
   await card.getByRole("button", { name: "ミオのリアクションの詳細" }).click();
-  const people = page.getByRole("dialog", { name: "リアクション", exact: true });
+  const people = page.getByRole("dialog", { name: "スタンプ", exact: true });
   await expect(people).toContainText("タクミ");
   await page.screenshot({ path: "test-results/inline-stamps-people.png", fullPage: true });
   await people.getByRole("button", { name: "閉じる", exact: true }).click();

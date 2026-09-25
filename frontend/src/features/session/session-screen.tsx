@@ -379,7 +379,7 @@ function ActiveTraining({
               disabled={!session || controller.busy}
               onClick={() => setFinishOpen(true)}
             >
-              今日のトレーニング終了
+              トレーニング終了
             </button>
           </div>
           <section className="training-peers" aria-label="今日の仲間">
@@ -537,7 +537,7 @@ function ActiveTraining({
                 disabled={!session || controller.busy}
                 onClick={() => setFinishOpen(true)}
               >
-                今日のトレーニング終了
+                トレーニング終了
               </button>
             </header>
             <section className="recording-memos memo-plain memo-inline-row" aria-label="種目メモ">
@@ -832,6 +832,7 @@ function ActiveTraining({
             onChanged={catalog.retry}
             onAdded={() => setCatalogOpen(false)}
             initialPrimary={selectedParts.length === 1 ? selectedParts[0] : undefined}
+            showAddHeading={false}
           />
         </Sheet>
       )}
@@ -924,18 +925,14 @@ function ActiveTraining({
             if (!controller.busy) setFinishOpen(false);
           }}
         >
-          <p>
-            {input.dirty
-              ? "未保存の入力があります。保存済みのセットだけを残して終了しますか？"
-              : "おつかれさまでした。保存したセットは履歴で確認できます。"}
-          </p>
+          {input.dirty && <p>未保存の入力があります。保存済みのセットだけを残して終了しますか？</p>}
           <button
             className="secondary full"
             type="button"
             disabled={controller.busy}
             onClick={() => setFinishOpen(false)}
           >
-            まだ続ける
+            トレーニングに戻る
           </button>
           <button
             className="primary full finish-confirm"
@@ -958,7 +955,7 @@ function ActiveTraining({
               }
             }}
           >
-            {controller.busy ? "終了中…" : "今日のトレーニング終了"}
+            {controller.busy ? "終了中…" : "終了する"}
           </button>
         </Sheet>
       )}

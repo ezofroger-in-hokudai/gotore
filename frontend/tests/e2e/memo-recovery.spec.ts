@@ -39,10 +39,10 @@ test("未保存メモを終了時に案内し、履歴でも元の版を保っ�
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "トレーニング終了" });
   await expect(confirmation).toContainText("未保存のメモ");
-  await confirmation.getByRole("button", { name: "まだ続ける", exact: true }).click();
+  await confirmation.getByRole("button", { name: "トレーニングに戻る", exact: true }).click();
   await expect(page.getByLabel("今日のメモ", { exact: true })).toHaveValue("消したくないメモ");
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
-  await confirmation.getByRole("button", { name: "今日のトレーニング終了", exact: true }).click();
+  await confirmation.getByRole("button", { name: "終了する", exact: true }).click();
   await expect.poll(() => state.finished.length).toBe(1);
   memo = { content: "別端末で保存したメモ", revision: 1 };
   await page.reload();
@@ -104,6 +104,6 @@ test("端末保存できないメモを履歴から復元できると案内し�
   const confirmation = page.getByRole("dialog", { name: "トレーニング終了" });
   await expect(confirmation).toContainText("端末に保持できていません");
   await expect(confirmation).not.toContainText("履歴から保存できます");
-  await confirmation.getByRole("button", { name: "まだ続ける", exact: true }).click();
+  await confirmation.getByRole("button", { name: "トレーニングに戻る", exact: true }).click();
   await expect(page.getByLabel("今日のメモ", { exact: true })).toHaveValue("端末保存できないメモ");
 });

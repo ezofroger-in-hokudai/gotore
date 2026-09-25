@@ -52,9 +52,11 @@ for (const width of [320, 390, 430]) {
       await page.getByRole("button", { name: "セットを追加", exact: true }).click();
       await expect(page.getByRole("heading", { name: `SET ${i + 2}`, exact: true })).toBeVisible();
     }
-    await page.getByRole("region", { name: "全セットの比較", exact: true }).evaluate((element) => {
-      element.scrollTop = 0;
-    });
+    await page
+      .getByRole("region", { name: "今回と前回の全セット", exact: true })
+      .evaluate((element) => {
+        element.scrollTop = 0;
+      });
     const input = page.getByRole("spinbutton", { name: "重量", exact: true });
     await input.fill("62.5");
     const y = (await input.boundingBox())?.y;
@@ -126,7 +128,7 @@ for (const width of [320, 390, 430]) {
     await finish.click();
     await page
       .getByRole("dialog", { name: "トレーニング終了", exact: true })
-      .getByRole("button", { name: "今日のトレーニング終了", exact: true })
+      .getByRole("button", { name: "終了する", exact: true })
       .click();
     const result = page.getByRole("region", { name: "トレーニング結果", exact: true });
     await expect(result.locator(".stamp-live-list button")).toHaveCount(6);
