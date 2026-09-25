@@ -25,7 +25,11 @@ def test_feed_summary_tracks_saved_record_and_does_not_expose_private_fields(cli
     assert response.status_code == 200
     saved = response.json()
     feed = client.get(path).json()["feed"][0]
-    assert feed["summary"] == {"exercise_count": 2, "set_count": 5}
+    assert feed["summary"] == {
+        "exercise_count": 2,
+        "set_count": 5,
+        "total_volume": 2400.0,
+    }
     assert not {"memo", "goal", "comment", "exercises"}.intersection(feed)
     ended = client.post(
         f"/api/sessions/{session['id']}/finish",
@@ -42,7 +46,11 @@ def test_feed_summary_tracks_saved_record_and_does_not_expose_private_fields(cli
         },
     )
     assert response.status_code == 200, response.text
-    assert client.get(path).json()["feed"][0]["summary"] == {"exercise_count": 1, "set_count": 1}
+    assert client.get(path).json()["feed"][0]["summary"] == {
+        "exercise_count": 1,
+        "set_count": 1,
+        "total_volume": 0.0,
+    }
     deleted = client.delete(
         f"/api/workouts/{session['id']}",
         params={"expected_revision": response.json()["revision"]},

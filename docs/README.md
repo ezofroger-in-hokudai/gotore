@@ -32,7 +32,7 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [design-system.md](design-system.md): スマホアプリを見据えた色・文字・余白・操作と共通部品の基準。[画面見本](design-preview.html)。
 
-- [画面設計の判断](design/README.md): 画面ごとの採用判断の一覧。現在は[トレーニング中の画面設計](design/training-session.md)を参照する。
+- [画面設計の判断](design/README.md): 画面ごとの採用判断の一覧。現在は[トレーニング中の画面設計](design/training-session.md)と[ホーム画面の設計](design/home-screen.md)を参照する。
 
 - [performance-best-history.md](performance-best-history.md): BEST・前回比較の履歴件数別計測と既存集計の利用。
 

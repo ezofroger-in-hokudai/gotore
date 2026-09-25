@@ -24,7 +24,7 @@ test("開始前は入力を出さず、開始待ちの種目選択と入力で�
   });
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   try {
-    await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toBeVisible({
+    await expect(page.locator(".session-wordmark")).toBeVisible({
       timeout: 2000,
     });
     await page.getByRole("button", { name: /^スクワット/ }).click();

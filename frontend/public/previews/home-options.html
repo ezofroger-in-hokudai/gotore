@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>E-GOTORE ホーム案</title>
+    <style>
+      :root { color-scheme: light; --bg:#f4f4f5; --panel:#fff; --ink:#17191d; --muted:#656a74; --line:#dedfe3; --red:#ce282b; --soft:#fff0f0; --dark:#202127; }
+      :root[data-theme="dark"] { color-scheme:dark; --bg:#111214; --panel:#1b1d20; --ink:#f5f5f7; --muted:#a1a6af; --line:#33363d; --red:#e73a35; --soft:#392327; --dark:#272a30; }
+      * { box-sizing:border-box; }
+      body { margin:0; background:#e6e7ea; color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif; font-size:14px; }
+      button { font:inherit; cursor:pointer; } button:focus-visible { outline:3px solid #5b9dd9; outline-offset:2px; }
+      .controls { position:sticky; z-index:2; top:0; display:flex; justify-content:center; gap:8px; flex-wrap:wrap; padding:12px; background:#fff; border-bottom:1px solid #d5d6da; }
+      .controls button { min-height:36px; padding:6px 12px; border:1px solid #b7bac1; border-radius:8px; background:#fff; color:#25272b; }
+      .controls button[aria-pressed="true"] { border-color:var(--red); background:#fff0f0; color:#9e1e22; font-weight:700; }
+      .note { max-width:430px; margin:14px auto 0; padding:0 18px; color:#4c5058; font-size:12px; line-height:1.55; }
+      .phone { width:min(100%,430px); min-height:844px; margin:14px auto 0; overflow:hidden; background:var(--bg); position:relative; }
+      .app-header { height:65px; padding:20px 20px 10px; display:flex; align-items:center; justify-content:space-between; }
+      .wordmark { border:0; padding:0; background:none; color:var(--ink); font-size:22px; font-weight:800; letter-spacing:-.7px; }.wordmark span { color:var(--red); }
+      .icon-button { display:grid; place-items:center; width:44px; height:44px; padding:0; border:0; border-radius:8px; background:transparent; color:var(--ink); }
+      .icon { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+      main { padding:14px 20px 118px; }.title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }.title-row h1 { margin:0; font-size:22px; }.text-link { border:0; padding:10px 0; background:none; color:var(--muted); font-size:12px; }
+      .option { display:none; }.option.active { display:block; }.eyebrow { margin:0 0 6px; color:var(--muted); font-size:11px; letter-spacing:.08em; }.group-name { margin:0; font-size:18px; }.chevron { font-size:22px; color:inherit; }
+      .team-dock { margin:0 -2px 22px; border:0; border-radius:14px; padding:16px; background:var(--dark); color:#fff; text-align:left; width:calc(100% + 4px); }.team-dock .muted, .team-dock .eyebrow { color:#c1c4ca; }.team-dock-top { display:flex; align-items:center; justify-content:space-between; gap:12px; }.live-line { display:flex; align-items:center; gap:8px; margin:14px 0 12px; font-size:13px; }.live-dot { width:8px; height:8px; border-radius:50%; background:#ff5357; box-shadow:0 0 0 4px rgb(255 83 87 / .16); }.avatar-row { display:flex; align-items:center; }.avatar { display:grid; place-items:center; width:34px; height:34px; margin-right:-6px; border:2px solid var(--dark); border-radius:50%; background:#555963; color:#fff; font-size:11px; font-weight:700; }.avatar:nth-child(2) { background:#7d655f; }.avatar:nth-child(3) { background:#58746a; }.avatar.more { background:#3a3d44; }.dock-stats { display:grid; grid-template-columns:1fr 1fr; margin-top:15px; border-top:1px solid #46484f; }.dock-stat { padding-top:12px; }.dock-stat + .dock-stat { padding-left:16px; border-left:1px solid #46484f; }.dock-stat b { display:block; font-size:19px; }.dock-stat span { color:#c1c4ca; font-size:11px; }
+      .quick-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:0 0 22px; }.quick { min-height:83px; border:1px solid var(--line); border-radius:10px; padding:11px 9px; background:var(--panel); color:var(--ink); text-align:left; }.quick .icon { display:block; margin-bottom:9px; color:var(--red); }.quick b, .quick small { display:block; }.quick b { font-size:14px; }.quick small { margin-top:3px; color:var(--muted); font-size:11px; }
+      .status-board { margin:0 0 22px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }.board-group { display:flex; align-items:center; justify-content:space-between; padding:14px 0; }.board-numbers { display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line); }.board-numbers div { padding:14px 8px 13px 0; }.board-numbers div + div { padding-left:12px; border-left:1px solid var(--line); }.board-numbers b { display:block; font-size:19px; }.board-numbers span { display:flex; align-items:center; gap:5px; margin-bottom:3px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.05em; }.mini-dot { width:6px; height:6px; border-radius:50%; background:var(--red); }.board-members { display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-top:1px solid var(--line); }.board-members .avatar { border-color:var(--bg); }
+      .section-title { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:0 0 10px; }.section-title h2 { margin:0; font-size:16px; }.section-title span { overflow:hidden; color:var(--muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }.feed { border-top:1px solid var(--line); }.feed-item { padding:15px 0; border-bottom:1px solid var(--line); }.feed-top { display:flex; justify-content:space-between; gap:8px; }.person { display:flex; gap:9px; min-width:0; }.person .avatar { flex:none; margin:0; border-color:var(--bg); }.person b, .person p { margin:0; }.person p { overflow:hidden; max-width:180px; color:var(--muted); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }.time { color:var(--muted); font-size:11px; }.record { display:flex; align-items:center; justify-content:space-between; margin:11px 0 0 43px; }.summary { color:var(--muted); font-size:12px; }.weight { font-size:16px; }.weight b { color:var(--red); }.detail { color:var(--muted); font-size:12px; }
+      .start { position:absolute; right:20px; bottom:82px; display:flex; align-items:center; gap:9px; min-height:52px; border:0; border-radius:10px; padding:0 18px; background:var(--red); box-shadow:0 5px 13px rgb(0 0 0 / .18); color:#fff; font-size:14px; font-weight:700; }.start .icon { width:18px; height:18px; }
+      .nav { position:absolute; right:0; bottom:0; left:0; display:grid; grid-template-columns:repeat(4,1fr); min-height:66px; padding:0 10px; border-top:1px solid var(--line); background:var(--panel); }.nav button { position:relative; border:0; padding:21px 0; background:transparent; color:var(--muted); font-size:12px; }.nav button.active { color:var(--red); font-weight:700; }.nav button.active::before { content:""; position:absolute; top:-1px; right:25%; left:25%; height:2px; background:var(--red); }
+      @media (max-width:340px) { main { padding-right:14px; padding-left:14px; }.app-header { padding-right:14px; padding-left:14px; }.phone { min-height:720px; }.team-dock { border-radius:10px; }.quick { min-height:78px; padding:9px 7px; }.quick small { font-size:10px; }.start { right:14px; } }
+    </style>
+  </head>
+  <body>
+    <div class="controls" aria-label="プレビュー操作">
+      <button type="button" data-option="a" aria-pressed="true">A 仲間ドック</button>
+      <button type="button" data-option="b" aria-pressed="false">B アイコン入口</button>
+      <button type="button" data-option="c" aria-pressed="false">C チームボード</button>
+      <button type="button" id="theme" aria-pressed="false">暗色</button>
+    </div>
+    <p class="note">上部の部品だけを比較する見本です。数値・名前は架空で、保存や通信は行いません。</p>
+    <div class="phone">
+      <header class="app-header"><button class="wordmark" type="button">E-GO<span>TORE</span></button><button class="icon-button" aria-label="スタンプの受信一覧"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button></header>
+      <main>
+        <div class="title-row"><h1>ホーム</h1><button class="text-link" type="button">グループ一覧</button></div>
+        <section class="option active" data-panel="a" aria-label="A 仲間ドック案">
+          <button class="team-dock" type="button" aria-label="GO TOREの詳細を開く"><div class="team-dock-top"><div><p class="eyebrow">YOUR TEAM</p><h2 class="group-name">GO TORE</h2></div><span class="chevron">›</span></div><div class="live-line"><span class="live-dot"></span><b>いま 2人がトレーニング中</b></div><div class="avatar-row"><span class="avatar">み</span><span class="avatar">た</span><span class="avatar">ゆ</span><span class="avatar more">+2</span></div><div class="dock-stats"><div class="dock-stat"><b>4人</b><span>今日トレーニング</span></div><div class="dock-stat"><b>18</b><span>保存済みセット</span></div></div></button>
+          <div class="section-title"><h2>みんなの最新記録</h2><span>GO TORE</span></div>
+        </section>
+        <section class="option" data-panel="b" aria-label="B アイコン入口案">
+          <div class="quick-row"><button class="quick" type="button"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><b>グループ</b><small>GO TORE</small></button><button class="quick" type="button"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2v20M5 7v10M19 7v10M2 10v4M22 10v4"/><path d="M4 7h2M4 17h2M18 7h2M18 17h2M10 4h4M10 20h4"/></svg><b>LIVE</b><small>2人</small></button><button class="quick" type="button"><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6M12 7v5l3 2"/></svg><b>前回</b><small>2日前</small></button></div>
+          <div class="section-title"><h2>みんなの最新記録</h2><span>GO TORE</span></div>
+        </section>
+        <section class="option" data-panel="c" aria-label="C チームボード案">
+          <div class="status-board"><button class="board-group" type="button" style="width:100%;border:0;background:transparent;color:var(--ink);text-align:left"><div><p class="eyebrow">YOUR TEAM</p><h2 class="group-name">GO TORE</h2></div><span class="chevron">›</span></button><div class="board-numbers"><div><span><i class="mini-dot"></i>LIVE</span><b>2人</b></div><div><span>TODAY</span><b>4人</b></div><div><span>SETS</span><b>18</b></div></div><div class="board-members"><span style="font-size:12px;color:var(--muted)">今日の仲間</span><div class="avatar-row"><span class="avatar">み</span><span class="avatar">た</span><span class="avatar">ゆ</span><span class="avatar more">+2</span></div></div></div>
+          <div class="section-title"><h2>みんなの最新記録</h2><span>GO TORE</span></div>
+        </section>
+        <div class="feed"><article class="feed-item"><div class="feed-top"><div class="person"><span class="avatar">み</span><div><b>みお</b><p>ベンチプレス</p></div></div><span class="time">いま</span></div><div class="record"><span class="summary">3種目 · 9セット</span><span class="weight"><b>60</b> kg × 8 回　<span class="detail">詳細 ›</span></span></div></article><article class="feed-item"><div class="feed-top"><div class="person"><span class="avatar">た</span><div><b>たくみ</b><p>スクワット</p></div></div><span class="time">12分前</span></div><div class="record"><span class="summary">2種目 · 6セット</span><span class="weight">80 kg × 6 回　<span class="detail">詳細 ›</span></span></div></article></div>
+      </main>
+      <button class="start" type="button"><svg class="icon" viewBox="0 0 24 24"><path d="M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12"/></svg>START</button>
+      <nav class="nav" aria-label="メインナビゲーション"><button class="active" type="button">ホーム</button><button type="button">グループ</button><button type="button">履歴</button><button type="button">設定</button></nav>
+    </div>
+    <script>
+      const buttons = document.querySelectorAll('[data-option]');
+      buttons.forEach((button) => button.addEventListener('click', () => { buttons.forEach((item) => item.setAttribute('aria-pressed', String(item === button))); document.querySelectorAll('[data-panel]').forEach((panel) => panel.classList.toggle('active', panel.dataset.panel === button.dataset.option)); }));
+      document.querySelector('#theme').addEventListener('click', (event) => { const dark = document.documentElement.dataset.theme !== 'dark'; document.documentElement.dataset.theme = dark ? 'dark' : ''; event.currentTarget.setAttribute('aria-pressed', String(dark)); event.currentTarget.textContent = dark ? '明色' : '暗色'; });
+    </script>
+  </body>
+</html>

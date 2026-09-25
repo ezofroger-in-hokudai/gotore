@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate } from "./mock-training";
 
+async function openGroupList(page: import("@playwright/test").Page) {
+  await navigate(page, "グループ");
+  const back = page.getByRole("button", { name: "‹ グループ一覧", exact: true });
+  if (await back.count()) await back.click();
+}
+
 test("12桁コードで確認してから参加し、無効コードは再入力できる", async ({ page }) => {
   const state = await mockTraining(page);
   let joins = 0;
@@ -15,7 +21,7 @@ test("12桁コードで確認してから参加し、無効コードは再入力
     joins++;
     return route.fulfill({ json: state.group });
   });
-  await page.getByRole("button", { name: "グループ一覧", exact: true }).click();
+  await openGroupList(page);
   await page.getByRole("button", { name: "招待コードで参加", exact: true }).click();
   await page.getByLabel("招待コード", { exact: true }).fill("000000000000");
   await page.getByRole("button", { name: "グループを確認", exact: true }).click();
@@ -55,7 +61,7 @@ test("作成後は新グループの招待コードを表示する", async ({ pa
   await page.route("**/api/groups/new-group", (route) =>
     route.fulfill({ json: { ...group, members: [] } }),
   );
-  await page.getByRole("button", { name: "グループ一覧", exact: true }).click();
+  await openGroupList(page);
   await page.getByRole("button", { name: "グループを作成", exact: true }).click();
   await page.getByLabel("グループ名", { exact: true }).fill(group.name);
   await page.getByRole("button", { name: "作成する", exact: true }).click();
@@ -67,12 +73,13 @@ test("作成後は新グループの招待コードを表示する", async ({ pa
   await expect(page.getByTestId("invite-code")).toHaveText(group.invite_code);
 });
 
-test("グループ切替中は前の共有記録を隠し、戻ったとき選択を保持する", async ({ page }) => {
+test("上段のグループカードと下段のタイムライン絞り込みを分離する", async ({ page }) => {
   const state = await mockTraining(page);
   const second = { ...state.group, id: "second", name: "大学トレ部" };
   await page.route("**/api/groups", (route) => route.fulfill({ json: [state.group, second] }));
-  const activity = {
+  const firstActivity = {
     group_id: state.group.id,
+    name: state.group.name,
     member_count: 3,
     live_count: 1,
     today_count: 2,
@@ -98,32 +105,81 @@ test("グループ切替中は前の共有記録を隠し、戻ったとき選�
       },
     ],
   };
-  await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
-    route.fulfill({ json: activity }),
-  );
-  await page.route("**/api/groups/activity/summary", (route) => {
-    const { feed, ...summary } = activity;
-    return route.fulfill({ json: [summary, { ...summary, group_id: second.id }] });
+  const secondActivity = {
+    ...firstActivity,
+    group_id: second.id,
+    name: second.name,
+    live_count: 0,
+    today_count: 1,
+    members: [
+      {
+        id: "second-user",
+        display_name: "大学の仲間",
+        live: false,
+        today: true,
+      },
+    ],
+    feed: [
+      {
+        workout_id: "second-record",
+        user_id: "second-user",
+        display_name: "大学の仲間",
+        exercise: "大学グループだけの記録",
+        weight: 100,
+        reps: 5,
+        estimated_rm: 116.7,
+        updated_at: new Date(Date.now() + 1_000).toISOString(),
+        best: false,
+      },
+    ],
+  };
+  await page.route("**/api/groups/today-activity", (route) => {
+    return route.fulfill({ json: { groups: [firstActivity, secondActivity] } });
   });
-  let fail = false;
-  await page.route("**/api/groups/second/activity", (route) =>
-    route.fulfill(
-      fail
-        ? { status: 403, json: { detail: "閲覧できません" } }
-        : { json: { ...activity, group_id: second.id, feed: [] } },
-    ),
-  );
   await page.reload();
-  await expect(page.getByRole("article")).toContainText("最初のグループだけの記録");
+  await expect(page.locator(".feed-item", { hasText: "最初のグループだけの記録" })).toBeVisible();
+  await expect(page.locator(".feed-item", { hasText: "大学グループだけの記録" })).toBeVisible();
+  await expect(page.getByRole("button", { name: `${state.group.name}の詳細` })).toContainText(
+    "2人",
+  );
+  await expect(
+    page.getByRole("button", { name: `${state.group.name}の詳細` }).getByRole("img"),
+  ).toHaveCount(1);
+  const liveAvatar = page
+    .getByRole("button", { name: `${state.group.name}の詳細` })
+    .locator(".person-avatar.is-live");
+  await expect(liveAvatar).toHaveCSS("outline-width", "2px");
+  await expect(liveAvatar).toHaveCSS("border-top-color", "rgb(32, 33, 39)");
+  expect(
+    await page.locator(".home-feed-tabs").evaluate((tabs) => {
+      const first = tabs.firstElementChild?.getBoundingClientRect();
+      const last = tabs.lastElementChild?.getBoundingClientRect();
+      const track = tabs.getBoundingClientRect();
+      return first && last
+        ? Math.abs(first.left - track.left - (track.right - last.right))
+        : Number.POSITIVE_INFINITY;
+    }),
+  ).toBeLessThanOrEqual(1);
+
+  // 上段を動かしても、タイムラインは「すべて」のまま変えない。
   await page.getByRole("button", { name: "大学トレ部を表示", exact: true }).click();
-  await expect(page.getByRole("article")).toHaveCount(0);
-  await navigate(page, "設定");
-  await navigate(page, "ホーム");
   await expect(page.getByRole("button", { name: "大学トレ部を表示", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  await expect(page.getByRole("article")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "すべて", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.locator(".feed-item")).toHaveCount(2);
+
+  // 絞り込みは見出し直下の選択だけで行い、待ち時間や旧表示を挟まない。
+  await page.getByRole("button", { name: "大学トレ部", exact: true }).click();
+  await expect(page.locator(".feed-item")).toHaveCount(1);
+  await expect(page.locator(".feed-item")).toContainText("大学グループだけの記録");
+  await expect(page.locator(".feed-item")).not.toContainText("最初のグループだけの記録");
+  await page.getByRole("button", { name: "すべて", exact: true }).click();
+  await expect(page.locator(".feed-item")).toHaveCount(2);
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -134,10 +190,12 @@ test("グループ切替中は前の共有記録を隠し、戻ったとき選�
       fullPage: true,
     });
   }
-  fail = true;
-  await navigate(page, "設定");
-  await navigate(page, "ホーム");
-  await expect(page.locator(".v2-app").getByRole("alert")).toContainText("閲覧できません");
+});
+
+test("ホームの空状態はみんなのトレーニングを待つ文言にする", async ({ page }) => {
+  await mockTraining(page);
+  await expect(page.getByText("みんなのトレーニングを待っています", { exact: true })).toBeVisible();
+  await expect(page.getByText("まだ記録がありません。", { exact: true })).toHaveCount(0);
 });
 
 test("ブラウザの戻るでシート・グループ詳細を閉じ、記録入力は維持する", async ({ page }) => {
@@ -149,7 +207,7 @@ test("ブラウザの戻るでシート・グループ詳細を閉じ、記録�
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
   await page.goBack();
-  await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "今日の活動", exact: true })).toBeVisible();
   await page.getByRole("button", { name: /の詳細$/ }).click();
   await page.getByRole("button", { name: /^メンバーを招待/ }).click();
   await expect(page.getByTestId("invite-code")).toBeVisible();
@@ -186,7 +244,7 @@ test("一覧で選んだグループを戻る・進むとメンバー・招待�
   await page.getByRole("button", { name: "大学トレ部を表示", exact: true }).click();
   expect(await page.evaluate(() => history.length)).toBe(length);
   await page.getByRole("button", { name: `${state.group.name}を表示`, exact: true }).click();
-  await page.getByRole("button", { name: "グループ一覧", exact: true }).click();
+  await openGroupList(page);
   await page.getByRole("button", { name: "大学トレ部 ›", exact: true }).click();
   await expect(page.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
   await page.goBack();
@@ -221,7 +279,7 @@ test("新しく参加したグループも戻る・進むで復元する", async
   await page.route("**/api/groups/joined", (route) =>
     route.fulfill({ json: { ...joined, members: [] } }),
   );
-  await page.getByRole("button", { name: "グループ一覧", exact: true }).click();
+  await openGroupList(page);
   await page.getByRole("button", { name: "招待コードで参加", exact: true }).click();
   await page.getByLabel("招待コード", { exact: true }).fill("ABCDEF123456");
   await page.getByRole("button", { name: "グループを確認", exact: true }).click();

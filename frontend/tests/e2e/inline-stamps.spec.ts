@@ -41,9 +41,16 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
       json: {
         group_id: state.group.id,
         member_count: 3,
-        live_count: 0,
+        live_count: 1,
         today_count: 1,
-        members: [],
+        members: [
+          {
+            id: record.user_id,
+            display_name: record.display_name,
+            live: true,
+            today: true,
+          },
+        ],
         feed: [
           {
             workout_id: record.id,
@@ -89,48 +96,23 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
   });
   await page.reload();
   const card = page.locator(".feed-item").filter({ hasText: "ミオ" });
-  await expect(card.getByRole("button", { name: "がんばれ 3件", exact: true })).toBeVisible();
+  await expect(card.locator(".inline-stamp-choice")).toHaveCount(6);
+  await expect(card.getByRole("button", { name: "💪スタンプ", exact: true })).toBeVisible();
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
+    expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
     await page.screenshot({ path: `test-results/inline-stamps-${width}.png`, fullPage: true });
-    await card.getByRole("button", { name: "ミオの記録にスタンプを追加" }).click();
-    const picker = page.getByRole("dialog", { name: "スタンプ", exact: true });
-    await expect(picker.locator(".inline-stamp-choice")).toHaveCount(6);
-    expect(await picker.locator(".inline-stamp-picker").innerText()).not.toMatch(
-      /がんばれ|天狗|えらい/,
-    );
-    for (const button of await picker.locator(".inline-stamp-choice").all()) {
-      const box = await button.boundingBox();
-      expect(box?.width).toBeGreaterThanOrEqual(48);
-      expect(box?.height).toBeGreaterThanOrEqual(48);
-    }
-    expect(await picker.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
-      true,
-    );
-    await page.screenshot({
-      path: `test-results/inline-stamps-picker-${width}.png`,
-      fullPage: true,
-    });
-    await picker.getByRole("button", { name: "閉じる", exact: true }).click();
-    await expect(picker).toHaveCount(0);
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await card.getByRole("button", { name: "ミオの記録詳細を開く" }).click();
-  const detail = page.getByRole("dialog");
-  await expect(detail.locator(".record-set")).toHaveCount(3);
-  await detail.getByRole("button", { name: "ミオの記録にスタンプを追加" }).click();
-  const picker = page.getByRole("dialog", { name: "スタンプ", exact: true });
-  await picker.getByRole("button", { name: "天狗", exact: true }).click();
-  await expect(picker).toHaveCount(0);
-  await expect(detail.getByRole("button", { name: "天狗 1件", exact: true })).toHaveAttribute(
+  const date = await card.locator(".record-heading time").boundingBox();
+  const author = await card.locator(".record-author").boundingBox();
+  expect((date?.y ?? Number.POSITIVE_INFINITY) < (author?.y ?? 0)).toBe(true);
+  await card.getByRole("button", { name: "👺スタンプ", exact: true }).click();
+  await expect(card.getByRole("button", { name: "👺スタンプ", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  await expect(detail.getByRole("status", { name: "スタンプを送信中" })).toHaveCount(0);
-  await page.screenshot({ path: "test-results/inline-stamps-detail.png", fullPage: true });
-  await detail.getByRole("button", { name: "閉じる", exact: true }).click();
-  await expect(detail).toHaveCount(0);
-  await expect(card.getByRole("button", { name: "天狗 1件", exact: true })).toBeVisible();
+  await expect(card).toHaveCSS("box-shadow", "none");
   await navigate(page, "設定");
   await page.waitForTimeout(Math.max(0, 10000 - (Date.now() - sentAt)));
   fail = true;
@@ -148,13 +130,13 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
   await expect(outbox).toContainText("送信待ちはありません");
   await outbox.getByRole("button", { name: "閉じる", exact: true }).click();
   await navigate(page, "ホーム");
-  await expect(card.getByRole("button", { name: "天狗 1件", exact: true })).toHaveAttribute(
+  await expect(card.getByRole("button", { name: "👺スタンプ", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
   await card.getByRole("button", { name: "ミオのリアクションの詳細" }).click();
   const people = page.getByRole("dialog", { name: "スタンプ", exact: true });
-  await expect(people).toContainText("タクミ");
+  await expect(people.getByRole("region", { name: "💪スタンプ タクミ" })).toBeVisible();
   await page.screenshot({ path: "test-results/inline-stamps-people.png", fullPage: true });
   await people.getByRole("button", { name: "閉じる", exact: true }).click();
   await page.evaluate(() => {

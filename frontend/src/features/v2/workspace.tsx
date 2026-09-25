@@ -7,7 +7,6 @@ import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { LoadingState } from "../loading/loading-state";
 import { OnboardingGuide } from "../onboarding/onboarding-guide";
 import { SessionScreen } from "../session/session-screen";
-import { TrainingOverview } from "../session/training-overview";
 import { useSession } from "../session/use-session";
 import { WorkoutResult } from "../session/workout-result";
 import { StampProvider } from "../stamps/stamp-provider";
@@ -16,6 +15,7 @@ import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
 import { CommunityHome, CommunityScreen } from "./community";
+import { FloatingTraining } from "./floating-training";
 import { GroupOrderSheet } from "./group-order-sheet";
 import { History } from "./history";
 import { GROUP_REFRESH_MS } from "./refresh-interval";
@@ -226,28 +226,6 @@ function WorkspaceContent({ session }: { session: Session }) {
             }}
             refreshKey={refreshKey}
             active={view === "home"}
-            trainingAction={
-              <section className="home-training" aria-label="トレーニングの状況">
-                {training.session && (
-                  <p className="muted">
-                    {training.session.exercises.reduce(
-                      (count, exercise) => count + exercise.sets.length,
-                      0,
-                    )}
-                    セット
-                  </p>
-                )}
-                {!resumable && (
-                  <details className="home-review">
-                    <summary>前回を振り返る</summary>
-                    <TrainingOverview
-                      resource={recentRecords}
-                      onHistory={() => navigate("history")}
-                    />
-                  </details>
-                )}
-              </section>
-            }
           />
         </div>
         <div hidden={view !== "record"}>
@@ -386,17 +364,12 @@ function WorkspaceContent({ session }: { session: Session }) {
         )}
       </main>
       {primaryView && (
-        <button
-          type="button"
-          className="floating-training"
-          data-testid="floating-training"
-          data-tour="start"
-          aria-label={resumable ? "トレーニングを再開" : "トレーニングを開始"}
+        <FloatingTraining
+          userId={session.user.id}
+          resumable={resumable}
           disabled={!canStart}
-          onClick={startOrResume}
-        >
-          {resumable ? "RESUME" : "START"}
-        </button>
+          onActivate={startOrResume}
+        />
       )}
       {orderingGroups && (
         <GroupOrderSheet

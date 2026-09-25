@@ -114,7 +114,7 @@ export type GroupSummary = {
 };
 export type GroupActivity = GroupSummary & {
   feed: {
-    summary?: { exercise_count: number; set_count: number };
+    summary?: { exercise_count: number; set_count: number; total_volume?: number };
     score?: ScoreSummary | null;
     workout_id: string;
     user_id: string;

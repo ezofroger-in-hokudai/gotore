@@ -3,16 +3,10 @@ import {
   type GroupActivity,
   type GroupDetail,
   type GroupSummary,
+  type TodayActivity,
   api,
 } from "@/lib/api";
-import {
-  type CSSProperties,
-  type ReactNode,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { LoadingState } from "../loading/loading-state";
 import { StampInboxButton } from "../stamps/inbox";
 import { StampControl } from "../stamps/stamp-control";
@@ -20,15 +14,16 @@ import { BestFlame } from "../training/best-flame";
 import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
 import { MembershipPanel } from "../training/membership-panel";
+import { RecordList } from "../training/record-list";
 import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { HistoryBrowser } from "./history-browser";
+import { buildHomeFeed } from "./home-feed";
 import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
-import { GROUP_REFRESH_MS, activityRefreshMs, summaryRefreshMs } from "./refresh-interval";
+import { GROUP_REFRESH_MS, activityRefreshMs, todayActivityRefreshMs } from "./refresh-interval";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
-import { useGroupActivity } from "./use-group-activity";
 import { useGroupCardDrag } from "./use-group-card-drag";
 import { useGroupLongPress } from "./use-group-long-press";
 import { useSharedWorkoutDetails } from "./use-shared-workout-details";
@@ -44,7 +39,6 @@ export function CommunityHome({
   active,
   loading = false,
   failed = false,
-  trainingAction,
   onReady,
 }: {
   groups: Group[];
@@ -57,17 +51,22 @@ export function CommunityHome({
   active: boolean;
   loading?: boolean;
   failed?: boolean;
-  trainingAction?: ReactNode;
   onReady?: (ready: boolean) => void;
 }) {
   const carousel = useRef<HTMLDivElement>(null);
+  const [visibleGroup, setVisibleGroup] = useState(selected || groups[0]?.id || "");
+  const [feedScope, setFeedScope] = useState("all");
+  useEffect(() => {
+    if (!groups.some((group) => group.id === visibleGroup)) setVisibleGroup(groups[0]?.id || "");
+    if (feedScope !== "all" && !groups.some((group) => group.id === feedScope)) setFeedScope("all");
+  }, [groups, visibleGroup, feedScope]);
   const cardDrag = useGroupCardDrag({
     carousel,
     groups,
-    selected,
+    selected: visibleGroup,
     active,
     onSave: onOrder,
-    onSelect,
+    onSelect: setVisibleGroup,
     onOpen: (id) => {
       onSelect(id);
       onDetail();
@@ -87,25 +86,20 @@ export function CommunityHome({
     if (restored.current === groupIds || !carousel.current || !groups.length) return;
     const index = Math.max(
       0,
-      groups.findIndex((group) => group.id === selected),
+      groups.findIndex((group) => group.id === visibleGroup),
     );
     const card = carousel.current.children[index] as HTMLElement | undefined;
     if (card) carousel.current.scrollLeft = card.offsetLeft;
     restored.current = groupIds;
-  }, [groups, groupIds, selected, active, cardDrag.drag]);
-  const activity = useGroupActivity(groups, selected, active, refreshKey);
-  const summaries = useResource<GroupSummary[]>(
-    "/groups/activity/summary",
+  }, [groups, groupIds, visibleGroup, active, cardDrag.drag]);
+  const today = useResource<TodayActivity>(
+    "/groups/today-activity",
     refreshKey,
-    summaryRefreshMs,
+    todayActivityRefreshMs,
     true,
-    { enabled: active && groups.length > 1 },
+    { enabled: active && groups.length > 0, retainOnRefresh: true },
   );
-  const ready =
-    !loading &&
-    (!groups.length ||
-      ((!!activity.data || !!activity.error) &&
-        (groups.length < 2 || summaries.data !== null || !!summaries.error)));
+  const ready = !loading && (!groups.length || today.data !== null || !!today.error);
   useEffect(() => {
     onReady?.(ready || failed);
   }, [ready, failed, onReady]);
@@ -117,18 +111,12 @@ export function CommunityHome({
         left: element.offsetLeft,
         behavior: "instant",
       });
-    onSelect(groups[index].id);
+    setVisibleGroup(groups[index].id);
   }
+  const homeFeed = useMemo(() => buildHomeFeed(today.data, feedScope), [today.data, feedScope]);
   return (
     <>
-      <div className="section-heading">
-        <h1>ホーム</h1>
-        <button className="text-button" type="button" onClick={onGroups}>
-          グループ一覧
-        </button>
-      </div>
-      <StampInboxButton groupId={selected || undefined} active={active} />
-      {trainingAction}
+      <HomeSummary data={today.data} />
       {loading ? (
         <>
           <div
@@ -150,12 +138,14 @@ export function CommunityHome({
           )}
         </>
       ) : !groups.length ? (
-        <div className="panel empty-community">
-          <h2>グループはありません</h2>
-          <button className="primary full" type="button" onClick={onGroups}>
-            作成・参加
-          </button>
-        </div>
+        <>
+          <div className="panel empty-community">
+            <h2>グループはありません</h2>
+            <button className="primary full" type="button" onClick={onGroups}>
+              作成・参加
+            </button>
+          </div>
+        </>
       ) : (
         <>
           <div
@@ -170,7 +160,7 @@ export function CommunityHome({
                 groups.length - 1,
                 Math.max(0, Math.round(element.scrollLeft / width)),
               );
-              if (groups[index].id !== selected) onSelect(groups[index].id);
+              if (groups[index].id !== visibleGroup) setVisibleGroup(groups[index].id);
             }}
           >
             {groups.map((group, index) => (
@@ -179,14 +169,8 @@ export function CommunityHome({
                 group={group}
                 dragging={cardDrag.drag?.id === group.id}
                 style={cardDrag.style(group.id, index)}
-                active={active}
-                data={
-                  group.id === selected
-                    ? activity.data
-                    : (summaries.data?.find((item) => item.group_id === group.id) ?? null)
-                }
-                error={group.id === selected ? activity.error : summaries.error}
-                refreshing={group.id === selected ? activity.refreshing : summaries.refreshing}
+                data={today.data?.groups.find((item) => item.group_id === group.id) ?? null}
+                error={today.error}
                 onClick={() => {
                   onSelect(group.id);
                   onDetail();
@@ -206,34 +190,49 @@ export function CommunityHome({
               {cardDrag.error}
             </p>
           )}
-          {groups.length > 1 && (
-            <ResourceError resource={summaries} retryLabel="グループの状況を再試行" />
-          )}
+          <ResourceError resource={today} retryLabel="今日の活動を再試行" />
           <div className="carousel-dots">
             {groups.map((group, index) => (
               <button
                 key={group.id}
                 type="button"
                 aria-label={`${group.name}を表示`}
-                aria-pressed={selected === group.id}
+                aria-pressed={visibleGroup === group.id}
                 onClick={() => select(index)}
               />
             ))}
           </div>
-          <div className="section-heading">
-            <h2>みんなの最新記録</h2>
-            <span className="muted">{groups.find((group) => group.id === selected)?.name}</span>
+          <div className="section-heading home-timeline-heading">
+            <h2>みんなのトレーニング</h2>
           </div>
-          <ResourceError resource={activity} />
-          {activity.data ? (
+          <div className="home-feed-tabs" aria-label="トレーニングの表示範囲">
+            <button
+              type="button"
+              aria-pressed={feedScope === "all"}
+              onClick={() => setFeedScope("all")}
+            >
+              すべて
+            </button>
+            {groups.map((group) => (
+              <button
+                type="button"
+                key={group.id}
+                aria-pressed={feedScope === group.id}
+                onClick={() => setFeedScope(group.id)}
+              >
+                {group.name}
+              </button>
+            ))}
+          </div>
+          {homeFeed ? (
             <Feed
-              key={activity.data.group_id}
-              data={activity.data}
+              data={homeFeed.activity}
+              groupIds={homeFeed.groupIds}
               active={active}
-              trusted={!activity.refreshing}
+              trusted={!today.refreshing}
             />
-          ) : !activity.error ? (
-            <LoadingState label="グループの記録を読み込み中" />
+          ) : !today.error ? (
+            <LoadingState label="みんなの記録を読み込み中" />
           ) : null}
         </>
       )}
@@ -241,21 +240,65 @@ export function CommunityHome({
   );
 }
 
+function HomeSummary({ data }: { data: TodayActivity | null }) {
+  const groups = data?.groups ?? [];
+  const members = groups.flatMap((group) => group.members);
+  const workouts = new Map(
+    groups.flatMap((group) => group.feed.map((item) => [item.workout_id, item])),
+  );
+  const live = new Set(members.filter((member) => member.live).map((member) => member.id)).size;
+  const todayPeople = new Set(members.filter((member) => member.today).map((member) => member.id))
+    .size;
+  const sets = [...workouts.values()].reduce(
+    (sum, item) => sum + (item.summary?.set_count ?? 0),
+    0,
+  );
+  const volume = [...workouts.values()].reduce(
+    (sum, item) => sum + (item.summary?.total_volume ?? 0),
+    0,
+  );
+  return (
+    <div className="home-summary-block">
+      <p>TODAY</p>
+      <section className="home-summary" aria-label="今日の活動">
+        {[
+          { key: "live", label: "LIVE", value: data ? live : "—", unit: "人" },
+          { key: "people", label: "", value: data ? todayPeople : "—", unit: "人" },
+          { key: "sets", label: "", value: data ? sets : "—", unit: "セット" },
+          {
+            key: "volume",
+            label: "",
+            value: data ? volume.toLocaleString("ja-JP", { maximumFractionDigits: 0 }) : "—",
+            unit: "kg",
+          },
+        ].map(({ key, label, value, unit }, index) => (
+          <div key={key}>
+            <span className={index === 0 ? "home-summary-live" : undefined} aria-hidden={!label}>
+              {index === 0 && <span className="status-dot" />}
+              {label}
+            </span>
+            <strong>
+              {value}
+              <small>{unit}</small>
+            </strong>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
 function GroupCard({
   group,
   data,
   error,
-  refreshing,
-  active,
   onClick,
   dragging,
   style,
 }: {
   group: Group;
-  data: GroupSummary | null;
+  data: GroupActivity | null;
   error: string;
-  refreshing: boolean;
-  active: boolean;
   onClick: () => void;
   dragging: boolean;
   style?: CSSProperties;
@@ -269,14 +312,54 @@ function GroupCard({
       onClick={onClick}
       aria-label={`${group.name}の詳細`}
     >
-      <div className="section-heading">
+      <span className={data?.live_count ? "group-card-live is-live" : "group-card-live"}>
+        <span className="status-dot" />
+        {data ? `${data.live_count}人がトレーニング中` : "状況を確認中"}
+      </span>
+      <div className="section-heading group-card-heading">
         <h2>{group.name}</h2>
         <span>›</span>
       </div>
       {error && <p>{data ? "更新未確認" : "状況を取得できません"}</p>}
-      {error && !data ? null : <CommunityStats data={data} active={active} trusted={!refreshing} />}
-      <span className="community-total">メンバー {data?.member_count ?? "—"}人</span>
+      {error && !data ? null : <GroupCardStats data={data} />}
     </button>
+  );
+}
+
+function GroupCardStats({ data }: { data: GroupActivity | null }) {
+  const feed = data?.feed ?? [];
+  const sets = feed.reduce((sum, item) => sum + (item.summary?.set_count ?? 0), 0);
+  const volume = feed.reduce((sum, item) => sum + (item.summary?.total_volume ?? 0), 0);
+  return (
+    <>
+      <div className="group-card-people">
+        <span className="group-card-avatars">
+          {(data?.members.filter((member) => member.today || member.live) ?? [])
+            .slice(0, 5)
+            .map((member) => (
+              <Avatar
+                key={member.id}
+                userId={member.id}
+                name={member.display_name}
+                version={member.avatar_version}
+                small
+                live={member.live}
+              />
+            ))}
+        </span>
+        <span>{data ? `${data.today_count}人` : "—人"}</span>
+      </div>
+      <div className="group-card-stats">
+        <span>
+          <b>{data ? sets : "—"}</b>
+          <small>セット</small>
+        </span>
+        <span>
+          <b>{data ? volume.toLocaleString("ja-JP", { maximumFractionDigits: 0 }) : "—"}</b>
+          <small>kg</small>
+        </span>
+      </div>
+    </>
   );
 }
 
@@ -342,12 +425,17 @@ function CommunityStats({
 
 function Feed({
   data,
+  groupIds,
   active,
   trusted,
-}: { data: GroupActivity; active: boolean; trusted: boolean }) {
+}: {
+  data: GroupActivity;
+  groupIds?: ReadonlyMap<string, string>;
+  active: boolean;
+  trusted: boolean;
+}) {
   const clock = useLiveClock(data, active, trusted);
-  const [opened, setOpened] = useState<string | null>(null);
-  const details = useSharedWorkoutDetails(data, active && trusted, opened);
+  const details = useSharedWorkoutDetails(data, active && trusted, null, groupIds);
   const previous = useRef<Map<string, string> | null>(null);
   const [arrived, setArrived] = useState<string[]>([]);
   useEffect(() => {
@@ -374,105 +462,106 @@ function Feed({
   return (
     <>
       <div className="community-feed" ref={details.root}>
-        {!data.feed.length && <p className="muted feed-empty">まだ記録がありません。</p>}
+        {!data.feed.length && (
+          <p className="muted feed-empty">みんなのトレーニングを待っています</p>
+        )}
         {data.feed.map((item) => {
           const member = data.members.find((m) => m.id === item.user_id);
           const live = clock.live && !!member && memberIsLive(member, clock.now);
+          const record = details.record(item.workout_id).data;
           return (
-            <article
+            <div
               className={`feed-item${live ? " feed-live" : ""}${arrived.includes(item.user_id) ? " feed-arrived" : ""}`}
-              key={item.user_id}
+              key={item.workout_id}
               data-workout-id={item.workout_id}
             >
-              <div className="section-heading">
-                <div className="feed-person">
-                  <Avatar
-                    userId={item.user_id}
-                    name={item.display_name}
-                    version={member?.avatar_version}
-                    live={live}
-                  />
-                  <div>
-                    <div className="feed-name">
-                      <strong>{item.display_name}</strong>
-                      {live && (
-                        <span className="live-badge" aria-label="トレーニング中">
-                          LIVE
-                        </span>
-                      )}
+              {record ? (
+                <RecordList
+                  records={[record]}
+                  empty=""
+                  compact
+                  headerControl={() => (
+                    <StampControl
+                      active={active}
+                      groupId={groupIds?.get(item.workout_id) ?? data.group_id}
+                      workoutId={item.workout_id}
+                      name={item.display_name}
+                      alwaysVisible
+                    />
+                  )}
+                />
+              ) : (
+                <>
+                  <div className="section-heading">
+                    <div className="feed-person">
+                      <Avatar
+                        userId={item.user_id}
+                        name={item.display_name}
+                        version={member?.avatar_version}
+                        live={live}
+                      />
+                      <div>
+                        <div className="feed-name">
+                          <strong>{item.display_name}</strong>
+                          {live && (
+                            <span className="live-badge" aria-label="トレーニング中">
+                              LIVE
+                            </span>
+                          )}
+                        </div>
+                        <p>{item.exercise}</p>
+                      </div>
                     </div>
-                    <p>{item.exercise}</p>
+                    <time
+                      dateTime={item.updated_at}
+                      title={new Date(item.updated_at).toLocaleString("ja-JP", {
+                        timeZone: "Asia/Tokyo",
+                      })}
+                    >
+                      {relativeTime(item.updated_at, clock.now)}
+                    </time>
                   </div>
-                </div>
-                <time
-                  dateTime={item.updated_at}
-                  title={new Date(item.updated_at).toLocaleString("ja-JP", {
-                    timeZone: "Asia/Tokyo",
-                  })}
-                >
-                  {relativeTime(item.updated_at, clock.now)}
-                </time>
-              </div>
-              <button
-                type="button"
-                className="feed-record-row feed-detail-button"
-                aria-label={`${item.display_name}の記録詳細を開く`}
-                onClick={() => setOpened(item.workout_id)}
-              >
-                {item.summary && (
-                  <span className="feed-summary">
-                    <strong>{item.summary.exercise_count}</strong>種目
-                    <span aria-hidden="true"> · </span>
-                    <strong>{item.summary.set_count}</strong>セット
-                  </span>
-                )}
-                <span className="feed-value">
-                  <span className="feed-measurements">
-                    <strong>
-                      <b className={item.best_weight ? "personal-best-value" : undefined}>
-                        {item.weight}
-                      </b>
-                      <small> kg × </small>
-                      {item.reps}
-                      <small> 回</small>
-                    </strong>
-                    {item.estimated_rm !== null && (
-                      <span className="feed-rm">
-                        RM{" "}
-                        <b className={item.best_rm ? "personal-best-value" : undefined}>
-                          {item.estimated_rm}
-                        </b>
-                        <small> kg</small>
+                  <div className="feed-record-row">
+                    {item.summary && (
+                      <span className="feed-summary">
+                        <strong>{item.summary.exercise_count}</strong>種目
+                        <span aria-hidden="true"> · </span>
+                        <strong>{item.summary.set_count}</strong>セット
                       </span>
                     )}
-                  </span>
-                  {item.best && (
-                    <span className="best-badge record-celebration">
-                      <BestFlame best={{ weight: item.best_weight, rm: item.best_rm }} />
+                    <span className="feed-value">
+                      <span className="feed-measurements">
+                        <strong>
+                          <b className={item.best_weight ? "personal-best-value" : undefined}>
+                            {item.weight}
+                          </b>
+                          <small> kg × </small>
+                          {item.reps}
+                          <small> 回</small>
+                        </strong>
+                        {item.estimated_rm !== null && (
+                          <span className="feed-rm">
+                            RM{" "}
+                            <b className={item.best_rm ? "personal-best-value" : undefined}>
+                              {item.estimated_rm}
+                            </b>
+                            <small> kg</small>
+                          </span>
+                        )}
+                      </span>
+                      {item.best && (
+                        <span className="best-badge record-celebration">
+                          <BestFlame best={{ weight: item.best_weight, rm: item.best_rm }} />
+                        </span>
+                      )}
                     </span>
-                  )}
-                  <span className="feed-detail-hint">詳細</span>
-                </span>
-              </button>
-              <StampControl
-                active={active}
-                key={`${data.group_id}:${item.workout_id}`}
-                groupId={data.group_id}
-                workoutId={item.workout_id}
-                name={item.display_name}
-              />
-            </article>
+                  </div>
+                </>
+              )}
+            </div>
           );
         })}
       </div>
-      {opened && active && (
-        <SharedWorkoutDetail
-          key={`${data.group_id}:${opened}`}
-          record={details}
-          groupId={data.group_id}
-          onClose={() => setOpened(null)}
-        />
-      )}
     </>
   );
 }

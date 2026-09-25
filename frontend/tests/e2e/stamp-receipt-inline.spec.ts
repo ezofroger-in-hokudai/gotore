@@ -140,8 +140,7 @@ for (const width of [320, 390, 430]) {
     await expect(inbox).toContainText("仲間1");
     await inbox.getByRole("button", { name: "閉じる", exact: true }).click();
     await result.getByRole("button", { name: "ホーム", exact: true }).click();
-    const homeSummary = page.locator(".stamp-inbox-summary:visible");
-    await expect(homeSummary.locator(".stamp-live-list button")).toHaveCount(6);
+    await expect(page.locator(".stamp-inbox-summary:visible")).toHaveCount(0);
     await page.screenshot({ path: `test-results/stamp-receipt-home-${width}.png`, fullPage: true });
     await page.getByRole("button", { name: "画面テスト部の詳細", exact: true }).click();
     await expect(page.locator(".stamp-inbox-summary:visible .stamp-live-list button")).toHaveCount(

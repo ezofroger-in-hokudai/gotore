@@ -88,6 +88,7 @@ def test_today_activity_collects_visible_groups_in_one_response(client, connecti
     assert set(groups) == {first["id"], second["id"]}
     assert all(len(item["feed"]) == 1 for item in groups.values())
     assert all(item["feed"][0]["user_id"] == str(USERS["B"]) for item in groups.values())
+    assert all(item["feed"][0]["summary"]["total_volume"] == 640 for item in groups.values())
 
 
 def test_ordinary_feed_does_not_fetch_each_members_private_history(client, connection):
@@ -114,7 +115,8 @@ def test_ordinary_feed_does_not_fetch_each_members_private_history(client, conne
     assert len(activity["feed"]) == 3
     assert all(not item["best"] for item in activity["feed"])
     assert all(
-        item["summary"] == {"exercise_count": 1, "set_count": 1} for item in activity["feed"]
+        item["summary"] == {"exercise_count": 1, "set_count": 1, "total_volume": 640}
+        for item in activity["feed"]
     )
     assert counted.calls <= 4
 

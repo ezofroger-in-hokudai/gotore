@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate, startTraining } from "./mock-training";
 
-test("友達のセットから選んだ記録の全種目・全セットを開き、戻って再取得する", async ({ page }) => {
+test("友達の記録を全種目・全セットで表示し、再読込で共有権限を再確認する", async ({ page }) => {
   const state = await mockTraining(page);
   const record = {
     id: "shared-record",
@@ -12,15 +12,18 @@ test("友達のセットから選んだ記録の全種目・全セットを開�
     created_at: "2026-01-02T01:00:00Z",
     revision: 1,
     exercises: [
-      {
-        name: "ベンチプレス",
-        sets: [
-          { weight: 80, reps: 8 },
-          { weight: 75, reps: 10 },
-        ],
-      },
-      { name: "スクワット", sets: [{ weight: 100, reps: 5 }] },
-    ],
+      ["ベンチプレス", 5, 80],
+      ["インクラインダンベルプレス", 4, 32],
+      ["ラットプルダウン", 5, 70],
+      ["シーテッドロー", 4, 60],
+      ["スクワット", 4, 100],
+    ].map(([name, count, weight]) => ({
+      name: String(name),
+      sets: Array.from({ length: Number(count) }, (_, index) => ({
+        weight: Number(weight) - index * 5,
+        reps: 8 + index,
+      })),
+    })),
   };
   await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
     route.fulfill({
@@ -101,62 +104,63 @@ test("友達のセットから選んだ記録の全種目・全セットを開�
       : route.fulfill({ json: record });
   });
   await page.reload();
-  const open = page.getByRole("button", { name: "友達Aの記録詳細を開く", exact: true });
-  await expect(open).toBeVisible();
+  const card = page.locator(".feed-item").filter({ hasText: "友達A" });
+  await expect(card).toBeVisible();
   await expect.poll(() => reads).toBeGreaterThan(0);
-  await open.click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("2026年1月2日");
-  await expect(dialog.locator(".record-set")).toHaveCount(3);
-  await expect(dialog.locator(".record-details")).toContainText("ベンチプレス");
-  await expect(dialog.locator(".record-details")).toContainText("スクワット");
-  await expect(dialog.getByRole("button", { name: /^(編集|削除|コピー|メモ)$/ })).toHaveCount(0);
-  const addStamp = dialog.getByRole("button", { name: "友達Aの記録にスタンプを追加", exact: true });
-  await expect(addStamp).toBeEnabled();
-  await addStamp.click();
-  const picker = page.getByRole("dialog", { name: "スタンプ", exact: true });
-  await expect(picker.getByRole("button", { name: "えらい", exact: true })).toBeEnabled();
-  await picker.getByRole("button", { name: "えらい", exact: true }).click();
-  await expect(picker.getByRole("button", { name: "えらい", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
+  await expect(card).toContainText("2026年1月2日");
+  await expect(card.locator(".record-set")).toHaveCount(22);
+  await expect(card.locator(".record-details")).toContainText("ベンチプレス");
+  await expect(card.locator(".record-details")).toContainText("スクワット");
+  const details = card.locator(".record-details");
+  await expect(details).toHaveClass(/is-collapsed/);
+  expect(await details.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
+    true,
   );
-  await picker.getByRole("button", { name: "閉じる", exact: true }).click();
-  await dialog.getByRole("button", { name: "友達Aのリアクションの詳細", exact: true }).click();
+  const reveal = card.getByRole("button", { name: "友達Aの全セットを表示" });
+  await expect(reveal).toBeVisible();
+  const cardBox = await card.locator(".record-review").boundingBox();
+  const fadeBox = await reveal.boundingBox();
+  expect(Math.abs((fadeBox?.x ?? 0) - (cardBox?.x ?? 0))).toBeLessThanOrEqual(2);
+  expect(Math.abs((fadeBox?.width ?? 0) - (cardBox?.width ?? 0))).toBeLessThanOrEqual(2);
+  expect(
+    Math.abs(
+      (fadeBox?.y ?? 0) + (fadeBox?.height ?? 0) - ((cardBox?.y ?? 0) + (cardBox?.height ?? 0)),
+    ),
+  ).toBeLessThanOrEqual(2);
+  await details.getByRole("heading", { name: "ベンチプレス", exact: true }).click();
+  await expect(details).not.toHaveClass(/is-collapsed/);
+  await expect(card.getByRole("button", { name: "友達Aの記録を小さく表示" })).toBeAttached();
+  await details.getByRole("heading", { name: "ベンチプレス", exact: true }).click();
+  await expect(details).toHaveClass(/is-collapsed/);
+  await reveal.click();
+  await expect(details).not.toHaveClass(/is-collapsed/);
+  await expect(card.getByRole("button", { name: /^(編集|削除|コピー|メモ)$/ })).toHaveCount(0);
+  await expect(card.locator(".inline-stamp-choice")).toHaveCount(6);
+  await card.getByRole("button", { name: "友達Aのリアクションの詳細", exact: true }).click();
   const stampDetails = page.getByRole("dialog", { name: "スタンプ", exact: true });
   await expect(stampDetails.locator(".stamp-reaction-row")).toHaveCount(1);
   await expect(stampDetails.locator(".stamp-reaction-row").getByRole("img")).toHaveCount(2);
   await stampDetails.getByRole("button", { name: "閉じる", exact: true }).click();
-  await page.goBack();
-  await expect(dialog).toHaveCount(0);
-  await expect(open).toBeVisible();
   const before = reads;
   fail = true;
-  await open.click();
-  await expect(dialog.getByRole("alert")).toContainText("記録を閲覧できません");
-  await expect(dialog.locator(".record-set")).toHaveCount(0);
-  expect(reads).toBeGreaterThan(before);
+  await page.reload();
+  await expect.poll(() => reads).toBeGreaterThan(before);
+  await expect(card.locator(".record-set")).toHaveCount(0);
+  await expect(card).toContainText("スクワット");
   fail = false;
-  await dialog.getByRole("button", { name: "再試行", exact: true }).click();
-  await expect(dialog.locator(".record-set")).toHaveCount(3);
+  await page.reload();
+  await expect.poll(() => reads).toBeGreaterThan(before + 1);
+  await expect(card.locator(".record-set")).toHaveCount(22);
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
-    expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
-      true,
-    );
-    await expect(dialog.getByRole("button", { name: "閉じる", exact: true })).toBeInViewport();
+    expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "test-results/shared-workout-detail.png", fullPage: true });
-  await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
-  await expect(dialog).toHaveCount(0);
   await navigate(page, "設定");
 });
 
-test("詳細の共有権限を再確認し、非表示中と閉じた後は取得せず本人メモも出さない", async ({
-  page,
-}) => {
+test("非表示中と画面移動後は共有記録を取得せず本人メモも出さない", async ({ page }) => {
   await page.clock.install();
   const state = await mockTraining(page);
   await startTraining(page);
@@ -166,17 +170,14 @@ test("詳細の共有権限を再確認し、非表示中と閉じた後は取�
   const record = state.session;
   if (!record) throw new Error("テスト記録が作成されていない");
   let reads = 0;
-  let fail = false;
   await page.route(`**/api/groups/${state.group.id}/workouts/${record.id}`, (route) => {
     reads++;
-    return fail
-      ? route.fulfill({ status: 404, json: { detail: "記録を閲覧できません" } })
-      : route.fulfill({ json: record });
+    return route.fulfill({ json: record });
   });
-  await page.getByRole("button", { name: /の記録詳細を開く$/ }).click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog.locator(".record-set")).toHaveCount(1);
-  await expect(dialog.getByRole("button", { name: /^(編集|削除|コピー|メモ)$/ })).toHaveCount(0);
+  const card = page.locator(".feed-item").filter({ hasText: "画面テスト" });
+  await expect(card.locator(".record-set")).toHaveCount(1);
+  await expect(card.getByRole("button", { name: /^(編集|削除|コピー|メモ)$/ })).toHaveCount(0);
+  await expect.poll(() => reads).toBeGreaterThan(0);
   const before = reads;
   await page.evaluate(() => {
     Object.defineProperty(document, "hidden", { configurable: true, value: true });
@@ -184,18 +185,14 @@ test("詳細の共有権限を再確認し、非表示中と閉じた後は取�
   });
   await page.clock.runFor(10_000);
   expect(reads).toBe(before);
-  fail = true;
   await page.evaluate(() => {
     Object.defineProperty(document, "hidden", { configurable: true, value: false });
     document.dispatchEvent(new Event("visibilitychange"));
   });
-  await expect(dialog.getByRole("alert")).toContainText("記録を閲覧できません");
-  await expect(dialog.locator(".record-set")).toHaveCount(0);
-  fail = false;
   await page.clock.runFor(5000);
-  await expect(dialog.locator(".record-set")).toHaveCount(1);
-  await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
-  const closed = reads;
+  expect(reads).toBe(before);
+  await navigate(page, "設定");
+  const inactive = reads;
   await page.clock.runFor(10_000);
-  expect(reads).toBe(closed);
+  expect(reads).toBe(inactive);
 });
