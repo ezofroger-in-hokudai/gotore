@@ -57,6 +57,10 @@
       .filter-tabs button { position:relative; flex:0 0 auto; min-height:35px; padding:0 1px; border:0; background:transparent; color:#777b84; font-size:11px; }
       .filter-tabs button[aria-pressed="true"] { color:var(--red); font-weight:800; }
       .filter-tabs button[aria-pressed="true"]::after { content:""; position:absolute; right:0; bottom:-1px; left:0; height:3px; border-radius:3px 3px 0 0; background:var(--red); }
+      html.adopted .filter-tabs { gap:6px; margin:0 0 10px; padding:4px; border:0; border-radius:12px; background:var(--track); }
+      html.adopted .filter-tabs button { min-height:35px; padding:0 12px; border-radius:9px; }
+      html.adopted .filter-tabs button[aria-pressed="true"] { background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.05); }
+      html.adopted .filter-tabs button[aria-pressed="true"]::after { content:none; }
       .filter-chips { display:flex; gap:7px; margin:4px -16px 11px; padding:0 16px; overflow-x:auto; scrollbar-width:none; }
       .filter-chips button { flex:0 0 auto; min-height:34px; padding:0 14px; border:1px solid #cfd1d6; border-radius:18px; background:#fff; color:#666b74; font-size:11px; }
       .filter-chips button[aria-pressed="true"] { border-color:var(--ink); background:var(--ink); color:#fff; font-weight:750; }
@@ -157,6 +161,7 @@
     <dialog class="record-dialog"><header class="record-dialog-head"><strong>トレーニング詳細</strong><button type="button">閉じる</button></header><div class="record-dialog-content"></div></dialog>
     <script>
       const params=new URLSearchParams(location.search);
+      if(params.has("adopted"))document.documentElement.classList.add("adopted");
       const isStress=params.has("stress");
       const recordMode=["full","fade","accordion","summary"].includes(params.get("recordMode"))?params.get("recordMode"):"full";
       document.body.dataset.recordMode=recordMode;

@@ -20,6 +20,7 @@ export function useSharedWorkoutDetails(
   activity: GroupActivity,
   active: boolean,
   opened: string | null,
+  groupIds?: ReadonlyMap<string, string>,
 ) {
   const root = useRef<HTMLDivElement>(null);
   const entries = useRef(new Map<string, Entry>());
@@ -157,10 +158,8 @@ export function useSharedWorkoutDetails(
       entries.current.delete(id);
       entries.current.set(id, entry);
       recheck.current.delete(id);
-      void resourceRequest<Workout>(
-        `/groups/${activity.group_id}/workouts/${id}`,
-        controller.signal,
-      )
+      const groupId = groupIds?.get(id) ?? activity.group_id;
+      void resourceRequest<Workout>(`/groups/${groupId}/workouts/${id}`, controller.signal)
         .then((data) => {
           if (!controller.signal.aborted && entries.current.get(id) === entry) {
             entry.data = data;
@@ -181,7 +180,7 @@ export function useSharedWorkoutDetails(
           }
         });
     }
-  }, [activity, active, opened, visible, tick, notify]);
+  }, [activity, active, opened, visible, tick, notify, groupIds]);
 
   const current = opened ? entries.current.get(opened) : undefined;
   function record(id: string) {

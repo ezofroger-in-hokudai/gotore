@@ -6,14 +6,7 @@ import {
   type TodayActivity,
   api,
 } from "@/lib/api";
-import {
-  type CSSProperties,
-  type ReactNode,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { LoadingState } from "../loading/loading-state";
 import { StampInboxButton } from "../stamps/inbox";
 import { StampControl } from "../stamps/stamp-control";
@@ -26,16 +19,11 @@ import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { HistoryBrowser } from "./history-browser";
+import { buildHomeFeed } from "./home-feed";
 import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
-import {
-  GROUP_REFRESH_MS,
-  activityRefreshMs,
-  summaryRefreshMs,
-  todayActivityRefreshMs,
-} from "./refresh-interval";
+import { GROUP_REFRESH_MS, activityRefreshMs, todayActivityRefreshMs } from "./refresh-interval";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
-import { useGroupActivity } from "./use-group-activity";
 import { useGroupCardDrag } from "./use-group-card-drag";
 import { useGroupLongPress } from "./use-group-long-press";
 import { useSharedWorkoutDetails } from "./use-shared-workout-details";
@@ -51,7 +39,6 @@ export function CommunityHome({
   active,
   loading = false,
   failed = false,
-  trainingAction,
   onReady,
 }: {
   groups: Group[];
@@ -64,17 +51,22 @@ export function CommunityHome({
   active: boolean;
   loading?: boolean;
   failed?: boolean;
-  trainingAction?: ReactNode;
   onReady?: (ready: boolean) => void;
 }) {
   const carousel = useRef<HTMLDivElement>(null);
+  const [visibleGroup, setVisibleGroup] = useState(selected || groups[0]?.id || "");
+  const [feedScope, setFeedScope] = useState("all");
+  useEffect(() => {
+    if (!groups.some((group) => group.id === visibleGroup)) setVisibleGroup(groups[0]?.id || "");
+    if (feedScope !== "all" && !groups.some((group) => group.id === feedScope)) setFeedScope("all");
+  }, [groups, visibleGroup, feedScope]);
   const cardDrag = useGroupCardDrag({
     carousel,
     groups,
-    selected,
+    selected: visibleGroup,
     active,
     onSave: onOrder,
-    onSelect,
+    onSelect: setVisibleGroup,
     onOpen: (id) => {
       onSelect(id);
       onDetail();
@@ -94,20 +86,12 @@ export function CommunityHome({
     if (restored.current === groupIds || !carousel.current || !groups.length) return;
     const index = Math.max(
       0,
-      groups.findIndex((group) => group.id === selected),
+      groups.findIndex((group) => group.id === visibleGroup),
     );
     const card = carousel.current.children[index] as HTMLElement | undefined;
     if (card) carousel.current.scrollLeft = card.offsetLeft;
     restored.current = groupIds;
-  }, [groups, groupIds, selected, active, cardDrag.drag]);
-  const activity = useGroupActivity(groups, selected, active, refreshKey);
-  const summaries = useResource<GroupSummary[]>(
-    "/groups/activity/summary",
-    refreshKey,
-    summaryRefreshMs,
-    true,
-    { enabled: active && groups.length > 1 },
-  );
+  }, [groups, groupIds, visibleGroup, active, cardDrag.drag]);
   const today = useResource<TodayActivity>(
     "/groups/today-activity",
     refreshKey,
@@ -115,11 +99,7 @@ export function CommunityHome({
     true,
     { enabled: active && groups.length > 0, retainOnRefresh: true },
   );
-  const ready =
-    !loading &&
-    (!groups.length ||
-      ((!!activity.data || !!activity.error) &&
-        (groups.length < 2 || summaries.data !== null || !!summaries.error)));
+  const ready = !loading && (!groups.length || today.data !== null || !!today.error);
   useEffect(() => {
     onReady?.(ready || failed);
   }, [ready, failed, onReady]);
@@ -131,8 +111,9 @@ export function CommunityHome({
         left: element.offsetLeft,
         behavior: "instant",
       });
-    onSelect(groups[index].id);
+    setVisibleGroup(groups[index].id);
   }
+  const homeFeed = useMemo(() => buildHomeFeed(today.data, feedScope), [today.data, feedScope]);
   return (
     <>
       <HomeSummary data={today.data} />
@@ -155,8 +136,6 @@ export function CommunityHome({
           ) : (
             <LoadingState label="グループを読み込み中" />
           )}
-          <StampInboxButton groupId={selected || undefined} active={active} />
-          {trainingAction}
         </>
       ) : !groups.length ? (
         <>
@@ -166,7 +145,6 @@ export function CommunityHome({
               作成・参加
             </button>
           </div>
-          {trainingAction}
         </>
       ) : (
         <>
@@ -182,7 +160,7 @@ export function CommunityHome({
                 groups.length - 1,
                 Math.max(0, Math.round(element.scrollLeft / width)),
               );
-              if (groups[index].id !== selected) onSelect(groups[index].id);
+              if (groups[index].id !== visibleGroup) setVisibleGroup(groups[index].id);
             }}
           >
             {groups.map((group, index) => (
@@ -191,13 +169,8 @@ export function CommunityHome({
                 group={group}
                 dragging={cardDrag.drag?.id === group.id}
                 style={cardDrag.style(group.id, index)}
-                data={
-                  today.data?.groups.find((item) => item.group_id === group.id) ??
-                  (group.id === selected
-                    ? activity.data
-                    : (summaries.data?.find((item) => item.group_id === group.id) ?? null))
-                }
-                error={group.id === selected ? activity.error : summaries.error}
+                data={today.data?.groups.find((item) => item.group_id === group.id) ?? null}
+                error={today.error}
                 onClick={() => {
                   onSelect(group.id);
                   onDetail();
@@ -217,37 +190,50 @@ export function CommunityHome({
               {cardDrag.error}
             </p>
           )}
-          {groups.length > 1 && (
-            <ResourceError resource={summaries} retryLabel="グループの状況を再試行" />
-          )}
+          <ResourceError resource={today} retryLabel="今日の活動を再試行" />
           <div className="carousel-dots">
             {groups.map((group, index) => (
               <button
                 key={group.id}
                 type="button"
                 aria-label={`${group.name}を表示`}
-                aria-pressed={selected === group.id}
+                aria-pressed={visibleGroup === group.id}
                 onClick={() => select(index)}
               />
             ))}
           </div>
           <div className="section-heading home-timeline-heading">
             <h2>みんなのトレーニング</h2>
-            <span className="muted">{groups.find((group) => group.id === selected)?.name}</span>
           </div>
-          <ResourceError resource={activity} />
-          {activity.data ? (
+          <div className="home-feed-tabs" aria-label="トレーニングの表示範囲">
+            <button
+              type="button"
+              aria-pressed={feedScope === "all"}
+              onClick={() => setFeedScope("all")}
+            >
+              すべて
+            </button>
+            {groups.map((group) => (
+              <button
+                type="button"
+                key={group.id}
+                aria-pressed={feedScope === group.id}
+                onClick={() => setFeedScope(group.id)}
+              >
+                {group.name}
+              </button>
+            ))}
+          </div>
+          {homeFeed ? (
             <Feed
-              key={activity.data.group_id}
-              data={activity.data}
+              data={homeFeed.activity}
+              groupIds={homeFeed.groupIds}
               active={active}
-              trusted={!activity.refreshing}
+              trusted={!today.refreshing}
             />
-          ) : !activity.error ? (
-            <LoadingState label="グループの記録を読み込み中" />
+          ) : !today.error ? (
+            <LoadingState label="みんなの記録を読み込み中" />
           ) : null}
-          <StampInboxButton groupId={selected || undefined} active={active} />
-          {trainingAction}
         </>
       )}
     </>
@@ -272,25 +258,33 @@ function HomeSummary({ data }: { data: TodayActivity | null }) {
     0,
   );
   return (
-    <section className="home-summary" aria-label="今日の活動">
-      {[
-        ["LIVE", data ? live : "—", "人"],
-        ["今日", data ? todayPeople : "—", "人"],
-        ["セット", data ? sets : "—", ""],
-        ["総負荷", data ? volume.toLocaleString("ja-JP", { maximumFractionDigits: 0 }) : "—", "kg"],
-      ].map(([label, value, unit], index) => (
-        <div key={label}>
-          <span className={index === 0 ? "home-summary-live" : undefined}>
-            {index === 0 && <span className="status-dot" />}
-            {label}
-          </span>
-          <strong>
-            {value}
-            <small>{unit}</small>
-          </strong>
-        </div>
-      ))}
-    </section>
+    <div className="home-summary-block">
+      <p>TODAY</p>
+      <section className="home-summary" aria-label="今日の活動">
+        {[
+          { key: "live", label: "LIVE", value: data ? live : "—", unit: "人" },
+          { key: "people", label: "", value: data ? todayPeople : "—", unit: "人" },
+          { key: "sets", label: "", value: data ? sets : "—", unit: "セット" },
+          {
+            key: "volume",
+            label: "",
+            value: data ? volume.toLocaleString("ja-JP", { maximumFractionDigits: 0 }) : "—",
+            unit: "kg",
+          },
+        ].map(({ key, label, value, unit }, index) => (
+          <div key={key}>
+            <span className={index === 0 ? "home-summary-live" : undefined} aria-hidden={!label}>
+              {index === 0 && <span className="status-dot" />}
+              {label}
+            </span>
+            <strong>
+              {value}
+              <small>{unit}</small>
+            </strong>
+          </div>
+        ))}
+      </section>
+    </div>
   );
 }
 
@@ -303,7 +297,7 @@ function GroupCard({
   style,
 }: {
   group: Group;
-  data: GroupSummary | null;
+  data: GroupActivity | null;
   error: string;
   onClick: () => void;
   dragging: boolean;
@@ -322,7 +316,7 @@ function GroupCard({
         <span className="status-dot" />
         {data ? `${data.live_count}人がトレーニング中` : "状況を確認中"}
       </span>
-      <div className="section-heading">
+      <div className="section-heading group-card-heading">
         <h2>{group.name}</h2>
         <span>›</span>
       </div>
@@ -332,29 +326,40 @@ function GroupCard({
   );
 }
 
-function GroupCardStats({
-  data,
-}: {
-  data: GroupSummary | GroupActivity | null;
-}) {
-  const feed = data && "feed" in data ? data.feed : [];
+function GroupCardStats({ data }: { data: GroupActivity | null }) {
+  const feed = data?.feed ?? [];
   const sets = feed.reduce((sum, item) => sum + (item.summary?.set_count ?? 0), 0);
   const volume = feed.reduce((sum, item) => sum + (item.summary?.total_volume ?? 0), 0);
   return (
-    <div className="group-card-stats">
-      <span>
-        セット <b>{data && "feed" in data ? sets : "—"}</b>
-      </span>
-      <span>
-        総負荷{" "}
-        <b>
-          {data && "feed" in data
-            ? volume.toLocaleString("ja-JP", { maximumFractionDigits: 0 })
-            : "—"}
+    <>
+      <div className="group-card-people">
+        <span className="group-card-avatars">
+          {(data?.members.filter((member) => member.today || member.live) ?? [])
+            .slice(0, 5)
+            .map((member) => (
+              <Avatar
+                key={member.id}
+                userId={member.id}
+                name={member.display_name}
+                version={member.avatar_version}
+                small
+                live={member.live}
+              />
+            ))}
+        </span>
+        <span>{data ? `${data.today_count}人` : "—人"}</span>
+      </div>
+      <div className="group-card-stats">
+        <span>
+          <b>{data ? sets : "—"}</b>
+          <small>セット</small>
+        </span>
+        <span>
+          <b>{data ? volume.toLocaleString("ja-JP", { maximumFractionDigits: 0 }) : "—"}</b>
           <small>kg</small>
-        </b>
-      </span>
-    </div>
+        </span>
+      </div>
+    </>
   );
 }
 
@@ -420,11 +425,17 @@ function CommunityStats({
 
 function Feed({
   data,
+  groupIds,
   active,
   trusted,
-}: { data: GroupActivity; active: boolean; trusted: boolean }) {
+}: {
+  data: GroupActivity;
+  groupIds?: ReadonlyMap<string, string>;
+  active: boolean;
+  trusted: boolean;
+}) {
   const clock = useLiveClock(data, active, trusted);
-  const details = useSharedWorkoutDetails(data, active && trusted, null);
+  const details = useSharedWorkoutDetails(data, active && trusted, null, groupIds);
   const previous = useRef<Map<string, string> | null>(null);
   const [arrived, setArrived] = useState<string[]>([]);
   useEffect(() => {
@@ -470,7 +481,7 @@ function Feed({
                   headerControl={() => (
                     <StampControl
                       active={active}
-                      groupId={data.group_id}
+                      groupId={groupIds?.get(item.workout_id) ?? data.group_id}
                       workoutId={item.workout_id}
                       name={item.display_name}
                       alwaysVisible

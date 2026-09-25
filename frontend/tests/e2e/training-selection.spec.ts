@@ -51,7 +51,8 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
   await expect(page.getByRole("button", { name: /^ベンチプレス/ })).toHaveCount(0);
   const selectedPart = page.getByRole("button", { name: "脚", exact: true });
   await expect(selectedPart).toHaveCSS("border-top-style", "solid");
-  await expect(selectedPart).toHaveCSS("background-color", "rgb(255, 245, 245)");
+  await expect(selectedPart).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(selectedPart).toHaveCSS("box-shadow", /rgba?\(0, 0, 0/);
   await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).click();
   const addSheet = page.getByRole("dialog", { name: "種目を追加", exact: true });
   await expect(addSheet.getByLabel("新しい種目", { exact: true })).toBeVisible();

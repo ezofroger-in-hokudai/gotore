@@ -75,13 +75,11 @@ for (const width of [320, 390, 430]) {
   });
 }
 
-test("入力フォーカスとSheet表示中はフローティング開始を隠し、振り返りへ進める", async ({
-  page,
-}) => {
+test("ホームは仲間の記録に絞り、入力フォーカスとSheet表示中は開始を隠す", async ({ page }) => {
   await mockTraining(page);
   const floating = page.getByTestId("floating-training");
-  await page.getByText("前回を振り返る", { exact: true }).click();
-  await expect(page.getByRole("region", { name: "これまでのトレーニング" })).toBeVisible();
+  await expect(page.getByText("前回を振り返る", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: /届いたスタンプ/ })).toHaveCount(0);
   await navigate(page, "設定");
   await page.getByRole("button", { name: /^表示名/ }).click();
   await page.getByRole("textbox", { name: "表示名", exact: true }).focus();

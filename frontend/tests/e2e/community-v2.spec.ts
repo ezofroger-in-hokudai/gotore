@@ -73,12 +73,13 @@ test("作成後は新グループの招待コードを表示する", async ({ pa
   await expect(page.getByTestId("invite-code")).toHaveText(group.invite_code);
 });
 
-test("グループ切替中は前の共有記録を隠し、戻ったとき選択を保持する", async ({ page }) => {
+test("上段のグループカードと下段のタイムライン絞り込みを分離する", async ({ page }) => {
   const state = await mockTraining(page);
   const second = { ...state.group, id: "second", name: "大学トレ部" };
   await page.route("**/api/groups", (route) => route.fulfill({ json: [state.group, second] }));
-  const activity = {
+  const firstActivity = {
     group_id: state.group.id,
+    name: state.group.name,
     member_count: 3,
     live_count: 1,
     today_count: 2,
@@ -104,32 +105,66 @@ test("グループ切替中は前の共有記録を隠し、戻ったとき選�
       },
     ],
   };
-  await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
-    route.fulfill({ json: activity }),
-  );
-  await page.route("**/api/groups/activity/summary", (route) => {
-    const { feed, ...summary } = activity;
-    return route.fulfill({ json: [summary, { ...summary, group_id: second.id }] });
+  const secondActivity = {
+    ...firstActivity,
+    group_id: second.id,
+    name: second.name,
+    live_count: 0,
+    today_count: 1,
+    members: [
+      {
+        id: "second-user",
+        display_name: "大学の仲間",
+        live: false,
+        today: true,
+      },
+    ],
+    feed: [
+      {
+        workout_id: "second-record",
+        user_id: "second-user",
+        display_name: "大学の仲間",
+        exercise: "大学グループだけの記録",
+        weight: 100,
+        reps: 5,
+        estimated_rm: 116.7,
+        updated_at: new Date(Date.now() + 1_000).toISOString(),
+        best: false,
+      },
+    ],
+  };
+  await page.route("**/api/groups/today-activity", (route) => {
+    return route.fulfill({ json: { groups: [firstActivity, secondActivity] } });
   });
-  let fail = false;
-  await page.route("**/api/groups/second/activity", (route) =>
-    route.fulfill(
-      fail
-        ? { status: 403, json: { detail: "閲覧できません" } }
-        : { json: { ...activity, group_id: second.id, feed: [] } },
-    ),
-  );
   await page.reload();
-  await expect(page.locator(".feed-item")).toContainText("最初のグループだけの記録");
+  await expect(page.locator(".feed-item", { hasText: "最初のグループだけの記録" })).toBeVisible();
+  await expect(page.locator(".feed-item", { hasText: "大学グループだけの記録" })).toBeVisible();
+  await expect(page.getByRole("button", { name: `${state.group.name}の詳細` })).toContainText(
+    "2人",
+  );
+  await expect(
+    page.getByRole("button", { name: `${state.group.name}の詳細` }).getByRole("img"),
+  ).toHaveCount(1);
+
+  // 上段を動かしても、タイムラインは「すべて」のまま変えない。
   await page.getByRole("button", { name: "大学トレ部を表示", exact: true }).click();
-  await expect(page.locator(".feed-item")).toHaveCount(0);
-  await navigate(page, "設定");
-  await navigate(page, "ホーム");
   await expect(page.getByRole("button", { name: "大学トレ部を表示", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  await expect(page.locator(".feed-item")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "すべて", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.locator(".feed-item")).toHaveCount(2);
+
+  // 絞り込みは見出し直下の選択だけで行い、待ち時間や旧表示を挟まない。
+  await page.getByRole("button", { name: "大学トレ部", exact: true }).click();
+  await expect(page.locator(".feed-item")).toHaveCount(1);
+  await expect(page.locator(".feed-item")).toContainText("大学グループだけの記録");
+  await expect(page.locator(".feed-item")).not.toContainText("最初のグループだけの記録");
+  await page.getByRole("button", { name: "すべて", exact: true }).click();
+  await expect(page.locator(".feed-item")).toHaveCount(2);
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -140,10 +175,6 @@ test("グループ切替中は前の共有記録を隠し、戻ったとき選�
       fullPage: true,
     });
   }
-  fail = true;
-  await navigate(page, "設定");
-  await navigate(page, "ホーム");
-  await expect(page.locator(".v2-app").getByRole("alert")).toContainText("閲覧できません");
 });
 
 test("ブラウザの戻るでシート・グループ詳細を閉じ、記録入力は維持する", async ({ page }) => {

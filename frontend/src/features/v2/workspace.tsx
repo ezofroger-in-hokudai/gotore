@@ -7,7 +7,6 @@ import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { LoadingState } from "../loading/loading-state";
 import { OnboardingGuide } from "../onboarding/onboarding-guide";
 import { SessionScreen } from "../session/session-screen";
-import { TrainingOverview } from "../session/training-overview";
 import { useSession } from "../session/use-session";
 import { WorkoutResult } from "../session/workout-result";
 import { StampProvider } from "../stamps/stamp-provider";
@@ -227,28 +226,6 @@ function WorkspaceContent({ session }: { session: Session }) {
             }}
             refreshKey={refreshKey}
             active={view === "home"}
-            trainingAction={
-              <section className="home-training" aria-label="トレーニングの状況">
-                {training.session && (
-                  <p className="muted">
-                    {training.session.exercises.reduce(
-                      (count, exercise) => count + exercise.sets.length,
-                      0,
-                    )}
-                    セット
-                  </p>
-                )}
-                {!resumable && (
-                  <details className="home-review">
-                    <summary>前回を振り返る</summary>
-                    <TrainingOverview
-                      resource={recentRecords}
-                      onHistory={() => navigate("history")}
-                    />
-                  </details>
-                )}
-              </section>
-            }
           />
         </div>
         <div hidden={view !== "record"}>
