@@ -65,7 +65,7 @@ test("開始前の振り返りと履歴は先読みを共用し、取得待ち�
     await expect.poll(() => reads).toBe(2);
     await openTraining(page);
     await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toBeVisible();
+    await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
   } finally {
     release();
   }

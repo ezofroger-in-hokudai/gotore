@@ -27,7 +27,8 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
   await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
 
-  await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toBeVisible();
+  await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
+  await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toHaveCount(0);
   const centeredExercise = page.getByRole("button", { name: /^ベンチプレス/ });
   expect(
     await centeredExercise.evaluate((button) => {

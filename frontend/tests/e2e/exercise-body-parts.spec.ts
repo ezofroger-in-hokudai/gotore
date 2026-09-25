@@ -159,7 +159,7 @@ test("今回の種目に戻れて、未保存入力の保護と削除済み種�
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   page.once("dialog", (dialog) => dialog.dismiss());
   await page.getByRole("button", { name: "記録に戻る：ベンチプレス", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toBeVisible();
+  await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
   await page
     .locator(".exercise-picker-list")
     .getByRole("button", { name: /^スクワット/ })

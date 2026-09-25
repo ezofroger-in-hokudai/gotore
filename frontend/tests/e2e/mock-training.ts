@@ -200,6 +200,15 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
               ? [
                   {
                     workout_id: latest.id,
+                    summary: {
+                      exercise_count: latest.exercises.length,
+                      set_count: latest.exercises.reduce((sum, item) => sum + item.sets.length, 0),
+                      total_volume: latest.exercises.reduce(
+                        (sum, item) =>
+                          sum + item.sets.reduce((value, set) => value + set.weight * set.reps, 0),
+                        0,
+                      ),
+                    },
                     score: latest.score,
                     user_id: user.id,
                     display_name: user.user_metadata.display_name,
@@ -215,6 +224,33 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
       });
     }
     if (path === "/api/groups/today-activity") {
+      const latest = state.session?.exercises.length ? state.session : state.finished.at(-1);
+      const exercise = latest?.exercises.at(-1);
+      const value = exercise?.sets.at(-1);
+      const feed =
+        value && latest && exercise
+          ? [
+              {
+                workout_id: latest.id,
+                summary: {
+                  exercise_count: latest.exercises.length,
+                  set_count: latest.exercises.reduce((sum, item) => sum + item.sets.length, 0),
+                  total_volume: latest.exercises.reduce(
+                    (sum, item) =>
+                      sum + item.sets.reduce((total, set) => total + set.weight * set.reps, 0),
+                    0,
+                  ),
+                },
+                user_id: user.id,
+                display_name: user.user_metadata.display_name,
+                exercise: exercise.name,
+                ...value,
+                estimated_rm: null,
+                updated_at: latest.created_at,
+                best: false,
+              },
+            ]
+          : [];
       return route.fulfill({
         json: {
           groups: [
@@ -222,14 +258,30 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
               group_id: group.id,
               name: group.name,
               member_count: 1,
-              live_count: 0,
-              today_count: 0,
-              members: [],
-              feed: [],
+              live_count: state.session ? 1 : 0,
+              today_count: latest ? 1 : 0,
+              members: latest
+                ? [
+                    {
+                      id: user.id,
+                      display_name: user.user_metadata.display_name,
+                      live: !!state.session,
+                      today: true,
+                    },
+                  ]
+                : [],
+              feed,
             },
           ],
         },
       });
+    }
+    if (path.startsWith(`/api/groups/${group.id}/workouts/`)) {
+      const id = path.split("/").at(-1);
+      const workout = [state.session, ...state.finished].find((item) => item?.id === id);
+      return workout
+        ? route.fulfill({ json: { ...workout, best_sets: [], shared_group_ids: [group.id] } })
+        : route.fulfill({ status: 404, json: { detail: "記録が見つかりません" } });
     }
     if (path === "/api/groups/preview")
       return route.fulfill({ json: { ...group, member_count: 1, already_member: false } });

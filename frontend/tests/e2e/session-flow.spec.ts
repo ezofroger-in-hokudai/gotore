@@ -75,7 +75,7 @@ test("次の種目以外の入口で選択画面へ移っても入力を端末�
     .getByRole("heading", { name: "ベンチプレス", exact: true })
     .getByRole("button")
     .click();
-  await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toBeVisible();
+  await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
   const stored = await page.evaluate(
     ({ userId, sessionId }) => {
       return localStorage.getItem(`gotore:session-input:v2:${userId}:${sessionId}`);

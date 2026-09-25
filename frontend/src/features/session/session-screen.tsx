@@ -372,7 +372,9 @@ function ActiveTraining({
       {selecting ? (
         <>
           <div className="section-heading selection-heading session-header">
-            <h1>種目を選択</h1>
+            <span className="session-wordmark">
+              E-GO<span>TORE</span>
+            </span>
             <button
               type="button"
               className="text-button finish-training"
@@ -521,16 +523,9 @@ function ActiveTraining({
         <>
           <div className="session-context">
             <header className="recording-header session-header">
-              <h1>
-                <button
-                  className="exercise-information"
-                  type="button"
-                  disabled={blocking}
-                  onClick={openExerciseSelection}
-                >
-                  {input.name}
-                </button>
-              </h1>
+              <span className="session-wordmark">
+                E-GO<span>TORE</span>
+              </span>
               <button
                 type="button"
                 className="text-button finish-training"
@@ -540,6 +535,14 @@ function ActiveTraining({
                 トレーニング終了
               </button>
             </header>
+            <button
+              className="exercise-information recording-exercise-title"
+              type="button"
+              disabled={blocking}
+              onClick={openExerciseSelection}
+            >
+              {input.name}
+            </button>
             <section className="recording-memos memo-plain memo-inline-row" aria-label="種目メモ">
               <span className="memo-caption">種目メモ：</span>
               {context.data ? (

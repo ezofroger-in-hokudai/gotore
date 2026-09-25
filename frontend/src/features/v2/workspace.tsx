@@ -16,6 +16,7 @@ import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
 import { CommunityHome, CommunityScreen } from "./community";
+import { FloatingTraining } from "./floating-training";
 import { GroupOrderSheet } from "./group-order-sheet";
 import { History } from "./history";
 import { GROUP_REFRESH_MS } from "./refresh-interval";
@@ -386,17 +387,12 @@ function WorkspaceContent({ session }: { session: Session }) {
         )}
       </main>
       {primaryView && (
-        <button
-          type="button"
-          className="floating-training"
-          data-testid="floating-training"
-          data-tour="start"
-          aria-label={resumable ? "トレーニングを再開" : "トレーニングを開始"}
+        <FloatingTraining
+          userId={session.user.id}
+          resumable={resumable}
           disabled={!canStart}
-          onClick={startOrResume}
-        >
-          {resumable ? "RESUME" : "START"}
-        </button>
+          onActivate={startOrResume}
+        />
       )}
       {orderingGroups && (
         <GroupOrderSheet

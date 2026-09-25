@@ -1,4 +1,4 @@
-import type { GroupSummary } from "@/lib/api";
+import type { GroupSummary, TodayActivity } from "@/lib/api";
 
 export const GROUP_REFRESH_MS = 60_000;
 
@@ -8,4 +8,8 @@ export function activityRefreshMs(data: GroupSummary | undefined) {
 
 export function summaryRefreshMs(data: GroupSummary[] | undefined) {
   return data?.some((group) => group.live_count > 0) ? 5000 : 15_000;
+}
+
+export function todayActivityRefreshMs(data: TodayActivity | undefined) {
+  return summaryRefreshMs(data?.groups);
 }

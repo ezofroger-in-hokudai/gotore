@@ -184,8 +184,16 @@ export function useSharedWorkoutDetails(
   }, [activity, active, opened, visible, tick, notify]);
 
   const current = opened ? entries.current.get(opened) : undefined;
+  function record(id: string) {
+    const entry = entries.current.get(id);
+    const version = feedVersion(activity.feed.find((item) => item.workout_id === id));
+    return entry?.version === version && Date.now() - entry.savedAt < 60000
+      ? { data: entry.data, error: entry.error }
+      : { data: null, error: "" };
+  }
   return {
     root,
+    record,
     data:
       current?.version === feedVersion(activity.feed.find((item) => item.workout_id === opened)) &&
       Date.now() - current.savedAt < 60000
@@ -194,6 +202,10 @@ export function useSharedWorkoutDetails(
     error: current?.error || "",
     retry: () => {
       if (opened) recheck.current.add(opened);
+      notify();
+    },
+    retryRecord: (id: string) => {
+      recheck.current.add(id);
       notify();
     },
   };

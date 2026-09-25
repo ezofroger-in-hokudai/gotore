@@ -31,7 +31,7 @@ for (const width of [320, 390, 430]) {
     });
     try {
       await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
-      await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toBeVisible();
+      await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
       await expect(floating).toHaveCount(0);
       await page.getByRole("button", { name: /^ベンチプレス/ }).click();
       await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("60");
@@ -102,5 +102,24 @@ test("未所属のグループタブと通常入力でも開始操作を使い�
   await page.getByRole("heading", { name: "グループを作成", exact: true }).click();
   await expect(floating).toBeVisible();
   await floating.click();
-  await expect(page.getByRole("heading", { name: "種目を選択", exact: true })).toBeVisible();
+  await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
+});
+
+test("STARTは長押しで端へ移動し、再読込後も利用者ごとの位置を保つ", async ({ page }) => {
+  await mockTraining(page);
+  const floating = page.getByTestId("floating-training");
+  const before = await floating.boundingBox();
+  if (!before) throw new Error("STARTの位置を取得できません");
+  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(320);
+  await page.mouse.move(24, 180, { steps: 4 });
+  await page.mouse.up();
+  const moved = await floating.boundingBox();
+  expect(moved?.x).toBeLessThan(30);
+  await page.reload();
+  await expect(floating).toBeVisible();
+  const restored = await floating.boundingBox();
+  expect(restored?.x).toBeLessThan(30);
+  expect(Math.abs((restored?.y ?? 0) - (moved?.y ?? 0))).toBeLessThan(2);
 });

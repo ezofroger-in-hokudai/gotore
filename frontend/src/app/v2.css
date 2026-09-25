@@ -61,9 +61,11 @@
 }
 .v2-app .app-header {
   position: static;
-  height: 65px;
-  padding: 18px 20px 10px;
-  background: transparent;
+  height: 48px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  background: #202127;
   border: 0;
 }
 .v2-app .wordmark {
@@ -72,7 +74,7 @@
   padding: 0;
   font-size: 22px;
   letter-spacing: -.7px;
-  color: var(--text);
+  color: #fff;
   font-weight: 800;
 }
 .header-caption {
@@ -767,7 +769,7 @@
   }
 }
 .v2-app .app-header {
-  min-height: 65px;
+  min-height: 48px;
 }
 .session-screen > .section-heading {
   margin-bottom: 5px;
@@ -1948,6 +1950,14 @@
   box-shadow: 0 4px 16px #0003;
   font-weight: 800;
   letter-spacing: 0.04em;
+  touch-action: none;
+  user-select: none;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.floating-training.is-dragging {
+  cursor: grabbing;
+  transform: scale(1.04);
+  box-shadow: 0 8px 24px #0005;
 }
 .v2-app:has(dialog[open], input:focus, textarea:focus, [contenteditable="true"]:focus)
   .floating-training {
@@ -4151,12 +4161,22 @@
   align-items: center;
   min-height: 48px;
   gap: 4px;
-  border-bottom: 1px solid var(--line);
+  margin-inline: -16px;
+  padding-inline: 16px;
+  border-bottom: 0;
+  background: #202127;
+  color: #fff;
 }
-.recording-view .session-screen .session-header h1 {
+.recording-view .session-screen .session-wordmark {
   flex: 1 1 auto;
   min-width: 0;
-  margin: 0;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -.7px;
+}
+.recording-view .session-screen .session-wordmark > span {
+  color: var(--accent);
 }
 .recording-view .session-screen .session-header .finish-training {
   flex: 0 0 auto;
@@ -4178,6 +4198,119 @@
 }
 .recording-view .selection-heading {
   /* session-headerが選択・入力の終了操作を共通化する。 */
+}
+.recording-view .recording-exercise-title {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* ホームでは全体の今日を4列で比較し、その直下にグループを置く。 */
+.home-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: -2px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+.home-summary > div {
+  min-width: 0;
+  padding: 10px 4px 12px;
+  text-align: center;
+}
+.home-summary > div + div {
+  border-left: 1px solid var(--line);
+}
+.home-summary span {
+  display: flex;
+  min-height: 18px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.home-summary .home-summary-live {
+  color: var(--accent);
+  font-weight: 700;
+}
+.home-summary-live .status-dot,
+.group-card-stats .is-live .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.home-summary strong {
+  display: block;
+  margin-top: 2px;
+  font-size: clamp(18px, 5vw, 24px);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.home-summary small {
+  margin-left: 2px;
+  color: var(--muted);
+  font-size: 9px;
+}
+.community-card {
+  min-height: 126px;
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 16px;
+  border: 1px solid var(--line);
+}
+.community-card h2 {
+  color: var(--text);
+}
+.community-card .section-heading {
+  margin-bottom: 14px;
+}
+.group-card-stats {
+  display: grid;
+  grid-template-columns: .85fr 1fr 1.35fr;
+  gap: 8px;
+}
+.group-card-stats > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.group-card-stats b {
+  color: var(--text);
+  font-size: 15px;
+}
+.group-card-stats .is-live {
+  color: var(--accent);
+  font-weight: 700;
+}
+.group-card-stats small {
+  margin-left: 2px;
+  font-size: 9px;
+  font-weight: 400;
+}
+.home-timeline-heading {
+  margin-top: 4px;
+}
+.community-feed {
+  gap: 14px;
+}
+.feed-item:has(.record-list) {
+  padding: 0;
+  background: transparent;
+}
+.feed-item .record-list .record-review {
+  margin: 0;
 }
 .today-training {
   /* 直後の部位フィルターの上罫線と二重にしない。 */
