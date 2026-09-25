@@ -399,7 +399,7 @@ class SessionRepository(TrainingRepository):
         today = """
               AND w.performed_on = (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date"""
         latest = self.connection.execute(
-            """SELECT DISTINCT ON (w.user_id) w.*, p.display_name
+            """SELECT w.*, p.display_name
             FROM public.gotore_workouts w JOIN public.gotore_profiles p ON p.id = w.user_id
             WHERE (w.group_id = %s OR EXISTS(SELECT 1 FROM public.gotore_workout_shares s
               WHERE s.workout_id = w.id AND s.group_id = %s))
@@ -407,7 +407,8 @@ class SessionRepository(TrainingRepository):
             """
             + (today if today_only else "")
             + """
-            ORDER BY w.user_id, w.updated_at DESC, w.created_at DESC, w.id""",
+            ORDER BY w.updated_at DESC, w.created_at DESC, w.id
+            LIMIT 50""",
             (group_id, group_id),
         ).fetchall()
         feed = []
@@ -436,7 +437,14 @@ class SessionRepository(TrainingRepository):
             feed.append(
                 {
                     "workout_id": row["id"],
-                    "summary": workout_summary(row["exercises"]),
+                    "summary": {
+                        **workout_summary(row["exercises"]),
+                        "total_volume": sum(
+                            float(value["weight"]) * int(value["reps"])
+                            for item in row["exercises"]
+                            for value in item["sets"]
+                        ),
+                    },
                     "user_id": row["user_id"],
                     "display_name": row["display_name"],
                     "exercise": exercise["name"],

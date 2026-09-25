@@ -49,6 +49,7 @@ class ActivityMember(MemberResponse):
 class FeedSummary(BaseModel):
     exercise_count: int
     set_count: int
+    total_volume: float
 
 
 class FeedItem(BaseModel):
