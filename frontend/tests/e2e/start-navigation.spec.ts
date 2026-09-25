@@ -9,6 +9,12 @@ for (const width of [320, 390, 430]) {
     await expect(nav.getByRole("button")).toHaveText(["ホーム", "グループ", "履歴", "設定"]);
     const floating = page.getByTestId("floating-training");
     await expect(floating).toHaveText("START");
+    const dot = await page.locator(".home-summary-live .status-dot").boundingBox();
+    expect(dot?.width).toBe(dot?.height);
+    await expect(page.locator(".community-card").first()).toHaveCSS(
+      "background-color",
+      "rgb(32, 33, 39)",
+    );
     await expect(page.locator(".home-training > button")).toHaveCount(0);
     const actionBox = await floating.boundingBox();
     const navBox = await nav.boundingBox();
@@ -32,6 +38,7 @@ for (const width of [320, 390, 430]) {
     try {
       await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
       await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
+      expect((await page.locator(".session-header").boundingBox())?.y).toBe(0);
       await expect(floating).toHaveCount(0);
       await page.getByRole("button", { name: /^ベンチプレス/ }).click();
       await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("60");
@@ -112,7 +119,7 @@ test("STARTは長押しで端へ移動し、再読込後も利用者ごとの位
   if (!before) throw new Error("STARTの位置を取得できません");
   await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(320);
+  await page.waitForTimeout(170);
   await page.mouse.move(24, 180, { steps: 4 });
   await page.mouse.up();
   const moved = await floating.boundingBox();

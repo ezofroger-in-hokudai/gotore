@@ -12,12 +12,14 @@ export function StampControl({
   name,
   active = true,
   direct = false,
+  alwaysVisible = false,
 }: {
   groupId: string;
   workoutId: string;
   name: string;
   active?: boolean;
   direct?: boolean;
+  alwaysVisible?: boolean;
 }) {
   const store = useStamps(groupId, workoutId, active);
   const data = store.view(groupId, workoutId);
@@ -53,14 +55,18 @@ export function StampControl({
     const defer = direct || open === "picker";
     if (store.toggle(groupId, workoutId, kind, name, defer) && !defer) setOpen(null);
   }
-  function reaction(kind: (typeof stampKinds)[number], picker = false) {
+  function reaction(kind: (typeof stampKinds)[number], picker = false, neutral = false) {
     const selected = data?.mine.includes(kind.id) ?? false;
     return (
       <button
         key={kind.id}
         type="button"
         className={picker ? "inline-stamp-choice" : "inline-stamp-touch"}
-        aria-label={`${kind.label}${picker ? "" : ` ${data?.counts[kind.id] ?? 0}件`}`}
+        aria-label={
+          neutral
+            ? `${kind.emoji}スタンプ`
+            : `${kind.label}${picker ? "" : ` ${data?.counts[kind.id] ?? 0}件`}`
+        }
         aria-pressed={selected}
         disabled={!data?.can_send}
         onClick={() => send(kind.id)}
@@ -80,8 +86,8 @@ export function StampControl({
   return (
     <div className="inline-stamps" aria-label={`${name}の記録のスタンプ`}>
       <div className="inline-stamp-row">
-        {direct && data
-          ? stampChoices.map((kind) => reaction(kind, true))
+        {(direct || alwaysVisible) && data
+          ? stampChoices.map((kind) => reaction(kind, true, true))
           : data &&
             stampKinds
               .filter(
@@ -90,7 +96,7 @@ export function StampControl({
                   jobs.some((job) => job.kind === kind.id && job.state === "pending"),
               )
               .map((kind) => reaction(kind))}
-        {data?.can_send && !direct && (
+        {data?.can_send && !direct && !alwaysVisible && (
           <button
             type="button"
             className="inline-stamp-touch"
@@ -151,7 +157,7 @@ export function StampControl({
                 <strong>{name}の記録</strong>
               </p>
               <div className="inline-stamp-picker">
-                {stampChoices.map((kind) => reaction(kind, true))}
+                {stampChoices.map((kind) => reaction(kind, true, true))}
               </div>
             </>
           ) : (
@@ -176,7 +182,9 @@ export function StampControl({
                 <section
                   className="stamp-reaction-row"
                   key={kind.id}
-                  aria-label={`${kind.label} ${items.map((item) => item.display_name).join("、")}`}
+                  aria-label={`${kind.emoji}スタンプ ${items
+                    .map((item) => item.display_name)
+                    .join("、")}`}
                 >
                   <span className="stamp-reaction-emoji" aria-hidden="true">
                     {kind.emoji}

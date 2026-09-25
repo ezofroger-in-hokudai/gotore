@@ -50,6 +50,7 @@ test("本人の全セットを表で開き、日付と要約を一度だけ表�
 test("共有詳細は相手の名前を残し、本人だけの共有状態とメモを出さない", () => {
   const html = renderToStaticMarkup(<RecordList records={[record]} empty="" />);
   expect(html).toContain("本人");
+  expect(html.indexOf("2026年9月13日")).toBeLessThan(html.indexOf("record-author"));
   expect(html).not.toContain("共有済み");
   expect(html).not.toContain("メモ");
   expect(html).not.toContain("保存</time>");

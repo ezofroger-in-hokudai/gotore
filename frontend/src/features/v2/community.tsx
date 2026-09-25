@@ -191,7 +191,6 @@ export function CommunityHome({
                 group={group}
                 dragging={cardDrag.drag?.id === group.id}
                 style={cardDrag.style(group.id, index)}
-                active={active}
                 data={
                   today.data?.groups.find((item) => item.group_id === group.id) ??
                   (group.id === selected
@@ -199,7 +198,6 @@ export function CommunityHome({
                     : (summaries.data?.find((item) => item.group_id === group.id) ?? null))
                 }
                 error={group.id === selected ? activity.error : summaries.error}
-                refreshing={group.id === selected ? activity.refreshing : summaries.refreshing}
                 onClick={() => {
                   onSelect(group.id);
                   onDetail();
@@ -300,8 +298,6 @@ function GroupCard({
   group,
   data,
   error,
-  refreshing,
-  active,
   onClick,
   dragging,
   style,
@@ -309,8 +305,6 @@ function GroupCard({
   group: Group;
   data: GroupSummary | null;
   error: string;
-  refreshing: boolean;
-  active: boolean;
   onClick: () => void;
   dragging: boolean;
   style?: CSSProperties;
@@ -324,38 +318,30 @@ function GroupCard({
       onClick={onClick}
       aria-label={`${group.name}の詳細`}
     >
+      <span className={data?.live_count ? "group-card-live is-live" : "group-card-live"}>
+        <span className="status-dot" />
+        {data ? `${data.live_count}人がトレーニング中` : "状況を確認中"}
+      </span>
       <div className="section-heading">
         <h2>{group.name}</h2>
         <span>›</span>
       </div>
       {error && <p>{data ? "更新未確認" : "状況を取得できません"}</p>}
-      {error && !data ? null : <GroupCardStats data={data} active={active} trusted={!refreshing} />}
+      {error && !data ? null : <GroupCardStats data={data} />}
     </button>
   );
 }
 
 function GroupCardStats({
   data,
-  active,
-  trusted,
 }: {
   data: GroupSummary | GroupActivity | null;
-  active: boolean;
-  trusted: boolean;
 }) {
-  const clock = useLiveClock(data, active, trusted);
-  const live = data?.members.filter(
-    (member) => clock.live && memberIsLive(member, clock.now),
-  ).length;
   const feed = data && "feed" in data ? data.feed : [];
   const sets = feed.reduce((sum, item) => sum + (item.summary?.set_count ?? 0), 0);
   const volume = feed.reduce((sum, item) => sum + (item.summary?.total_volume ?? 0), 0);
   return (
     <div className="group-card-stats">
-      <span className={live ? "is-live" : undefined}>
-        <span className="status-dot" />
-        LIVE <b>{data ? live : "—"}</b>
-      </span>
       <span>
         セット <b>{data && "feed" in data ? sets : "—"}</b>
       </span>
@@ -480,12 +466,14 @@ function Feed({
                 <RecordList
                   records={[record]}
                   empty=""
+                  compact
                   headerControl={() => (
                     <StampControl
                       active={active}
                       groupId={data.group_id}
                       workoutId={item.workout_id}
                       name={item.display_name}
+                      alwaysVisible
                     />
                   )}
                 />

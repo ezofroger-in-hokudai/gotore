@@ -19,6 +19,7 @@ export function RecordList({
   onDeleted,
   headerControl,
   showDate = true,
+  compact = false,
 }: {
   personal?: boolean;
   records: Workout[];
@@ -29,6 +30,7 @@ export function RecordList({
   onDeleted?: () => void;
   headerControl?: (record: Workout) => ReactNode;
   showDate?: boolean;
+  compact?: boolean;
 }) {
   if (!records.length)
     return (
@@ -51,8 +53,23 @@ export function RecordList({
         const own = personal && record.user_id === userId;
         const live = Boolean(record.started_at && !record.ended_at);
         return (
-          <article className="record record-review" key={record.id}>
+          <article
+            className={`record record-review${compact ? " is-compact" : ""}`}
+            key={record.id}
+          >
             <header className="record-heading">
+              {showDate && (
+                <h2>
+                  <time dateTime={record.performed_on}>
+                    {dateLabel(record.performed_on)}　
+                    {new Date(record.created_at).toLocaleTimeString("ja-JP", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: "Asia/Tokyo",
+                    })}
+                  </time>
+                </h2>
+              )}
               {!own && (
                 <div className="record-author">
                   <span className="record-author-avatar">
@@ -68,11 +85,6 @@ export function RecordList({
                   </span>
                   <strong>{record.display_name}</strong>
                 </div>
-              )}
-              {showDate && (
-                <h2>
-                  <time dateTime={record.performed_on}>{dateLabel(record.performed_on)}</time>
-                </h2>
               )}
               <dl className="record-overview">
                 <div aria-label="総負荷">

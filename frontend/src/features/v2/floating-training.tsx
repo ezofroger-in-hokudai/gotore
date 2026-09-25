@@ -104,7 +104,7 @@ export function FloatingTraining({
           current.dragging = true;
           button.current?.setPointerCapture(event.pointerId);
           button.current?.classList.add("is-dragging");
-        }, 280);
+        }, 140);
         gesture.current = current;
       }}
       onPointerMove={(event) => {
