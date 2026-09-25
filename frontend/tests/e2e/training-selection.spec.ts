@@ -24,6 +24,21 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
 
   // mockTrainingの初期表示後に候補を差し替えるため、選択画面を開く前に再取得する。
   await page.reload();
+  const homeHeaderHeight = await page
+    .locator(".app-header")
+    .evaluate((header) => header.getBoundingClientRect().height);
+  const homeGroupOption = await page
+    .locator(".home-feed-tabs button")
+    .first()
+    .evaluate((button) => {
+      const style = getComputedStyle(button);
+      const box = button.getBoundingClientRect();
+      return {
+        height: box.height,
+        fontSize: style.fontSize,
+        borderRadius: style.borderRadius,
+      };
+    });
   await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
 
@@ -32,6 +47,47 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
   const sessionHeader = page.locator(".session-header");
   await expect(sessionHeader).toHaveCSS("position", "sticky");
   expect((await sessionHeader.boundingBox())?.y).toBe(0);
+  expect((await sessionHeader.boundingBox())?.height).toBe(homeHeaderHeight);
+  const trainingGroupOption = await page
+    .getByRole("tab", { name: "すべて", exact: true })
+    .evaluate((button) => {
+      const style = getComputedStyle(button);
+      const box = button.getBoundingClientRect();
+      return {
+        height: box.height,
+        fontSize: style.fontSize,
+        borderRadius: style.borderRadius,
+      };
+    });
+  expect(trainingGroupOption).toEqual(homeGroupOption);
+  const firstPart = await page
+    .getByRole("button", { name: "胸", exact: true })
+    .evaluate((button) => {
+      const style = getComputedStyle(button);
+      const box = button.getBoundingClientRect();
+      return {
+        height: box.height,
+        fontSize: style.fontSize,
+        borderRadius: style.borderRadius,
+      };
+    });
+  expect(firstPart).toEqual(homeGroupOption);
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    const partLayout = await page.locator(".session-body-parts").evaluate((parts) => {
+      const buttons = [...parts.querySelectorAll("button")].map((button) =>
+        button.getBoundingClientRect(),
+      );
+      return {
+        overflows: parts.scrollWidth > parts.clientWidth,
+        rows: new Set(buttons.map((button) => Math.round(button.top))).size,
+        widths: buttons.map((button) => button.width),
+      };
+    });
+    expect(partLayout.overflows).toBe(false);
+    expect(partLayout.rows).toBe(1);
+    expect(Math.max(...partLayout.widths) - Math.min(...partLayout.widths)).toBeLessThanOrEqual(1);
+  }
   const centeredExercise = page.getByRole("button", { name: /^ベンチプレス/ });
   expect(
     await centeredExercise.evaluate((button) => {

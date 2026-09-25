@@ -4263,13 +4263,13 @@
   z-index: 12;
   display: flex;
   align-items: center;
-  height: calc(48px + env(safe-area-inset-top));
-  min-height: calc(48px + env(safe-area-inset-top));
-  flex: 0 0 calc(48px + env(safe-area-inset-top));
+  height: 48px;
+  min-height: 48px;
+  flex: 0 0 48px;
   box-sizing: border-box;
   gap: 4px;
   margin-inline: -16px;
-  padding: env(safe-area-inset-top) 16px 0;
+  padding: 0 16px;
   border-bottom: 0;
   background: #202127;
   color: #fff;
@@ -4278,7 +4278,7 @@
   flex: 1 1 auto;
   min-width: 0;
   color: #fff;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -.7px;
 }
@@ -4564,8 +4564,10 @@
 }
 .peer-groups {
   display: flex;
-  gap: 16px;
-  min-height: 42px;
+  justify-content: safe center;
+  gap: 6px;
+  min-height: 43px;
+  padding: 4px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -4575,17 +4577,16 @@
 }
 .peer-groups button {
   flex: 0 0 auto;
-  min-height: 42px;
-  padding: 10px 0 7px;
+  min-height: 35px;
+  padding: 0 12px;
   border: 0;
-  border-bottom: 2px solid transparent;
+  border-radius: 9px;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 .peer-groups button[aria-selected="true"] {
-  border-bottom-color: var(--accent);
-  color: var(--accent);
+  color: var(--text);
   font-weight: 700;
 }
 .peer-avatars {
@@ -4639,22 +4640,20 @@
 .session-body-parts {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  /* 今日のトレーニング直下の区切り線を、そのまま部位選択の上罫線にする。 */
-  margin-top: 0;
+  margin-top: 4px;
   gap: 2px;
-  padding: 4px 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  padding: 4px;
+  border: 0;
 }
 .session-body-parts button {
   min-width: 0;
-  min-height: 38px;
-  padding: 8px 0 5px;
+  min-height: 35px;
+  padding: 0 2px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 9px;
   background: transparent;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
 }
 .session-body-parts button[aria-pressed="true"] {
