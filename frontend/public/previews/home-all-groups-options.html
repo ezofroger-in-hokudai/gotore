@@ -1,1 +1,224 @@
-<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>すべてのグループ案</title><style>body{margin:0;background:#eee;font:14px sans-serif}.tabs{text-align:center;padding:10px;background:#fff}.tabs button{padding:8px;margin:2px}.phone{max-width:430px;min-height:720px;margin:auto;padding:20px;background:#f4f4f5}.v{display:none}.v.on{display:block}.card{padding:18px;margin:12px 0;border-radius:14px;background:#202127;color:#fff}.all{background:#d32f2f}.line{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #ddd}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}.stats b{display:block;font-size:20px}.feed{background:#fff;padding:12px;margin-top:14px}.set{padding:5px 0;border-bottom:1px solid #eee}</style><div class=tabs><button onclick="show(0)">A 集約を主役</button><button onclick="show(1)">B 同じカード</button><button onclick="show(2)">C 集約を薄く</button></div><main class=phone><h1>ホーム</h1><section class="v on"><div class="card all"><small>ALL GROUPS</small><h2>すべてのグループ</h2><div class=stats><div>LIVE<b>2人</b></div><div>今日<b>4人</b></div><div>セット<b>18</b></div><div>総負荷<b>18.6t</b></div></div></div><div class=card><small>GO TORE</small><h2>GO TORE</h2>LIVE 2人　今日 3人</div></section><section class=v><div class=card><small>ALL GROUPS</small><h2>すべてのグループ　›</h2>LIVE 2人　今日 4人　18セット　18.6t</div><div class=card><small>GROUP</small><h2>GO TORE　›</h2>LIVE 2人　今日 3人　12セット　12.1t</div></section><section class=v><div class=line><b>すべてのグループ</b><span>LIVE 2人　›</span></div><div class=card><h2>GO TORE</h2>今日 3人　12セット　12.1t</div></section><div class=feed><b>最新のトレーニング</b><div class=set>佐藤　ベンチプレス　75kg × 8回</div><div class=set>田中　スクワット　80kg × 6回</div></div></main><script>function show(n){document.querySelectorAll('.v').forEach((x,i)=>x.classList.toggle('on',i==n))}</script>
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>E-GOTORE すべての選択 4案</title>
+    <style>
+      :root { color-scheme: light; --red:#df2f35; --ink:#202127; --muted:#737780; --line:#d9dbe0; --page:#f5f5f6; }
+      * { box-sizing:border-box; }
+      body { margin:0; background:#e5e6e9; color:#17181c; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif; }
+      button { font:inherit; }
+      .switcher { position:sticky; top:0; z-index:50; display:flex; gap:8px; justify-content:center; overflow-x:auto; padding:10px; background:rgba(229,230,233,.96); border-bottom:1px solid #cfd1d6; }
+      .switcher button { flex:0 0 auto; min-height:36px; padding:0 14px; border:1px solid #c8cbd1; border-radius:20px; background:#fff; color:#555a64; font-size:12px; font-weight:700; }
+      .switcher button[aria-pressed="true"] { border-color:var(--ink); background:var(--ink); color:#fff; }
+      .stage { width:min(100%,430px); margin:14px auto 40px; }
+      .option { display:none; }
+      .option.is-active { display:block; }
+      .option-note { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin:0 4px 10px; }
+      .option-note h1 { margin:0; font-size:17px; }
+      .option-note p { margin:3px 0 0; color:#646973; font-size:11px; }
+      .phone { position:relative; height:844px; overflow-y:auto; overscroll-behavior:contain; background:var(--page); border-radius:20px; box-shadow:0 14px 45px rgba(22,24,30,.18); scrollbar-width:none; }
+      .phone::-webkit-scrollbar { display:none; }
+      .head { position:sticky; top:0; z-index:20; height:48px; display:flex; align-items:center; padding:0 16px; background:var(--ink); color:#fff; font-size:20px; font-weight:850; letter-spacing:-.7px; }
+      .head span { color:#ef454c; }
+      .main { padding:0 16px 90px; }
+      .summary-wrap { position:relative; padding-top:13px; }
+      .summary { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--line); }
+      .summary > div { min-width:0; padding:9px 3px 12px; text-align:center; }
+      .summary > div+div { border-left:1px solid var(--line); }
+      .summary small { display:block; min-height:15px; color:#777b84; font-size:9px; }
+      .summary b { display:block; margin-top:3px; font-size:18px; }
+      .summary em { margin-left:2px; font-size:9px; font-style:normal; font-weight:500; }
+      .dot { display:inline-block; width:6px; height:6px; margin-right:3px; border-radius:50%; background:var(--red); vertical-align:1px; }
+      .live { color:var(--red)!important; }
+      .all-summary-button { width:100%; padding:0; border:0; background:transparent; color:inherit; cursor:pointer; }
+      .summary-selection { display:flex; align-items:center; justify-content:center; height:25px; border-bottom:3px solid var(--red); color:var(--red); font-size:10px; font-weight:750; letter-spacing:.04em; }
+      .summary-selection::before { content:"✓"; margin-right:4px; }
+      .all-summary-button[aria-pressed="false"] .summary-selection { border-bottom-color:transparent; color:#777b84; }
+      .all-summary-button[aria-pressed="false"] .summary-selection::before { content:"↩"; }
+      .groups-label { display:flex; align-items:center; justify-content:space-between; margin:12px 0 7px; color:#777b84; font-size:10px; }
+      .groups-label b { color:#3e4148; font-size:11px; }
+      .group-track { display:flex; gap:9px; margin-inline:-16px; padding:0 16px 4px; overflow-x:auto; scroll-snap-type:x proximity; scrollbar-width:none; }
+      .group-track::-webkit-scrollbar { display:none; }
+      .group-card { position:relative; flex:0 0 78%; min-height:131px; padding:15px 16px; border:2px solid transparent; border-radius:14px; background:var(--ink); color:#fff; scroll-snap-align:start; user-select:none; touch-action:pan-x; transition:transform .16s,border-color .16s; }
+      .group-card[aria-pressed="true"] { border-color:#ef454c; }
+      .group-card[aria-pressed="true"]::after { content:"表示中"; position:absolute; top:12px; right:38px; color:#ff777c; font-size:9px; font-weight:800; }
+      .group-card.is-dragging { z-index:4; transform:scale(1.025) rotate(-1deg); border-color:#fff; opacity:.92; }
+      .group-card .status { display:block; min-height:18px; color:#ff696f; font-size:10px; font-weight:700; }
+      .group-card h2 { margin:2px 34px 13px 0; font-size:18px; }
+      .group-card .open { position:absolute; top:34px; right:12px; width:38px; height:38px; border:0; background:transparent; color:#fff; font-size:25px; cursor:pointer; }
+      .group-numbers { display:flex; gap:24px; padding-top:11px; border-top:1px solid #555861; }
+      .group-numbers b { display:block; font-size:18px; }
+      .group-numbers small { color:#c6c8ce; font-size:9px; }
+      .hint { margin:3px 1px 0; color:#92959d; font-size:9px; }
+      .fixed-all-row { display:flex; align-items:center; gap:9px; padding:12px 0 8px; }
+      .all-pill { min-height:34px; padding:0 18px; border:1px solid var(--red); border-radius:18px; background:#fff; color:var(--red); font-size:12px; font-weight:800; }
+      .all-pill[aria-pressed="true"] { background:var(--red); color:#fff; }
+      .fixed-all-row .rule { height:1px; flex:1; background:var(--line); }
+      .half-layout { display:grid; grid-template-columns:92px minmax(0,1fr); gap:9px; margin-top:12px; }
+      .all-tile { min-height:131px; padding:15px 10px; border:2px solid transparent; border-radius:14px; background:#fff; color:var(--ink); text-align:left; }
+      .all-tile[aria-pressed="true"] { border-color:var(--red); }
+      .all-tile small { display:block; color:var(--red); font-size:9px; font-weight:800; }
+      .all-tile strong { display:block; margin-top:7px; font-size:16px; }
+      .all-tile span { display:block; margin-top:23px; color:#747881; font-size:9px; line-height:1.5; }
+      .half-layout .group-track { margin:0; padding:0 0 4px; }
+      .half-layout .group-card { flex-basis:88%; }
+      .feed-head { display:flex; align-items:center; justify-content:space-between; margin:18px 0 9px; }
+      .feed-head h2 { margin:0; font-size:18px; letter-spacing:-.04em; }
+      .scope { color:#747881; font-size:10px; }
+      .scope b { color:var(--red); }
+      .scope-menu { position:relative; }
+      .scope-menu > button { min-height:32px; padding:0 11px; border:1px solid #cfd1d6; border-radius:8px; background:#fff; font-size:11px; font-weight:750; }
+      .scope-popover { position:absolute; top:37px; right:0; z-index:10; display:none; width:170px; padding:6px; border:1px solid var(--line); border-radius:12px; background:#fff; box-shadow:0 12px 30px rgba(20,22,28,.18); }
+      .scope-popover.is-open { display:grid; }
+      .scope-popover button { min-height:38px; border:0; border-radius:8px; background:transparent; text-align:left; }
+      .scope-popover button:hover { background:#f2f2f4; }
+      .record { margin-bottom:10px; padding:13px 14px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+      .record time { color:#777b84; font-size:10px; }
+      .person { display:flex; align-items:center; gap:9px; margin-top:8px; }
+      .avatar { display:grid; width:34px; height:34px; place-items:center; border-radius:50%; background:#282a30; color:#fff; font-size:12px; }
+      .person strong { font-size:13px; }
+      .source { display:inline-flex; margin-left:auto; padding:3px 7px; border-radius:9px; background:#f0f1f3; color:#6c7079; font-size:9px; }
+      .overview { display:flex; gap:25px; margin:9px 0 10px; padding-bottom:9px; border-bottom:1px solid var(--line); }
+      .overview span { color:#777b84; font-size:9px; }
+      .overview b { display:block; margin-top:2px; color:#1d1e22; font-size:15px; }
+      .stamps { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+      .stamps span { display:grid; width:31px; height:31px; place-items:center; border:1px solid #e2e3e6; border-radius:50%; background:#fff; font-size:18px; }
+      .stamps b { letter-spacing:2px; }
+      .exercise { margin:4px 0 2px; font-size:13px; }
+      .sets { width:100%; border-collapse:collapse; font-size:11px; }
+      .sets th,.sets td { padding:4px 2px; border-bottom:1px solid #e4e5e8; text-align:right; }
+      .sets th:first-child,.sets td:first-child { text-align:left; }
+      .sets th { color:#777b84; font-weight:500; }
+      .start { position:sticky; z-index:15; bottom:78px; display:block; width:112px; height:52px; margin:-58px 0 6px auto; border:0; border-radius:28px; background:var(--red); color:#fff; font-size:13px; font-weight:800; box-shadow:0 8px 20px rgba(55,25,27,.2); }
+      .nav { position:sticky; z-index:14; bottom:0; display:grid; grid-template-columns:repeat(4,1fr); height:66px; margin-top:20px; border-top:1px solid var(--line); background:#fff; }
+      .nav span { display:grid; place-items:center; color:#777b84; font-size:12px; }
+      .nav span:first-child { border-top:2px solid var(--red); color:var(--red); font-weight:700; }
+      .compact-track { margin-top:12px; }
+      @media (max-width:520px) {
+        body { background:var(--page); }
+        .switcher { justify-content:flex-start; }
+        .stage { margin:0 auto; }
+        .option-note { padding:10px 12px 7px; margin:0; background:#e5e6e9; }
+        .phone { height:calc(100dvh - 107px); min-height:650px; border-radius:0; box-shadow:none; }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="switcher" aria-label="案を切り替え">
+      <button data-show="a" aria-pressed="true">A 数値ヘッダー</button>
+      <button data-show="b" aria-pressed="false">B 固定ピル</button>
+      <button data-show="c" aria-pressed="false">C 半幅パネル</button>
+      <button data-show="d" aria-pressed="false">D 右上メニュー</button>
+    </nav>
+    <main class="stage">
+      <section class="option is-active" data-option="a">
+        <div class="option-note"><div><h1>A 数値ヘッダー</h1><p>4列全体が「すべて」。画面を増やさない基本案</p></div></div>
+        <div class="phone"><header class="head">E-GO<span>TORE</span></header><div class="main">
+          <button class="all-summary-button all-control" type="button"><div class="summary-wrap"><div class="summary"><div><small class="live"><i class="dot"></i>LIVE</small><b>3<em>人</em></b></div><div><small>今日</small><b>7<em>人</em></b></div><div><small>セット</small><b>31</b></div><div><small>総負荷</small><b>28.4<em>t</em></b></div></div><div class="summary-selection">すべて</div></div></button>
+          <div class="groups-label"><b>グループ</b><span>長押しで並べ替え</span></div><div class="group-track"></div><p class="hint">カードを押すと絞り込み　› はグループ詳細</p>
+          <div class="feed-head"><h2>みんなのトレーニング</h2><span class="scope"><b>すべて</b>・新しい順</span></div><div class="records"></div>
+        </div><button class="start">START</button><nav class="nav"><span>ホーム</span><span>グループ</span><span>履歴</span><span>設定</span></nav></div>
+      </section>
+      <section class="option" data-option="b">
+        <div class="option-note"><div><h1>B 固定ピル</h1><p>すべてを独立した操作として常に見せる</p></div></div>
+        <div class="phone"><header class="head">E-GO<span>TORE</span></header><div class="main">
+          <div class="summary-wrap"><div class="summary"><div><small class="live"><i class="dot"></i>LIVE</small><b>3<em>人</em></b></div><div><small>今日</small><b>7<em>人</em></b></div><div><small>セット</small><b>31</b></div><div><small>総負荷</small><b>28.4<em>t</em></b></div></div></div>
+          <div class="fixed-all-row"><button class="all-pill all-control" aria-pressed="true">✓ すべて</button><span class="rule"></span><span class="hint">長押しで並べ替え</span></div><div class="group-track"></div><p class="hint">カードを押すと絞り込み　› はグループ詳細</p>
+          <div class="feed-head"><h2>みんなのトレーニング</h2><span class="scope"><b>すべて</b>・新しい順</span></div><div class="records"></div>
+        </div><button class="start">START</button><nav class="nav"><span>ホーム</span><span>グループ</span><span>履歴</span><span>設定</span></nav></div>
+      </section>
+      <section class="option" data-option="c">
+        <div class="option-note"><div><h1>C 半幅パネル</h1><p>すべてだけ白く小さく、グループとは別物にする</p></div></div>
+        <div class="phone"><header class="head">E-GO<span>TORE</span></header><div class="main">
+          <div class="summary-wrap"><div class="summary"><div><small class="live"><i class="dot"></i>LIVE</small><b>3<em>人</em></b></div><div><small>今日</small><b>7<em>人</em></b></div><div><small>セット</small><b>31</b></div><div><small>総負荷</small><b>28.4<em>t</em></b></div></div></div>
+          <div class="half-layout"><button class="all-tile all-control" aria-pressed="true"><small>ALL</small><strong>すべて</strong><span>7人<br>31セット</span></button><div><div class="group-track"></div><p class="hint">長押しで並べ替え</p></div></div>
+          <div class="feed-head"><h2>みんなのトレーニング</h2><span class="scope"><b>すべて</b>・新しい順</span></div><div class="records"></div>
+        </div><button class="start">START</button><nav class="nav"><span>ホーム</span><span>グループ</span><span>履歴</span><span>設定</span></nav></div>
+      </section>
+      <section class="option" data-option="d">
+        <div class="option-note"><div><h1>D 右上メニュー</h1><p>カードは閲覧専用。タイムライン側で範囲を選ぶ</p></div></div>
+        <div class="phone"><header class="head">E-GO<span>TORE</span></header><div class="main">
+          <div class="summary-wrap"><div class="summary"><div><small class="live"><i class="dot"></i>LIVE</small><b>3<em>人</em></b></div><div><small>今日</small><b>7<em>人</em></b></div><div><small>セット</small><b>31</b></div><div><small>総負荷</small><b>28.4<em>t</em></b></div></div></div>
+          <div class="groups-label"><b>グループ</b><span>長押しで並べ替え</span></div><div class="group-track compact-track"></div>
+          <div class="feed-head"><h2>みんなのトレーニング</h2><div class="scope-menu"><button class="menu-toggle">すべて⌄</button><div class="scope-popover"><button data-scope="all">✓ すべて</button><button data-scope="morning">朝トレ部</button><button data-scope="weekend">週末ワークアウト</button><button data-scope="lab">研究室筋トレ</button></div></div></div><div class="records"></div>
+        </div><button class="start">START</button><nav class="nav"><span>ホーム</span><span>グループ</span><span>履歴</span><span>設定</span></nav></div>
+      </section>
+    </main>
+    <template id="group-template"><article class="group-card" role="button" tabindex="0" aria-pressed="false"><span class="status"><i class="dot"></i><span class="live-count"></span>人がトレーニング中</span><h2></h2><button class="open" aria-label="グループ詳細">›</button><div class="group-numbers"><span><b class="set-count"></b><small>セット</small></span><span><b class="volume"></b><small>総負荷</small></span></div></article></template>
+    <template id="record-template"><article class="record"><time></time><div class="person"><span class="avatar"></span><strong></strong><span class="source"></span></div><div class="overview"><span>総負荷<b class="record-volume"></b></span><span>セット<b class="record-sets"></b></span></div><div class="stamps"><span>💪</span><span>🔥</span><span>👎</span><span>🤩</span><span>👏</span><span>👺</span><b>…</b></div><h3 class="exercise"></h3><table class="sets"><thead><tr><th>セット</th><th>重量 kg</th><th>回数</th><th>推定1RM kg</th></tr></thead><tbody></tbody></table></article></template>
+    <script>
+      const groups=[
+        {id:"morning",name:"朝トレ部",live:2,sets:14,volume:"12.8t"},
+        {id:"weekend",name:"週末ワークアウト",live:1,sets:10,volume:"9.4t"},
+        {id:"lab",name:"研究室筋トレ",live:0,sets:7,volume:"6.2t"}
+      ];
+      const records=[
+        {group:"morning",time:"9月26日　07:42",name:"ミオ",volume:"1,890kg",sets:3,exercise:"ベンチプレス",rows:[[1,60,10,80],[2,60,8,76],[3,55,10,"73.3"]]},
+        {group:"weekend",time:"9月26日　06:58",name:"ユウ",volume:"3,240kg",sets:4,exercise:"スクワット",rows:[[1,100,8,"126.7"],[2,100,6,120],[3,90,10,120],[4,80,10,"106.7"]]},
+        {group:"lab",time:"9月25日　21:16",name:"タクミ",volume:"1,080kg",sets:3,exercise:"ショルダープレス",rows:[[1,40,10,"53.3"],[2,40,9,52],[3,40,8,"50.7"]]}
+      ];
+      const nameOf=id=>groups.find(group=>group.id===id)?.name||"すべて";
+      function renderRecords(option,scope="all"){
+        const root=option.querySelector(".records"); root.replaceChildren();
+        records.filter(record=>scope==="all"||record.group===scope).forEach(data=>{
+          const node=document.querySelector("#record-template").content.firstElementChild.cloneNode(true);
+          node.querySelector("time").textContent=data.time;
+          node.querySelector(".avatar").textContent=data.name.slice(0,1);
+          node.querySelector(".person strong").textContent=data.name;
+          node.querySelector(".source").textContent=nameOf(data.group);
+          node.querySelector(".record-volume").textContent=data.volume;
+          node.querySelector(".record-sets").textContent=data.sets;
+          node.querySelector(".exercise").textContent=data.exercise;
+          const body=node.querySelector("tbody");
+          data.rows.forEach(row=>{const tr=document.createElement("tr");tr.innerHTML=`<td>${row[0]}</td><td><b>${row[1]}</b></td><td><b>${row[2]}</b></td><td><b>${row[3]}</b></td>`;body.append(tr)});
+          root.append(node);
+        });
+        const scopeLabel=option.querySelector(".scope");
+        if(scopeLabel) scopeLabel.innerHTML=`<b>${scope==="all"?"すべて":nameOf(scope)}</b>・新しい順`;
+        const toggle=option.querySelector(".menu-toggle"); if(toggle) toggle.textContent=`${scope==="all"?"すべて":nameOf(scope)}⌄`;
+        option.dataset.scope=scope;
+        option.querySelectorAll(".group-card").forEach(card=>card.setAttribute("aria-pressed",String(card.dataset.group===scope)));
+        option.querySelectorAll(".all-control").forEach(button=>button.setAttribute("aria-pressed",String(scope==="all")));
+        const summarySelection=option.querySelector(".summary-selection");if(summarySelection)summarySelection.textContent=scope==="all"?"すべて":"すべてに戻す";
+        const pill=option.querySelector(".all-pill");if(pill)pill.textContent=scope==="all"?"✓ すべて":"すべて";
+      }
+      function makeGroups(option){
+        const track=option.querySelector(".group-track");
+        groups.forEach(data=>{
+          const card=document.querySelector("#group-template").content.firstElementChild.cloneNode(true);
+          card.dataset.group=data.id; card.querySelector("h2").textContent=data.name;
+          card.querySelector(".live-count").textContent=data.live; card.querySelector(".set-count").textContent=data.sets; card.querySelector(".volume").textContent=data.volume;
+          if(!data.live) card.querySelector(".status").style.color="#c6c8ce";
+          card.querySelector(".open").addEventListener("click",event=>{event.stopPropagation();alert(`${data.name}の詳細は今回の比較対象外です`)});
+          card.addEventListener("click",()=>{if(!card.dataset.moved&&option.dataset.option!=="d") renderRecords(option,data.id);delete card.dataset.moved});
+          card.addEventListener("keydown",event=>{if(option.dataset.option!=="d"&&(event.key==="Enter"||event.key===" ")){event.preventDefault();renderRecords(option,data.id)}});
+          enableReorder(card,track); track.append(card);
+        });
+      }
+      function enableReorder(card,track){
+        let timer=null,dragging=false,startX=0;
+        card.addEventListener("pointerdown",event=>{startX=event.clientX;timer=setTimeout(()=>{dragging=true;card.classList.add("is-dragging");card.setPointerCapture(event.pointerId)},320)});
+        card.addEventListener("pointermove",event=>{
+          if(!dragging)return; event.preventDefault(); card.dataset.moved="true";
+          const other=[...track.querySelectorAll(".group-card")].find(item=>item!==card&&event.clientX>=item.getBoundingClientRect().left&&event.clientX<=item.getBoundingClientRect().right);
+          if(other) track.insertBefore(card,event.clientX<other.getBoundingClientRect().left+other.offsetWidth/2?other:other.nextSibling);
+        });
+        const finish=()=>{clearTimeout(timer);if(dragging)setTimeout(()=>delete card.dataset.moved);dragging=false;card.classList.remove("is-dragging")};
+        card.addEventListener("pointerup",finish);card.addEventListener("pointercancel",finish);card.addEventListener("pointerleave",()=>{if(!dragging)clearTimeout(timer)});
+      }
+      document.querySelectorAll(".option").forEach(option=>{makeGroups(option);renderRecords(option);option.querySelectorAll(".all-control").forEach(button=>button.addEventListener("click",()=>renderRecords(option)));});
+      document.querySelectorAll(".switcher button").forEach(button=>button.addEventListener("click",()=>{
+        document.querySelectorAll(".switcher button").forEach(item=>item.setAttribute("aria-pressed",String(item===button)));
+        document.querySelectorAll(".option").forEach(option=>option.classList.toggle("is-active",option.dataset.option===button.dataset.show));
+        history.replaceState(null,"",`#${button.dataset.show}`);
+        const resetScroll=()=>{const phone=document.querySelector(".option.is-active .phone");if(phone)phone.scrollTop=0;window.scrollTo(0,0)};
+        requestAnimationFrame(resetScroll);setTimeout(resetScroll,120);
+      }));
+      document.querySelectorAll(".menu-toggle").forEach(button=>button.addEventListener("click",()=>button.nextElementSibling.classList.toggle("is-open")));
+      document.querySelectorAll(".scope-popover button").forEach(button=>button.addEventListener("click",()=>{const option=button.closest(".option");renderRecords(option,button.dataset.scope);button.parentElement.classList.remove("is-open")}));
+      const initial=document.querySelector(`.switcher button[data-show="${location.hash.slice(1)}"]`);if(initial)initial.click();
+    </script>
+  </body>
+</html>
