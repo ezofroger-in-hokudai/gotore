@@ -1,4 +1,5 @@
 import type { Workout } from "@/lib/api";
+import type { ReactNode } from "react";
 import { dateLabel } from "../activity/calendar";
 import { estimatedRM } from "../session/session";
 import { BestFlame } from "./best-flame";
@@ -16,6 +17,8 @@ export function RecordList({
   onReuse,
   onEdit,
   onDeleted,
+  headerControl,
+  showDate = true,
 }: {
   personal?: boolean;
   records: Workout[];
@@ -24,6 +27,8 @@ export function RecordList({
   onReuse?: (record: Workout) => void;
   onEdit?: (record: Workout) => void;
   onDeleted?: () => void;
+  headerControl?: (record: Workout) => ReactNode;
+  showDate?: boolean;
 }) {
   if (!records.length)
     return (
@@ -44,21 +49,31 @@ export function RecordList({
         );
         const summary = recordSummary(record);
         const own = personal && record.user_id === userId;
+        const live = Boolean(record.started_at && !record.ended_at);
         return (
           <article className="record record-review" key={record.id}>
             <header className="record-heading">
               {!own && (
                 <div className="record-author">
-                  <span className="avatar" aria-hidden="true">
-                    {record.display_name.slice(0, 1)}
+                  <span className="record-author-avatar">
+                    <span className={`avatar${live ? " is-live" : ""}`} aria-hidden="true">
+                      {record.display_name.slice(0, 1)}
+                    </span>
+                    {live && <span className="record-author-live" aria-label="LIVE" />}
+                    {!!bests.size && (
+                      <span className="record-author-best" aria-label="最高記録を更新">
+                        🔥
+                      </span>
+                    )}
                   </span>
                   <strong>{record.display_name}</strong>
                 </div>
               )}
-              <h2>
-                <time dateTime={record.performed_on}>{dateLabel(record.performed_on)}</time>
-              </h2>
-              {record.started_at && !record.ended_at && <p className="muted">トレーニング中</p>}
+              {showDate && (
+                <h2>
+                  <time dateTime={record.performed_on}>{dateLabel(record.performed_on)}</time>
+                </h2>
+              )}
               <dl className="record-overview">
                 <div aria-label="総負荷">
                   <dt>総負荷</dt>
@@ -85,6 +100,7 @@ export function RecordList({
                   </div>
                 )}
               </dl>
+              {headerControl?.(record)}
             </header>
             <div className="record-details">
               {record.exercises.map((exercise, index) => (

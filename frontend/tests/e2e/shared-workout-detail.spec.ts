@@ -49,6 +49,51 @@ test("友達のセットから選んだ記録の全種目・全セットを開�
   let reads = 0;
   let fail = false;
   const path = `/api/groups/${state.group.id}/workouts/${record.id}`;
+  await page.route(`**${path}/stamps?offset=*`, (route) =>
+    route.fulfill({
+      json: {
+        target: { group_name: state.group.name, performed_on: record.performed_on },
+        items: [
+          {
+            id: "stamp-praise-a",
+            workout_id: record.id,
+            group_id: state.group.id,
+            group_name: state.group.name,
+            sender_id: "member-a",
+            display_name: "ミオ",
+            kind: "praise",
+            created_at: "2026-01-02T01:00:00Z",
+            performed_on: record.performed_on,
+            exercise: "ベンチプレス",
+            read: true,
+            announced: true,
+            mine: false,
+          },
+          {
+            id: "stamp-praise-b",
+            workout_id: record.id,
+            group_id: state.group.id,
+            group_name: state.group.name,
+            sender_id: "member-b",
+            display_name: "ユウ",
+            kind: "praise",
+            created_at: "2026-01-02T01:01:00Z",
+            performed_on: record.performed_on,
+            exercise: "ベンチプレス",
+            read: true,
+            announced: true,
+            mine: false,
+          },
+        ],
+        total: 2,
+        people: 2,
+        unread: 0,
+        mine: [],
+        can_send: true,
+        has_more: false,
+      },
+    }),
+  );
   await page.route(`**${path}`, (route) => {
     reads++;
     return fail
@@ -60,13 +105,29 @@ test("友達のセットから選んだ記録の全種目・全セットを開�
   await expect(open).toBeVisible();
   await expect.poll(() => reads).toBeGreaterThan(0);
   await open.click();
-  const dialog = page.getByRole("dialog", { name: "記録の詳細", exact: true });
+  const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("2026年1月2日");
   await expect(dialog.locator(".record-set")).toHaveCount(3);
   await expect(dialog.locator(".record-details")).toContainText("ベンチプレス");
   await expect(dialog.locator(".record-details")).toContainText("スクワット");
   await expect(dialog.getByRole("button", { name: /^(編集|削除|コピー|メモ)$/ })).toHaveCount(0);
+  const addStamp = dialog.getByRole("button", { name: "友達Aの記録にスタンプを追加", exact: true });
+  await expect(addStamp).toBeEnabled();
+  await addStamp.click();
+  const picker = page.getByRole("dialog", { name: "スタンプ", exact: true });
+  await expect(picker.getByRole("button", { name: "えらい", exact: true })).toBeEnabled();
+  await picker.getByRole("button", { name: "えらい", exact: true }).click();
+  await expect(picker.getByRole("button", { name: "えらい", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await picker.getByRole("button", { name: "閉じる", exact: true }).click();
+  await dialog.getByRole("button", { name: "友達Aのリアクションの詳細", exact: true }).click();
+  const stampDetails = page.getByRole("dialog", { name: "スタンプ", exact: true });
+  await expect(stampDetails.locator(".stamp-reaction-row")).toHaveCount(1);
+  await expect(stampDetails.locator(".stamp-reaction-row").getByRole("img")).toHaveCount(2);
+  await stampDetails.getByRole("button", { name: "閉じる", exact: true }).click();
   await page.goBack();
   await expect(dialog).toHaveCount(0);
   await expect(open).toBeVisible();
@@ -99,7 +160,7 @@ test("詳細の共有権限を再確認し、非表示中と閉じた後は取�
   await page.clock.install();
   const state = await mockTraining(page);
   await startTraining(page);
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect.poll(() => state.saves).toBe(1);
   await navigate(page, "ホーム");
   const record = state.session;
@@ -113,7 +174,7 @@ test("詳細の共有権限を再確認し、非表示中と閉じた後は取�
       : route.fulfill({ json: record });
   });
   await page.getByRole("button", { name: /の記録詳細を開く$/ }).click();
-  const dialog = page.getByRole("dialog", { name: "記録の詳細", exact: true });
+  const dialog = page.getByRole("dialog");
   await expect(dialog.locator(".record-set")).toHaveCount(1);
   await expect(dialog.getByRole("button", { name: /^(編集|削除|コピー|メモ)$/ })).toHaveCount(0);
   const before = reads;

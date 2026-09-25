@@ -17,6 +17,7 @@ export function InlineMemo({
   onSaved,
   onDraftChange,
   omitWhenEmpty = false,
+  singleLine = false,
 }: {
   title: string;
   path: string;
@@ -26,6 +27,7 @@ export function InlineMemo({
   onSaved?: () => void;
   onDraftChange?: (state: MemoDraftState) => void;
   omitWhenEmpty?: boolean;
+  singleLine?: boolean;
 }) {
   const key = memoDraftKey(userId, name ?? path);
   const [draft] = useState(() => readMemoDraft(key));
@@ -87,7 +89,7 @@ export function InlineMemo({
   if (omitWhenEmpty && !content.trim() && !editing && !error && !dirty.current) return null;
   return (
     <form
-      className="inline-memo"
+      className={`inline-memo${singleLine ? " single-line" : ""}`}
       onSubmit={async (event) => {
         event.preventDefault();
         if (!memo || busy) return;
@@ -132,7 +134,8 @@ export function InlineMemo({
             id={key}
             aria-label={title}
             maxLength={1000}
-            rows={2}
+            rows={singleLine ? 1 : 2}
+            wrap={singleLine ? "off" : undefined}
             disabled={busy || !memo}
             placeholder="メモ"
             value={content}
@@ -141,6 +144,10 @@ export function InlineMemo({
               if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
               event.preventDefault();
               event.currentTarget.form?.requestSubmit();
+            }}
+            onBlur={(event) => {
+              // 入力欄を離れる操作も、Enter と同じ保存のきっかけにする。
+              if (dirty.current && !busy && memo) event.currentTarget.form?.requestSubmit();
             }}
             onChange={(event) => {
               setContent(event.target.value);
@@ -157,24 +164,6 @@ export function InlineMemo({
               }
             }}
           />
-          <div className="memo-actions">
-            <button
-              className="text-button"
-              type="button"
-              disabled={busy}
-              onClick={() => setEditing(false)}
-            >
-              閉じる
-            </button>
-            <button
-              className="text-button"
-              type="submit"
-              disabled={!memo || busy}
-              aria-label={`${title}を保存`}
-            >
-              {busy ? "保存中" : "保存"}
-            </button>
-          </div>
         </>
       )}
       {error && (

@@ -20,12 +20,12 @@ for (const width of [320, 390, 430]) {
       }),
     );
     await startTraining(page);
-    const table = page.getByRole("region", { name: "全セットの比較", exact: true });
+    const table = page.getByRole("region", { name: "今回と前回の全セット", exact: true });
     await expect(table.locator(".comparison-row")).toHaveCount(10);
     await table.evaluate((element) => {
       element.scrollTop = 48;
     });
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect.poll(() => table.evaluate((element) => element.scrollTop)).toBe(48);
   });
 }

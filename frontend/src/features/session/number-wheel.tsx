@@ -29,6 +29,7 @@ export function NumberWheel({
   onChange,
   inputRef,
   onEnter,
+  showLabel = true,
 }: {
   label: string;
   unit: string;
@@ -39,6 +40,7 @@ export function NumberWheel({
   onChange: (value: string) => void;
   inputRef?: RefObject<HTMLInputElement | null>;
   onEnter?: () => void;
+  showLabel?: boolean;
 }) {
   const [offset, setOffset] = useState(0);
   const current = useRef(Number(value) || 0);
@@ -72,7 +74,8 @@ export function NumberWheel({
       ref={host}
       className="number-wheel"
       onPointerDown={(event) => {
-        if (event.target instanceof Element && event.target.closest("button")) return;
+        if (event.target instanceof Element && event.target.closest("button, .number-wheel-label"))
+          return;
         cancelAnimationFrame(frame.current);
         gesture.current = {
           y: event.clientY,
@@ -141,10 +144,12 @@ export function NumberWheel({
         setOffset(0);
       }}
     >
-      <label htmlFor={`set-${unit}`}>
-        {label}
-        <small>{unit}</small>
-      </label>
+      {showLabel && (
+        <span className="number-wheel-label">
+          {label}
+          <small>{unit}</small>
+        </span>
+      )}
       <button
         type="button"
         className="wheel-neighbor"

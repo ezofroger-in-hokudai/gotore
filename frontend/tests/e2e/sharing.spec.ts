@@ -59,7 +59,7 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await pageA.route("**/api/sessions/*", (route) =>
       route.request().method() === "PATCH" && failSave ? route.abort() : route.continue(),
     );
-    await pageA.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await pageA.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect(pageA.locator(".sync-status")).toContainText("未送信");
     failSave = false;
     // 自動再送も許容し、先に同期が完了してボタンが消えても保存結果を確認する。
@@ -80,7 +80,7 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
           response.request().method() === "GET",
       );
       await pageB.getByRole("button", { name: "共有テストAの記録詳細を開く", exact: true }).click();
-      const detail = pageB.getByRole("dialog", { name: "記録の詳細", exact: true });
+      const detail = pageB.getByRole("dialog");
       await expect(detail.locator(".record-set")).toHaveCount(1);
       await expect(detail).toContainText("82.5");
       expect((await (await detailResponse).json()).shared_group_ids).toHaveLength(1);
@@ -105,13 +105,13 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await expect(pageB.getByText("本人だけの振り返り")).toHaveCount(0);
     await expect(pageB.getByRole("button", { name: "メモ", exact: true })).toHaveCount(0);
     await pageB.getByRole("button", { name: "共有テストAの記録詳細を開く", exact: true }).click();
-    const detail = pageB.getByRole("dialog", { name: "記録の詳細", exact: true });
+    const detail = pageB.getByRole("dialog");
     await expect(detail.locator(".record-set")).toContainText("85");
     await expect(detail).not.toContainText("本人だけの振り返り");
     await expect(detail.getByRole("button", { name: /^(メモ|編集|削除)$/ })).toHaveCount(0);
     await detail.getByRole("button", { name: "閉じる", exact: true }).click();
     await startTraining(pageB, "スクワット");
-    await pageB.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await pageB.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect(pageB.getByText("保存しました", { exact: true })).toBeVisible();
     await navigate(pageB, "ホーム");
     await pageB.getByRole("button", { name: "朝の合トレ部の詳細", exact: true }).click();

@@ -27,7 +27,7 @@ test("前回の最初の重量・回数を初期値にし、入力だけでは�
   expect(state.session?.exercises).toEqual([]);
   expect(state.saves).toBe(0);
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("65");
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect.poll(() => state.session?.exercises[0]?.sets).toEqual([{ weight: 65, reps: 8 }]);
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page.getByRole("button", { name: /^スクワット/ }).click();

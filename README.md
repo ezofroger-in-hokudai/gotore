@@ -253,6 +253,17 @@ PCの `localhost` はスマートフォンから使うための公開URLでは�
 ローカルSupabaseの既定キーや管理画面をそのままインターネットへ公開しないでください。
 公開環境の準備後、iPhone／Androidそれぞれで「追加 → 起動 → ログイン → 記録・共有 → 閉じて再起動」と、キーボード・画面端の表示を確認します。実機での追加操作は自動テストの対象外です。
 
+### 同一LANでの開発確認
+
+同じWi-Fi内だけで実機確認する場合は、PCのLAN IPv4アドレスを使います。これは開発用のHTTP接続であり、インターネット公開やホーム画面への本番インストールには使いません。
+
+1. `make db-start`、`make backend`、`make frontend` を起動する。
+2. `frontend/.env.local` の `NEXT_PUBLIC_SUPABASE_URL` を `http://<PCのLAN IPv4アドレス>:59321` に変更し、frontendを再起動する。
+3. `supabase/config.toml` の `site_url` と `additional_redirect_urls` に、実機で開く `http://<PCのLAN IPv4アドレス>:<frontendポート>` とその `/auth/callback` を追加してから、`make db-stop`、`make db-start` を実行する。ローカルDBのデータは削除しない。
+4. スマホで `http://<PCのLAN IPv4アドレス>:<frontendポート>` を開く。PCのファイアウォールが有効なら、同一LANからのTCP 3000（または指定ポート）・8000・59321を許可する。
+
+PCのLANアドレスはDHCPで変わる場合があります。変わったときは上記のURLと`frontend/next.config.mjs`の `allowedDevOrigins` を同じアドレスへ更新し、各サービスを再起動します。Googleログインを試す場合は、Google CloudのOAuthリダイレクトURIにも同じ `/auth/callback` を登録します。
+
 ## 検証
 
 ### lint・単体テスト・DB統合テスト

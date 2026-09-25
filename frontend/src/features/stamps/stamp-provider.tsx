@@ -9,6 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { createSessionId } from "../session/session-id";
 import { Sheet } from "../v2/sheet";
 import { type StampJob, StampStore, stampKey } from "./stamp-store";
 import { stampKinds } from "./types";
@@ -29,7 +30,8 @@ function createClient(userId: string) {
         }),
     write: (job: StampJob) => localStorage.setItem(prefix + job.id, JSON.stringify(job)),
     remove: (job: StampJob) => localStorage.removeItem(prefix + job.id),
-    id: () => crypto.randomUUID(),
+    // LAN上のHTTP実機ではrandomUUIDが公開されないため、セッションと同じ互換IDを使う。
+    id: createSessionId,
     lock: (key, work) => (navigator.locks ? navigator.locks.request(prefix + key, work) : work()),
   });
   const records = new Map<string, Map<string, number>>();

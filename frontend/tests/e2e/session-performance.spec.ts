@@ -10,8 +10,8 @@ for (const destination of ["ホーム", "設定"]) {
     await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeEnabled();
     const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
     await weight.fill("77.5");
-    await page.getByRole("button", { name: "今回のメモを編集", exact: true }).click();
-    await page.getByRole("textbox", { name: "今回のメモ", exact: true }).fill("入力途中のメモ");
+    await page.getByRole("button", { name: "今日のメモを編集", exact: true }).click();
+    await page.getByRole("textbox", { name: "今日のメモ", exact: true }).fill("入力途中のメモ");
     await page.getByRole("button", { name: "種目メモを編集", exact: true }).click();
     await page.getByRole("textbox", { name: "種目メモ", exact: true }).fill("種目の下書き");
     let contexts = 0;
@@ -45,7 +45,7 @@ for (const destination of ["ホーム", "設定"]) {
       return route.fallback();
     });
     try {
-      await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+      await page.getByRole("button", { name: "セットを追加", exact: true }).click();
       await expect.poll(() => started).toBe(true);
       await navigate(page, destination);
       release();
@@ -64,10 +64,10 @@ for (const destination of ["ホーム", "設定"]) {
       await expectRecordingBest(page, "99");
       expect(contexts).toBe(1);
       await expect(weight).toHaveValue("77.5");
-      await expect(page.getByRole("textbox", { name: "今回のメモ", exact: true })).toHaveValue(
+      await expect(page.getByRole("textbox", { name: "今日のメモ", exact: true })).toHaveValue(
         "入力途中のメモ",
       );
-      await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+      await page.getByRole("button", { name: "セットを追加", exact: true }).click();
       await expect.poll(() => contexts).toBe(2);
       expect(state.saves).toBe(2);
     } finally {
@@ -102,7 +102,7 @@ test("保存待ちの全セット一覧を離れた後はBEST取得を延期し�
     return route.fallback();
   });
   try {
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect.poll(() => started).toBe(true);
     await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
     await expect.poll(() => bests).toBe(1);

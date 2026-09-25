@@ -35,12 +35,12 @@ for (const width of [320, 390, 430]) {
       await expect(floating).toHaveCount(0);
       await page.getByRole("button", { name: /^ベンチプレス/ }).click();
       await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("60");
-      await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeDisabled();
     } finally {
       release();
     }
-    await expect(page.getByRole("button", { name: "次のセットへ", exact: true })).toBeEnabled();
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeEnabled();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect.poll(() => state.session?.exercises[0]?.sets.length).toBe(1);
     const sessionId = state.session?.id;
     await navigate(page, "グループ");

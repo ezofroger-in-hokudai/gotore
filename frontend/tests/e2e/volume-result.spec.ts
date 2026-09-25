@@ -8,7 +8,7 @@ test("採点APIを使わず終了結果・履歴・ホーム・設定を表示�
     if (/\/api\/(me\/goal|.*score)/.test(request.url())) calls.push(request.url());
   });
   await startTraining(page);
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
   await page.getByRole("button", { name: "終了する", exact: true }).click();

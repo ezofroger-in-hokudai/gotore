@@ -14,7 +14,7 @@ test("タップ後も色が戻り、受付セットと次の番号・保存待�
     if (route.request().method() === "PATCH") await gate;
     await route.fallback();
   });
-  const next = page.getByRole("button", { name: "次のセットへ", exact: true });
+  const next = page.getByRole("button", { name: "セットを追加", exact: true });
   const color = await next.evaluate((el) => getComputedStyle(el).backgroundColor);
   await next.tap();
   try {
@@ -39,7 +39,7 @@ test("種目追加はリスト末尾、次種目と終了を押しやすいボ�
   await mockTraining(page);
   await startTraining(page);
   const next = page.getByRole("button", { name: "次の種目へ", exact: true });
-  const save = page.getByRole("button", { name: "次のセットへ", exact: true });
+  const save = page.getByRole("button", { name: "セットを追加", exact: true });
   const finish = page.getByRole("button", { name: "トレーニング終了", exact: true });
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 720 });
@@ -67,7 +67,7 @@ test("終了を待っていることを表示し、失敗時は保存済みセ�
 }) => {
   const state = await mockTraining(page);
   await startTraining(page);
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).tap();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).tap();
   await expect(page.locator(".sync-status")).toContainText("同期済み");
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
@@ -115,7 +115,7 @@ test("最高記録の赤色と炎はサーバー保存の確定後に表示す�
     if (route.request().method() === "PATCH") await gate;
     await route.fallback();
   });
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).tap();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).tap();
   try {
     await expect(page.locator(".save-feedback")).toContainText("保存中");
     await expect(page.locator(".save-feedback .record-celebration")).toHaveCount(0);

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GO TORE — 種目選択 3案</title>
+  <style>
+    :root { color-scheme: light; --bg:#f4f4f5; --panel:#fff; --text:#17191d; --muted:#656a74; --line:#dedfe3; --accent:#d32f2f; --soft:#fff0f0; --good:#24754b; }
+    [data-theme="dark"] { color-scheme:dark; --bg:#111214; --panel:#1b1d20; --text:#f5f5f7; --muted:#a1a6af; --line:#33363d; --accent:#ff625b; --soft:#392327; --good:#8addae; }
+    * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 -apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif; }
+    button { font:inherit; color:inherit; cursor:pointer; } button:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+    .intro { max-width:1120px; margin:auto; padding:32px 24px 14px; } .eyebrow { font-size:12px; color:var(--accent); font-weight:800; letter-spacing:.14em; } h1 { font-size:29px; margin:6px 0; letter-spacing:-.04em; } .intro p { margin:0; color:var(--muted); }
+    .tools { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; } .tools button { min-height:40px; padding:6px 13px; border:1px solid var(--line); background:var(--panel); border-radius:0; } .tools button[aria-pressed="true"] { background:var(--text); border-color:var(--text); color:var(--panel); } .tools .theme { margin-left:auto; }
+    .grid { display:grid; grid-template-columns:repeat(3,minmax(270px,1fr)); gap:22px; max-width:1120px; margin:auto; padding:8px 24px 36px; } .option h2 { margin:8px 0 9px; font-size:17px; } .option p { min-height:38px; margin:0 0 10px; color:var(--muted); font-size:12px; }
+    .phone { max-width:430px; margin:auto; min-height:722px; border:1px solid #343942; background:var(--bg); overflow:hidden; } .status { height:31px; padding:10px 18px 0; display:flex; justify-content:space-between; font-size:11px; font-weight:800; }
+    .screen { padding:8px 16px 20px; } .header { display:flex; min-height:45px; align-items:center; justify-content:space-between; gap:8px; } .header h3 { margin:0; font-size:20px; letter-spacing:-.04em; } .finish { min-height:44px; border:0; padding:8px 0; background:none; color:var(--accent); font-size:11px; white-space:nowrap; }
+    .menu { border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:8px 0; } .menu-label { margin:0 0 6px; color:var(--muted); font-size:11px; } .menu-track { display:flex; gap:16px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; } .menu-item { flex:0 0 auto; min-height:36px; white-space:nowrap; } .menu-item b { display:block; font-size:13px; } .menu-item span { font-size:11px; color:var(--muted); }
+    .stats { display:grid; grid-template-columns:1.35fr .58fr 1fr; border-bottom:1px solid var(--line); padding:10px 0; } .stat { min-width:0; } .stat small { display:block; color:var(--muted); font-size:10px; } .stat b { display:block; font-size:18px; line-height:1.2; letter-spacing:-.04em; white-space:nowrap; } .stat:last-child b { font-size:12px; color:var(--good); letter-spacing:0; padding-top:4px; }
+    .part-grid { display:grid; grid-template-columns:repeat(4,1fr); border-left:1px solid var(--line); border-top:1px solid var(--line); margin:12px 0; } .part { min-height:49px; border:0; border-right:1px solid var(--line); border-bottom:1px solid var(--line); background:var(--panel); font-size:12px; } .part i { display:block; width:5px; height:5px; margin:0 auto 3px; border:1px solid currentColor; } .part[aria-pressed="true"] { color:var(--accent); background:var(--soft); font-weight:800; } .part[aria-pressed="true"] i { background:var(--accent); border-color:var(--accent); }
+    .exercise-list { border-top:1px solid var(--line); } .exercise { width:100%; min-height:57px; padding:8px 0; display:grid; grid-template-columns:1fr auto; align-items:center; text-align:left; border:0; border-bottom:1px solid var(--line); background:transparent; } .exercise strong { display:block; font-size:15px; } .exercise small { color:var(--muted); font-size:11px; } .exercise span:last-child { color:var(--muted); font-size:17px; padding:0 6px; }
+    .current { margin-top:15px; border-top:1px solid var(--line); padding-top:8px; } .current div { display:flex; justify-content:space-between; min-height:27px; align-items:center; } .current b { font-size:12px; } .current span { color:var(--muted); font-size:11px; }
+    .axis { display:grid; grid-template-columns:28px 1fr; border-top:1px solid var(--line); } .axis button { min-height:57px; border:0; border-bottom:1px solid var(--line); background:transparent; text-align:left; padding:8px 0; } .axis-mark { border-right:1px solid var(--line); display:grid; place-items:center; color:var(--muted); font-size:11px; } .axis button strong { display:block; font-size:15px; } .axis button small { color:var(--muted); font-size:11px; }
+    .strip { display:flex; gap:5px; border-bottom:1px solid var(--line); padding:10px 0; } .strip span { min-width:0; padding:4px 7px; border-left:2px solid var(--accent); background:var(--soft); color:var(--accent); font-size:11px; white-space:nowrap; }
+    .add { width:100%; min-height:46px; margin-top:14px; border:1px solid var(--line); background:var(--panel); color:var(--muted); font-size:16px; } .note { max-width:1120px; margin:-20px auto 32px; padding:0 24px; color:var(--muted); font-size:12px; }
+    @media (max-width:850px) { .grid { grid-template-columns:1fr; } .option p { min-height:auto; } } @media (max-width:600px) { .intro { padding:22px 16px 12px; } h1 { font-size:25px; } .tools .theme { margin-left:0; } .grid { padding:6px 0 30px; } .option h2,.option p { margin-left:16px; margin-right:16px; } .phone { max-width:none; border-left:0; border-right:0; } }
+  </style>
+  <header class="intro">
+    <span class="eyebrow">GO TORE / 画面比較・試作 4</span>
+    <h1>部位から、次の種目へ。</h1>
+    <p>記録入力と同じ罫線・余白・赤の使い方で組んだ3案です。</p>
+    <div class="tools"><button data-view="all" aria-pressed="true">3案</button><button data-view="A" aria-pressed="false">A</button><button data-view="B" aria-pressed="false">B</button><button data-view="C" aria-pressed="false">C</button><button class="theme" data-theme>ダーク</button></div>
+  </header>
+  <main class="grid" id="grid"></main>
+  <p class="note">胸・腕を選択した例。赤い部位は複数選択・解除できます。今日のメニューは全種目・全セットを横に送って確認します。</p>
+  <script>
+    const variants={A:["セット一覧型","今日の内容 → 数値 → 部位 → 種目の順に、記録入力と同じ縦の流れ。","list"],B:["軸つき一覧型","種目一覧にSETの並びを思わせる細い軸を付け、選択場所を明確にする。","axis"],C:["選択帯型","選択した部位だけを細い帯で再表示し、一覧の意味を短く補う。","strip"]};
+    const parts=["胸","背中","脚","肩","腕","腹筋","お尻","他"], exercises=[["ベンチプレス","72.5kg × 8"],["トライセプスプレスダウン","25kg × 12"],["ダンベルフライ","14kg × 12"]]; let view="all";
+    const header=()=>`<header class="header"><h3>種目を選択</h3><button class="finish">今日のトレーニング終了</button></header>`;
+    const menu=()=>`<section class="menu"><p class="menu-label">今日のメニュー</p><div class="menu-track"><div class="menu-item"><b>ベンチプレス</b><span>72.5 × 8　70 × 10　70 × 10</span></div><div class="menu-item"><b>ラットプルダウン</b><span>55 × 10　55 × 10</span></div><div class="menu-item"><b>ショルダープレス</b><span>30 × 10</span></div></div></section>`;
+    const stats=()=>`<section class="stats"><div class="stat"><small>総負荷</small><b>3,240kg</b></div><div class="stat"><small>セット</small><b>5</b></div><div class="stat"><small>先週比</small><b>+420kg</b></div></section>`;
+    const body=()=>`<div class="part-grid">${parts.map((part,index)=>`<button class="part" aria-pressed="${index===0||index===4}"><i></i>${part}</button>`).join("")}</div>`;
+    const list=()=>`<div class="exercise-list">${exercises.map(([name,last])=>`<button class="exercise"><span><strong>${name}</strong><small>${last}</small></span><span>›</span></button>`).join("")}</div>`;
+    const axis=()=>`<div class="axis">${exercises.map(([name,last],index)=>`<span class="axis-mark">${index+1}</span><button><strong>${name}</strong><small>${last}</small></button>`).join("")}</div>`;
+    const current=()=>`<section class="current"><div><b>ベンチプレス</b><span>3 SET</span></div><div><b>ラットプルダウン</b><span>2 SET</span></div></section>`;
+    const phone=kind=>{const content=kind==="axis"?axis():list();const extra=kind==="strip"?`<div class="strip"><span>胸</span><span>腕</span></div>`:"";return `<div class="phone"><div class="status"><span>9:41</span><span>● ▰</span></div><div class="screen">${header()}${menu()}${stats()}${body()}${extra}${content}${current()}<button class="add" aria-label="種目を追加">＋</button></div></div>`};
+    function render(){document.querySelector("#grid").innerHTML=Object.entries(variants).filter(([key])=>view==="all"||view===key).map(([key,[title,copy,kind]])=>`<section class="option"><h2>${key} · ${title}</h2><p>${copy}</p>${phone(kind)}</section>`).join("");}
+    document.addEventListener("click",event=>{const button=event.target.closest("button");if(!button)return;if(button.dataset.view){view=button.dataset.view;document.querySelectorAll("[data-view]").forEach(node=>node.setAttribute("aria-pressed",String(node===button)));render();}else if(button.dataset.theme!==undefined){const dark=document.documentElement.dataset.theme!=="dark";document.documentElement.dataset.theme=dark?"dark":"";button.textContent=dark?"ライト":"ダーク";}else if(button.classList.contains("part")){button.setAttribute("aria-pressed",String(button.getAttribute("aria-pressed")!=="true"));}});render();
+  </script>
+</html>

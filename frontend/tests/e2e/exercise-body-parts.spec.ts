@@ -95,7 +95,6 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
   const state = await prepare(page);
   await startTraining(page);
   await openRecordingCatalog(page);
-  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   await page.getByLabel("新しい種目", { exact: true }).fill("ケーブルロウ");
   await page.getByLabel("主な部位", { exact: true }).selectOption("back");
   await page.locator(".secondary-parts > summary").click();
@@ -149,7 +148,7 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
 test("今回の種目に戻れて、未保存入力の保護と削除済み種目の選択を維持する", async ({ page }) => {
   const state = await prepare(page);
   await startTraining(page);
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page
@@ -189,7 +188,6 @@ test("種目一覧の再取得に失敗しても、読み込んだ候補で部�
   const state = await prepare(page);
   await startTraining(page);
   await openRecordingCatalog(page);
-  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   await page.getByLabel("新しい種目", { exact: true }).fill("追加種目");
   state.failOptions = true;
   await page.getByRole("button", { name: "追加", exact: true }).click();

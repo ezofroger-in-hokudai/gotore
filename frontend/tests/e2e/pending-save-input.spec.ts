@@ -8,7 +8,7 @@ test("端末保存を待つ間に入力した次セットの値を保持する",
   await weight.fill("60");
   const lockName = `gotore:session-queue:v1:${state.user.id}:store`;
   await holdStore(page, lockName);
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect
     .poll(() =>
       page.evaluate(
@@ -28,7 +28,7 @@ test("端末保存を待つ間に入力した次セットの値を保持する",
   await page.reload();
   await openTraining(page);
   await expect(weight).toHaveValue("82.5");
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect
     .poll(() => state.session?.exercises[0]?.sets)
     .toEqual([
@@ -59,7 +59,7 @@ for (const change of ["編集中の回数", "選択種目"]) {
     const state = await mockTraining(page);
     await startTraining(page);
     await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("60");
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect.poll(() => state.session?.exercises[0]?.sets.length).toBe(1);
     await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
     await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("8");
@@ -80,7 +80,7 @@ for (const change of ["編集中の回数", "選択種目"]) {
       await expect.poll(() => state.session?.exercises[0]?.sets).toEqual([{ weight: 60, reps: 9 }]);
     } else {
       await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();
-      await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+      await page.getByRole("button", { name: "セットを追加", exact: true }).click();
       await expect.poll(() => state.session?.exercises[1]?.name).toBe("スクワット");
     }
   });

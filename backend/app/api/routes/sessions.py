@@ -16,6 +16,7 @@ from app.schemas.session import (
     InvitePreview,
     SessionBests,
     SessionResponse,
+    TodayActivity,
 )
 from app.schemas.training import GroupJoin, WorkoutMemoResponse
 from app.services.training import TrainingService
@@ -81,6 +82,11 @@ def preview_group(data: GroupJoin, service: Service):
 @router.get("/groups/activity/summary", response_model=list[GroupSummary])
 def group_summaries(service: Service):
     return repository(service).group_summaries(service.user.id)
+
+
+@router.get("/groups/today-activity", response_model=TodayActivity)
+def today_activity(service: Service):
+    return repository(service).today_activity(service.user.id)
 
 
 @router.get("/groups/{group_id}/activity", response_model=GroupActivity)

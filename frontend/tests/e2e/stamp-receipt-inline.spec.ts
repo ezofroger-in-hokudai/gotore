@@ -49,12 +49,14 @@ for (const width of [320, 390, 430]) {
     });
     await startTraining(page);
     for (let i = 0; i < 6; i++) {
-      await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+      await page.getByRole("button", { name: "セットを追加", exact: true }).click();
       await expect(page.getByRole("heading", { name: `SET ${i + 2}`, exact: true })).toBeVisible();
     }
-    await page.getByRole("region", { name: "全セットの比較", exact: true }).evaluate((element) => {
-      element.scrollTop = 0;
-    });
+    await page
+      .getByRole("region", { name: "今回と前回の全セット", exact: true })
+      .evaluate((element) => {
+        element.scrollTop = 0;
+      });
     const input = page.getByRole("spinbutton", { name: "重量", exact: true });
     await input.fill("62.5");
     const y = (await input.boundingBox())?.y;
@@ -111,7 +113,7 @@ for (const width of [320, 390, 430]) {
     await expect(
       receipt.getByRole("button", { name: "がんばれ 55件の詳細", exact: true }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     const finish = page.getByRole("button", { name: "トレーニング終了", exact: true });
     await expect(finish).toContainText("トレーニング終了");
     if (width === 390) {

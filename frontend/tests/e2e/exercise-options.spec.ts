@@ -9,7 +9,6 @@ test("種目追加・削除の失敗を再試行でき、削除後も入力を�
   const state = await mockTraining(page);
   await startTraining(page, "スクワット");
   await catalog(page);
-  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   const name = page.getByLabel("新しい種目", { exact: true });
   await name.fill(" ケーブルロウ ");
   state.failOptionWrite = true;
@@ -52,9 +51,7 @@ test("候補取得失敗から再試行し、空リストにも追加できる",
   state.failOptions = false;
   state.options = [];
   await page.getByRole("button", { name: "再試行", exact: true }).click();
-  await expect(
-    page.getByText("種目一覧から種目を追加してください。", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("この部位の種目はありません", { exact: true })).toBeVisible();
   await catalog(page);
   await page.getByLabel("新しい種目", { exact: true }).fill("新しい種目");
   await page.getByRole("button", { name: "追加", exact: true }).click();
@@ -71,7 +68,6 @@ test("空白・長すぎる名前を送信せず、種目ごとにセットを�
   const state = await mockTraining(page);
   await startTraining(page);
   await catalog(page);
-  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   for (const value of ["   ", "長".repeat(61)]) {
     await page.getByLabel("新しい種目", { exact: true }).fill(value);
     await page.getByRole("button", { name: "追加", exact: true }).click();
@@ -79,11 +75,11 @@ test("空白・長すぎる名前を送信せず、種目ごとにセットを�
     expect(state.options).toHaveLength(2);
   }
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page.getByRole("button", { name: /^スクワット/ }).click();
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
   expect(state.session?.exercises.map((e) => e.name)).toEqual(["ベンチプレス", "スクワット"]);
 });

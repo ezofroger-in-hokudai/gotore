@@ -129,6 +129,8 @@ export type GroupActivity = GroupSummary & {
     best_rm?: boolean;
   }[];
 };
+export type TodayGroupActivity = GroupActivity & { name: string };
+export type TodayActivity = { groups: TodayGroupActivity[] };
 
 export type ScoreAxis = "c" | "i" | "v" | "g";
 export type ScoreWeights = Record<ScoreAxis, number>;

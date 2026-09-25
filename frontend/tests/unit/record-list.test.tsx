@@ -69,6 +69,6 @@ test("旧記録に時間を作らず、進行中と実績0を区別する", () =
   const active = renderToStaticMarkup(
     <RecordList records={[{ ...record, ended_at: null }]} empty="" />,
   );
-  expect(active).toContain("トレーニング中");
+  expect(active).not.toContain("トレーニング中");
   expect(active).not.toContain('aria-label="時間"');
 });

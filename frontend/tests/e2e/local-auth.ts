@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-export const testPassword = "Gotore-test-2026!";
+export const testPassword = "testtest";
 
 export function localAuth() {
   // 管理キーはローカルCLIからテストプロセス内だけで取得し、ブラウザやログに渡さない。

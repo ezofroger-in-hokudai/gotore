@@ -1,17 +1,13 @@
 from uuid import UUID
 
-from app.domain.errors import Conflict, NotFound
+from app.domain.errors import NotFound
 
-# 固定SQL。共有の所属と保存済みセットを毎回確認する。
-VISIBLE = """(w.group_id = r.group_id OR EXISTS (
-    SELECT 1 FROM public.gotore_workout_shares s
-    WHERE s.workout_id = w.id AND s.group_id = r.group_id))
-    AND EXISTS (SELECT 1 FROM public.gotore_group_members m
-      WHERE m.group_id = r.group_id AND m.user_id = r.sender_id)
-    AND EXISTS (SELECT 1 FROM public.gotore_group_members m
-      WHERE m.group_id = r.group_id AND m.user_id = w.user_id)
-    AND EXISTS (SELECT 1 FROM jsonb_array_elements(w.exercises) e
-      WHERE jsonb_array_length(e->'sets') > 0)"""
+# 記録に保存済みセットと共有先があることだけを確認する。
+# グループは記録の表示経路であり、スタンプそのものの所属ではない。
+VISIBLE = """EXISTS (SELECT 1 FROM jsonb_array_elements(w.exercises) e
+      WHERE jsonb_array_length(e->'sets') > 0)
+    AND (w.group_id IS NOT NULL OR EXISTS (
+      SELECT 1 FROM public.gotore_workout_shares s WHERE s.workout_id = w.id))"""
 
 
 class StampRepository:
@@ -47,20 +43,18 @@ class StampRepository:
     def change(self, user_id, group_id, workout_id, kind, remove=False):
         with self.connection.transaction():
             recipient = self.target(user_id, group_id, workout_id)["user_id"]
-            if recipient == user_id:
-                raise Conflict("自分の記録には送れません")
             if remove:
                 self.connection.execute(
                     "DELETE FROM public.gotore_workout_stamps WHERE workout_id=%s "
-                    "AND group_id=%s AND sender_id=%s AND kind=%s",
-                    (workout_id, group_id, user_id, kind),
+                    "AND sender_id=%s AND kind=%s",
+                    (workout_id, user_id, kind),
                 )
             else:
                 self.connection.execute(
                     "INSERT INTO public.gotore_workout_stamps "
-                    "(workout_id,recipient_id,group_id,sender_id,kind) VALUES (%s,%s,%s,%s,%s) "
-                    "ON CONFLICT (workout_id,group_id,sender_id,kind) DO NOTHING",
-                    (workout_id, recipient, group_id, user_id, kind),
+                    "(workout_id,recipient_id,sender_id,kind) VALUES (%s,%s,%s,%s) "
+                    "ON CONFLICT (workout_id,sender_id,kind) DO NOTHING",
+                    (workout_id, recipient, user_id, kind),
                 )
             return {"ok": True}
 
@@ -72,20 +66,36 @@ class StampRepository:
                 self.repository.group(user_id, group_id, lock_membership=True)
             if not inbox:
                 target = self.target(user_id, group_id, workout_id)
-                can_send = target["user_id"] != user_id
+                can_send = True
             scope = VISIBLE + (" AND r.recipient_id = %(user)s" if inbox else "")
-            scope += " AND (%(group)s::uuid IS NULL OR r.group_id=%(group)s)"
+            if inbox and group_id is not None:
+                scope += """ AND EXISTS (
+                    SELECT 1 FROM public.gotore_group_members m
+                    WHERE m.group_id=%(group)s AND m.user_id=w.user_id)
+                    AND (w.group_id=%(group)s OR EXISTS (
+                      SELECT 1 FROM public.gotore_workout_shares s
+                      WHERE s.workout_id=w.id AND s.group_id=%(group)s))"""
             scope += " AND (%(workout)s::uuid IS NULL OR r.workout_id=%(workout)s)"
             params = {"user": user_id, "group": group_id, "workout": workout_id, "offset": offset}
             # 合計とページを同じスナップショットで取得する。
             row = self.connection.execute(
                 """WITH visible AS MATERIALIZED (
-                    SELECT r.*, p.display_name, g.name AS group_name, w.performed_on,
+                    SELECT r.*, p.display_name, route.id AS group_id, route.name AS group_name,
+                        w.performed_on,
                         coalesce(w.exercises->0->>'name','記録') AS exercise
                     FROM public.gotore_workout_stamps r
                     JOIN public.gotore_workouts w ON w.id=r.workout_id
                     JOIN public.gotore_profiles p ON p.id=r.sender_id
-                    JOIN public.gotore_groups g ON g.id=r.group_id WHERE """
+                    JOIN LATERAL (
+                      SELECT g.id,g.name FROM public.gotore_groups g
+                      JOIN public.gotore_group_members m ON m.group_id=g.id
+                        AND m.user_id=w.user_id
+                      WHERE (%(group)s::uuid IS NULL OR g.id=%(group)s)
+                        AND (w.group_id=g.id OR EXISTS (
+                          SELECT 1 FROM public.gotore_workout_shares s
+                          WHERE s.workout_id=w.id AND s.group_id=g.id))
+                      ORDER BY g.created_at,g.id LIMIT 1
+                    ) route ON TRUE WHERE """
                 + scope
                 + """
                 ), page AS (SELECT * FROM visible ORDER BY created_at DESC,id DESC
@@ -134,10 +144,8 @@ class StampRepository:
                       bool_or(r.sender_id=%(user)s) mine
                     FROM public.gotore_workout_stamps r
                     JOIN workouts w ON w.id=r.workout_id
-                    JOIN public.gotore_group_members m
-                      ON m.group_id=r.group_id AND m.user_id=r.sender_id
-                    WHERE r.group_id=%(group)s GROUP BY r.workout_id,r.kind
-                ) SELECT w.id,w.user_id<>%(user)s can_send,
+                    GROUP BY r.workout_id,r.kind
+                ) SELECT w.id,true can_send,
                   coalesce((SELECT jsonb_object_agg(c.kind,c.n) FROM counts c
                     WHERE c.workout_id=w.id),'{}'::jsonb) counts,
                   coalesce((SELECT array_agg(c.kind) FROM counts c

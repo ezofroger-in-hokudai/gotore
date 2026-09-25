@@ -24,10 +24,10 @@ for (const width of [320, 390, 430]) {
     );
     await startTraining(page);
     for (let i = 0; i < 8; i++) {
-      await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+      await page.getByRole("button", { name: "セットを追加", exact: true }).click();
       await expect(page.getByRole("heading", { name: `SET ${i + 2}`, exact: true })).toBeVisible();
     }
-    const table = page.getByRole("region", { name: "全セットの比較" });
+    const table = page.getByRole("region", { name: "今回と前回の全セット" });
     await table.evaluate((el) => {
       el.scrollTop = 0;
     });
@@ -56,7 +56,7 @@ for (const width of [320, 390, 430]) {
     await weight.fill("72.5");
     await page.getByRole("button", { name: "変更を保存", exact: true }).click();
     await expect.poll(() => state.session?.exercises[0].sets[0].weight).toBe(72.5);
-    for (const name of ["次のセットへ", "次の種目へ", "トレーニング終了"]) {
+    for (const name of ["セットを追加", "次の種目へ", "トレーニング終了"]) {
       await expect(page.getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
@@ -86,6 +86,6 @@ test("畳んだメモの未保存入力を保持し、種目情報と終了確�
   const finish = page.getByRole("dialog", { name: "トレーニング終了", exact: true });
   await expect(finish).toBeVisible();
   await page.screenshot({ path: "test-results/visible-sets-finish.png" });
-  await finish.getByRole("button", { name: "記録に戻る", exact: true }).click();
+  await finish.getByRole("button", { name: "トレーニングに戻る", exact: true }).click();
   await expect(memo).toHaveValue("肩甲骨を寄せてゆっくり下ろす");
 });

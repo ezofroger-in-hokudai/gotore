@@ -78,3 +78,11 @@ class GroupSummary(BaseModel):
 
 class GroupActivity(GroupSummary):
     feed: list[FeedItem]
+
+
+class TodayGroupActivity(GroupActivity):
+    name: str
+
+
+class TodayActivity(BaseModel):
+    groups: list[TodayGroupActivity]

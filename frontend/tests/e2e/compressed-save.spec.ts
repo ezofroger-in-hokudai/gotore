@@ -55,7 +55,7 @@ test("圧縮保存が実APIへ届き、応答を失っても再送で二重追�
   const acknowledged = page.waitForResponse(
     (r) => r.request().method() === "PATCH" && r.status() === 200,
   );
-  await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect(page.locator(".sync-status")).toContainText("未送信");
   const response: TrainingSession = await (await acknowledged).json();
   await expect(page.locator(".sync-status")).toContainText("同期済み");
@@ -101,9 +101,9 @@ for (const unsupported of ["browser", "api"] as const) {
         });
       return route.fallback();
     });
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect.poll(() => state.saves).toBe(1);
-    await page.getByRole("button", { name: "次のセットへ", exact: true }).click();
+    await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect.poll(() => state.saves).toBe(2);
     expect(encodings).toEqual(
       unsupported === "api" ? ["gzip", undefined, undefined] : [undefined, undefined],

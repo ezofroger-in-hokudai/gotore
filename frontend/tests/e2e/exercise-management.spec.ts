@@ -48,6 +48,8 @@ test("開始せず種目を整理し、検索・分類を保って成功結果�
     "true",
   );
   await sheet.getByRole("button", { name: "種目を追加", exact: true }).click();
+  await expect(sheet.getByRole("heading", { name: "種目を追加", exact: true })).toBeVisible();
+  await expect(sheet.getByRole("searchbox")).toHaveCount(0);
   await sheet.getByLabel("新しい種目", { exact: true }).fill("ロウ追加");
   await sheet.getByRole("button", { name: "追加", exact: true }).click();
   await sheet.getByRole("button", { name: "すべて", exact: true }).click();
