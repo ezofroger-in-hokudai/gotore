@@ -4298,6 +4298,11 @@
   font-weight: 700;
   white-space: nowrap;
 }
+@media (max-width: 350px) {
+  .recording-view .session-screen .session-header {
+    margin-inline: -10px;
+  }
+}
 
 /* 種目を選ぶ間は、候補の操作を最優先にし、仲間の取得で高さを変えない。 */
 .recording-view .session-screen:not(.entering-sets) {

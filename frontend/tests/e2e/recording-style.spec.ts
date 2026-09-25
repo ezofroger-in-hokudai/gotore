@@ -84,6 +84,9 @@ for (const width of [320, 390, 430]) {
       await page.evaluate((value) => {
         document.documentElement.dataset.theme = value;
       }, theme);
+      const header = await page.locator(".session-header").boundingBox();
+      expect(Math.round(header?.x ?? -1)).toBeGreaterThanOrEqual(0);
+      expect(Math.round((header?.x ?? width) + (header?.width ?? 1))).toBeLessThanOrEqual(width);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
       if (width === 390) await page.screenshot({ path: `test-results/recording-${theme}.png` });
     }
