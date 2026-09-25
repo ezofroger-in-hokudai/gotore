@@ -1,5 +1,5 @@
 import type { Workout } from "@/lib/api";
-import type { ReactNode } from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { dateLabel } from "../activity/calendar";
 import { estimatedRM } from "../session/session";
 import { BestFlame } from "./best-flame";
@@ -114,63 +114,7 @@ export function RecordList({
               </dl>
               {headerControl?.(record)}
             </header>
-            <div className="record-details">
-              {record.exercises.map((exercise, index) => (
-                <section className="record-exercise" key={`${index}-${exercise.name}`}>
-                  <h3>{exercise.name}</h3>
-                  <section
-                    className="record-table-scroll"
-                    aria-label={`${exercise.name}の全セット`}
-                    // biome-ignore lint/a11y/noNoninteractiveTabindex: 文字拡大時に表をキーボードで横スクロールする。
-                    tabIndex={0}
-                  >
-                    <table className="record-table" aria-label={exercise.name}>
-                      <thead>
-                        <tr>
-                          <th scope="col">セット</th>
-                          <th scope="col">
-                            重量 <small>kg</small>
-                          </th>
-                          <th scope="col">回数</th>
-                          <th scope="col">
-                            推定1RM <small>kg</small>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {exercise.sets.map((set, setIndex) => {
-                          const best = bests.get(`${index}:${setIndex}`);
-                          return (
-                            <tr
-                              className={`record-set${best ? " has-personal-best" : ""}`}
-                              // biome-ignore lint/suspicious/noArrayIndexKey: 保存順で特定する読み取り専用のセット。
-                              key={`${index}-${setIndex}`}
-                            >
-                              <th scope="row">
-                                <span className="record-set-label">
-                                  {setIndex + 1} {best && <BestFlame best={best} />}
-                                </span>
-                              </th>
-                              <td>
-                                <b className={best?.weight ? "personal-best-value" : undefined}>
-                                  {set.weight}
-                                </b>
-                              </td>
-                              <td>{set.reps}</td>
-                              <td>
-                                <b className={best?.rm ? "personal-best-value" : undefined}>
-                                  {estimatedRM(set.weight, set.reps) ?? "—"}
-                                </b>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </section>
-                </section>
-              ))}
-            </div>
+            <RecordDetails record={record} bests={bests} compact={compact} />
             {own && (
               <p className="record-sharing">
                 {record.group_id || record.shared_group_ids?.length ? "共有済み" : "自分だけ"}
@@ -189,6 +133,100 @@ export function RecordList({
           </article>
         );
       })}
+    </div>
+  );
+}
+
+function RecordDetails({
+  record,
+  bests,
+  compact,
+}: {
+  record: Workout;
+  bests: Map<string, NonNullable<Workout["best_sets"]>[number]>;
+  compact: boolean;
+}) {
+  const details = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const exerciseLayoutKey = record.exercises
+    .map((exercise) => `${exercise.name}:${exercise.sets.length}`)
+    .join("|");
+
+  useLayoutEffect(() => {
+    const element = details.current;
+    if (!compact || !element || !exerciseLayoutKey) {
+      setOverflowing(false);
+      return;
+    }
+    setOverflowing(!expanded && element.scrollHeight > element.clientHeight + 1);
+  }, [compact, expanded, exerciseLayoutKey]);
+
+  return (
+    <div className={`record-details${compact && !expanded ? " is-collapsed" : ""}`} ref={details}>
+      {record.exercises.map((exercise, index) => (
+        <section className="record-exercise" key={`${index}-${exercise.name}`}>
+          <h3>{exercise.name}</h3>
+          <section
+            className="record-table-scroll"
+            aria-label={`${exercise.name}の全セット`}
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: 文字拡大時に表をキーボードで横スクロールする。
+            tabIndex={0}
+          >
+            <table className="record-table" aria-label={exercise.name}>
+              <thead>
+                <tr>
+                  <th scope="col">セット</th>
+                  <th scope="col">
+                    重量 <small>kg</small>
+                  </th>
+                  <th scope="col">回数</th>
+                  <th scope="col">
+                    推定1RM <small>kg</small>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {exercise.sets.map((set, setIndex) => {
+                  const best = bests.get(`${index}:${setIndex}`);
+                  return (
+                    <tr
+                      className={`record-set${best ? " has-personal-best" : ""}`}
+                      // biome-ignore lint/suspicious/noArrayIndexKey: 保存順で特定する読み取り専用のセット。
+                      key={`${index}-${setIndex}`}
+                    >
+                      <th scope="row">
+                        <span className="record-set-label">
+                          {setIndex + 1} {best && <BestFlame best={best} />}
+                        </span>
+                      </th>
+                      <td>
+                        <b className={best?.weight ? "personal-best-value" : undefined}>
+                          {set.weight}
+                        </b>
+                      </td>
+                      <td>{set.reps}</td>
+                      <td>
+                        <b className={best?.rm ? "personal-best-value" : undefined}>
+                          {estimatedRM(set.weight, set.reps) ?? "—"}
+                        </b>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </section>
+        </section>
+      ))}
+      {compact && overflowing && !expanded && (
+        <button
+          className="record-details-reveal"
+          type="button"
+          aria-label={`${record.display_name}の全セットを表示`}
+          onClick={() => setExpanded(true)}
+        />
+      )}
     </div>
   );
 }

@@ -101,8 +101,9 @@
       .record-expand { display:none; width:100%; min-height:42px; margin-top:8px; border:0; border-top:1px solid #e1e2e6; background:#fff; color:#3f4249; font-size:11px; font-weight:750; }
       .record-expand[hidden] { display:none!important; }
       body[data-record-mode="fade"] .record:not(.is-expanded) .exercise-list { position:relative; max-height:352px; overflow:hidden; }
-      body[data-record-mode="fade"] .record:not(.is-expanded) .exercise-list::after { content:""; position:absolute; right:0; bottom:0; left:0; height:82px; pointer-events:none; background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 82%); box-shadow:inset 0 -12px 18px rgba(32,33,39,.05); }
-      body[data-record-mode="fade"] .record-expand,body[data-record-mode="summary"] .record-expand { display:block; }
+      body[data-record-mode="fade"] .record { position:relative; }
+      body[data-record-mode="fade"] .record-expand { position:absolute; right:14px; bottom:13px; left:14px; display:block; height:82px; min-height:0; margin:0; border:0; background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 82%); box-shadow:inset 0 -12px 18px rgba(32,33,39,.05); }
+      body[data-record-mode="summary"] .record-expand { display:block; }
       body[data-record-mode="accordion"] .exercise-block { margin:0; padding:0; border-bottom:1px solid #e4e5e8; }
       body[data-record-mode="accordion"] .exercise-toggle,body[data-record-mode="summary"] .record:not(.in-dialog) .exercise-toggle { min-height:45px; cursor:pointer; }
       body[data-record-mode="accordion"] .exercise-meta,body[data-record-mode="accordion"] .exercise-toggle i,body[data-record-mode="summary"] .record:not(.in-dialog) .exercise-meta { display:block; }
@@ -222,8 +223,8 @@
           });
           const expand=node.querySelector(".record-expand");
           if(recordMode==="fade"){
-            expand.textContent="全て表示　⌄";
-            expand.addEventListener("click",()=>{const open=node.classList.toggle("is-expanded");expand.textContent=open?"閉じる　⌃":"全て表示　⌄"});
+            expand.setAttribute("aria-label",`${data.name}の全セットを表示`);
+            expand.addEventListener("click",()=>{node.classList.add("is-expanded");expand.hidden=true});
           }else if(recordMode==="summary"){
             expand.textContent="詳細を見る　›";
             expand.addEventListener("click",()=>openRecordDetail(node));

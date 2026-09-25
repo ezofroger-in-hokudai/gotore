@@ -12,15 +12,18 @@ test("友達の記録を全種目・全セットで表示し、再読込で共�
     created_at: "2026-01-02T01:00:00Z",
     revision: 1,
     exercises: [
-      {
-        name: "ベンチプレス",
-        sets: [
-          { weight: 80, reps: 8 },
-          { weight: 75, reps: 10 },
-        ],
-      },
-      { name: "スクワット", sets: [{ weight: 100, reps: 5 }] },
-    ],
+      ["ベンチプレス", 5, 80],
+      ["インクラインダンベルプレス", 4, 32],
+      ["ラットプルダウン", 5, 70],
+      ["シーテッドロー", 4, 60],
+      ["スクワット", 4, 100],
+    ].map(([name, count, weight]) => ({
+      name: String(name),
+      sets: Array.from({ length: Number(count) }, (_, index) => ({
+        weight: Number(weight) - index * 5,
+        reps: 8 + index,
+      })),
+    })),
   };
   await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
     route.fulfill({
@@ -105,9 +108,19 @@ test("友達の記録を全種目・全セットで表示し、再読込で共�
   await expect(card).toBeVisible();
   await expect.poll(() => reads).toBeGreaterThan(0);
   await expect(card).toContainText("2026年1月2日");
-  await expect(card.locator(".record-set")).toHaveCount(3);
+  await expect(card.locator(".record-set")).toHaveCount(22);
   await expect(card.locator(".record-details")).toContainText("ベンチプレス");
   await expect(card.locator(".record-details")).toContainText("スクワット");
+  const details = card.locator(".record-details");
+  await expect(details).toHaveClass(/is-collapsed/);
+  expect(await details.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
+    true,
+  );
+  const reveal = card.getByRole("button", { name: "友達Aの全セットを表示" });
+  await expect(reveal).toBeVisible();
+  await reveal.click();
+  await expect(details).not.toHaveClass(/is-collapsed/);
+  await expect(reveal).toHaveCount(0);
   await expect(card.getByRole("button", { name: /^(編集|削除|コピー|メモ)$/ })).toHaveCount(0);
   await expect(card.locator(".inline-stamp-choice")).toHaveCount(6);
   await card.getByRole("button", { name: "友達Aのリアクションの詳細", exact: true }).click();
@@ -124,21 +137,17 @@ test("友達の記録を全種目・全セットで表示し、再読込で共�
   fail = false;
   await page.reload();
   await expect.poll(() => reads).toBeGreaterThan(before + 1);
-  await expect(card.locator(".record-set")).toHaveCount(3);
+  await expect(card.locator(".record-set")).toHaveCount(22);
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
-    expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
-      true,
-    );
+    expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "test-results/shared-workout-detail.png", fullPage: true });
   await navigate(page, "設定");
 });
 
-test("非表示中と画面移動後は共有記録を取得せず本人メモも出さない", async ({
-  page,
-}) => {
+test("非表示中と画面移動後は共有記録を取得せず本人メモも出さない", async ({ page }) => {
   await page.clock.install();
   const state = await mockTraining(page);
   await startTraining(page);

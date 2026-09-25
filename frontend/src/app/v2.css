@@ -2400,6 +2400,30 @@
   border: 0;
   padding: 0;
 }
+.record-review.is-compact .record-details.is-collapsed {
+  position: relative;
+  max-height: 352px;
+  overflow: hidden;
+}
+.record-details-reveal {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 86px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0%), var(--panel) 82%);
+  box-shadow: inset 0 -12px 18px rgb(32 33 39 / 5%);
+  cursor: pointer;
+}
+.record-details-reveal:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 .record-exercise {
   margin: 0 0 24px;
   min-width: 0;

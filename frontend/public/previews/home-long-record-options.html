@@ -21,7 +21,7 @@
     <header class="chooser">
       <nav class="choices" aria-label="長い記録カードの案">
         <button data-mode="full" aria-pressed="true">A 全展開</button>
-        <button data-mode="fade" aria-pressed="false">B 固定＋フェード</button>
+        <button data-mode="fade" aria-pressed="false">B 固定＋フェード（採用）</button>
         <button data-mode="accordion" aria-pressed="false">C 種目ごと</button>
         <button data-mode="summary" aria-pressed="false">D 概要＋詳細</button>
       </nav>
@@ -31,7 +31,7 @@
     <script>
       const options={
         full:{hash:"a",description:"現在案。5種目・22セットを最初から1枚のカードに全て表示"},
-        fade:{hash:"b",description:"カードを一定の高さにし、下端の影と「全て表示」でその場に展開"},
+        fade:{hash:"b",description:"採用案。カードを一定の高さにし、文字のない下端フェードを押すとその場に全展開"},
         accordion:{hash:"c",description:"種目名とセット数を並べ、見たい種目だけカード内で開閉"},
         summary:{hash:"d",description:"カードは種目ごとのセット数まで。全セットは下から開く詳細で表示"}
       };
@@ -39,7 +39,7 @@
       const description=document.querySelector(".description");
       function show(mode){const selected=options[mode]?mode:"full";frame.src=`home-feed-filter-options.html?adopted=1&stress=1&recordMode=${selected}#a`;description.textContent=options[selected].description;document.querySelectorAll("button").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.mode===selected)));history.replaceState(null,"",`#${options[selected].hash}`)}
       document.querySelectorAll("button").forEach(button=>button.addEventListener("click",()=>show(button.dataset.mode)));
-      const initial=Object.entries(options).find(([,value])=>value.hash===location.hash.slice(1))?.[0]||"full";
+      const initial=Object.entries(options).find(([,value])=>value.hash===location.hash.slice(1))?.[0]||"fade";
       show(initial);
     </script>
   </body>
