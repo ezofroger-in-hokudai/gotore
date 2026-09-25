@@ -4462,9 +4462,6 @@
 .group-card-avatars .person-avatar:first-child {
   margin-left: 0;
 }
-.group-card-avatars .person-avatar.is-live {
-  border-color: #ef454c;
-}
 .group-card-people > span:last-child {
   margin-left: 8px;
 }
@@ -4473,6 +4470,7 @@
 }
 .home-feed-tabs {
   display: flex;
+  justify-content: safe center;
   gap: 6px;
   margin: 0 0 10px;
   padding: 4px;

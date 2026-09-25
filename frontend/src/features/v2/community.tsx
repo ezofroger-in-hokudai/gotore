@@ -462,7 +462,9 @@ function Feed({
   return (
     <>
       <div className="community-feed" ref={details.root}>
-        {!data.feed.length && <p className="muted feed-empty">まだ記録がありません。</p>}
+        {!data.feed.length && (
+          <p className="muted feed-empty">みんなのトレーニングを待っています</p>
+        )}
         {data.feed.map((item) => {
           const member = data.members.find((m) => m.id === item.user_id);
           const live = clock.live && !!member && memberIsLive(member, clock.now);

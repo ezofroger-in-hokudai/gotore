@@ -145,6 +145,21 @@ test("上段のグループカードと下段のタイムライン絞り込み�
   await expect(
     page.getByRole("button", { name: `${state.group.name}の詳細` }).getByRole("img"),
   ).toHaveCount(1);
+  const liveAvatar = page
+    .getByRole("button", { name: `${state.group.name}の詳細` })
+    .locator(".person-avatar.is-live");
+  await expect(liveAvatar).toHaveCSS("outline-width", "2px");
+  await expect(liveAvatar).toHaveCSS("border-top-color", "rgb(32, 33, 39)");
+  expect(
+    await page.locator(".home-feed-tabs").evaluate((tabs) => {
+      const first = tabs.firstElementChild?.getBoundingClientRect();
+      const last = tabs.lastElementChild?.getBoundingClientRect();
+      const track = tabs.getBoundingClientRect();
+      return first && last
+        ? Math.abs(first.left - track.left - (track.right - last.right))
+        : Number.POSITIVE_INFINITY;
+    }),
+  ).toBeLessThanOrEqual(1);
 
   // 上段を動かしても、タイムラインは「すべて」のまま変えない。
   await page.getByRole("button", { name: "大学トレ部を表示", exact: true }).click();
@@ -175,6 +190,12 @@ test("上段のグループカードと下段のタイムライン絞り込み�
       fullPage: true,
     });
   }
+});
+
+test("ホームの空状態はみんなのトレーニングを待つ文言にする", async ({ page }) => {
+  await mockTraining(page);
+  await expect(page.getByText("みんなのトレーニングを待っています", { exact: true })).toBeVisible();
+  await expect(page.getByText("まだ記録がありません。", { exact: true })).toHaveCount(0);
 });
 
 test("ブラウザの戻るでシート・グループ詳細を閉じ、記録入力は維持する", async ({ page }) => {
