@@ -1,5 +1,5 @@
 import type { Workout } from "@/lib/api";
-import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { dateLabel } from "../activity/calendar";
 import { estimatedRM } from "../session/session";
 import { BestFlame } from "./best-flame";
@@ -148,7 +148,7 @@ function RecordDetails({
 }) {
   const details = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
-  const [overflowing, setOverflowing] = useState(false);
+  const [collapsible, setCollapsible] = useState(false);
   const exerciseLayoutKey = record.exercises
     .map((exercise) => `${exercise.name}:${exercise.sets.length}`)
     .join("|");
@@ -156,14 +156,40 @@ function RecordDetails({
   useLayoutEffect(() => {
     const element = details.current;
     if (!compact || !element || !exerciseLayoutKey) {
-      setOverflowing(false);
+      setCollapsible(false);
       return;
     }
-    setOverflowing(!expanded && element.scrollHeight > element.clientHeight + 1);
+    if (!expanded) setCollapsible(element.scrollHeight > element.clientHeight + 1);
   }, [compact, expanded, exerciseLayoutKey]);
 
+  useEffect(() => {
+    const card = details.current?.closest<HTMLElement>(".record-review");
+    if (!compact || !collapsible || !card) return;
+    card.classList.add("is-collapsible");
+    const toggle = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (
+        target.closest(
+          "button, a, input, textarea, select, [role='button'], [contenteditable='true']",
+        )
+      )
+        return;
+      if (window.getSelection()?.toString()) return;
+      setExpanded((current) => !current);
+    };
+    card.addEventListener("click", toggle);
+    return () => {
+      card.classList.remove("is-collapsible");
+      card.removeEventListener("click", toggle);
+    };
+  }, [compact, collapsible]);
+
   return (
-    <div className={`record-details${compact && !expanded ? " is-collapsed" : ""}`} ref={details}>
+    <div
+      className={`record-details${compact ? (expanded ? " is-expanded" : " is-collapsed") : ""}`}
+      ref={details}
+    >
       {record.exercises.map((exercise, index) => (
         <section className="record-exercise" key={`${index}-${exercise.name}`}>
           <h3>{exercise.name}</h3>
@@ -219,12 +245,20 @@ function RecordDetails({
           </section>
         </section>
       ))}
-      {compact && overflowing && !expanded && (
+      {compact && collapsible && (
         <button
-          className="record-details-reveal"
+          className={`record-details-reveal${expanded ? " is-expanded" : ""}`}
           type="button"
-          aria-label={`${record.display_name}の全セットを表示`}
-          onClick={() => setExpanded(true)}
+          aria-expanded={expanded}
+          aria-label={
+            expanded
+              ? `${record.display_name}の記録を小さく表示`
+              : `${record.display_name}の全セットを表示`
+          }
+          onClick={(event) => {
+            event.stopPropagation();
+            setExpanded((current) => !current);
+          }}
         />
       )}
     </div>

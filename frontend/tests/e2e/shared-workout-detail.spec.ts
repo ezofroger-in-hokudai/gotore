@@ -118,9 +118,13 @@ test("友達の記録を全種目・全セットで表示し、再読込で共�
   );
   const reveal = card.getByRole("button", { name: "友達Aの全セットを表示" });
   await expect(reveal).toBeVisible();
+  await details.getByRole("heading", { name: "ベンチプレス", exact: true }).click();
+  await expect(details).not.toHaveClass(/is-collapsed/);
+  await expect(card.getByRole("button", { name: "友達Aの記録を小さく表示" })).toBeAttached();
+  await details.getByRole("heading", { name: "ベンチプレス", exact: true }).click();
+  await expect(details).toHaveClass(/is-collapsed/);
   await reveal.click();
   await expect(details).not.toHaveClass(/is-collapsed/);
-  await expect(reveal).toHaveCount(0);
   await expect(card.getByRole("button", { name: /^(編集|削除|コピー|メモ)$/ })).toHaveCount(0);
   await expect(card.locator(".inline-stamp-choice")).toHaveCount(6);
   await card.getByRole("button", { name: "友達Aのリアクションの詳細", exact: true }).click();

@@ -120,9 +120,12 @@ test("STARTは長押しで端へ移動し、再読込後も利用者ごとの位
   await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
   await page.mouse.down();
   await page.waitForTimeout(170);
+  const held = await floating.boundingBox();
+  expect(held?.width).toBeCloseTo(before.width, 1);
   await page.mouse.move(24, 180, { steps: 4 });
   await page.mouse.up();
   const moved = await floating.boundingBox();
+  expect(moved?.width).toBeCloseTo(before.width, 1);
   expect(moved?.x).toBeLessThan(30);
   await page.reload();
   await expect(floating).toBeVisible();

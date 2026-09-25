@@ -1940,7 +1940,7 @@
   z-index: 20;
   right: max(16px, calc((100vw - 480px) / 2 + 16px));
   bottom: calc(82px + env(safe-area-inset-bottom));
-  min-width: 112px;
+  width: 112px;
   min-height: 52px;
   padding: 12px 20px;
   border: 0;
@@ -1952,11 +1952,11 @@
   letter-spacing: 0.04em;
   touch-action: none;
   user-select: none;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: box-shadow 120ms ease, opacity 120ms ease;
 }
 .floating-training.is-dragging {
   cursor: grabbing;
-  transform: scale(1.04);
+  opacity: 0.96;
   box-shadow: 0 8px 24px #0005;
 }
 .v2-app:has(dialog[open], input:focus, textarea:focus, [contenteditable="true"]:focus)
@@ -2405,6 +2405,9 @@
   max-height: 352px;
   overflow: hidden;
 }
+.record-review.is-compact.is-collapsible {
+  cursor: pointer;
+}
 .record-details-reveal {
   position: absolute;
   right: 0;
@@ -2419,6 +2422,14 @@
   background: linear-gradient(to bottom, rgb(255 255 255 / 0%), var(--panel) 82%);
   box-shadow: inset 0 -12px 18px rgb(32 33 39 / 5%);
   cursor: pointer;
+}
+.record-details-reveal.is-expanded {
+  right: 0;
+  left: auto;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  box-shadow: none;
 }
 .record-details-reveal:focus-visible {
   outline: 2px solid var(--accent);

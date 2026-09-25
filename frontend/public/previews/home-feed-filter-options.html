@@ -222,15 +222,21 @@
             list.append(exerciseNode);
           });
           const expand=node.querySelector(".record-expand");
+          let toggleFade;
           if(recordMode==="fade"){
+            toggleFade=()=>{const open=node.classList.toggle("is-expanded");expand.hidden=open;expand.setAttribute("aria-label",open?`${data.name}の記録を小さく表示`:`${data.name}の全セットを表示`)};
             expand.setAttribute("aria-label",`${data.name}の全セットを表示`);
-            expand.addEventListener("click",()=>{node.classList.add("is-expanded");expand.hidden=true});
+            expand.addEventListener("click",event=>{event.stopPropagation();toggleFade()});
           }else if(recordMode==="summary"){
             expand.textContent="詳細を見る　›";
             expand.addEventListener("click",()=>openRecordDetail(node));
           }
           root.append(node);
-          if(recordMode==="fade"&&list.scrollHeight<=list.clientHeight+1)expand.hidden=true;
+          if(recordMode==="fade"){
+            const collapsible=list.scrollHeight>list.clientHeight+1;
+            expand.hidden=!collapsible;
+            if(collapsible)node.addEventListener("click",event=>{if(event.target.closest(".stamps,.record-expand"))return;toggleFade()});
+          }
         });
         option.dataset.scope=scope;
         option.querySelectorAll(".filter-slot button").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.scope===scope)));
