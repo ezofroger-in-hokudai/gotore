@@ -5,6 +5,7 @@
 - 起動390px: [ライト](startup-light.png) / [ダーク](startup-dark.png)
 - [配信画像と小さいサイズの比較](icons.png)
 - 配信PNG: [192px](icon-192.png) / [512px](icon-512.png) / [Apple 180px](icon-180.png)
+- [ホーム遷移の読み込み用・バーベル版SVG](loading-barbell.svg): `LoadingState` で動かしている既存ウォンバットと同じ形状を、資料用に独立保存したもの。
 
 320/390/430pxのはみ出し、32/64pxの縮小、角丸・丸い切り抜き、明暗をブラウザで確認。OS実機でのホーム画面への反映は未確認。既に追加したアイコンが更新される時期はOSに依存する。
 
