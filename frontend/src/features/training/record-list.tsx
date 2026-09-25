@@ -186,65 +186,67 @@ function RecordDetails({
   }, [compact, collapsible]);
 
   return (
-    <div
-      className={`record-details${compact ? (expanded ? " is-expanded" : " is-collapsed") : ""}`}
-      ref={details}
-    >
-      {record.exercises.map((exercise, index) => (
-        <section className="record-exercise" key={`${index}-${exercise.name}`}>
-          <h3>{exercise.name}</h3>
-          <section
-            className="record-table-scroll"
-            aria-label={`${exercise.name}の全セット`}
-            // biome-ignore lint/a11y/noNoninteractiveTabindex: 文字拡大時に表をキーボードで横スクロールする。
-            tabIndex={0}
-          >
-            <table className="record-table" aria-label={exercise.name}>
-              <thead>
-                <tr>
-                  <th scope="col">セット</th>
-                  <th scope="col">
-                    重量 <small>kg</small>
-                  </th>
-                  <th scope="col">回数</th>
-                  <th scope="col">
-                    推定1RM <small>kg</small>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {exercise.sets.map((set, setIndex) => {
-                  const best = bests.get(`${index}:${setIndex}`);
-                  return (
-                    <tr
-                      className={`record-set${best ? " has-personal-best" : ""}`}
-                      // biome-ignore lint/suspicious/noArrayIndexKey: 保存順で特定する読み取り専用のセット。
-                      key={`${index}-${setIndex}`}
-                    >
-                      <th scope="row">
-                        <span className="record-set-label">
-                          {setIndex + 1} {best && <BestFlame best={best} />}
-                        </span>
-                      </th>
-                      <td>
-                        <b className={best?.weight ? "personal-best-value" : undefined}>
-                          {set.weight}
-                        </b>
-                      </td>
-                      <td>{set.reps}</td>
-                      <td>
-                        <b className={best?.rm ? "personal-best-value" : undefined}>
-                          {estimatedRM(set.weight, set.reps) ?? "—"}
-                        </b>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+    <div className="record-details-shell">
+      <div
+        className={`record-details${compact ? (expanded ? " is-expanded" : " is-collapsed") : ""}`}
+        ref={details}
+      >
+        {record.exercises.map((exercise, index) => (
+          <section className="record-exercise" key={`${index}-${exercise.name}`}>
+            <h3>{exercise.name}</h3>
+            <section
+              className="record-table-scroll"
+              aria-label={`${exercise.name}の全セット`}
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: 文字拡大時に表をキーボードで横スクロールする。
+              tabIndex={0}
+            >
+              <table className="record-table" aria-label={exercise.name}>
+                <thead>
+                  <tr>
+                    <th scope="col">セット</th>
+                    <th scope="col">
+                      重量 <small>kg</small>
+                    </th>
+                    <th scope="col">回数</th>
+                    <th scope="col">
+                      推定1RM <small>kg</small>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exercise.sets.map((set, setIndex) => {
+                    const best = bests.get(`${index}:${setIndex}`);
+                    return (
+                      <tr
+                        className={`record-set${best ? " has-personal-best" : ""}`}
+                        // biome-ignore lint/suspicious/noArrayIndexKey: 保存順で特定する読み取り専用のセット。
+                        key={`${index}-${setIndex}`}
+                      >
+                        <th scope="row">
+                          <span className="record-set-label">
+                            {setIndex + 1} {best && <BestFlame best={best} />}
+                          </span>
+                        </th>
+                        <td>
+                          <b className={best?.weight ? "personal-best-value" : undefined}>
+                            {set.weight}
+                          </b>
+                        </td>
+                        <td>{set.reps}</td>
+                        <td>
+                          <b className={best?.rm ? "personal-best-value" : undefined}>
+                            {estimatedRM(set.weight, set.reps) ?? "—"}
+                          </b>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </section>
           </section>
-        </section>
-      ))}
+        ))}
+      </div>
       {compact && collapsible && (
         <button
           className={`record-details-reveal${expanded ? " is-expanded" : ""}`}

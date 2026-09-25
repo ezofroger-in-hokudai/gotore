@@ -78,7 +78,7 @@
       .sheet button { display:flex; align-items:center; width:100%; min-height:48px; padding:0 4px; border:0; border-bottom:1px solid #ececef; background:#fff; text-align:left; }
       .sheet button[aria-pressed="true"] { color:var(--red); font-weight:800; }
       .sheet button[aria-pressed="true"]::after { content:"✓"; margin-left:auto; }
-      .record { margin-bottom:10px; padding:13px 14px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+      .record { margin-bottom:10px; padding:13px 14px; overflow:hidden; border:1px solid var(--line); border-radius:12px; background:#fff; }
       .record time { color:#777b84; font-size:10px; }
       .person { display:flex; align-items:center; gap:9px; margin-top:8px; }
       .avatar { display:grid; width:34px; height:34px; place-items:center; border-radius:50%; background:#282a30; color:#fff; font-size:12px; }
@@ -101,8 +101,8 @@
       .record-expand { display:none; width:100%; min-height:42px; margin-top:8px; border:0; border-top:1px solid #e1e2e6; background:#fff; color:#3f4249; font-size:11px; font-weight:750; }
       .record-expand[hidden] { display:none!important; }
       body[data-record-mode="fade"] .record:not(.is-expanded) .exercise-list { position:relative; max-height:352px; overflow:hidden; }
-      body[data-record-mode="fade"] .record { position:relative; }
-      body[data-record-mode="fade"] .record-expand { position:absolute; right:14px; bottom:13px; left:14px; display:block; height:104px; min-height:0; margin:0; border:0; background:linear-gradient(to bottom,rgba(32,33,39,0),rgba(32,33,39,.07) 58%,rgba(32,33,39,.16)); box-shadow:inset 0 -14px 22px rgba(32,33,39,.1); }
+      body[data-record-mode="fade"] .record { position:relative; -webkit-tap-highlight-color:transparent; }
+      body[data-record-mode="fade"] .record-expand { position:absolute; right:0; bottom:0; left:0; display:block; height:104px; min-height:0; margin:0; border:0; background:linear-gradient(to bottom,rgba(32,33,39,0),rgba(32,33,39,.07) 58%,rgba(32,33,39,.16)); box-shadow:inset 0 -14px 22px rgba(32,33,39,.1); }
       body[data-record-mode="summary"] .record-expand { display:block; }
       body[data-record-mode="accordion"] .exercise-block { margin:0; padding:0; border-bottom:1px solid #e4e5e8; }
       body[data-record-mode="accordion"] .exercise-toggle,body[data-record-mode="summary"] .record:not(.in-dialog) .exercise-toggle { min-height:45px; cursor:pointer; }

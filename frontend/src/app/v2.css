@@ -2286,6 +2286,7 @@
 }
 .record-review.is-compact {
   padding: 13px 14px;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--panel);
@@ -2400,21 +2401,24 @@
   border: 0;
   padding: 0;
 }
-.record-review.is-compact .record-details.is-collapsed {
+.record-details-shell {
   position: relative;
+}
+.record-review.is-compact .record-details.is-collapsed {
   max-height: 352px;
   overflow: hidden;
 }
 .record-review.is-compact.is-collapsible {
+  -webkit-tap-highlight-color: transparent;
   cursor: pointer;
 }
 .record-details-reveal {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  right: -14px;
+  bottom: -13px;
+  left: -14px;
   z-index: 1;
-  width: 100%;
+  width: auto;
   height: 104px;
   padding: 0;
   border: 0;
@@ -2429,7 +2433,8 @@
   cursor: pointer;
 }
 .record-details-reveal.is-expanded {
-  right: 0;
+  right: -14px;
+  bottom: -13px;
   left: auto;
   width: 44px;
   height: 44px;

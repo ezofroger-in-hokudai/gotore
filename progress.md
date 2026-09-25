@@ -3225,3 +3225,10 @@
 - 影響範囲・関連ファイル: `frontend/src/app/v2.css`、`frontend/public/previews/home-feed-filter-options.html`、`docs/design/home-screen.md`、`progress.md`。固定高、開閉操作、START、API、DBは変更しない。
 - 検証: 採用プレビューを390px幅で画像確認し、カード高540px、フェード104px、文字なし、横はみ出しなしを確認した。frontend lintと関連E2E 1件が成功し、カードの往復開閉を維持することを確認した。CSSと静的プレビューだけの調整のため、新しい業務ロジックのテストは追加しない。
 - 未解決事項・次のアクション: 実機スマホで新しい濃さを確認する。
+
+## 2026-09-26 フェードをカード全面へ拡張
+
+- 変更内容・目的: フェードが種目・セット欄の内幅だけに見えていたため、ホーム記録カードの左右端から下端まで覆うようにした。カードの角丸で影を切り、タッチ時にカード全体へ出るブラウザ標準の青いハイライトを無効にした。キーボードのフォーカス表示と読み上げ用の開閉操作は維持する。
+- 影響範囲・関連ファイル: `frontend/src/features/training/record-list.tsx`、`frontend/src/app/v2.css`、`frontend/public/previews/home-feed-filter-options.html`、`frontend/tests/e2e/shared-workout-detail.spec.ts`、`docs/design/home-screen.md`、`docs/design-system.md`、`progress.md`。フェードの濃さ、カード高、スタンプ、API、DBは変更しない。
+- 検証: E2Eでフェードの左端・幅・下端がカードの1px境界線以内に一致すること、カードの往復開閉を維持することを確認した。frontend lint、型検査、単体テスト99件が成功した。390pxの採用プレビューではカード358pxに対してフェード356px、左右・下端は1pxの境界線だけを残し、横はみ出しなし、タップハイライトが透明であることを画像確認した。
+- 未解決事項・次のアクション: 実機スマホで全面フェードとタップ時の見え方を確認する。

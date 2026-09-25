@@ -118,6 +118,15 @@ test("友達の記録を全種目・全セットで表示し、再読込で共�
   );
   const reveal = card.getByRole("button", { name: "友達Aの全セットを表示" });
   await expect(reveal).toBeVisible();
+  const cardBox = await card.locator(".record-review").boundingBox();
+  const fadeBox = await reveal.boundingBox();
+  expect(Math.abs((fadeBox?.x ?? 0) - (cardBox?.x ?? 0))).toBeLessThanOrEqual(2);
+  expect(Math.abs((fadeBox?.width ?? 0) - (cardBox?.width ?? 0))).toBeLessThanOrEqual(2);
+  expect(
+    Math.abs(
+      (fadeBox?.y ?? 0) + (fadeBox?.height ?? 0) - ((cardBox?.y ?? 0) + (cardBox?.height ?? 0)),
+    ),
+  ).toBeLessThanOrEqual(2);
   await details.getByRole("heading", { name: "ベンチプレス", exact: true }).click();
   await expect(details).not.toHaveClass(/is-collapsed/);
   await expect(card.getByRole("button", { name: "友達Aの記録を小さく表示" })).toBeAttached();
