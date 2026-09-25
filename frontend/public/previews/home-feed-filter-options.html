@@ -23,7 +23,7 @@
       .head { position:sticky; top:0; z-index:20; height:48px; display:flex; align-items:center; padding:0 16px; background:var(--ink); color:#fff; font-size:20px; font-weight:850; letter-spacing:-.7px; }
       .head span { color:#ef454c; }
       .main { padding:13px 16px 92px; }
-      .summary-caption { margin:0 0 6px; color:#555a63; font-size:11px; font-weight:700; }
+      .summary-caption { margin:0 0 6px; color:#555a63; font-size:10px; font-weight:800; letter-spacing:.08em; }
       .summary { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--line); }
       .summary > div { padding:9px 3px 12px; text-align:center; }
       .summary > div+div { border-left:1px solid var(--line); }
@@ -51,10 +51,10 @@
       .group-numbers { display:flex; gap:24px; padding-top:11px; border-top:1px solid #555861; }
       .group-numbers b { display:block; font-size:18px; }
       .group-numbers small { color:#c6c8ce; font-size:9px; }
-      .feed-head { display:flex; align-items:center; justify-content:space-between; min-height:49px; }
+      .feed-head { display:flex; align-items:flex-end; justify-content:space-between; min-height:38px; padding-bottom:3px; }
       .feed-head h2 { margin:0; font-size:18px; letter-spacing:-.04em; }
-      .filter-tabs { display:flex; gap:20px; margin:1px -16px 10px; padding:0 16px; overflow-x:auto; border-bottom:1px solid var(--line); scrollbar-width:none; }
-      .filter-tabs button { position:relative; flex:0 0 auto; min-height:39px; padding:0 1px; border:0; background:transparent; color:#777b84; font-size:11px; }
+      .filter-tabs { display:flex; gap:20px; margin:-1px -16px 10px; padding:0 16px; overflow-x:auto; border-bottom:1px solid var(--line); scrollbar-width:none; }
+      .filter-tabs button { position:relative; flex:0 0 auto; min-height:35px; padding:0 1px; border:0; background:transparent; color:#777b84; font-size:11px; }
       .filter-tabs button[aria-pressed="true"] { color:var(--red); font-weight:800; }
       .filter-tabs button[aria-pressed="true"]::after { content:""; position:absolute; right:0; bottom:-1px; left:0; height:3px; border-radius:3px 3px 0 0; background:var(--red); }
       .filter-chips { display:flex; gap:7px; margin:4px -16px 11px; padding:0 16px; overflow-x:auto; scrollbar-width:none; }
@@ -123,7 +123,7 @@
       <section class="option" data-option="c"><div class="note"><h1>C 右上選択</h1><p>一番省スペース。グループが増えても高さが変わらない</p></div><div class="phone"><header class="head">E-GO<span>TORE</span></header><div class="main"><div class="summary-slot"></div><div class="groups-slot"></div><div class="feed-head"><h2>みんなのトレーニング</h2><div class="scope-menu"><button class="menu-toggle">すべて⌄</button><div class="scope-popover filter-slot"></div></div></div><div class="records"></div></div><button class="start">START</button><nav class="nav"><span>ホーム</span><span>グループ</span><span>履歴</span><span>設定</span></nav></div></section>
       <section class="option" data-option="d"><div class="note"><h1>D 選択バー</h1><p>表示範囲を一行で明示。押すと下から選択</p></div><div class="phone"><header class="head">E-GO<span>TORE</span></header><div class="main"><div class="summary-slot"></div><div class="groups-slot"></div><div class="feed-head"><h2>みんなのトレーニング</h2></div><button class="scope-bar"><small>表示</small><strong>すべて</strong><span>›</span></button><div class="records"></div></div><button class="start">START</button><nav class="nav"><span>ホーム</span><span>グループ</span><span>履歴</span><span>設定</span></nav><div class="sheet-backdrop"><div class="sheet"><h3>表示するグループ</h3><div class="filter-slot"></div></div></div></div></section>
     </main>
-    <template id="summary-template"><p class="summary-caption">今日のみんなのトレーニング</p><div class="summary" aria-label="今日の活動"><div><small class="live"><i class="dot"></i>LIVE</small><b>3<em>人</em></b></div><div><small aria-hidden="true"></small><b>7<em>人</em></b></div><div><small aria-hidden="true"></small><b>31<em>セット</em></b></div><div><small aria-hidden="true"></small><b>28,400<em>kg</em></b></div></div></template>
+    <template id="summary-template"><p class="summary-caption">TODAY</p><div class="summary" aria-label="今日の活動"><div><small class="live"><i class="dot"></i>LIVE</small><b>3<em>人</em></b></div><div><small aria-hidden="true"></small><b>7<em>人</em></b></div><div><small aria-hidden="true"></small><b>31<em>セット</em></b></div><div><small aria-hidden="true"></small><b>28,400<em>kg</em></b></div></div></template>
     <template id="groups-template"><div class="groups-label"><b>グループ</b><span>長押しで並べ替え</span></div><div class="group-track"></div></template>
     <template id="group-template"><article class="group-card"><div class="group-card-main"><span class="status"><i class="dot"></i><span class="live-count"></span>人がトレーニング中</span><h2></h2><div class="active-members"><span class="group-avatars"></span><span class="today-count"></span></div></div><button class="open" aria-label="グループ詳細">›</button><div class="group-numbers"><span><b class="set-count"></b><small>セット</small></span><span><b class="volume"></b><small>総負荷</small></span></div></article></template>
     <template id="record-template"><article class="record"><time></time><div class="person"><span class="avatar"></span><strong></strong><span class="source"></span></div><div class="overview"><span>総負荷<b class="record-volume"></b></span><span>セット<b class="record-sets"></b></span></div><div class="stamps"><span>💪</span><span>🔥</span><span>👎</span><span>🤩</span><span>👏</span><span>👺</span><b>…</b></div><h3 class="exercise"></h3><table class="sets"><thead><tr><th>セット</th><th>重量 kg</th><th>回数</th><th>推定1RM kg</th></tr></thead><tbody></tbody></table></article></template>
