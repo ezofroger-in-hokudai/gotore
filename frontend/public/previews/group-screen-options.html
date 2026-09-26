@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>E-GOTORE グループ画面 5案</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --red: #d32f2f;
+        --red-dark: #b71c1c;
+        --ink: #202127;
+        --text: #1f1f1f;
+        --muted: #686a70;
+        --line: #dedfe2;
+        --bg: #f4f4f5;
+        --surface: #fff;
+        --track: #ececef;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        background: #e5e6e9;
+        color: var(--text);
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+      button, input { font: inherit; }
+      button { color: inherit; }
+      button:focus-visible, input:focus-visible { outline: 3px solid rgba(211, 47, 47, .28); outline-offset: 2px; }
+
+      .preview-controls {
+        position: sticky;
+        z-index: 20;
+        top: 0;
+        padding: 10px 12px 12px;
+        border-bottom: 1px solid #d2d3d6;
+        background: rgba(255, 255, 255, .96);
+        backdrop-filter: blur(12px);
+      }
+      .preview-controls-inner { max-width: 920px; margin: auto; }
+      .preview-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+      .preview-title strong { font-size: 15px; }
+      .preview-title span { color: var(--muted); font-size: 11px; }
+      .option-tabs, .state-tabs {
+        display: grid;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 8px;
+        background: var(--track);
+      }
+      .option-tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 8px; }
+      .state-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 6px; }
+      .option-tabs button, .state-tabs button {
+        min-height: 38px;
+        padding: 5px 3px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #56585e;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .option-tabs button[aria-pressed="true"], .state-tabs button[aria-pressed="true"] {
+        background: #fff;
+        color: var(--text);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, .1);
+      }
+      .option-note { margin: 8px 2px 0; min-height: 34px; color: #55575c; font-size: 12px; }
+
+      .stage { display: flex; justify-content: center; padding: 16px 0 38px; }
+      .phone {
+        position: relative;
+        width: min(100%, 430px);
+        min-height: 844px;
+        overflow: hidden;
+        background: var(--bg);
+        box-shadow: 0 16px 42px rgba(22, 24, 30, .17);
+      }
+      .app-header {
+        position: sticky;
+        z-index: 7;
+        top: 0;
+        display: flex;
+        align-items: center;
+        height: 48px;
+        padding: 0 16px;
+        background: var(--ink);
+        color: #fff;
+      }
+      .logo { font-size: 22px; font-weight: 900; letter-spacing: -.7px; }
+      .logo span { color: #ff625b; }
+      .screen { min-height: 730px; padding: 14px 16px 116px; }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { margin-bottom: 10px; font-size: 20px; line-height: 1.3; }
+      h2 { margin-bottom: 8px; font-size: 16px; }
+      h3 { margin-bottom: 4px; font-size: 14px; }
+      .eyebrow { margin: 0 0 2px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .09em; }
+      .muted { color: var(--muted); }
+      .small { font-size: 12px; }
+      .section { margin-top: 16px; }
+      .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+      .section-head h2 { margin: 0; }
+      .text-action { min-width: 48px; min-height: 44px; border: 0; background: transparent; color: #4f5157; font-weight: 700; }
+      .chevron { color: #8b8d92; font-size: 20px; }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: rgba(255,255,255,.5);
+      }
+      .metric { min-width: 0; padding: 9px 5px 8px; text-align: center; }
+      .metric + .metric { border-left: 1px solid var(--line); }
+      .metric b { display: block; font-size: 17px; line-height: 1.2; white-space: nowrap; }
+      .metric small { display: block; min-height: 16px; color: var(--muted); font-size: 10px; white-space: nowrap; }
+      .live { color: var(--red); font-weight: 800; }
+      .live-dot { display: inline-block; width: 7px; height: 7px; margin-right: 4px; border-radius: 50%; background: var(--red); vertical-align: 1px; }
+
+      .segment {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        padding: 4px;
+        border-radius: 8px;
+        background: var(--track);
+      }
+      .segment button { min-height: 40px; border: 0; border-radius: 6px; background: transparent; color: #66686d; font-weight: 700; }
+      .segment button.on { background: #fff; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+
+      .rows { border-top: 1px solid var(--line); }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-height: 64px;
+        padding: 9px 2px;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        background: transparent;
+        text-align: left;
+      }
+      .row-main { min-width: 0; flex: 1; }
+      .row-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 800; }
+      .row-meta { margin-top: 3px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+      .avatar-stack { display: flex; padding-left: 5px; }
+      .avatar {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        margin-left: -5px;
+        border: 2px solid var(--surface);
+        border-radius: 50%;
+        background: #d9dde3;
+        color: #454850;
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .avatar.is-live { outline: 2px solid var(--red); outline-offset: 1px; }
+      .avatar.is-live::after { content: ""; position: absolute; right: -2px; bottom: 0; width: 7px; height: 7px; border: 2px solid #fff; border-radius: 50%; background: var(--red); }
+
+      .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .primary, .secondary, .icon-action {
+        min-height: 48px;
+        border-radius: 8px;
+        font-weight: 800;
+      }
+      .primary { border: 1px solid var(--red); background: var(--red); color: #fff; }
+      .primary:active { background: var(--red-dark); }
+      .secondary { border: 1px solid #babcc1; background: #fff; }
+      .icon-action { display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line); background: #fff; }
+      .icon { display: inline-grid; place-items: center; width: 24px; height: 24px; font-size: 18px; }
+
+      .dark-card { padding: 15px; border-radius: 12px; background: var(--ink); color: #fff; }
+      .dark-card .muted { color: #c6c8cd; }
+      .dark-card .metric-grid { margin-top: 12px; border-color: #51535a; background: transparent; }
+      .dark-card .metric + .metric { border-color: #51535a; }
+      .dark-card .metric small { color: #c6c8cd; }
+      .dark-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+      .dark-card h2 { margin: 2px 0 0; font-size: 18px; }
+
+      .activity-card { padding: 12px 0; border-top: 1px solid var(--line); }
+      .activity-card:last-child { border-bottom: 1px solid var(--line); }
+      .record-head { display: flex; justify-content: space-between; gap: 8px; }
+      .record-summary { color: var(--muted); font-size: 12px; }
+      .set-line { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 4px 0; font-size: 12px; }
+      .stamp-row { display: flex; justify-content: space-between; margin-top: 6px; }
+      .stamp-row button { min-width: 42px; min-height: 40px; border: 0; border-radius: 6px; background: #ececef; }
+
+      .carousel { display: flex; gap: 8px; margin: 0 -16px; padding: 0 16px 4px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; }
+      .carousel::-webkit-scrollbar { display: none; }
+      .mini-group { flex: 0 0 78%; scroll-snap-align: center; padding: 14px; border: 0; border-radius: 12px; background: var(--ink); color: #fff; text-align: left; }
+      .mini-group.alt { background: #fff; color: var(--text); border: 1px solid var(--line); }
+      .mini-group h2 { margin: 4px 0 10px; }
+      .mini-group-foot { display: flex; justify-content: space-between; border-top: 1px solid rgba(128,128,128,.38); padding-top: 9px; color: #c6c8cd; font-size: 12px; }
+      .mini-group.alt .mini-group-foot { color: var(--muted); }
+      .dots { display: flex; justify-content: center; gap: 5px; margin-top: 5px; }
+      .dots i { width: 5px; height: 5px; border-radius: 50%; background: #c6c7cb; }
+      .dots i.on { width: 16px; border-radius: 4px; background: var(--red); }
+
+      .calendar-strip { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid var(--line); background: #fff; }
+      .day { min-height: 48px; padding: 5px 2px; border-right: 1px solid #ededee; text-align: center; font-size: 10px; }
+      .day:last-child { border-right: 0; }
+      .day b { display: grid; place-items: center; width: 24px; height: 24px; margin: 2px auto 0; border-radius: 50%; font-size: 11px; }
+      .day.hot b { background: #d32f2f; color: #fff; }
+      .day.mid b { background: #f2b2b2; }
+      .day.low b { background: #fdecec; }
+      .chart { display: flex; align-items: flex-end; gap: 7px; height: 78px; padding: 10px 5px 0; border-bottom: 1px solid var(--line); }
+      .bar { position: relative; flex: 1; min-height: 5px; background: #e38b8b; }
+      .bar.hot { background: var(--red); }
+      .bar::after { content: attr(data-label); position: absolute; right: 0; bottom: -20px; left: 0; color: var(--muted); font-size: 9px; text-align: center; }
+
+      .people-line { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+      .people-line .avatar { flex: 0 0 36px; width: 36px; height: 36px; margin: 0; }
+      .people-line-main { min-width: 0; flex: 1; }
+      .people-line b, .people-line small { display: block; }
+      .people-line small { color: var(--muted); }
+
+      .board-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .board-tile { min-height: 128px; padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: #fff; text-align: left; }
+      .board-tile.dark { border-color: var(--ink); background: var(--ink); color: #fff; }
+      .board-tile h2 { margin: 4px 0 18px; }
+      .tile-numbers { display: flex; gap: 12px; color: var(--muted); font-size: 11px; }
+      .board-tile.dark .tile-numbers { color: #c8cad0; }
+      .tile-numbers b { display: block; color: inherit; font-size: 15px; }
+
+      .reorder-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+      .reorder-list li { display: grid; grid-template-columns: 44px 1fr 44px 44px; align-items: center; min-height: 58px; border-bottom: 1px solid var(--line); }
+      .drag-handle { color: #777980; font-size: 20px; text-align: center; }
+      .step { width: 40px; height: 40px; border: 0; background: transparent; font-size: 18px; }
+      .setting-row { display: flex; align-items: center; justify-content: space-between; min-height: 54px; border-bottom: 1px solid var(--line); }
+      .danger { color: var(--red); }
+
+      .join-methods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .method { min-height: 76px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 11px; font-weight: 700; }
+      .method.on { border-color: #efcaca; background: #fff5f5; }
+      .method b { display: block; margin-bottom: 3px; font-size: 21px; }
+      .field { display: block; margin-top: 14px; font-size: 12px; font-weight: 700; }
+      .field input { width: 100%; min-height: 48px; margin-top: 5px; padding: 0 12px; border: 1px solid #767676; border-radius: 6px; background: #fff; font-size: 16px; letter-spacing: .08em; }
+      .invite-code { padding: 12px; border: 1px solid var(--line); background: #fff; text-align: center; }
+      .invite-code b { display: block; font-size: 19px; letter-spacing: .12em; }
+      .qr { display: grid; place-items: center; width: 92px; height: 92px; margin: 9px auto; border: 8px solid #fff; outline: 1px solid var(--line); background:
+        linear-gradient(90deg, #202127 25%, transparent 25% 50%, #202127 50% 75%, transparent 75%),
+        linear-gradient(#202127 25%, transparent 25% 50%, #202127 50% 75%, transparent 75%);
+        background-size: 20px 20px;
+      }
+      .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 13px; padding: 4px; border-radius: 8px; background: var(--track); }
+      .mode-switch button { min-height: 40px; border: 0; border-radius: 6px; background: transparent; font-weight: 800; }
+      .mode-switch .on { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+
+      .start {
+        position: absolute;
+        z-index: 8;
+        right: 16px;
+        bottom: 80px;
+        width: 112px;
+        height: 52px;
+        border: 0;
+        border-radius: 9px;
+        background: var(--red);
+        color: #fff;
+        font-weight: 900;
+        letter-spacing: .04em;
+        box-shadow: 0 7px 18px rgba(85, 25, 25, .28);
+      }
+      .bottom-nav {
+        position: absolute;
+        z-index: 7;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        height: 66px;
+        border-top: 1px solid var(--line);
+        background: rgba(255,255,255,.98);
+      }
+      .bottom-nav button { position: relative; border: 0; background: transparent; color: #73757a; font-size: 12px; }
+      .bottom-nav button.on { color: var(--red); font-weight: 800; }
+      .bottom-nav button.on::before { content: ""; position: absolute; top: 0; right: 18px; left: 18px; height: 2px; background: var(--red); }
+
+      .back { display: inline-flex; align-items: center; min-height: 44px; margin: -7px 0 1px -8px; padding: 0 8px; border: 0; background: transparent; color: #55575c; font-weight: 700; }
+      .detail-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .detail-title h1 { margin: 0; }
+      .round-icon { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; background: #fff; font-size: 18px; }
+
+      @media (max-width: 520px) {
+        .preview-title span { display: none; }
+        .stage { padding: 0; }
+        .phone { min-height: calc(100vh - 174px); box-shadow: none; }
+        .screen { min-height: calc(100vh - 222px); }
+      }
+      @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+    </style>
+  </head>
+  <body>
+    <aside class="preview-controls" aria-label="プレビューの切り替え">
+      <div class="preview-controls-inner">
+        <div class="preview-title"><strong>グループ画面 5案</strong><span>架空データ・操作できる比較プレビュー</span></div>
+        <div class="option-tabs" id="optionTabs"></div>
+        <div class="state-tabs" id="stateTabs"></div>
+        <p class="option-note" id="optionNote"></p>
+      </div>
+    </aside>
+    <div class="stage">
+      <main class="phone" id="phone" aria-live="polite"></main>
+    </div>
+
+    <script>
+      const options = [
+        { key: "A", name: "一覧＋詳細", note: "一覧を最初の着地点にする基本案。今日の状況を比較してから、必要なグループだけ開く。" },
+        { key: "B", name: "スワイプ", note: "ホームのグループカードを受け継ぐ案。横スワイプで状況を見て、カードを押すと詳細へ進む。" },
+        { key: "C", name: "履歴中心", note: "グループごとの積み上がりを主役にする案。カレンダーと最近の記録をホームから確認できる。" },
+        { key: "D", name: "メンバー", note: "一緒にやっている人を主役にする案。LIVEと今日やった人からグループ詳細へ入る。" },
+        { key: "E", name: "ボード", note: "少し攻めた2列ボード案。多いグループを一画面で比較し、管理操作も短くする。" },
+      ];
+      const states = [
+        { key: "home", label: "ホーム" },
+        { key: "detail", label: "詳細・履歴" },
+        { key: "manage", label: "設定・順番" },
+        { key: "join", label: "作成・参加" },
+      ];
+      let option = "A";
+      let state = "home";
+      let joinMode = "join";
+
+      const avatars = (live = true) => `<span class="avatar-stack" aria-label="今日トレーニングしたメンバー">
+        <span class="avatar ${live ? "is-live" : ""}">高</span><span class="avatar">佐</span><span class="avatar">森</span>
+      </span>`;
+      const metrics = (group = false) => `<div class="metric-grid" aria-label="今日の状況">
+        <div class="metric"><small class="live"><span class="live-dot"></span>LIVE</small><b>${group ? 1 : 2}人</b></div>
+        <div class="metric"><small>${group ? "活動" : "グループ"}</small><b>${group ? 5 : 3}${group ? "人" : ""}</b></div>
+        <div class="metric"><small>セット</small><b>${group ? 18 : 41}</b></div>
+        <div class="metric"><small>総負荷</small><b>${group ? "14,280" : "32,640"}<small>kg</small></b></div>
+      </div>`;
+      const segment = (active = "latest") => `<div class="segment" aria-label="グループの表示">
+        <button class="${active === "calendar" ? "on" : ""}">カレンダー</button>
+        <button class="${active === "latest" ? "on" : ""}">最新記録</button>
+        <button class="${active === "graph" ? "on" : ""}">グラフ</button>
+      </div>`;
+      const groupRows = () => `<div class="rows">
+        <button class="row" data-go="detail">${avatars()}<span class="row-main"><span class="row-title"><span>いつものトレ仲間</span><span class="live"><span class="live-dot"></span>1人</span></span><span class="row-meta">5人　18セット　14,280kg</span></span><span class="chevron">›</span></button>
+        <button class="row" data-go="detail">${avatars(false)}<span class="row-main"><span class="row-title"><span>大学トレ部</span></span><span class="row-meta">3人　14セット　11,160kg</span></span><span class="chevron">›</span></button>
+        <button class="row" data-go="detail"><span class="avatar-stack"><span class="avatar is-live">森</span><span class="avatar">石</span></span><span class="row-main"><span class="row-title"><span>朝トレ部</span><span class="live"><span class="live-dot"></span>1人</span></span><span class="row-meta">2人　9セット　7,200kg</span></span><span class="chevron">›</span></button>
+      </div>`;
+      const recent = () => `<article class="activity-card">
+        <div class="record-head"><h3>高橋</h3><span class="muted small">今日 10:42</span></div>
+        <div class="record-summary">3種目　9セット　5,460kg</div>
+        <div class="set-line"><b>ベンチプレス　75kg × 8回 🔥</b><span>RM 95kg</span></div>
+        <div class="set-line"><span>スクワット　100kg × 5回</span><span>RM 117kg</span></div>
+        <div class="stamp-row" aria-label="スタンプ"><button>💪 2</button><button>🔥 1</button><button>👎</button><button>🤩</button><button>👏 3</button><button>👺</button></div>
+      </article>`;
+      const actions = () => `<div class="actions section"><button class="primary" data-go="join" data-mode="create">グループを作成</button><button class="secondary" data-go="join" data-mode="join">グループに参加</button></div>`;
+
+      function homeA() {
+        return `<p class="eyebrow">GROUPS</p><div class="section-head"><h1>グループ</h1><button class="text-action" data-go="manage">並べ替え</button></div>
+          ${metrics()}<section class="section"><div class="section-head"><h2>所属グループ</h2><span class="muted small">3件</span></div>${groupRows()}</section>${actions()}`;
+      }
+      function homeB() {
+        return `<p class="eyebrow">GROUPS</p><div class="section-head"><h1>グループ</h1><button class="text-action" data-go="manage">管理</button></div>${metrics()}
+          <section class="section"><div class="carousel"><button class="mini-group" data-go="detail"><span class="live"><span class="live-dot"></span>1人がトレーニング中</span><h2>いつものトレ仲間　›</h2>${avatars()}<div class="mini-group-foot"><span>18セット</span><span>14,280kg</span></div></button><button class="mini-group alt" data-go="detail"><span class="muted">3人がトレーニング済み</span><h2>大学トレ部　›</h2>${avatars(false)}<div class="mini-group-foot"><span>14セット</span><span>11,160kg</span></div></button></div><div class="dots"><i class="on"></i><i></i><i></i></div></section>
+          <section class="section"><div class="section-head"><h2>このグループの最新</h2><button class="text-action" data-go="detail">すべて</button></div>${recent()}</section>${actions()}`;
+      }
+      function homeC() {
+        return `<p class="eyebrow">GROUPS</p><div class="section-head"><h1>グループ</h1><button class="text-action" data-go="manage">管理</button></div>${metrics()}
+          <section class="section">${segment("calendar")}<div class="section-head" style="margin-top:12px"><h2>いつものトレ仲間</h2><button class="text-action" data-go="detail">詳細 ›</button></div><div class="calendar-strip"><div class="day">月<b>21</b></div><div class="day mid">火<b>22</b></div><div class="day">水<b>23</b></div><div class="day hot">木<b>24</b></div><div class="day low">金<b>25</b></div><div class="day hot">土<b>26</b></div><div class="day">日<b>27</b></div></div></section>
+          <section class="section"><div class="section-head"><h2>グループを切り替え</h2><button class="text-action" data-go="manage">順番</button></div>${groupRows()}</section>${actions()}`;
+      }
+      function homeD() {
+        return `<p class="eyebrow">GROUPS</p><div class="section-head"><h1>グループ</h1><button class="text-action" data-go="manage">管理</button></div>${metrics()}
+          <section class="section"><h2>いま・今日</h2><button class="people-line" style="width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left" data-go="detail"><span class="avatar is-live">高</span><span class="people-line-main"><b>高橋　<span class="live">LIVE</span></b><small>いつものトレ仲間 · ベンチプレス</small></span><span class="chevron">›</span></button><button class="people-line" style="width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left" data-go="detail"><span class="avatar">佐</span><span class="people-line-main"><b>佐藤</b><small>大学トレ部 · 9セット · 5,460kg</small></span><span class="chevron">›</span></button></section>
+          <section class="section"><div class="section-head"><h2>所属グループ</h2><button class="text-action" data-go="manage">並べ替え</button></div>${groupRows()}</section>${actions()}`;
+      }
+      function homeE() {
+        return `<p class="eyebrow">GROUP BOARD</p><div class="section-head"><h1>グループ</h1><button class="text-action" data-go="manage">編集</button></div>${metrics()}
+          <section class="section board-grid"><button class="board-tile dark" data-go="detail"><span class="live"><span class="live-dot"></span>LIVE 1人</span><h2>いつもの<br>トレ仲間　›</h2><span class="tile-numbers"><span><b>18</b>セット</span><span><b>14,280</b>kg</span></span></button><button class="board-tile" data-go="detail"><span class="muted small">3人が活動</span><h2>大学<br>トレ部　›</h2><span class="tile-numbers"><span><b>14</b>セット</span><span><b>11,160</b>kg</span></span></button><button class="board-tile" data-go="detail"><span class="live small"><span class="live-dot"></span>LIVE 1人</span><h2>朝トレ部　›</h2><span class="tile-numbers"><span><b>9</b>セット</span><span><b>7,200</b>kg</span></span></button><button class="board-tile" data-go="join" data-mode="create" style="display:grid;place-items:center;text-align:center"><span><b style="display:block;font-size:28px">＋</b>グループを作成</span></button></section>
+          <button class="secondary section" style="width:100%" data-go="join" data-mode="join">招待から参加</button>`;
+      }
+
+      function detail() {
+        const detailTop = option === "B"
+          ? `<div class="dark-card"><div class="dark-card-head"><div><span class="live"><span class="live-dot"></span>1人がトレーニング中</span><h2>いつものトレ仲間</h2></div>${avatars()}</div>${metrics(true)}</div>`
+          : `<div class="detail-title"><div><p class="eyebrow">GROUP</p><h1>いつものトレ仲間</h1></div><button class="round-icon" data-go="manage" aria-label="グループ設定">⚙</button></div>${metrics(true)}`;
+        const body = option === "C"
+          ? `${segment("calendar")}<div class="calendar-strip section"><div class="day">月<b>21</b></div><div class="day mid">火<b>22</b></div><div class="day">水<b>23</b></div><div class="day hot">木<b>24</b></div><div class="day low">金<b>25</b></div><div class="day hot">土<b>26</b></div><div class="day">日<b>27</b></div></div><div class="chart section"><i class="bar" style="height:25%" data-label="月"></i><i class="bar hot" style="height:76%" data-label="火"></i><i class="bar" style="height:42%" data-label="水"></i><i class="bar hot" style="height:95%" data-label="木"></i><i class="bar" style="height:58%" data-label="金"></i></div>`
+          : `${segment()}<section class="section"><div class="section-head"><h2>最新記録</h2><span class="muted small">9月</span></div>${recent()}${recent()}</section>`;
+        return `<button class="back" data-go="home">‹ グループ</button>${detailTop}<section class="section">${body}</section><section class="section rows"><button class="row" data-go="manage"><span class="icon">👥</span><span class="row-main"><b>メンバー</b><span class="row-meta">8人</span></span><span class="chevron">›</span></button><button class="row" data-go="join" data-mode="invite"><span class="icon">↗</span><span class="row-main"><b>招待</b><span class="row-meta">リンク・QR・12桁コード</span></span><span class="chevron">›</span></button></section>`;
+      }
+
+      function manage() {
+        return `<button class="back" data-go="home">‹ グループ</button><p class="eyebrow">GROUP SETTINGS</p><h1>グループの管理</h1>
+          <section class="section"><div class="section-head"><h2>表示順</h2><span class="muted small">ホーム・切替タブで共通</span></div><ol class="reorder-list"><li><span class="drag-handle">⠿</span><b>いつものトレ仲間</b><button class="step" aria-label="上へ">↑</button><button class="step" aria-label="下へ">↓</button></li><li><span class="drag-handle">⠿</span><b>大学トレ部</b><button class="step">↑</button><button class="step">↓</button></li><li><span class="drag-handle">⠿</span><b>朝トレ部</b><button class="step">↑</button><button class="step">↓</button></li></ol><button class="primary" style="width:100%;margin-top:10px">完了</button></section>
+          <section class="section"><h2>いつものトレ仲間</h2><div class="setting-row"><span>グループ名</span><b>いつものトレ仲間　›</b></div><button class="row" data-go="join" data-mode="invite"><span>招待</span><span class="chevron">›</span></button><div class="setting-row"><span>メンバー</span><b>8人　›</b></div><div class="setting-row danger"><span>グループから退出</span><span>›</span></div></section>`;
+      }
+
+      function join() {
+        const isCreate = joinMode === "create";
+        const isInvite = joinMode === "invite";
+        let content;
+        if (isCreate) content = `<label class="field">グループ名<input value="いつものトレ仲間" aria-label="グループ名"></label><button class="primary section" style="width:100%">作成する</button><p class="muted small section">作成後、そのまま招待リンクを共有できます。</p>`;
+        else if (isInvite) content = `${option === "C" || option === "D" ? `<div class="qr" aria-label="招待QRコード"></div>` : ""}<div class="invite-code"><span class="muted small">招待コード</span><b>7E4A19C2B8F0</b></div><div class="actions section"><button class="primary">リンクを共有</button><button class="secondary">コードをコピー</button></div><p class="muted small section">リンクとQRは同じ招待コードを渡します。再発行すると以前のものは使えません。</p>`;
+        else content = `<div class="join-methods"><button class="method ${option === "E" ? "" : "on"}"><b>↗</b>招待リンク</button><button class="method ${option === "E" ? "" : ""}"><b>▦</b>QR</button><button class="method ${option === "E" ? "on" : ""}"><b>•••</b>12桁コード</button></div><label class="field">招待コード<input value="7E4A19C2B8F0" aria-label="招待コード"></label><div class="dark-card section"><p class="eyebrow" style="color:#c6c8cd">参加するグループ</p><h2>朝トレ部</h2><span class="muted">メンバー 6人</span></div><button class="primary section" style="width:100%">参加する</button>`;
+        return `<button class="back" data-go="${isInvite ? "detail" : "home"}">‹ ${isInvite ? "いつものトレ仲間" : "グループ"}</button><div class="mode-switch"><button class="${isCreate ? "on" : ""}" data-mode-only="create">作成</button><button class="${!isCreate && !isInvite ? "on" : ""}" data-mode-only="join">参加</button></div><p class="eyebrow">${isInvite ? "INVITE" : isCreate ? "NEW GROUP" : "JOIN"}</p><h1>${isInvite ? "メンバーを招待" : isCreate ? "グループを作成" : "グループに参加"}</h1>${content}`;
+      }
+
+      function shell(content) {
+        return `<header class="app-header"><div class="logo">E-GO<span>TORE</span></div></header><section class="screen">${content}</section><button class="start">START</button><nav class="bottom-nav" aria-label="メインナビゲーション"><button data-nav="home">ホーム</button><button class="on" data-nav="groups">グループ</button><button data-nav="history">履歴</button><button data-nav="settings">設定</button></nav>`;
+      }
+      function render() {
+        document.getElementById("optionTabs").innerHTML = options.map(item => `<button data-option="${item.key}" aria-pressed="${option === item.key}">${item.key}<br>${item.name}</button>`).join("");
+        document.getElementById("stateTabs").innerHTML = states.map(item => `<button data-state="${item.key}" aria-pressed="${state === item.key}">${item.label}</button>`).join("");
+        document.getElementById("optionNote").textContent = options.find(item => item.key === option).note;
+        let content = state === "detail" ? detail() : state === "manage" ? manage() : state === "join" ? join() : ({ A: homeA, B: homeB, C: homeC, D: homeD, E: homeE })[option]();
+        document.getElementById("phone").innerHTML = shell(content);
+        bind();
+      }
+      function bind() {
+        document.querySelectorAll("[data-option]").forEach(button => button.addEventListener("click", () => { option = button.dataset.option; state = "home"; render(); }));
+        document.querySelectorAll("[data-state]").forEach(button => button.addEventListener("click", () => { state = button.dataset.state; render(); }));
+        document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => { if (button.dataset.mode) joinMode = button.dataset.mode; state = button.dataset.go; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }));
+        document.querySelectorAll("[data-mode-only]").forEach(button => button.addEventListener("click", () => { joinMode = button.dataset.modeOnly; render(); }));
+        document.querySelectorAll(".segment button").forEach(button => button.addEventListener("click", () => { button.parentElement.querySelectorAll("button").forEach(item => item.classList.toggle("on", item === button)); }));
+      }
+      render();
+    </script>
+  </body>
+</html>

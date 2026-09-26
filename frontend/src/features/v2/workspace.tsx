@@ -399,8 +399,17 @@ function WorkspaceContent({ session }: { session: Session }) {
             }
             onClick={() => {
               if (next === "groups") {
-                setGroupDetail(!!selected);
-                navigate(next, selected ? "detail" : "list");
+                setGroupDetail(false);
+                if (view === "groups") {
+                  const state = {
+                    ...window.history.state,
+                    gotoreView: "groups",
+                    groupId: selected,
+                    communityMode: "list",
+                  };
+                  window.history.replaceState(state, "");
+                  window.dispatchEvent(new PopStateEvent("popstate", { state }));
+                } else navigate(next, "list");
               } else navigate(next);
             }}
           >

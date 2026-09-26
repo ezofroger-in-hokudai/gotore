@@ -7,6 +7,24 @@ async function openGroupList(page: import("@playwright/test").Page) {
   if (await back.count()) await back.click();
 }
 
+test("グループナビは選択中の詳細ではなくグループホームを開く", async ({ page }) => {
+  const state = await mockTraining(page);
+  await navigate(page, "グループ");
+  await expect(page.getByRole("heading", { name: "グループ一覧", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: state.group.name, level: 1, exact: true }),
+  ).toHaveCount(0);
+  expect(await page.evaluate(() => history.state.communityMode)).toBe("list");
+
+  await page.getByRole("button", { name: `${state.group.name} ›`, exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: state.group.name, level: 1, exact: true }),
+  ).toBeVisible();
+  await navigate(page, "グループ");
+  await expect(page.getByRole("heading", { name: "グループ一覧", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => history.state.communityMode)).toBe("list");
+});
+
 test("12桁コードで確認してから参加し、無効コードは再入力できる", async ({ page }) => {
   const state = await mockTraining(page);
   let joins = 0;
