@@ -64,9 +64,9 @@ test("実画像は設定で保存後に仲間へ表示され、退出後と未�
     await pageA.screenshot({ path: "test-results/avatar-settings.png", fullPage: true });
     await pageB.bringToFront();
     await pageB.reload();
-    const record = pageB.getByRole("article");
-    await expect(record.locator(".person-avatar img")).toBeVisible();
-    await expect(record.locator(".avatar-live-dot")).toBeVisible();
+    const groupCard = pageB.getByRole("button", { name: "画像の共有テストの詳細" });
+    await expect(groupCard.locator(".person-avatar img")).toBeVisible();
+    await expect(groupCard.locator(".avatar-live-dot")).toBeVisible();
     const imagePath = `${backendUrl}/api/profiles/${group.owner_id}/avatar`;
     expect((await pageB.request.get(imagePath, { headers: authB })).status()).toBe(200);
     expect((await pageB.request.get(imagePath)).status()).toBe(401);

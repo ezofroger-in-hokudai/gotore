@@ -70,8 +70,9 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await pageA.getByRole("button", { name: "セットを追加", exact: true }).click();
     await expect(pageA.locator(".sync-status")).toContainText("未送信");
     failSave = false;
-    // 自動再送も許容し、先に同期が完了してボタンが消えても保存結果を確認する。
-    await expect(pageA.locator(".sync-status")).toContainText("同期済み");
+    // オフライン保存分を再送し、表示が消えてから永続化を確認する。
+    await pageA.getByRole("button", { name: "再送", exact: true }).click();
+    await expect(pageA.locator(".sync-status")).toHaveCount(0);
     await pageA.reload();
     await openTraining(pageA);
     await expect(pageA.getByRole("button", { name: "セット1を編集", exact: true })).toContainText(
@@ -79,7 +80,7 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     );
     await pageB.bringToFront();
     for (const name of ["朝の合トレ部", "週末の合トレ部"]) {
-      await pageB.getByRole("button", { name: `${name}を表示`, exact: true }).click();
+      await pageB.getByRole("button", { name, exact: true }).click();
       await expect(pageB.getByRole("article")).toContainText("82.5");
       await expect(pageB.getByRole("article")).toContainText("共有テストA");
       await expect(pageB.getByRole("article").locator(".record-table tbody tr")).toHaveCount(1);
@@ -130,7 +131,7 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await pageA.getByRole("button", { name: "完了", exact: true }).click();
     await join(pageB, newToken, "朝の合トレ部");
     await navigate(pageB, "ホーム");
-    await pageB.getByRole("button", { name: "朝の合トレ部を表示", exact: true }).click();
+    await pageB.getByRole("button", { name: "朝の合トレ部", exact: true }).click();
     await expect(pageB.getByRole("article")).toHaveCount(1);
     await expect(pageB.getByRole("article")).toContainText("共有テストA");
     expect(errors).toEqual([]);

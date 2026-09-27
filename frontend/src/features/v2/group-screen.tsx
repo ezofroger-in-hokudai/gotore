@@ -1,6 +1,12 @@
 "use client";
 
-import type { Group, GroupActivity, GroupDetail, TodayActivity } from "@/lib/api";
+import type {
+  Group,
+  GroupActivity,
+  GroupDetail,
+  TodayActivity,
+  TodayGroupActivity,
+} from "@/lib/api";
 import { api } from "@/lib/api";
 import QRCode from "qrcode";
 import {
@@ -83,7 +89,10 @@ export function CommunityScreen({
     refreshKey,
     GROUP_REFRESH_MS,
     true,
-    { enabled: active && mode === "list" && groups.length > 0, retainOnRefresh: true },
+    {
+      enabled: active && (mode === "list" || mode === "detail") && groups.length > 0,
+      retainOnRefresh: true,
+    },
   );
   const detail = useResource<GroupDetail>(
     selected ? `/groups/${selected}` : null,
@@ -473,8 +482,8 @@ export function CommunityScreen({
             <>
               <GroupCard
                 group={group}
-                data={activity.data}
-                error={activity.error ?? ""}
+                data={groupActivity.get(group.id) ?? null}
+                error={today.error ?? ""}
                 dragging={false}
                 onClick={() => setDetailTab("latest")}
               />
@@ -1116,7 +1125,7 @@ function SortableGroupCard({
   list,
 }: {
   group: Group;
-  data: GroupActivity | null;
+  data: TodayGroupActivity | null;
   error: string;
   groups: Group[];
   onOpen: () => void;
