@@ -32,7 +32,7 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [design-system.md](design-system.md): スマホアプリを見据えた色・文字・余白・操作と共通部品の基準。[画面見本](design-preview.html)。
 
-- [画面設計の判断](design/README.md): 画面ごとの採用判断の一覧。現在は[トレーニング中の画面設計](design/training-session.md)と[ホーム画面の設計](design/home-screen.md)を参照する。
+- [画面設計の判断](design/README.md): 画面ごとの採用判断の一覧。[トレーニング中](design/training-session.md)、[ホーム](design/home-screen.md)、[グループ](design/group-screen.md)、[グループ作成](design/group-create.md)の画面設計を参照する。
 
 - [performance-best-history.md](performance-best-history.md): BEST・前回比較の履歴件数別計測と既存集計の利用。
 
@@ -40,6 +40,7 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
 - [画面文言の再棚卸し](ui-copy-review-2026-09-13.md): 削減候補37件と今回採用する範囲。
+- [全画面の操作・デザイン監査（2026-09-27）](ui-review-2026-09-27.md): 現行画面を通した迷いやすい操作と、採用済みデザインを守った改善候補。
 - [history-analytics.md](history-analytics.md): 種目別の履歴グラフ、グループの推移・ランキングと集計・先読み。
 - [score.md](score.md): SCOREの計算式・基準回・目標・採点保存の設計案。初版への採用と実装状況は [score-implementation.md](score-implementation.md) を参照。
 - [activity-heatmap.md](activity-heatmap.md): 日別総負荷量の月別ヒートマップと日別記録。
