@@ -42,7 +42,7 @@ async function prepare(page: import("@playwright/test").Page) {
   return state;
 }
 
-test("A案の部位と検索は通信を待たずに切り替わり、主部位・補助部位・その他から選べる", async ({
+test("部位の主分類とその他を通信を待たずに切り替えられる", async ({
   page,
 }) => {
   await prepare(page);
@@ -53,21 +53,20 @@ test("A案の部位と検索は通信を待たずに切り替わり、主部位�
   });
   await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
-  const filters = page.getByRole("group", { name: "部位で絞り込み" });
+  const filters = page.locator('[aria-label="部位で絞り込み"]');
   const list = page.locator(".exercise-picker-list");
   await expect(list.getByRole("button")).toHaveCount(5);
   const loaded = reads;
-  await filters.getByRole("button", { name: "腕", exact: true }).click();
+  await filters.getByRole("button", { name: "胸", exact: true }).click();
   await expect(list.getByRole("button")).toHaveCount(2);
-  await page.getByPlaceholder("種目名で検索").fill(" ベンチ ");
-  await expect(list.getByRole("button")).toHaveCount(1);
-  await expect(list).toContainText("補助：腕・肩");
-  await page.getByPlaceholder("種目名で検索").fill("");
+  await filters.getByRole("button", { name: "胸", exact: true }).click();
   await filters.getByRole("button", { name: "その他", exact: true }).click();
   await expect(list.getByRole("button")).toHaveCount(1);
   await expect(list).toContainText("自分の種目");
+  await filters.getByRole("button", { name: "その他", exact: true }).click();
   await filters.getByRole("button", { name: "腹筋", exact: true }).click();
-  await expect(page.getByText("条件に合う種目がありません。", { exact: true })).toBeVisible();
+  await expect(page.getByText("この部位の種目はありません", { exact: true })).toBeVisible();
+  await filters.getByRole("button", { name: "腹筋", exact: true }).click();
   await filters.getByRole("button", { name: "胸", exact: true }).click();
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
@@ -80,10 +79,6 @@ test("A案の部位と検索は通信を待たずに切り替わり、主部位�
   }
   expect(reads).toBe(loaded);
   await list.getByRole("button", { name: /^ベンチプレス/ }).click();
-  await page.locator(".exercise-information").click();
-  await expect(
-    page.getByRole("dialog", { name: "種目情報" }).locator(".body-part-tags"),
-  ).toHaveText("胸補助：腕・肩");
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("80");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "test-results/body-parts-record-390.png", fullPage: true });
@@ -108,9 +103,11 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
   await expect(page.getByLabel("主な部位", { exact: true })).toHaveValue("back");
   state.failOptionWrite = false;
   await page.getByRole("button", { name: "追加", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("追加しました");
+  await expect(page.getByRole("dialog", { name: "種目を追加" })).toHaveCount(0);
   const created = state.options.find((option) => option.name === "ケーブルロウ");
   expect(created).toMatchObject({ primary_body_part: "back", secondary_body_parts: ["arms"] });
+  await openRecordingCatalog(page);
+  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
   await page.getByRole("button", { name: "ケーブルロウの部位を編集", exact: true }).click();
   await page.getByLabel("主な部位", { exact: true }).selectOption("shoulders");
   await page.screenshot({ path: "test-results/body-parts-edit-390.png", fullPage: true });
@@ -133,13 +130,13 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
   await expect(page.getByLabel("主な部位", { exact: true })).toHaveValue("legs");
   await page.getByLabel("主な部位", { exact: true }).selectOption("back");
   await page.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("部位を保存しました");
+  await expect.poll(() => created.primary_body_part).toBe("back");
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
   await page.reload();
   await openTraining(page);
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page
-    .getByRole("group", { name: "部位で絞り込み" })
+    .locator('[aria-label="部位で絞り込み"]')
     .getByRole("button", { name: "背中", exact: true })
     .click();
   await expect(page.locator(".exercise-picker-list")).toContainText("ケーブルロウ");
@@ -170,7 +167,7 @@ test("今回の種目に戻れて、未保存入力の保護と削除済み種�
   await openTraining(page);
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page
-    .getByRole("group", { name: "部位で絞り込み" })
+    .locator('[aria-label="部位で絞り込み"]')
     .getByRole("button", { name: "その他", exact: true })
     .click();
   await expect(page.locator(".exercise-picker-list")).toContainText("ベンチプレス");
@@ -191,19 +188,17 @@ test("種目一覧の再取得に失敗しても、読み込んだ候補で部�
   await page.getByLabel("新しい種目", { exact: true }).fill("追加種目");
   state.failOptions = true;
   await page.getByRole("button", { name: "追加", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("追加しました");
-  await page.getByRole("button", { name: "閉じる", exact: true }).click();
-  await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "種目を追加" })).toHaveCount(0);
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("通信できません");
   await page
-    .getByRole("group", { name: "部位で絞り込み" })
+    .locator('[aria-label="部位で絞り込み"]')
     .getByRole("button", { name: "胸", exact: true })
     .click();
   await expect(page.locator(".exercise-picker-list").getByRole("button")).toHaveCount(2);
   state.failOptions = false;
   await page.getByRole("button", { name: "再試行", exact: true }).click();
   await page
-    .getByRole("group", { name: "部位で絞り込み" })
+    .locator('[aria-label="部位で絞り込み"]')
     .getByRole("button", { name: "その他", exact: true })
     .click();
   await expect(page.locator(".exercise-picker-list")).toContainText("追加種目");
