@@ -31,11 +31,42 @@ class InviteCodeRenew(BaseModel):
     ]
 
 
+class GroupInviteToken(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: Annotated[str, StringConstraints(strip_whitespace=True, min_length=40, max_length=100)]
+
+
+class GroupOwnerTransfer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    member_id: UUID
+    expected_joined_at: datetime
+
+
+class GroupInviteResponse(BaseModel):
+    token: str
+    expires_at: datetime
+
+
+class GroupInviteMember(BaseModel):
+    id: UUID
+    display_name: str
+    role: str
+
+
+class GroupInvitePreviewResponse(BaseModel):
+    id: UUID
+    name: str
+    member_count: int
+    already_member: bool
+    members: list[GroupInviteMember]
+
+
 class GroupResponse(BaseModel):
     id: UUID
     name: str
     owner_id: UUID
     invite_code: str
+    invite_expires_at: datetime
     created_at: datetime
 
 
@@ -43,6 +74,7 @@ class MemberResponse(BaseModel):
     id: UUID
     display_name: str
     joined_at: datetime
+    last_activity_at: datetime | None = None
 
 
 class GroupDetail(GroupResponse):

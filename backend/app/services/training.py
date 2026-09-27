@@ -33,6 +33,23 @@ class TrainingService:
     def renew_invite_code(self, group_id: UUID, expected_invite_code: str):
         return self.repository.renew_invite_code(self.user.id, group_id, expected_invite_code)
 
+    def issue_group_invite(self, group_id: UUID):
+        return self.repository.issue_group_invite(self.user.id, group_id)
+
+    def preview_group_invite(self, token: str):
+        return self.repository.preview_group_invite(self.user.id, token)
+
+    def join_group_invite(self, token: str):
+        return self.repository.join_group_invite(self.user.id, token)
+
+    def transfer_group_owner(self, group_id: UUID, member_id: UUID, expected_joined_at: datetime):
+        return self.repository.transfer_group_owner(
+            self.user.id, group_id, member_id, expected_joined_at
+        )
+
+    def delete_group(self, group_id: UUID):
+        return self.repository.delete_group(self.user.id, group_id)
+
     def save_workout(self, workout: WorkoutInput):
         return self.repository.save_workout(self.user.id, workout)
 

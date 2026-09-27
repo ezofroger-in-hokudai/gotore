@@ -1,3 +1,4 @@
+import hashlib
 import os
 from pathlib import Path
 from uuid import UUID
@@ -460,14 +461,20 @@ def test_activity_uses_all_own_sets_with_month_boundaries_and_daily_pages(client
         "active_days": 2,
         "days": [
             {
-                "date": "2024-02-01", "set_count": 5, "workout_count": 2, "volume": 375,
+                "date": "2024-02-01",
+                "set_count": 5,
+                "workout_count": 2,
+                "volume": 375,
                 "workout_groups": [{"body_parts": ["other"], "workout_count": 2}],
                 "body_parts": [
                     {"body_part": "other", "set_count": 5, "workout_count": 2, "volume": 375}
                 ],
             },
             {
-                "date": "2024-02-29", "set_count": 51, "workout_count": 51, "volume": 0,
+                "date": "2024-02-29",
+                "set_count": 51,
+                "workout_count": 51,
+                "volume": 0,
                 "workout_groups": [{"body_parts": ["other"], "workout_count": 51}],
                 "body_parts": [
                     {"body_part": "other", "set_count": 51, "workout_count": 51, "volume": 0}
@@ -511,11 +518,14 @@ def test_activity_empty_month_and_refresh_after_record_changes(client, connectio
     assert client.get(path).json()["total_sets"] == 1
     assert client.get(path).json()["total_volume"] == 644
     assert client.get("/api/workouts/activity?month=2025-01").json()["total_sets"] == 0
-    revised = client.patch(f"/api/workouts/{record['id']}", json={
-        "expected_revision": 1,
-        "performed_on": "2024-12-31",
-        "exercises": [{"name": "ベンチプレス", "sets": [{"weight": 12.5, "reps": 3}]}],
-    })
+    revised = client.patch(
+        f"/api/workouts/{record['id']}",
+        json={
+            "expected_revision": 1,
+            "performed_on": "2024-12-31",
+            "exercises": [{"name": "ベンチプレス", "sets": [{"weight": 12.5, "reps": 3}]}],
+        },
+    )
     assert revised.status_code == 200, revised.text
     assert client.get(path).json()["total_volume"] == 37.5
     connection.execute(
@@ -716,6 +726,157 @@ def test_renew_invite_retries_collisions_without_losing_current_code(client, mon
     assert client.get(f"/api/groups/{group['id']}").json()["invite_code"] == available
 
 
+def test_group_invite_accepts_multiple_members_and_expires(client, connection):
+    group = create_group(client)
+    response = client.post(f"/api/groups/{group['id']}/invites")
+    assert response.status_code == 200
+    token = response.json()["token"]
+    assert len(token) >= 40
+    preview = client.post(
+        "/api/group-invites/preview", json={"token": token}, headers={"X-Test-User": "B"}
+    )
+    assert preview.status_code == 200
+    assert preview.json() == {
+        "id": group["id"],
+        "name": group["name"],
+        "member_count": 1,
+        "already_member": False,
+        "members": [{"id": group["owner_id"], "display_name": "A", "role": "owner"}],
+    }
+    joined = client.post(
+        "/api/group-invites/join", json={"token": token}, headers={"X-Test-User": "B"}
+    )
+    assert joined.status_code == 200
+    preview = client.post(
+        "/api/group-invites/preview", json={"token": token}, headers={"X-Test-User": "C"}
+    )
+    assert preview.status_code == 200
+    assert preview.json()["member_count"] == 2
+    assert [member["role"] for member in preview.json()["members"]] == ["owner", "member"]
+    assert client.post(
+        "/api/group-invites/join", json={"token": token}, headers={"X-Test-User": "C"}
+    ).status_code == 200
+    assert client.post(
+        "/api/group-invites/join", json={"token": token}, headers={"X-Test-User": "B"}
+    ).status_code == 200
+    response = client.post(f"/api/groups/{group['id']}/invites")
+    expired_token = response.json()["token"]
+    assert expired_token != token
+    assert client.post(
+        "/api/group-invites/preview", json={"token": token}, headers={"X-Test-User": "C"}
+    ).status_code == 200
+    connection.execute(
+        """UPDATE public.gotore_group_invites
+        SET created_at = clock_timestamp() - interval '2 seconds',
+            expires_at = clock_timestamp() - interval '1 second'
+        WHERE token_hash = %s""",
+        (hashlib.sha256(expired_token.encode()).hexdigest(),),
+    )
+    assert (
+        client.post(
+            "/api/group-invites/preview",
+            json={"token": expired_token},
+            headers={"X-Test-User": "C"},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            "/api/group-invites/join", json={"token": expired_token}, headers={"X-Test-User": "C"}
+        ).status_code
+        == 404
+    )
+
+
+def test_any_member_can_issue_group_invite_but_nonmember_cannot(client):
+    group = create_group(client)
+    joined = client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    assert joined.status_code == 200
+    issued = client.post(f"/api/groups/{group['id']}/invites", headers={"X-Test-User": "B"})
+    assert issued.status_code == 200
+    token = issued.json()["token"]
+    preview = client.post(
+        "/api/group-invites/preview", json={"token": token}, headers={"X-Test-User": "C"}
+    )
+    assert preview.status_code == 200 and preview.json()["name"] == group["name"]
+    assert (
+        client.post(f"/api/groups/{group['id']}/invites", headers={"X-Test-User": "C"}).status_code
+        == 404
+    )
+
+
+def test_owner_can_transfer_then_leave_without_losing_personal_workouts(client):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    workout = client.post("/api/workouts", json=payload(group_id=group["id"]))
+    assert workout.status_code == 201
+    detail = client.get(f"/api/groups/{group['id']}").json()
+    member = next(item for item in detail["members"] if item["id"] == str(USERS["B"]))
+    transfer = client.patch(
+        f"/api/groups/{group['id']}/owner",
+        json={"member_id": str(USERS["B"]), "expected_joined_at": member["joined_at"]},
+    )
+    assert transfer.status_code == 200
+    assert transfer.json()["owner_id"] == str(USERS["B"])
+    owner = next(item for item in detail["members"] if item["id"] == str(USERS["A"]))
+    left = client.delete(
+        f"/api/groups/{group['id']}/membership",
+        params={"expected_joined_at": owner["joined_at"]},
+    )
+    assert left.status_code == 204
+    assert client.get(f"/api/groups/{group['id']}", headers={"X-Test-User": "B"}).json()[
+        "owner_id"
+    ] == str(USERS["B"])
+    personal = client.get("/api/workouts").json()
+    assert len(personal) == 1 and personal[0]["id"] == workout.json()["id"]
+    assert personal[0]["group_id"] is None
+
+
+def test_group_deletion_unshares_records_but_keeps_personal_history(client):
+    group = create_group(client)
+    joined = client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    assert joined.status_code == 200
+    owner_record = client.post("/api/workouts", json=payload(group_id=group["id"]))
+    member_record = client.post(
+        "/api/workouts", json=payload(group_id=group["id"]), headers={"X-Test-User": "B"}
+    )
+    assert owner_record.status_code == member_record.status_code == 201
+    invite_token = client.post(f"/api/groups/{group['id']}/invites").json()["token"]
+    deleted = client.delete(f"/api/groups/{group['id']}")
+    assert deleted.status_code == 204
+    assert client.get(f"/api/groups/{group['id']}").status_code == 404
+    assert client.get("/api/workouts").json()[0]["group_id"] is None
+    records = client.get("/api/workouts", headers={"X-Test-User": "B"}).json()
+    assert len(records) == 1 and records[0]["group_id"] is None
+    assert (
+        client.post(
+            "/api/group-invites/preview",
+            json={"token": invite_token},
+            headers={"X-Test-User": "C"},
+        ).status_code
+        == 404
+    )
+
+
+def test_only_owner_can_transfer_or_delete_group(client):
+    group = create_group(client)
+    denied_transfer = client.patch(
+        f"/api/groups/{group['id']}/owner",
+        json={"member_id": str(USERS["B"]), "expected_joined_at": "2026-09-27T00:00:00Z"},
+        headers={"X-Test-User": "B"},
+    )
+    assert denied_transfer.status_code == 404
+    assert (
+        client.delete(f"/api/groups/{group['id']}", headers={"X-Test-User": "B"}).status_code == 404
+    )
+
+
 def joined_at(client, group, user="B"):
     members = client.get(f"/api/groups/{group['id']}").json()["members"]
     return next(
@@ -739,6 +900,7 @@ def test_departure_preserves_personal_history_and_rejoin_never_reshares(client, 
         "/api/workouts", json=payload(group_id=other["id"]), headers=b
     ).json()
     owner_record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    invite_token = client.post(f"/api/groups/{group['id']}/invites", headers=b).json()["token"]
     suffix = "membership" if self_leave else f"members/{USERS['B']}"
     path = f"/api/groups/{group['id']}/{suffix}"
     params = {"expected_joined_at": joined_at(client, group)}
@@ -747,6 +909,14 @@ def test_departure_preserves_personal_history_and_rejoin_never_reshares(client, 
     assert client.delete(path, params=params, headers=actor).status_code == 204
     assert client.get(f"/api/groups/{group['id']}", headers=b).status_code == 404
     assert client.get(f"/api/groups/{group['id']}/workouts", headers=b).status_code == 404
+    assert (
+        client.post(
+            "/api/group-invites/preview",
+            json={"token": invite_token},
+            headers={"X-Test-User": "C"},
+        ).status_code
+        == 404
+    )
     assert (
         client.post("/api/workouts", json=payload(group_id=group["id"]), headers=b).status_code
         == 404
