@@ -151,6 +151,7 @@ export function Preferences({
                       : "触覚フィードバック"
           }
           onClose={() => setSheet(null)}
+          dismissOnBackdrop={sheet !== "exercises" && sheet !== "avatar" && sheet !== "name"}
         >
           {sheet === "suggestion" ? (
             <SuggestionBox state={suggestion} />

@@ -826,7 +826,7 @@ function ActiveTraining({
         </>
       )}
       {catalogOpen && (
-        <Sheet title="種目を追加" onClose={() => setCatalogOpen(false)}>
+        <Sheet title="種目を追加" onClose={() => setCatalogOpen(false)} dismissOnBackdrop={false}>
           <ExerciseCatalog
             options={catalog.data ?? []}
             expanded
