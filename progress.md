@@ -3287,3 +3287,12 @@
 - 検証: 先行E2E 3件すべてで期間欄に読み込み表示が残る失敗を確認し、修正後は3件成功。関連する分析・表示保持E2Eは9件中8件成功。失敗1件は対象外のホームフィードが旧活動APIモックを使う既存テストで、分析パネルへ入る前に失敗した。`make check`成功（backend 103件成功・171件skip、frontend単体101件成功、lint・型・production build成功）。`git diff --check`成功。
 - 未解決事項: 専用DBを使う統合テスト、全E2E、実機Safari/Androidは未実施。修正対象外のホームフィードE2Eは現行APIのモックへ追従が必要。
 - 次のアクション: PRのCIで全E2EとDB統合テストを確認し、ホームフィードE2Eの旧API期待は別目的の変更で整理する。
+## 2026-09-27 23:08 当日50件超のホーム集計を修正（Issue #197）
+
+- 変更内容: `GET /api/groups/today-activity` に全体とグループ別の `totals`（セット数・総負荷）を追加した。表示用フィードは従来の各グループ最大50件のままとし、当日共有中の全記録を既存の記録×種目統計から別に集計する。全体値では複数グループへ共有した同じ記録を記録IDで一度だけ数える。ホームのTODAYとグループカードは新しい集計値を使用し、集計値のない応答では部分和を表示せず `—` とする。仕様資料と修正前後の390px画面を追加した。
+- 目的: 当日の記録が1グループ50件を超えても、セット数・総負荷を過少表示しないため。
+- 影響範囲: 当日活動APIの応答、ホームの要約とグループカード、関連型・テスト・仕様資料。フィード上限、共有権限、記録保存、DB schemaは変更していない。新しい集計は1回のSQLで取得する。
+- 関連ファイル: `backend/app/infrastructure/sessions.py`、`backend/app/schemas/session.py`、`backend/tests/test_session_performance.py`、`frontend/src/lib/api.ts`、`frontend/src/features/v2/community.tsx`、`frontend/tests/e2e/today-totals.spec.ts`、`frontend/tests/e2e/community-v2.spec.ts`、`frontend/tests/unit/home-feed.test.ts`、`docs/design/home-screen.md`、`docs/shared-workout-summary.md`、`docs/images/issue-197/`。
+- 検証: 専用`gotore_test` DBで先行テストが`totals`欠落により失敗することを確認し、修正後は0・1・50・51件、重複共有、訂正、共有解除、削除、退出が成功した。ホームE2Eも修正前はフィード50件の部分和（50セット・32,000kg）で失敗し、修正後は全51件（51セット・32,640kg）で成功。既存のグループ切替E2Eも成功。`make check`成功（backend 275件、frontend単体101件、lint・型検査・production build）。`git diff --check`成功。
+- 未解決事項: CIの全E2Eと実機での当日件数が多い画面確認は未実施。新API項目がない旧サーバー応答では正確性を優先して `—` を表示する。
+- 次のアクション: PRのCI全E2EとレビューでSQLの共有範囲・実データの表示を確認し、成功後にマージする。

@@ -89,6 +89,102 @@ def test_today_activity_collects_visible_groups_in_one_response(client, connecti
     assert all(len(item["feed"]) == 1 for item in groups.values())
     assert all(item["feed"][0]["user_id"] == str(USERS["B"]) for item in groups.values())
     assert all(item["feed"][0]["summary"]["total_volume"] == 640 for item in groups.values())
+    assert response.json()["totals"] == {"set_count": 1, "total_volume": 640}
+    assert all(item["totals"] == {"set_count": 1, "total_volume": 640} for item in groups.values())
+    counted = CountingConnection(connection)
+    assert SessionRepository(counted).today_totals(USERS["A"])[0] == {
+        "set_count": 1,
+        "total_volume": 640,
+    }
+    assert counted.calls == 1
+
+
+def test_today_totals_include_records_beyond_feed_limit_and_deduplicate_shares(client, connection):
+    first = create_group(client)
+    second = client.post("/api/groups", json={"name": "夜トレ部"}).json()
+    for group in (first, second):
+        assert client.post(
+            "/api/groups/join",
+            json={"invite_code": group["invite_code"]},
+            headers={"X-Test-User": "B"},
+        ).status_code == 200
+
+    def totals():
+        response = client.get("/api/groups/today-activity")
+        assert response.status_code == 200, response.text
+        data = response.json()
+        return data["totals"], {group["group_id"]: group for group in data["groups"]}
+
+    overall, groups = totals()
+    assert overall == {"set_count": 0, "total_volume": 0}
+    assert all(group["totals"] == overall for group in groups.values())
+
+    def insert(count):
+        rows = connection.execute(
+            """INSERT INTO public.gotore_workouts (id, user_id, performed_on, exercises)
+            SELECT gen_random_uuid(), %s,
+              (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date, %s
+            FROM generate_series(1, %s) RETURNING id""",
+            (
+                USERS["B"],
+                Jsonb([{"name": "ベンチプレス", "sets": [{"weight": 80, "reps": 8}]}]),
+                count,
+            ),
+        ).fetchall()
+        ids = [row["id"] for row in rows]
+        connection.execute(
+            """INSERT INTO public.gotore_workout_shares (workout_id, group_id, user_id)
+            SELECT id, %s, user_id FROM public.gotore_workouts WHERE id = ANY(%s::uuid[])""",
+            (first["id"], ids),
+        )
+        return ids
+
+    first_id = insert(1)[0]
+    connection.execute(
+        """INSERT INTO public.gotore_workout_shares (workout_id, group_id, user_id)
+        VALUES (%s, %s, %s)""",
+        (first_id, second["id"], USERS["B"]),
+    )
+    for size, count in [(1, 0), (50, 49), (51, 1)]:
+        if count:
+            insert(count)
+        overall, groups = totals()
+        assert overall == {"set_count": size, "total_volume": 640 * size}
+        assert groups[first["id"]]["totals"] == overall
+        assert groups[second["id"]]["totals"] == {"set_count": 1, "total_volume": 640}
+        assert len(groups[first["id"]]["feed"]) == min(size, 50)
+
+    connection.execute(
+        """UPDATE public.gotore_workouts SET exercises = %s WHERE id = %s""",
+        (Jsonb([{"name": "ベンチプレス", "sets": [{"weight": 100, "reps": 8}]}]), first_id),
+    )
+    overall, groups = totals()
+    assert overall == {"set_count": 51, "total_volume": 51 * 640 + 160}
+    assert groups[second["id"]]["totals"] == {"set_count": 1, "total_volume": 800}
+
+    connection.execute(
+        "DELETE FROM public.gotore_workout_shares WHERE workout_id = %s AND group_id = %s",
+        (first_id, first["id"]),
+    )
+    overall, groups = totals()
+    assert overall == {"set_count": 51, "total_volume": 51 * 640 + 160}
+    assert groups[first["id"]]["totals"] == {"set_count": 50, "total_volume": 50 * 640}
+
+    connection.execute("DELETE FROM public.gotore_workouts WHERE id = %s", (first_id,))
+    overall, groups = totals()
+    assert overall == groups[first["id"]]["totals"] == {
+        "set_count": 50,
+        "total_volume": 50 * 640,
+    }
+    assert groups[second["id"]]["totals"] == {"set_count": 0, "total_volume": 0}
+
+    connection.execute(
+        "DELETE FROM public.gotore_group_members WHERE group_id = %s AND user_id = %s",
+        (first["id"], USERS["B"]),
+    )
+    overall, groups = totals()
+    assert overall == {"set_count": 0, "total_volume": 0}
+    assert groups[first["id"]]["totals"] == overall
 
 
 def test_ordinary_feed_does_not_fetch_each_members_private_history(client, connection):

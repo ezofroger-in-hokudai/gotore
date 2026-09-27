@@ -83,6 +83,7 @@ test("上段のグループカードと下段のタイムライン絞り込み�
     member_count: 3,
     live_count: 1,
     today_count: 2,
+    totals: { set_count: 1, total_volume: 640 },
     members: [
       {
         id: state.user.id,
@@ -111,6 +112,7 @@ test("上段のグループカードと下段のタイムライン絞り込み�
     name: second.name,
     live_count: 0,
     today_count: 1,
+    totals: { set_count: 1, total_volume: 500 },
     members: [
       {
         id: "second-user",
@@ -134,7 +136,12 @@ test("上段のグループカードと下段のタイムライン絞り込み�
     ],
   };
   await page.route("**/api/groups/today-activity", (route) => {
-    return route.fulfill({ json: { groups: [firstActivity, secondActivity] } });
+    return route.fulfill({
+      json: {
+        groups: [firstActivity, secondActivity],
+        totals: { set_count: 2, total_volume: 1140 },
+      },
+    });
   });
   await page.reload();
   await expect(page.locator(".feed-item", { hasText: "最初のグループだけの記録" })).toBeVisible();
