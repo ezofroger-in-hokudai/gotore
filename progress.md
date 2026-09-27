@@ -17,7 +17,7 @@
 - 関連ファイル: `frontend/src/features/session/queue-storage.ts`、`session-queue.ts`、`use-session.ts`、`session-screen.tsx`、`workout-result.tsx`、`frontend/src/features/v2/workspace.tsx`、関連単体/E2E、`docs/queue-storage.md`、`docs/design/training-session.md`、`docs/images/issue-172/`。
 - 検証: 終了を端末保存する前の単体テスト失敗を確認し、実装後は終了順序、通信失敗・応答喪失・再起動、端末保存失敗、競合で成功。対象ブラウザE2E 4件と通常終了・記録画面の既存E2E 7件が成功。既存E2E 1件は終了変更と無関係な旧「重量を増やす」ボタンを前提にして失敗。`make check`は専用`gotore_test` DBで成功（backend 275件、frontend単体108件、lint・型・build）。その後追加した形式不正の単体2件を含む対象単体25件も成功。修正前後の390×844pxを同じ終了応答保留条件で撮影した。
 - 未解決事項: 終了送信中の次回開始を端末で先に許すか、前回終了確定まで待つかを利用者へ確認中。現時点では単一進行中セッション制約に合わせ開始を無効にする。全E2Eと実機Safari/Androidは未実施。旧「重量を増やす」E2Eの追従は別課題。
-- 次のアクション: 次回開始の回答を反映し、必要なE2Eを追加してPRを作成する。CI・レビューで競合復旧と画面を確認する。
+- 次のアクション: 前後画像・検証・未決定事項を記したドラフトPR #217を作成した。次回開始の回答を反映して必要なE2Eを追加し、CI・レビューで競合復旧と画面を確認する。
 
 ## 2026-09-28 01:28 グループ画面のリリース前統合確認
 
