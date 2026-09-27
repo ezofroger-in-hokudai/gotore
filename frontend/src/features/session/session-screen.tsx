@@ -63,7 +63,7 @@ export function SessionScreen({
         <button
           className="primary full"
           type="button"
-          disabled={!controller.ready || controller.busy}
+          disabled={!controller.ready || controller.busy || controller.finishPending}
           onClick={() => {
             void controller.start().catch(() => {});
           }}

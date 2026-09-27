@@ -7,6 +7,7 @@ type Change =
 export type SavedQueue = {
   base: TrainingSession;
   pending: { id: string; change: Change }[];
+  finish?: boolean;
   conflict?: boolean;
 };
 
@@ -111,14 +112,15 @@ function validExercises(value: unknown): value is Exercise[] {
 export function readQueue(raw: string): SavedQueue {
   const value = JSON.parse(raw);
   if (
-    (value?.version !== undefined && value.version !== 2) ||
+    (value?.version !== undefined && value.version !== 2 && value.version !== 3) ||
     typeof value?.base?.id !== "string" ||
     !value.base.id ||
     !Number.isInteger(value.base.revision) ||
     value.base.revision < 1 ||
     !validExercises(value.base.exercises) ||
     !Array.isArray(value.pending) ||
-    (value.conflict !== undefined && typeof value.conflict !== "boolean")
+    (value.conflict !== undefined && typeof value.conflict !== "boolean") ||
+    (value.version === 3 ? value.finish !== true : value.finish !== undefined)
   )
     throw invalid();
   let exercises: Exercise[] = value.base.exercises;
@@ -127,7 +129,7 @@ export function readQueue(raw: string): SavedQueue {
     if (typeof job?.id !== "string" || !job.id || ids.has(job.id)) throw invalid();
     ids.add(job.id);
     let change: Change;
-    if (value.version === 2) {
+    if (value.version === 2 || value.version === 3) {
       change = job.change;
       if (
         change?.kind === "sets"
@@ -143,10 +145,15 @@ export function readQueue(raw: string): SavedQueue {
     }
     return { id: job.id, change };
   });
-  return { base: value.base, pending, ...(value.conflict ? { conflict: true } : {}) };
+  return {
+    base: value.base,
+    pending,
+    ...(value.conflict ? { conflict: true } : {}),
+    ...(value.finish ? { finish: true } : {}),
+  };
 }
 
 export function writeQueue(record: SavedQueue) {
   // 操作ID・順序を残す。各操作の全状態は送信直前に復元し、間引かない。
-  return JSON.stringify({ version: 2, ...record });
+  return JSON.stringify({ version: record.finish ? 3 : 2, ...record });
 }

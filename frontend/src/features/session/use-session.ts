@@ -22,6 +22,12 @@ export function useSession(userId: string, onChanged: () => void) {
         load: () =>
           api<TrainingSession | null>("/sessions/active", { signal: AbortSignal.timeout(15_000) }),
         send: createSessionSender(api<TrainingSession>),
+        finish: (id, revision) =>
+          api<TrainingSession>(`/sessions/${id}/finish`, {
+            method: "POST",
+            body: JSON.stringify({ expected_revision: revision }),
+            signal: AbortSignal.timeout(15_000),
+          }),
       }),
   );
   const state = useSyncExternalStore(queue.subscribe, queue.getSnapshot, queue.getSnapshot);
@@ -135,6 +141,8 @@ export function useSession(userId: string, onChanged: () => void) {
     },
     start: async () => {
       if (!state.ready) throw new Error("保存済みのトレーニングを確認しています。");
+      if (queue.getSnapshot().finishPending)
+        throw new Error("前のトレーニングの終了を確認しています。");
       if (state.session) return state.session;
       startId.current ??= createSessionId();
       const result = await mutate(() =>
@@ -153,21 +161,23 @@ export function useSession(userId: string, onChanged: () => void) {
       void queue.sync();
       return result;
     },
-    finish: (beforeAccept?: () => void) =>
-      mutate(async () => {
-        await queue.sync();
-        const current = queue.state;
-        if (current.pending)
-          throw new Error(
-            "未送信のセットを同期してから終了してください。入力は端末に保持しています。",
-          );
-        if (!current.session) throw new Error("トレーニングがありません。");
-        return api<TrainingSession>(`/sessions/${current.session.id}/finish`, {
-          method: "POST",
-          body: JSON.stringify({ expected_revision: current.session.revision }),
-          signal: AbortSignal.timeout(15_000),
-        });
-      }, beforeAccept),
+    finish: async (beforeAccept?: () => void) => {
+      if (lock.current) throw new Error("処理中です。");
+      lock.current = true;
+      setBusy(true);
+      setError("");
+      try {
+        const result = await queue.requestFinish(beforeAccept);
+        void queue.sync();
+        return result;
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : "端末に保存できませんでした。");
+        throw reason;
+      } finally {
+        lock.current = false;
+        setBusy(false);
+      }
+    },
   };
 }
 export type SessionController = ReturnType<typeof useSession>;
