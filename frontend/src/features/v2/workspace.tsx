@@ -48,7 +48,10 @@ function WorkspaceContent({ session }: { session: Session }) {
   const [notice, setNotice] = useState("");
   const changed = () => setRefreshKey((key) => key + 1);
   const [finished, setFinished] = useState<Workout | null>(null);
+  const [finishConflictOpen, setFinishConflictOpen] = useState(false);
   const training = useSession(session.user.id, changed);
+  const resultConfirmed =
+    !!finished && training.saved?.id === finished.id && !!training.saved.ended_at;
   const preferences = usePreferences(session.user.id);
   const catalog = useExerciseCatalog(changed);
   const groupList = useResource<Group[]>("/groups", groupRefreshKey, GROUP_REFRESH_MS, true, {
@@ -154,7 +157,7 @@ function WorkspaceContent({ session }: { session: Session }) {
     window.scrollTo({ top: 0 });
   }
   const resumable = !!training.session || !!training.startingId;
-  const canStart = training.ready && (!training.busy || resumable);
+  const canStart = training.ready && !training.finishPending && (!training.busy || resumable);
   const primaryView = ["home", "groups", "history", "settings"].includes(view);
   function startOrResume() {
     if (!canStart) return;
@@ -204,6 +207,18 @@ function WorkspaceContent({ session }: { session: Session }) {
           />
         )}
         {notice && <output className="notice">{notice}</output>}
+        {training.finishPending && training.status === "conflict" && (
+          <div className="error" role="alert">
+            トレーニング記録の確認が必要です。
+            <button
+              className="text-button"
+              type="button"
+              onClick={() => setFinishConflictOpen(true)}
+            >
+              記録を確認
+            </button>
+          </div>
+        )}
         {training.error && (
           <div className="error" role="alert">
             {training.error}
@@ -263,6 +278,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         {view === "result" && finished && (
           <WorkoutResult
             record={finished}
+            confirmed={resultConfirmed}
             onHistory={() => navigate("history")}
             onHome={() => navigate("home")}
           />
@@ -358,7 +374,12 @@ function WorkspaceContent({ session }: { session: Session }) {
             <button
               className="primary full"
               type="button"
-              disabled={training.busy || !training.ready || !!training.session?.exercises.length}
+              disabled={
+                training.busy ||
+                !training.ready ||
+                training.finishPending ||
+                !!training.session?.exercises.length
+              }
               onClick={async () => {
                 try {
                   if (!training.session) {
@@ -375,6 +396,39 @@ function WorkspaceContent({ session }: { session: Session }) {
               }}
             >
               {training.session ? "コピーしたセットを保存" : "トレーニングを開始"}
+            </button>
+          </Sheet>
+        )}
+        {finishConflictOpen && training.finishRecord && (
+          <Sheet title="端末のトレーニング記録" onClose={() => setFinishConflictOpen(false)}>
+            <p>別の更新があるため終了を確認できません。端末の記録を確認してから進めてください。</p>
+            <textarea
+              aria-label="端末に残っている記録"
+              readOnly
+              rows={8}
+              value={training.finishRecord.exercises
+                .map(
+                  (exercise) =>
+                    `${exercise.name}\n${exercise.sets.map((set, index) => `${index + 1}: ${set.weight}kg × ${set.reps}`).join("\n")}`,
+                )
+                .join("\n\n")}
+            />
+            <button
+              type="button"
+              className="secondary full"
+              onClick={async () => {
+                if (!window.confirm("端末の記録を破棄し、サーバーの記録を採用しますか？")) return;
+                try {
+                  await training.discardPending();
+                  setFinishConflictOpen(false);
+                  setFinished(null);
+                  navigate("home");
+                } catch {
+                  setNotice("記録を読み直せませんでした。もう一度お試しください。");
+                }
+              }}
+            >
+              サーバーの記録を採用
             </button>
           </Sheet>
         )}
