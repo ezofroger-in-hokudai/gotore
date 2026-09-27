@@ -36,32 +36,37 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
     mine: [...mine],
     can_send: true,
   });
-  await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
+  await page.route("**/api/groups/today-activity", (route) =>
     route.fulfill({
       json: {
-        group_id: state.group.id,
-        member_count: 3,
-        live_count: 1,
-        today_count: 1,
-        members: [
+        groups: [
           {
-            id: record.user_id,
-            display_name: record.display_name,
-            live: true,
-            today: true,
-          },
-        ],
-        feed: [
-          {
-            workout_id: record.id,
-            user_id: record.user_id,
-            display_name: record.display_name,
-            exercise: "ベンチプレス",
-            weight: 60,
-            reps: 10,
-            estimated_rm: 80,
-            updated_at: new Date().toISOString(),
-            best: false,
+            group_id: state.group.id,
+            name: state.group.name,
+            member_count: 3,
+            live_count: 1,
+            today_count: 1,
+            members: [
+              {
+                id: record.user_id,
+                display_name: record.display_name,
+                live: true,
+                today: true,
+              },
+            ],
+            feed: [
+              {
+                workout_id: record.id,
+                user_id: record.user_id,
+                display_name: record.display_name,
+                exercise: "ベンチプレス",
+                weight: 60,
+                reps: 10,
+                estimated_rm: 80,
+                updated_at: new Date().toISOString(),
+                best: false,
+              },
+            ],
           },
         ],
       },
