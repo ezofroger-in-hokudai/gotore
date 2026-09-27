@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>E-GOTORE｜グループ参加・採用案</title>
+    <style>
+      :root { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans JP", sans-serif; color: #202127; background: #e9e9eb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 20px 12px; }
+      .phone { position: relative; width: min(100%, 390px); min-height: 790px; margin: auto; border: 1px solid #d3d3d6; border-radius: 22px; overflow: hidden; background: #f4f4f5; box-shadow: 0 14px 38px #15151520; }
+      header { height: 48px; display: flex; align-items: center; padding: 0 16px; background: #202127; color: white; font-size: 22px; font-weight: 800; }
+      header span { color: #ff666a; }
+      main { padding: 14px 20px 170px; }
+      .back { border: 0; background: none; color: #656a74; font-size: 12px; padding: 8px 0; }
+      .hero { margin-top: 12px; padding: 19px 18px; border-radius: 13px; color: white; background: #24252a; }
+      .hero small { color: #ff787b; font-size: 11px; font-weight: 800; letter-spacing: .09em; }
+      h1 { margin: 9px 0 15px; font-size: 21px; }
+      .people { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 750; }
+      .avatars { display: flex; padding-left: 3px; }
+      .avatar { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: #ead6d7; color: #313139; font-size: 12px; font-weight: 800; }
+      .avatars .avatar { margin-left: -3px; border: 2px solid #24252a; }
+      .avatars .avatar:nth-child(2) { background: #d4dee4; }.avatars .avatar:nth-child(3) { background: #dbe8d9; }.avatars .avatar:nth-child(4) { background: #e3d9e9; }
+      .heading { display: flex; justify-content: space-between; align-items: center; margin: 22px 0 8px; }
+      h2 { margin: 0; font-size: 15px; }.heading span { color: #656a74; font-size: 11px; }
+      .members { position: relative; overflow: hidden; max-height: 218px; border: 1px solid #dedfe3; border-radius: 12px; background: white; }
+      .members.expanded { max-height: none; }
+      .member { display: flex; align-items: center; gap: 9px; min-height: 62px; padding: 7px 11px; }
+      .member + .member { border-top: 1px solid #dedfe3; }
+      .member b { display: block; font-size: 13px; }.member small { color: #656a74; font-size: 10px; }
+      .fade { position: absolute; inset: auto 0 0; width: 100%; height: 76px; border: 0; background: linear-gradient(transparent, #b9b9b9); }
+      .expanded .fade { display: none; }
+      .footer { position: absolute; inset: auto 0 66px; width: 100%; padding: 20px 20px 10px; background: linear-gradient(transparent, #f4f4f5 20%); }
+      .join { width: 100%; min-height: 46px; border: 0; border-radius: 8px; background: #ce282b; color: white; font-size: 14px; font-weight: 800; }
+      .footer p { margin: 9px 0 0; text-align: center; color: #656a74; font-size: 11px; }
+      nav { position: absolute; inset: auto 0 0; display: grid; grid-template-columns: repeat(4, 1fr); height: 66px; border-top: 1px solid #dedfe3; background: white; }
+      nav span { display: grid; place-items: center; color: #656a74; font-size: 13px; }nav span:nth-child(2) { color: #d32f2f; font-weight: 700; }
+      @media (max-width: 390px) { body { padding: 0; }.phone { border: 0; border-radius: 0; } }
+    </style>
+  </head>
+  <body>
+    <div class="phone">
+      <header>E-GO<span>TORE</span></header>
+      <main>
+        <button class="back">‹ グループ一覧</button>
+        <section class="hero"><small>INVITE</small><h1>いつものトレ仲間</h1><div class="people"><div class="avatars"><span class="avatar">高</span><span class="avatar">佐</span><span class="avatar">森</span><span class="avatar">石</span></div>メンバー 5人</div></section>
+        <div class="heading"><h2>メンバー</h2><span>5人</span></div>
+        <section class="members" id="members">
+          <div class="member"><span class="avatar">高</span><div><b>高橋</b><small>オーナー</small></div></div>
+          <div class="member"><span class="avatar">佐</span><div><b>佐藤</b><small>メンバー</small></div></div>
+          <div class="member"><span class="avatar">森</span><div><b>森</b><small>メンバー</small></div></div>
+          <div class="member"><span class="avatar">石</span><div><b>石井</b><small>メンバー</small></div></div>
+          <div class="member"><span class="avatar">山</span><div><b>山田</b><small>メンバー</small></div></div>
+          <button class="fade" aria-label="メンバー一覧を展開" onclick="document.getElementById('members').classList.toggle('expanded')"></button>
+        </section>
+      </main>
+      <div class="footer"><button class="join">このグループに参加</button><p>参加後の記録から共有されます</p></div>
+      <nav><span>ホーム</span><span>グループ</span><span>履歴</span><span>設定</span></nav>
+    </div>
+  </body>
+</html>

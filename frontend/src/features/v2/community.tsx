@@ -7,7 +7,17 @@ import {
   type TodayGroupActivity,
   api,
 } from "@/lib/api";
-import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type MouseEventHandler,
+  type PointerEventHandler,
+  type Ref,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { LoadingState } from "../loading/loading-state";
 import { StampInboxButton } from "../stamps/inbox";
 import { StampControl } from "../stamps/stamp-control";
@@ -279,13 +289,20 @@ function HomeSummary({ data }: { data: TodayActivity | null }) {
   );
 }
 
-function GroupCard({
+export function GroupCard({
   group,
   data,
   error,
   onClick,
   dragging,
   style,
+  buttonRef,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
+  onContextMenu,
+  ariaLabel,
 }: {
   group: Group;
   data: TodayGroupActivity | null;
@@ -293,15 +310,28 @@ function GroupCard({
   onClick: () => void;
   dragging: boolean;
   style?: CSSProperties;
+  buttonRef?: Ref<HTMLButtonElement>;
+  onPointerDown?: PointerEventHandler<HTMLButtonElement>;
+  onPointerMove?: PointerEventHandler<HTMLButtonElement>;
+  onPointerUp?: PointerEventHandler<HTMLButtonElement>;
+  onPointerCancel?: PointerEventHandler<HTMLButtonElement>;
+  onContextMenu?: MouseEventHandler<HTMLButtonElement>;
+  ariaLabel?: string;
 }) {
   return (
     <button
       className={`community-card${dragging ? " is-dragging" : ""}`}
       data-group-id={group.id}
       style={style}
+      ref={buttonRef}
       type="button"
       onClick={onClick}
-      aria-label={`${group.name}の詳細`}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onContextMenu={onContextMenu}
+      aria-label={ariaLabel ?? `${group.name}の詳細`}
     >
       <span className={data?.live_count ? "group-card-live is-live" : "group-card-live"}>
         <span className="status-dot" />
@@ -309,7 +339,6 @@ function GroupCard({
       </span>
       <div className="section-heading group-card-heading">
         <h2>{group.name}</h2>
-        <span>›</span>
       </div>
       {error && <p>{data ? "更新未確認" : "状況を取得できません"}</p>}
       {error && !data ? null : <GroupCardStats data={data} />}
@@ -413,7 +442,7 @@ function CommunityStats({
   );
 }
 
-function Feed({
+export function Feed({
   data,
   groupIds,
   active,

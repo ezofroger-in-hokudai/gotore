@@ -52,7 +52,7 @@ for (const width of [320, 390, 430]) {
     const sessionId = state.session?.id;
     await navigate(page, "グループ");
     await expect(
-      page.getByRole("heading", { name: state.group.name, level: 1, exact: true }),
+      page.getByRole("heading", { name: state.group.name, level: 2, exact: true }),
     ).toBeVisible();
     await expect(floating).toHaveText("RESUME");
     if (width === 390)
@@ -61,7 +61,7 @@ for (const width of [320, 390, 430]) {
     await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("60");
     await page.goBack();
     await expect(
-      page.getByRole("heading", { name: state.group.name, level: 1, exact: true }),
+      page.getByRole("heading", { name: state.group.name, level: 2, exact: true }),
     ).toBeVisible();
     await page.goForward();
     await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("60");
@@ -98,13 +98,15 @@ test("未所属のグループタブと通常入力でも開始操作を使い�
   await page.route("**/api/groups", (route) => route.fulfill({ json: [] }));
   await page.reload();
   await navigate(page, "グループ");
-  await expect(page.getByRole("heading", { name: "グループ一覧", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "グループ", exact: true })).toBeVisible();
   const floating = page.getByTestId("floating-training");
   await expect(floating).toBeVisible();
-  await page.getByRole("button", { name: "グループを作成", exact: true }).click();
+  await page.getByRole("button", { name: "作成", exact: true }).click();
   await page.getByLabel("グループ名", { exact: true }).focus();
   await expect(floating).toBeHidden();
   await page.getByRole("heading", { name: "グループを作成", exact: true }).click();
+  await expect(floating).toBeHidden();
+  await page.getByRole("button", { name: "閉じる", exact: true }).click();
   await expect(floating).toBeVisible();
   await floating.click();
   await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");

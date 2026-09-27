@@ -2,7 +2,7 @@
 
 アプリの正式な表示名は **E-GOTORE**（2026-09-18のユーザー指定）。公開URLは https://egotore.com/ 。画面・ブラウザ/PWA情報・API表示名に適用し、リポジトリ名、DB識別子、ブラウザ保存キーは変更しない。旧資料のGO TORE/GOTORE表記は当時の名称として残す。
 
-更新日: 2026-09-09（v2実装ブランチ）。実装Issue: [#1](https://github.com/ezofroger-in-hokudai/gotore/issues/1)。
+更新日: 2026-09-27（グループ管理画面/APIの実装ブランチ）。実装Issue: [#1](https://github.com/ezofroger-in-hokudai/gotore/issues/1)。
 初版の完成ラインはユーザー指定の「グループ作成・記録・記録共有」です。
 仕様とMOCK資料からの変更点は [standard-v0.1-scope.md](standard-v0.1-scope.md)、検証結果は [progress.md](../progress.md) を参照してください。
 
@@ -17,7 +17,7 @@ Googleログイン追加ブランチでは、[Google認証仕様と設定手順]
 | 機能 | 動作 | 主な配置先 |
 | --- | --- | --- |
 | アカウント | 設定後はGoogleで自己登録・初回表示名設定。既存の管理者発行メールログイン・ログアウトを維持。設定で本人の表示名を取得・変更・同期。Auth未設定時はDBの既存名を保持（#29）。APIがトークンと認証設定の形式を検証 | frontend/src/features/settings/、auth-panel.tsx、backend/app/api/dependencies.py |
-| グループ | 作成・招待参加・一覧・メンバー表示。名称変更・招待コード再発行・退出・メンバー除外。退出・除外後は本人の履歴を残して共有解除 | features/v2/community.tsx、group-name-form.tsx、backend/app/services/training.py |
+| グループ | 採用画面の一覧・詳細・最新記録・共通履歴・設定・作成・QR/招待リンク参加を実装。招待は発行から7日間、複数人が利用可能。参加前は有効な招待リンクを持つログイン済みの人にグループ名・人数・メンバー表示名と役割を専用ページで見せる。長押しドラッグで一覧順を変更。オーナー移譲・退出・除外・削除を権限確認付きで提供。退会時は対象者の当該グループ共有だけを解除し、グループ削除時は全共有を解除する。本人の個人記録と別グループ共有は保持 | `frontend/src/features/v2/group-screen.tsx`、`backend/app/infrastructure/training_repository.py`、`supabase/migrations/20260927010000_group_invites.sql`、`20260927020000_reusable_group_invites.sql`。画面仕様は[グループ画面](design/group-screen.md)。新migrationの適用は環境ごとに必要 |
 | 記録 | 本人用の種目リストから選択し、候補の追加・削除も可能（#28）。主部位・補助部位を保存・編集し、A案の部位ボタンと名前検索で選択（#132）。v2では1セットずつ端末へ即時追加し、DBへ順序付きでバックグラウンド保存。連続ホイール・直接入力・全セット一覧の前回比較・RM・BEST・常時表示のメモ。明示終了まで継続し、未保存入力は同じ端末で復元。旧記録の編集フォームは維持 | features/session/、workout-form.tsx、backend/app/domain/session.py |
 | 共有 | v2は開始時の全所属グループへ保存済みセットを共有。旧記録の共有範囲は維持。メンバー限定のLIVE/TODAYと最新記録 | backend/app/infrastructure/training_repository.py、record-list.tsx |
 | 自分の記録 | 本人の編集・削除・コピー・非共有メモ。日別総負荷量の月間ヒートマップと日付タップによる絞り込み。実記録を50件ずつ閲覧 | frontend/src/features/activity/、training/training-app.tsx |

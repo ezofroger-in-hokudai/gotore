@@ -115,6 +115,7 @@ test("友達の記録を全種目・全セットで表示し、再読込で共�
         groups: [
           {
             group_id: state.group.id,
+            name: state.group.name,
             member_count: 2,
             live_count: 0,
             today_count: 1,

@@ -13,7 +13,11 @@ from app.schemas.activity import MonthlyActivity
 from app.schemas.training import (
     GroupCreate,
     GroupDetail,
+    GroupInvitePreviewResponse,
+    GroupInviteResponse,
+    GroupInviteToken,
     GroupJoin,
+    GroupOwnerTransfer,
     GroupRename,
     GroupResponse,
     InviteCodeRenew,
@@ -58,6 +62,12 @@ def group(group_id: UUID, service: Service):
     return service.group(group_id)
 
 
+@router.delete("/groups/{group_id}", status_code=204)
+def delete_group(group_id: UUID, service: Service):
+    service.delete_group(group_id)
+    return Response(status_code=204)
+
+
 @router.patch("/groups/{group_id}", response_model=GroupResponse)
 def rename_group(group_id: UUID, data: GroupRename, service: Service):
     return service.rename_group(group_id, data.name)
@@ -66,6 +76,26 @@ def rename_group(group_id: UUID, data: GroupRename, service: Service):
 @router.post("/groups/{group_id}/invite-code", response_model=GroupResponse)
 def renew_invite_code(group_id: UUID, data: InviteCodeRenew, service: Service):
     return service.renew_invite_code(group_id, data.expected_invite_code)
+
+
+@router.post("/groups/{group_id}/invites", response_model=GroupInviteResponse)
+def issue_group_invite(group_id: UUID, service: Service):
+    return service.issue_group_invite(group_id)
+
+
+@router.post("/group-invites/preview", response_model=GroupInvitePreviewResponse)
+def preview_group_invite(data: GroupInviteToken, service: Service):
+    return service.preview_group_invite(data.token)
+
+
+@router.post("/group-invites/join", response_model=GroupResponse)
+def join_group_invite(data: GroupInviteToken, service: Service):
+    return service.join_group_invite(data.token)
+
+
+@router.patch("/groups/{group_id}/owner", response_model=GroupResponse)
+def transfer_group_owner(group_id: UUID, data: GroupOwnerTransfer, service: Service):
+    return service.transfer_group_owner(group_id, data.member_id, data.expected_joined_at)
 
 
 @router.get("/groups/{group_id}/workouts", response_model=list[WorkoutResponse])

@@ -1,14 +1,22 @@
 import { type Group, api } from "@/lib/api";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
 export function GroupNameForm({
   group,
   onSaved,
-}: { group: Group; onSaved: (group: Group) => void }) {
+  inline = false,
+  onCancel,
+}: { group: Group; onSaved: (group: Group) => void; inline?: boolean; onCancel?: () => void }) {
   const [name, setName] = useState(group.name);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (inline) inputRef.current?.focus();
+  }, [inline]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -28,7 +36,7 @@ export function GroupNameForm({
       });
       setName(updated.name);
       onSaved(updated);
-      setMessage("変更しました。");
+      if (!inline) setMessage("変更しました。");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "変更できませんでした。");
     } finally {
@@ -36,22 +44,51 @@ export function GroupNameForm({
     }
   }
 
+  const input = (
+    <input
+      required
+      ref={inputRef}
+      id={inputId}
+      aria-label={inline ? "グループ名" : undefined}
+      maxLength={40}
+      value={name}
+      onChange={(event) => {
+        setName(event.target.value);
+        setError("");
+        setMessage("");
+      }}
+    />
+  );
+
+  if (inline)
+    return (
+      <form className="group-name-inline-form" onSubmit={submit}>
+        <fieldset disabled={busy}>
+          {input}
+          <div className="group-name-inline-actions">
+            <button type="button" className="text-button" onClick={onCancel}>
+              キャンセル
+            </button>
+            <button type="submit" className="group-name-commit">
+              決定
+            </button>
+          </div>
+        </fieldset>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+      </form>
+    );
+
   return (
     <form onSubmit={submit}>
       <h3>名前の変更</h3>
       <fieldset disabled={busy}>
-        <label>
+        <label htmlFor={inputId}>
           変更後の名前
-          <input
-            required
-            maxLength={40}
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-              setError("");
-              setMessage("");
-            }}
-          />
+          {input}
         </label>
         <button type="submit" className="secondary full">
           {busy ? "変更中…" : "変更する"}

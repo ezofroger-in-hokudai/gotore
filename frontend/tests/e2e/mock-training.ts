@@ -338,6 +338,21 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
       });
     }
     if (path === "/api/groups") return route.fulfill({ json: [group] });
+    if (path === `/api/groups/${group.id}/invites` && route.request().method() === "POST")
+      return route.fulfill({
+        json: { token: "test-single-use-token", expires_at: "2026-10-04T00:00:00Z" },
+      });
+    if (path === "/api/group-invites/preview")
+      return route.fulfill({
+        json: { id: group.id, name: group.name, member_count: 1, already_member: false },
+      });
+    if (path === "/api/group-invites/join") return route.fulfill({ json: group });
+    if (path === `/api/groups/${group.id}/owner` && route.request().method() === "PATCH")
+      return route.fulfill({
+        json: { ...group, owner_id: route.request().postDataJSON().member_id },
+      });
+    if (path === `/api/groups/${group.id}/membership` && route.request().method() === "DELETE")
+      return route.fulfill({ status: 204 });
     if (path === `/api/groups/${group.id}`) {
       if (route.request().method() === "PATCH") {
         if (state.failRename) return route.abort();
@@ -402,14 +417,15 @@ export async function startTraining(page: Page, name = "ベンチプレス") {
   await page.getByRole("button", { name: new RegExp(`^${name}`) }).click();
 }
 export async function openGroup(page: Page, destination?: "members" | "invite" | "manage") {
-  await navigate(page, "ホーム");
-  await page
-    .getByRole("button", { name: /の詳細$/ })
-    .first()
-    .click();
-  if (destination === "members") await page.getByRole("button", { name: /^メンバー一覧/ }).click();
-  if (destination === "invite") await page.getByRole("button", { name: /^メンバーを招待/ }).click();
-  if (destination === "manage") await page.getByText("グループを管理", { exact: true }).click();
+  await navigate(page, "グループ");
+  const card = page.locator(".group-card-list .community-card").first();
+  if (await card.count()) await card.click();
+  if (destination === "members" || destination === "manage")
+    await page
+      .getByRole("navigation", { name: "グループの表示" })
+      .getByRole("button", { name: "設定", exact: true })
+      .click();
+  if (destination === "invite") await page.getByRole("button", { name: /招待/ }).click();
 }
 export async function openRecord(page: Page) {
   await navigate(page, "履歴");

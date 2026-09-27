@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>E-GOTORE｜参加確認の詳細ページ案</title>
+    <style>
+      :root { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; color: #202127; background: #e9e9eb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 22px 14px 38px; }
+      .controls { max-width: 900px; margin: 0 auto 16px; }
+      .controls h1 { font-size: 19px; margin: 0 0 4px; }
+      .controls p { margin: 0 0 12px; font-size: 13px; color: #666; }
+      .switcher { display: flex; gap: 8px; }
+      button { font: inherit; cursor: pointer; }
+      .switcher button { min-height: 40px; padding: 0 14px; border: 1px solid #cfd1d4; border-radius: 8px; background: #fff; font-size: 13px; }
+      .switcher button[aria-pressed="true"] { color: #a82429; border-color: #dca5a8; background: #fff5f5; font-weight: 700; }
+      .phone { width: min(100%, 390px); min-height: 790px; margin: auto; background: #fafafa; border: 1px solid #d3d3d6; border-radius: 23px; overflow: hidden; box-shadow: 0 14px 38px #15151520; position: relative; }
+      .app-header { height: 48px; background: #202127; color: #fff; display: flex; align-items: center; padding: 0 16px; font-size: 16px; font-weight: 900; letter-spacing: .03em; }
+      .app-header span { color: #ff666a; }
+      .screen { padding: 16px 16px 190px; }
+      .back { border: 0; background: none; padding: 0; min-height: 38px; font-size: 13px; color: #555; }
+      .eyebrow { color: #b82b30; letter-spacing: .09em; font-size: 11px; font-weight: 800; margin: 18px 0 7px; }
+      h2 { font-size: 20px; line-height: 1.35; margin: 0; }
+      .hero { margin-top: 16px; padding: 19px 18px; border-radius: 13px; background: #24252a; color: white; }
+      .hero .eyebrow { margin: 0 0 9px; color: #ff787b; }
+      .hero h2 { font-size: 21px; }
+      .hero-people { display: flex; align-items: center; gap: 9px; margin-top: 15px; color: #f1f1f3; font-size: 12px; }
+      .avatars { display: flex; padding-left: 2px; }
+      .avatar { width: 31px; height: 31px; margin-left: -3px; display: grid; place-items: center; flex: none; border: 2px solid white; border-radius: 50%; color: #464047; background: #f2d6d4; font-size: 12px; font-weight: 700; }
+      .avatar:nth-child(2) { background: #d5dde2; }.avatar:nth-child(3) { background: #d8e3d8; }.avatar:nth-child(4) { background: #e5d9ea; }
+      .hero .avatar { border-color: #24252a; }
+      .plain-intro { margin: 14px 0 0; padding-bottom: 16px; border-bottom: 1px solid #dedee1; }
+      .plain-intro .eyebrow { margin: 0 0 8px; }
+      .plain-intro .hero-people { margin-top: 12px; color: #575961; }
+      .section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 22px 0 8px; }
+      .section-heading h3 { margin: 0; font-size: 15px; }
+      .section-heading span { color: #777; font-size: 11px; }
+      .member-card { position: relative; border: 1px solid #e1e2e4; border-radius: 12px; background: white; overflow: hidden; }
+      .member-list { overflow: hidden; }
+      .member-card.collapsed .member-list { max-height: 191px; }
+      .row { display: flex; align-items: center; min-height: 56px; gap: 10px; padding: 7px 12px; border-bottom: 1px solid #f0f0f0; }
+      .row:last-child { border-bottom: 0; }
+      .row .avatar { width: 37px; height: 37px; margin: 0; border: 0; }
+      .row b { display: block; font-size: 13px; }.row small { color: #858585; font-size: 11px; }
+      .fade { display: none; position: absolute; inset: auto 0 0; height: 48px; border: 0; width: 100%; background: linear-gradient(transparent, #fff 90%); }
+      .member-card.collapsed .fade { display: block; }
+      .footer { position: absolute; inset: auto 0 0; background: linear-gradient(#fafafa00, #fafafa 20%); padding: 20px 16px 72px; }
+      .join { width: 100%; min-height: 48px; border: 0; border-radius: 8px; background: #ba292d; color: #fff; font-size: 14px; font-weight: 800; }
+      .scope { margin: 9px 0 0; text-align: center; color: #737373; font-size: 11px; }
+      .nav { position: absolute; inset: auto 0 0; display: grid; grid-template-columns: repeat(4, 1fr); height: 57px; background: white; border-top: 1px solid #e5e5e6; }
+      .nav span { display: grid; place-items: center; color: #777; font-size: 11px; }.nav span:nth-child(2) { color: #b4272c; font-weight: 800; }
+      .joined-note { border-left: 3px solid #b6292e; padding: 8px 10px; margin: 18px 0; background: white; font-size: 12px; }
+      .tab-track { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 3px; margin-top: 13px; border-radius: 9px; background: #ececef; }
+      .tab-track span { padding: 9px 1px; text-align: center; font-size: 10px; }.tab-track span:first-child { border-radius: 7px; background: white; box-shadow: 0 1px 3px #0001; }
+      @media (max-width: 390px) { body { padding: 10px 0; }.phone { border-radius: 0; border: 0; } }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <h1>参加確認をページにする案</h1>
+      <p>架空のメンバーで表示した比較です。参加前に見せる範囲は未確定です。</p>
+      <div class="switcher"><button data-variant="a" aria-pressed="true">A 黒い概要</button><button data-variant="b" aria-pressed="false">B 白い詳細</button></div>
+    </div>
+    <div class="phone" id="phone"></div>
+    <script>
+      let variant = "a";
+      let joined = false;
+      let expanded = false;
+      const members = [
+        ["高", "高橋", "オーナー"], ["佐", "佐藤", "メンバー"],
+        ["森", "森", "メンバー"], ["石", "石井", "メンバー"],
+        ["山", "山田", "メンバー"],
+      ];
+      const avatars = () => `<div class="avatars">${members.slice(0, 4).map(([initial]) => `<span class="avatar">${initial}</span>`).join("")}</div>`;
+      const list = () => `<div class="section-heading"><h3>メンバー</h3><span>5人</span></div><div class="member-card ${expanded ? "expanded" : "collapsed"}"><div class="member-list">${members.map(([initial, name, role]) => `<div class="row"><span class="avatar">${initial}</span><div><b>${name}</b><small>${role}</small></div></div>`).join("")}</div><button class="fade" aria-label="メンバーを展開" data-action="expand"></button></div>`;
+      const content = () => joined
+        ? `<button class="back" data-action="back">‹ グループ一覧</button><div class="hero"><p class="eyebrow">GROUP</p><h2>いつものトレ仲間</h2><div class="hero-people">${avatars()}<b>メンバー 5人</b></div></div><div class="tab-track"><span>最新記録</span><span>カレンダー</span><span>グラフ</span><span>設定</span></div><p class="joined-note">参加後はこのグループの詳細に移動</p>${list()}`
+        : `${variant === "a" ? `<button class="back" data-action="back">‹ 戻る</button><div class="hero"><p class="eyebrow">INVITE</p><h2>いつものトレ仲間</h2><div class="hero-people">${avatars()}<b>メンバー 5人</b></div></div>` : `<button class="back" data-action="back">‹ 戻る</button><div class="plain-intro"><p class="eyebrow">グループへの招待</p><h2>いつものトレ仲間</h2><div class="hero-people">${avatars()}<b>メンバー 5人</b></div></div>`}${list()}`;
+      function render() {
+        document.getElementById("phone").innerHTML = `<header class="app-header">E-GO<span>TORE</span></header><main class="screen">${content()}</main>${!joined ? `<div class="footer"><button class="join" data-action="join">このグループに参加</button><p class="scope">参加後に始める記録から共有</p></div>` : ""}<nav class="nav"><span>ホーム</span><span>グループ</span><span>履歴</span><span>設定</span></nav>`;
+        document.querySelectorAll("[data-action]").forEach(button => button.onclick = () => { if (button.dataset.action === "expand") expanded = true; else if (button.dataset.action === "join") joined = true; else if (button.dataset.action === "back") joined = false; render(); });
+      }
+      document.querySelectorAll("[data-variant]").forEach(button => button.onclick = () => { variant = button.dataset.variant; joined = false; expanded = false; document.querySelectorAll("[data-variant]").forEach(other => other.setAttribute("aria-pressed", String(other === button))); render(); });
+      render();
+    </script>
+  </body>
+</html>

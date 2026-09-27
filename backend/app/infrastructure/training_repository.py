@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 from datetime import date, datetime
 from uuid import UUID
@@ -68,7 +69,16 @@ class TrainingRepository:
 
     def members(self, group_id: UUID):
         return self.connection.execute(
-            """SELECT p.id, p.display_name, m.joined_at FROM public.gotore_profiles p
+            """SELECT p.id, p.display_name, m.joined_at,
+            (SELECT max(COALESCE(w.ended_at, w.last_seen_at, w.created_at))
+             FROM public.gotore_workouts w
+             WHERE w.user_id = m.user_id AND (
+               w.group_id = m.group_id OR EXISTS(
+                 SELECT 1 FROM public.gotore_workout_shares s
+                 WHERE s.workout_id = w.id AND s.group_id = m.group_id
+               )
+             )) AS last_activity_at
+            FROM public.gotore_profiles p
             JOIN public.gotore_group_members m ON m.user_id = p.id
             WHERE m.group_id = %s ORDER BY m.joined_at, p.id""",
             (group_id,),
@@ -139,6 +149,138 @@ class TrainingRepository:
                 except UniqueViolation:
                     continue
             raise ServiceUnavailable("コードを発行できません。再試行してください")
+
+    def issue_group_invite(self, user_id: UUID, group_id: UUID):
+        with self.connection.transaction():
+            group = self.connection.execute(
+                "SELECT id FROM public.gotore_groups WHERE id = %s FOR UPDATE", (group_id,)
+            ).fetchone()
+            if group is None:
+                raise NotFound("グループが見つかりません")
+            self.group(user_id, group_id)
+            for _ in range(5):
+                token = secrets.token_urlsafe(32)
+                token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+                try:
+                    with self.connection.transaction():
+                        row = self.connection.execute(
+                            """INSERT INTO public.gotore_group_invites
+                            (group_id, token_hash, created_by, expires_at)
+                            VALUES (%s, %s, %s, clock_timestamp() + interval '7 days')
+                            RETURNING expires_at""",
+                            (group_id, token_hash, user_id),
+                        ).fetchone()
+                    return {"token": token, "expires_at": row["expires_at"]}
+                except UniqueViolation:
+                    continue
+            raise ServiceUnavailable("招待リンクを発行できません。再試行してください")
+
+    def preview_group_invite(self, user_id: UUID, token: str):
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        row = self.connection.execute(
+            """SELECT g.id, g.name,
+                (SELECT count(*) FROM public.gotore_group_members m WHERE m.group_id = g.id)
+                    AS member_count,
+                EXISTS(SELECT 1 FROM public.gotore_group_members m
+                    WHERE m.group_id = g.id AND m.user_id = %s) AS already_member
+            FROM public.gotore_group_invites i
+            JOIN public.gotore_groups g ON g.id = i.group_id
+            WHERE i.token_hash = %s AND i.used_at IS NULL AND i.expires_at > clock_timestamp()""",
+            (user_id, token_hash),
+        ).fetchone()
+        if row is None:
+            raise NotFound("招待リンクの有効期限が切れているか、使用済みです")
+        members = self.connection.execute(
+            """SELECT p.id, p.display_name,
+                CASE WHEN m.user_id = g.owner_id THEN 'owner' ELSE 'member' END AS role
+            FROM public.gotore_group_members m
+            JOIN public.gotore_profiles p ON p.id = m.user_id
+            JOIN public.gotore_groups g ON g.id = m.group_id
+            WHERE m.group_id = %s
+            ORDER BY CASE WHEN m.user_id = g.owner_id THEN 0 ELSE 1 END,
+                m.joined_at, m.user_id""",
+            (row["id"],),
+        ).fetchall()
+        return {**row, "members": members}
+
+    def join_group_invite(self, user_id: UUID, token: str):
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        with self.connection.transaction():
+            invite = self.connection.execute(
+                "SELECT group_id FROM public.gotore_group_invites WHERE token_hash = %s",
+                (token_hash,),
+            ).fetchone()
+            if invite is None:
+                raise NotFound("招待リンクの有効期限が切れているか、使用済みです")
+            group_id = invite["group_id"]
+            group = self.connection.execute(
+                "SELECT * FROM public.gotore_groups WHERE id = %s FOR NO KEY UPDATE", (group_id,)
+            ).fetchone()
+            current = self.connection.execute(
+                """SELECT used_at, expires_at FROM public.gotore_group_invites
+                WHERE group_id = %s AND token_hash = %s FOR UPDATE""",
+                (group_id, token_hash),
+            ).fetchone()
+            if group is None or current is None or current["used_at"] is not None:
+                raise NotFound("招待リンクの有効期限が切れているか、使用済みです")
+            expired = self.connection.execute(
+                "SELECT %s <= clock_timestamp() AS expired", (current["expires_at"],)
+            ).fetchone()["expired"]
+            if expired:
+                raise NotFound("招待リンクの有効期限が切れています")
+            already_member = self.connection.execute(
+                "SELECT 1 FROM public.gotore_group_members WHERE group_id = %s AND user_id = %s",
+                (group_id, user_id),
+            ).fetchone()
+            if already_member:
+                return group
+            self.connection.execute(
+                """INSERT INTO public.gotore_group_members (group_id, user_id, joined_at)
+                VALUES (%s, %s, clock_timestamp())""",
+                (group_id, user_id),
+            )
+        return group
+
+    def transfer_group_owner(
+        self, actor_id: UUID, group_id: UUID, member_id: UUID, expected_joined_at: datetime
+    ):
+        with self.connection.transaction():
+            group = self.connection.execute(
+                "SELECT * FROM public.gotore_groups WHERE id = %s AND owner_id = %s FOR UPDATE",
+                (group_id, actor_id),
+            ).fetchone()
+            if group is None:
+                raise NotFound("グループを操作できません")
+            membership = self.connection.execute(
+                """SELECT joined_at FROM public.gotore_group_members
+                WHERE group_id = %s AND user_id = %s FOR UPDATE""",
+                (group_id, member_id),
+            ).fetchone()
+            if membership is None:
+                raise NotFound("メンバーが見つかりません")
+            if membership["joined_at"] != expected_joined_at:
+                raise Conflict("参加状況が変わりました。グループを開き直してください")
+            if member_id == actor_id:
+                raise Conflict("別のメンバーを選択してください")
+            return self.connection.execute(
+                "UPDATE public.gotore_groups SET owner_id = %s WHERE id = %s RETURNING *",
+                (member_id, group_id),
+            ).fetchone()
+
+    def delete_group(self, actor_id: UUID, group_id: UUID):
+        with self.connection.transaction():
+            group = self.connection.execute(
+                "SELECT id FROM public.gotore_groups WHERE id = %s AND owner_id = %s FOR UPDATE",
+                (group_id, actor_id),
+            ).fetchone()
+            if group is None:
+                raise NotFound("グループを削除できません")
+            # 旧式の単一グループ共有は個人履歴へ戻し、新方式の共有行は所属cascadeで解除する。
+            self.connection.execute(
+                "UPDATE public.gotore_workouts SET group_id = NULL WHERE group_id = %s",
+                (group_id,),
+            )
+            self.connection.execute("DELETE FROM public.gotore_groups WHERE id = %s", (group_id,))
 
     def save_workout(self, user_id: UUID, workout: WorkoutInput):
         exercises = workout.model_dump(mode="json")["exercises"]
@@ -406,10 +548,14 @@ class TrainingRepository:
                 return
             if membership["joined_at"] != expected_joined_at:
                 raise Conflict("参加状況が変わりました。グループを開き直してください")
-            # 本人の履歴を保持して共有を解除してから、所属の外部キーを外す。
+            # 本人の個人履歴を保ったまま対象グループの共有だけを解除する。
             self.connection.execute(
                 """UPDATE public.gotore_workouts SET group_id = NULL
                 WHERE group_id = %s AND user_id = %s""",
+                (group_id, member_id),
+            )
+            self.connection.execute(
+                "DELETE FROM public.gotore_group_invites WHERE group_id = %s AND created_by = %s",
                 (group_id, member_id),
             )
             self.connection.execute(
