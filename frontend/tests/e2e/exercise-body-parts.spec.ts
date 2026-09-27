@@ -42,9 +42,7 @@ async function prepare(page: import("@playwright/test").Page) {
   return state;
 }
 
-test("部位の主分類とその他を通信を待たずに切り替えられる", async ({
-  page,
-}) => {
+test("部位の主分類とその他を通信を待たずに切り替えられる", async ({ page }) => {
   await prepare(page);
   let reads = 0;
   page.on("request", (request) => {
