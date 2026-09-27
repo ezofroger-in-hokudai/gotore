@@ -112,6 +112,44 @@ async function routes(page: Page) {
   };
 }
 
+for (const view of ["履歴グラフ", "グループグラフ", "グループランキング"] as const) {
+  test(`${view}の初回取得失敗では期間の読み込み表示を残さず再試行できる`, async ({ page }) => {
+    await mockTraining(page);
+    let status = 503;
+    await page.route(/\/api\/(groups\/[^/]+\/)?analytics\?/, (route) =>
+      route.fulfill(
+        status === 503
+          ? { status, json: { detail: "集計を取得できません" } }
+          : {
+              json: fixture(
+                new URL(route.request().url()),
+                route.request().url().includes("/groups/"),
+              ),
+            },
+      ),
+    );
+    if (view === "履歴グラフ") await navigate(page, "履歴");
+    else await openGroup(page);
+    await page
+      .getByRole("button", {
+        name: view === "グループランキング" ? "ランキング" : "グラフ",
+        exact: true,
+      })
+      .click();
+    const panel = page.getByRole("region", {
+      name: view === "履歴グラフ" ? "履歴グラフ" : "グループ集計",
+    });
+    await expect(panel.getByRole("alert")).toContainText("集計を取得できません");
+    await expect(
+      panel.locator('.analytics-period output[aria-label="期間を読み込み中"]'),
+    ).toHaveCount(0);
+    status = 200;
+    await panel.getByRole("button", { name: "再試行", exact: true }).click();
+    await expect(panel.locator(".analytics-period")).toContainText("2026/09");
+    await expect(panel.getByRole("alert")).toHaveCount(0);
+  });
+}
+
 test("先読みした履歴グラフを表示し、指標・粒度・期間再訪を待たずに切り替える", async ({ page }) => {
   await mockTraining(page);
   const state = await routes(page);

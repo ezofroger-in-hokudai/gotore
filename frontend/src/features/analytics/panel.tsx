@@ -179,7 +179,7 @@ export function AnalyticsPanel({
         <span>
           {data ? (
             dates(data.window.start, frameEnd(data.window.end, period))
-          ) : (
+          ) : resource.error ? null : (
             <LoadingState label="期間を読み込み中" compact />
           )}
           {data && data.window.end < frameEnd(data.window.end, period)
