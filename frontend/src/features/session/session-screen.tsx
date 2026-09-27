@@ -338,7 +338,7 @@ function ActiveTraining({
     if (
       input.dirty &&
       input.name !== name &&
-      !window.confirm("未保存の入力を破棄して種目を変更しますか？")
+      !window.confirm("入力中の数値を破棄して種目を変更しますか？")
     )
       return;
     if (input.name === name) {
@@ -870,19 +870,12 @@ function ActiveTraining({
           )}
         </Sheet>
       )}
-      {(controller.status === "offline" || controller.status === "conflict") && (
+      {controller.status === "conflict" && (
         <div className="sync-status" aria-live="polite">
-          {controller.status === "offline" ? "未送信・端末に保持" : "要確認・端末に保持"}
-          {controller.status === "offline" && (
-            <button type="button" className="text-button" onClick={() => void controller.sync()}>
-              再送
-            </button>
-          )}
-          {controller.status === "conflict" && (
-            <button type="button" className="text-button" onClick={() => setConflictOpen(true)}>
-              未送信の記録を確認
-            </button>
-          )}
+          要確認・端末に保持
+          <button type="button" className="text-button" onClick={() => setConflictOpen(true)}>
+            未送信の記録を確認
+          </button>
         </div>
       )}
       {conflictOpen && (
@@ -928,7 +921,11 @@ function ActiveTraining({
             if (!controller.busy) setFinishOpen(false);
           }}
         >
-          {input.dirty && <p>未保存の入力があります。保存済みのセットだけを残して終了しますか？</p>}
+          {input.dirty && (
+            <p>
+              入力中の数値はセットに追加されていません。追加済みのセットだけを残して終了しますか？
+            </p>
+          )}
           <button
             className="secondary full"
             type="button"

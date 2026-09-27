@@ -14,13 +14,17 @@ test("未保存入力と保存済みセットをタブ切替・再起動後も�
   await openTraining(page);
   await expect(weight).toHaveValue("60.5");
   state.failSave = true;
+  const failedSend = page.waitForEvent(
+    "requestfailed",
+    (request) => request.url().includes("/api/sessions/") && request.method() === "PATCH",
+  );
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-  await expect(page.locator(".sync-status")).toContainText("未送信");
+  await failedSend;
+  await expect(page.locator(".sync-status")).toHaveCount(0);
   await expect(weight).toHaveValue("60.5");
   state.failSave = false;
-  await page.getByRole("button", { name: "再送", exact: true }).click();
-  await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
-  expect(state.session?.exercises[0].sets).toEqual([{ weight: 60.5, reps: 8 }]);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect.poll(() => state.session?.exercises[0].sets).toEqual([{ weight: 60.5, reps: 8 }]);
   await navigate(page, "ホーム");
   await expect(page.getByRole("article")).toContainText("60.5");
   await page.reload();
@@ -91,10 +95,10 @@ test("保存応答を失ったまま再起動しても二重追加せず、古�
     { times: 1 },
   );
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-  await expect(page.locator(".sync-status")).toContainText("未送信");
+  await expect(page.locator(".sync-status")).toHaveCount(0);
   await page.reload();
   await openTraining(page);
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await expect(page.locator(".sync-status")).toHaveCount(0);
   expect(state.session?.exercises[0].sets).toHaveLength(1);
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("82.5");
@@ -110,6 +114,7 @@ test("保存応答を失ったまま再起動しても二重追加せず、古�
   await expect(page.getByRole("button", { name: "変更を保存", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("85");
+  await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await expect(page.getByRole("button", { name: "変更を保存", exact: true })).toBeEnabled();
 });
 

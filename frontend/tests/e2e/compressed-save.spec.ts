@@ -56,9 +56,9 @@ test("圧縮保存が実APIへ届き、応答を失っても再送で二重追�
     (r) => r.request().method() === "PATCH" && r.status() === 200,
   );
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-  await expect(page.locator(".sync-status")).toContainText("未送信");
+  await expect(page.locator(".sync-status")).toHaveCount(0);
   const response: TrainingSession = await (await acknowledged).json();
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await expect(page.locator(".sync-status")).toHaveCount(0);
   expect(payloads).toHaveLength(2);
   expect(payloads[0]).toEqual(payloads[1]);
   expect(response.revision).toBe(saved.revision + 1);

@@ -55,14 +55,14 @@ test("未送信の複数セットは再起動後も残り、再送できる", as
     await page.getByRole("spinbutton", { name: "重量", exact: true }).fill(String(weight));
     await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   }
-  await expect(page.locator(".sync-status")).toContainText("未送信");
+  await expect(page.locator(".sync-status")).toHaveCount(0);
   await page.reload();
   await openTraining(page);
   await showRecordingMemos(page);
   await expect(page.getByRole("heading", { name: "SET 3", exact: true })).toBeVisible();
   expect(state.saves).toBe(0);
   state.failSave = false;
-  await page.getByRole("button", { name: "再送", exact: true }).click();
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
   await expect.poll(() => state.saves).toBe(2);
 });
 
