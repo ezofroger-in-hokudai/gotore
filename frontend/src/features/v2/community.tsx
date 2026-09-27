@@ -11,7 +11,6 @@ import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { LoadingState } from "../loading/loading-state";
 import { StampInboxButton } from "../stamps/inbox";
 import { StampControl } from "../stamps/stamp-control";
-import { BestFlame } from "../training/best-flame";
 import { GroupNameForm } from "../training/group-name-form";
 import { InviteCodePanel } from "../training/invite-code-panel";
 import { MembershipPanel } from "../training/membership-panel";
@@ -21,7 +20,7 @@ import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { HistoryBrowser } from "./history-browser";
 import { buildHomeFeed } from "./home-feed";
-import { memberIsLive, relativeTime, useLiveClock } from "./live-presence";
+import { memberIsLive, useLiveClock } from "./live-presence";
 import { GROUP_REFRESH_MS, activityRefreshMs, todayActivityRefreshMs } from "./refresh-interval";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
@@ -459,16 +458,16 @@ function Feed({
         {data.feed.map((item) => {
           const member = data.members.find((m) => m.id === item.user_id);
           const live = clock.live && !!member && memberIsLive(member, clock.now);
-          const record = details.record(item.workout_id).data;
+          const detail = details.record(item.workout_id);
           return (
             <div
               className={`feed-item${live ? " feed-live" : ""}${arrived.includes(item.user_id) ? " feed-arrived" : ""}`}
               key={item.workout_id}
               data-workout-id={item.workout_id}
             >
-              {record ? (
+              {detail.data ? (
                 <RecordList
-                  records={[record]}
+                  records={[detail.data]}
                   empty=""
                   compact
                   headerControl={() => (
@@ -482,78 +481,103 @@ function Feed({
                   )}
                 />
               ) : (
-                <>
-                  <div className="section-heading">
-                    <div className="feed-person">
-                      <Avatar
-                        userId={item.user_id}
-                        name={item.display_name}
-                        version={member?.avatar_version}
-                        live={live}
-                      />
-                      <div>
-                        <div className="feed-name">
-                          <strong>{item.display_name}</strong>
-                          {live && (
-                            <span className="live-badge" aria-label="トレーニング中">
-                              LIVE
-                            </span>
-                          )}
-                        </div>
-                        <p>{item.exercise}</p>
-                      </div>
-                    </div>
-                    <time
-                      dateTime={item.updated_at}
-                      title={new Date(item.updated_at).toLocaleString("ja-JP", {
-                        timeZone: "Asia/Tokyo",
-                      })}
-                    >
-                      {relativeTime(item.updated_at, clock.now)}
-                    </time>
-                  </div>
-                  <div className="feed-record-row">
-                    {item.summary && (
-                      <span className="feed-summary">
-                        <strong>{item.summary.exercise_count}</strong>種目
-                        <span aria-hidden="true"> · </span>
-                        <strong>{item.summary.set_count}</strong>セット
-                      </span>
-                    )}
-                    <span className="feed-value">
-                      <span className="feed-measurements">
-                        <strong>
-                          <b className={item.best_weight ? "personal-best-value" : undefined}>
-                            {item.weight}
-                          </b>
-                          <small> kg × </small>
-                          {item.reps}
-                          <small> 回</small>
-                        </strong>
-                        {item.estimated_rm !== null && (
-                          <span className="feed-rm">
-                            RM{" "}
-                            <b className={item.best_rm ? "personal-best-value" : undefined}>
-                              {item.estimated_rm}
-                            </b>
-                            <small> kg</small>
-                          </span>
-                        )}
-                      </span>
-                      {item.best && (
-                        <span className="best-badge record-celebration">
-                          <BestFlame best={{ weight: item.best_weight, rm: item.best_rm }} />
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </>
+                <PendingFeedRecord
+                  item={item}
+                  error={detail.error}
+                  onRetry={() => details.retryRecord(item.workout_id)}
+                />
               )}
             </div>
           );
         })}
       </div>
     </>
+  );
+}
+
+function PendingFeedRecord({
+  item,
+  error,
+  onRetry,
+}: {
+  item: GroupActivity["feed"][number];
+  error: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="record-list">
+      <article className="record record-review is-compact is-pending">
+        <header className="record-heading">
+          <h2>
+            <span className="sr-only">記録の日付を確認中</span>
+            <span className="record-pending-line record-pending-date" aria-hidden="true" />
+          </h2>
+          <div className="record-author">
+            <span className="record-author-avatar">
+              <span className="avatar" aria-hidden="true">
+                {item.display_name.slice(0, 1)}
+              </span>
+            </span>
+            <strong>{item.display_name}</strong>
+          </div>
+          <dl className="record-overview">
+            <div aria-label="総負荷">
+              <dt>総負荷</dt>
+              <dd>
+                {item.summary?.total_volume === undefined ? (
+                  <span className="record-pending-line record-pending-value" aria-hidden="true" />
+                ) : (
+                  <>
+                    <strong>
+                      {item.summary.total_volume.toLocaleString("ja-JP", {
+                        maximumFractionDigits: 1,
+                      })}
+                    </strong>
+                    <small>kg</small>
+                  </>
+                )}
+              </dd>
+            </div>
+            <div aria-label="セット数">
+              <dt>セット</dt>
+              <dd>
+                {item.summary ? (
+                  <strong>{item.summary.set_count}</strong>
+                ) : (
+                  <span className="record-pending-line record-pending-value" aria-hidden="true" />
+                )}
+              </dd>
+            </div>
+          </dl>
+          <div className="record-pending-stamps" aria-hidden="true">
+            {[0, 1, 2, 3, 4, 5].map((kind) => (
+              <span key={kind} />
+            ))}
+          </div>
+        </header>
+        <div className="record-pending-details">
+          <h3 className="record-pending-exercise-name">{item.exercise}</h3>
+          {error ? (
+            <div className="record-pending-error" role="alert">
+              <span>記録の詳細を取得できませんでした</span>
+              <button
+                className="text-button"
+                type="button"
+                onClick={onRetry}
+                aria-label="記録の詳細を再試行"
+              >
+                再試行
+              </button>
+            </div>
+          ) : (
+            <div aria-hidden="true">
+              <span className="record-pending-line record-pending-set" />
+              <span className="record-pending-line record-pending-set" />
+            </div>
+          )}
+        </div>
+      </article>
+    </div>
   );
 }
 

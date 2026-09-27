@@ -1,6 +1,90 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate, startTraining } from "./mock-training";
 
+test("ホームの記録詳細待ちと取得失敗でも旧フィードカードを表示しない", async ({ page }) => {
+  const state = await mockTraining(page);
+  const record = {
+    id: "delayed-record",
+    user_id: "friend",
+    display_name: "友達A",
+    group_id: state.group.id,
+    performed_on: "2026-09-27",
+    created_at: "2026-09-27T01:00:00Z",
+    revision: 1,
+    exercises: [{ name: "ベンチプレス", sets: [{ weight: 80, reps: 8 }] }],
+  };
+  await page.route("**/api/groups/today-activity", (route) =>
+    route.fulfill({
+      json: {
+        groups: [
+          {
+            group_id: state.group.id,
+            name: state.group.name,
+            member_count: 2,
+            live_count: 0,
+            today_count: 1,
+            members: [],
+            feed: [
+              {
+                workout_id: record.id,
+                user_id: record.user_id,
+                display_name: record.display_name,
+                exercise: "ベンチプレス",
+                weight: 80,
+                reps: 8,
+                estimated_rm: 101.3,
+                updated_at: record.created_at,
+                best: false,
+                summary: { exercise_count: 1, set_count: 1, total_volume: 640 },
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let reads = 0;
+  await page.route(`**/api/groups/${state.group.id}/workouts/${record.id}`, async (route) => {
+    reads++;
+    if (reads === 1) {
+      await gate;
+      return route.fulfill({ status: 503, json: { detail: "一時的に取得できません" } });
+    }
+    return route.fulfill({ json: record });
+  });
+  try {
+    await page.reload();
+    const card = page.locator(`[data-workout-id="${record.id}"]`);
+    await expect(card).toBeVisible();
+    await expect.poll(() => reads).toBe(1);
+    await expect(card.locator(".record-review.is-compact")).toBeVisible();
+    await expect(card.locator(".feed-record-row")).toHaveCount(0);
+    await expect(card).toContainText("友達A");
+    await expect(card).toContainText("640");
+    for (const width of [320, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      );
+    }
+    const pendingHeight = (await card.locator(".record-review").boundingBox())?.height ?? 0;
+    release();
+    await expect(card.getByRole("button", { name: "記録の詳細を再試行" })).toBeVisible();
+    await expect(card.locator(".record-review.is-compact")).toBeVisible();
+    await card.getByRole("button", { name: "記録の詳細を再試行" }).click();
+    await expect(card.locator(".record-set")).toHaveCount(1);
+    await expect(card.locator(".feed-record-row")).toHaveCount(0);
+    const loadedHeight = (await card.locator(".record-review").boundingBox())?.height ?? 0;
+    expect(Math.abs(loadedHeight - pendingHeight)).toBeLessThan(100);
+  } finally {
+    release();
+  }
+});
+
 test("友達の記録を全種目・全セットで表示し、再読込で共有権限を再確認する", async ({ page }) => {
   const state = await mockTraining(page);
   const record = {
@@ -25,25 +109,29 @@ test("友達の記録を全種目・全セットで表示し、再読込で共�
       })),
     })),
   };
-  await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
+  await page.route("**/api/groups/today-activity", (route) =>
     route.fulfill({
       json: {
-        group_id: state.group.id,
-        member_count: 2,
-        live_count: 0,
-        today_count: 1,
-        members: [],
-        feed: [
+        groups: [
           {
-            workout_id: record.id,
-            user_id: record.user_id,
-            display_name: record.display_name,
-            exercise: "スクワット",
-            weight: 100,
-            reps: 5,
-            estimated_rm: 116.7,
-            updated_at: "2026-09-11T00:00:00Z",
-            best: false,
+            group_id: state.group.id,
+            member_count: 2,
+            live_count: 0,
+            today_count: 1,
+            members: [],
+            feed: [
+              {
+                workout_id: record.id,
+                user_id: record.user_id,
+                display_name: record.display_name,
+                exercise: "スクワット",
+                weight: 100,
+                reps: 5,
+                estimated_rm: 116.7,
+                updated_at: "2026-09-11T00:00:00Z",
+                best: false,
+              },
+            ],
           },
         ],
       },
