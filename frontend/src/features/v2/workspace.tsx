@@ -14,9 +14,9 @@ import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
-import { CommunityHome, CommunityScreen } from "./community";
+import { CommunityHome } from "./community";
 import { FloatingTraining } from "./floating-training";
-import { GroupOrderSheet } from "./group-order-sheet";
+import { CommunityScreen } from "./group-screen";
 import { History } from "./history";
 import { GROUP_REFRESH_MS } from "./refresh-interval";
 import { Preferences, usePreferences } from "./settings";
@@ -57,7 +57,6 @@ function WorkspaceContent({ session }: { session: Session }) {
   });
   const groupOrder = useGroupOrder(session.user.id, groupList.data);
   const groups = groupOrder.groups;
-  const [orderingGroups, setOrderingGroups] = useState(false);
   const [historyReady, setHistoryReady] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   useEffect(() => {
@@ -86,14 +85,20 @@ function WorkspaceContent({ session }: { session: Session }) {
   });
   const [homeReady, setHomeReady] = useState(false);
   const [opened, setOpened] = useState(false);
+  const [inviteLanding] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).has("groupInvite"),
+  );
   const ready =
-    homeReady &&
-    (training.ready || !!training.error) &&
-    (catalog.data !== null || !!catalog.error) &&
-    (!!training.session ||
-      !!training.startingId ||
-      recentRecords.data !== null ||
-      !!recentRecords.error);
+    (inviteLanding && view === "groups") ||
+    (homeReady &&
+      (training.ready || !!training.error) &&
+      (catalog.data !== null || !!catalog.error) &&
+      (!!training.session ||
+        !!training.startingId ||
+        recentRecords.data !== null ||
+        !!recentRecords.error));
   useEffect(() => {
     if (ready) setOpened(true);
   }, [ready]);
@@ -113,7 +118,16 @@ function WorkspaceContent({ session }: { session: Session }) {
   }, [view]);
   const selected = groups.some((group) => group.id === groupId) ? groupId : groups[0]?.id || "";
   useEffect(() => {
-    window.history.replaceState({ ...window.history.state, gotoreView: "home" }, "");
+    const inviteEntry = new URLSearchParams(window.location.search).has("groupInvite");
+    window.history.replaceState(
+      {
+        ...window.history.state,
+        gotoreView: inviteEntry ? "groups" : "home",
+        communityMode: inviteEntry ? "join" : undefined,
+      },
+      "",
+    );
+    if (inviteEntry) setView("groups");
     const back = (event: PopStateEvent) => {
       const next = event.state?.gotoreView;
       if (["home", "record", "history", "settings", "groups", "result"].includes(next)) {
@@ -173,7 +187,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </button>
       </header>
       <main className="main-content">
-        {opened && (
+        {opened && !inviteLanding && (
           <OnboardingGuide
             userId={session.user.id}
             replay={guideReplay}
@@ -299,16 +313,18 @@ function WorkspaceContent({ session }: { session: Session }) {
             groups={groups}
             selected={selected}
             initialDetail={groupDetail}
-            active={view === "groups"}
+            active={opened && view === "groups"}
             userId={session.user.id}
             refreshKey={refreshKey}
             onSelect={setGroupId}
-            onReorder={() => setOrderingGroups(true)}
+            onOrder={(ids) => {
+              groupOrder.save(ids);
+              setGroupId(selected);
+            }}
             onChanged={() => {
               setGroupRefreshKey((key) => key + 1);
               changed();
             }}
-            onHome={() => navigate("home")}
           />
         </div>
         {view === "settings" && (
@@ -369,17 +385,6 @@ function WorkspaceContent({ session }: { session: Session }) {
           resumable={resumable}
           disabled={!canStart}
           onActivate={startOrResume}
-        />
-      )}
-      {orderingGroups && (
-        <GroupOrderSheet
-          available={groupList.data !== null}
-          groups={groups}
-          onClose={() => setOrderingGroups(false)}
-          onSave={(ids) => {
-            groupOrder.save(ids);
-            setGroupId(selected);
-          }}
         />
       )}
       <nav className="bottom-nav" aria-label="メインナビゲーション">

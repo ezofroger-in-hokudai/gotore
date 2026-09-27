@@ -72,13 +72,13 @@ test("ホームとグループは一時失敗で保持し、再試行と権限�
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText(retained);
   await expect(
-    page.getByRole("heading", { name: state.group.name, level: 1, exact: true }),
+    page.getByRole("heading", { name: state.group.name, level: 2, exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /^メンバー一覧/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "設定", exact: true })).toBeVisible();
   detailStatus = 403;
   await page.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: state.group.name, level: 1, exact: true }),
+    page.getByRole("heading", { name: state.group.name, level: 2, exact: true }),
   ).toHaveCount(0);
   await expect(page.locator(".community-feed:visible")).toHaveCount(0);
 });

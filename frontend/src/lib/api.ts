@@ -29,9 +29,15 @@ export type Group = {
   name: string;
   owner_id: string;
   invite_code: string;
+  invite_expires_at?: string;
 };
 export type GroupDetail = Group & {
-  members: { id: string; display_name: string; joined_at: string }[];
+  members: {
+    id: string;
+    display_name: string;
+    joined_at: string;
+    last_activity_at?: string | null;
+  }[];
 };
 export type BodyPart =
   | "chest"

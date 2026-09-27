@@ -5,12 +5,14 @@ import { type FormEvent, useEffect, useState } from "react";
 import { googleSignInOptions } from "../auth/google-auth";
 
 export function AuthPanel() {
+  const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const configured = !!getSupabase();
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
 
   useEffect(() => {
+    setReady(true);
     const restore = () => setBusy(false);
     window.addEventListener("pageshow", restore);
     return () => window.removeEventListener("pageshow", restore);
@@ -80,8 +82,8 @@ export function AuthPanel() {
         ) : (
           <p className="notice">アカウントの発行は管理者へ。</p>
         )}
-        <form onSubmit={submit}>
-          <fieldset disabled={busy || !configured}>
+        <form method="post" onSubmit={submit}>
+          <fieldset disabled={!ready || busy || !configured}>
             <label>
               メールアドレス
               <input

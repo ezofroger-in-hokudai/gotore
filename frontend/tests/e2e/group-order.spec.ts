@@ -1,461 +1,124 @@
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { mockTraining, navigate } from "./mock-training";
 
-async function setup(page: Page) {
+async function setup(page: import("@playwright/test").Page) {
   const state = await mockTraining(page);
   const groups = [
     state.group,
     { ...state.group, id: "group-b", name: "朝トレ部" },
     { ...state.group, id: "group-c", name: "週末トレ部" },
   ];
-  const data = { groups };
   await page.route("**/api/groups**", (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === "/api/groups") return route.fulfill({ json: data.groups });
-    if (path === "/api/groups/activity/summary") return route.fulfill({ json: [] });
-    const group = data.groups.find(
-      (item) => path === `/api/groups/${item.id}` || path === `/api/groups/${item.id}/activity`,
-    );
+    if (path === "/api/groups") return route.fulfill({ json: groups });
+    if (path === "/api/groups/today-activity") return route.fulfill({ json: { groups: [] } });
+    const group = groups.find((item) => path === `/api/groups/${item.id}`);
     if (group)
       return route.fulfill({
-        json: path.endsWith("/activity")
-          ? {
-              group_id: group.id,
-              members: [],
-              member_count: 1,
-              live_count: 0,
-              today_count: 0,
-              feed: [],
-            }
-          : { ...group, members: [] },
+        json: {
+          ...group,
+          members: [
+            {
+              id: state.user.id,
+              display_name: "画面テスト",
+              joined_at: "2026-01-01T00:00:00Z",
+              last_activity_at: null,
+            },
+            ...["ミオ", "ケン", "ユイ"].map((display_name, index) => ({
+              id: `member-${index}`,
+              display_name,
+              joined_at: `2026-01-0${index + 2}T00:00:00Z`,
+              last_activity_at: null,
+            })),
+          ],
+        },
       });
     return route.fallback();
   });
   await page.reload();
-  await expect(page.locator(".group-carousel .community-card")).toHaveCount(3);
-  return { ...state, data, key: `gotore:group-order:${state.user.id}` };
+  await navigate(page, "グループ");
+  await expect(page.locator(".group-card-list .community-card")).toHaveCount(3);
+  return { state, groups };
 }
-async function hold(page: Page, target: Locator) {
-  const box = await target.boundingBox();
-  if (!box) throw new Error("長押し対象がありません");
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await expect(page.getByRole("dialog", { name: "グループの並べ替え" })).toBeVisible();
-  await page.mouse.up();
-}
-async function holdCard(page: Page, target: Locator) {
-  const box = await target.boundingBox();
-  if (!box) throw new Error("カードがありません");
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await expect(page.locator(".group-carousel .is-dragging")).toHaveCount(1);
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  return box;
-}
-const names = ["画面テスト部", "朝トレ部", "週末トレ部"];
+
 for (const width of [320, 390, 430]) {
-  test(`${width}px: 長押しで並べ替え、選択を保ちホームと一覧・再読込に反映する`, async ({
+  test(`${width}px: グループ一覧で長押しドラッグし、詳細タップと順序保存を分ける`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
-    const { key } = await setup(page);
-    const box = await holdCard(
-      page,
-      page.getByRole("button", { name: "画面テスト部の詳細", exact: true }),
-    );
-    const sheet = page.getByRole("dialog");
-    await page.mouse.move(width - 12, box.y + 100, { steps: 8 });
-    await expect(page.locator("output.sr-only")).toContainText("2番目");
+    const { state, groups } = await setup(page);
+    const key = `gotore:group-order:${state.user.id}`;
+    const first = page.locator(".group-list-drag-wrap").nth(0);
+    const box = await first.locator(".community-card").boundingBox();
+    if (!box) throw new Error("グループカードがありません");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(500);
+    await expect(first.locator(".community-card")).toHaveClass(/is-dragging/);
+    const targetBox = await page.locator(".group-list-drag-wrap").nth(1).boundingBox();
+    if (!targetBox) throw new Error("移動先グループカードがありません");
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + 150, {
+      steps: 8,
+    });
+    await expect(first.locator(".community-card")).toHaveClass(/is-dragging/);
+    await expect(first).toHaveClass(/is-dragging/);
+    await expect.poll(async () => (await first.boundingBox())?.y ?? 0).toBeGreaterThan(box.y + 40);
     await expect
-      .poll(() => page.locator(".group-carousel").evaluate((element) => element.scrollLeft), {
-        intervals: [16],
-      })
-      .toBeGreaterThan((box.width + 12) * 0.85);
-    await page.mouse.move(width / 2, box.y + 100);
-    await expect(page.locator("output.sr-only")).toContainText("2番目");
-    await page.screenshot({ path: `test-results/group-drag-${width}.png`, fullPage: true });
+      .poll(async () => (await page.locator(".group-list-drag-wrap").nth(1).boundingBox())?.y ?? 0)
+      .toBeLessThan(targetBox.y - 40);
     await page.mouse.up();
-    await expect(page.locator(".group-carousel.is-reordering")).toHaveCount(0);
-    await page.screenshot({ path: `test-results/group-order-${width}.png`, fullPage: true });
-    await expect(page.locator(".group-carousel h2")).toHaveText([names[1], names[0], names[2]]);
-    await expect(page.getByRole("button", { name: "画面テスト部を表示" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await expect
-      .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "[]")[0], key))
-      .toBe("group-b");
-    await page.getByRole("button", { name: "グループ一覧", exact: true }).click();
-    await expect(page.locator(".group-order-entry span:first-child")).toHaveText([
-      names[1],
-      names[0],
-      names[2],
+    await expect(page.locator(".group-card-list h2")).toHaveText([
+      groups[1].name,
+      groups[0].name,
+      groups[2].name,
     ]);
-    await hold(page, page.getByRole("button", { name: "朝トレ部 ›", exact: true }));
-    await sheet.getByRole("button", { name: "朝トレ部を下へ", exact: true }).click();
-    await page.goBack();
-    await expect(sheet).toHaveCount(0);
-    await expect(page.locator(".group-order-entry span:first-child")).toHaveText([
-      names[1],
-      names[0],
-      names[2],
-    ]);
-    await navigate(page, "ホーム");
-    await page.reload();
-    await expect(page.locator(".group-carousel h2")).toHaveText([names[1], names[0], names[2]]);
-    await page.getByRole("button", { name: "朝トレ部の詳細", exact: true }).click();
-    await expect(
-      page.getByRole("heading", { name: "朝トレ部", level: 1, exact: true }),
-    ).toBeVisible();
-  });
-}
-
-test("ドラッグとキーボード移動、保存失敗後の再試行、所属増減を扱う", async ({ page }) => {
-  const { key, data } = await setup(page);
-  await page.getByRole("button", { name: "グループ一覧", exact: true }).click();
-  await page.getByRole("button", { name: "並べ替え", exact: true }).click();
-  const sheet = page.getByRole("dialog");
-  const from = await sheet
-    .getByRole("button", { name: "週末トレ部を移動", exact: true })
-    .boundingBox();
-  const to = await sheet
-    .getByRole("button", { name: "画面テスト部を移動", exact: true })
-    .boundingBox();
-  if (!from || !to) throw new Error("移動先がありません");
-  await page.mouse.move(from.x + 24, from.y + 24);
-  await page.mouse.down();
-  await page.mouse.move(to.x + 24, to.y + 24, { steps: 12 });
-  await page.mouse.up();
-  await expect(sheet.locator(".group-order-name")).toHaveText([names[2], names[0], names[1]]);
-  await sheet.getByRole("button", { name: "朝トレ部を移動", exact: true }).press("ArrowUp");
-  await expect(sheet.locator(".group-order-name")).toHaveText([names[2], names[1], names[0]]);
-  await page.evaluate(() => {
-    const original = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (key, value) {
-      if (key.startsWith("gotore:group-order:"))
-        throw new DOMException("full", "QuotaExceededError");
-      original.call(this, key, value);
-    };
-    Object.assign(window, {
-      restoreGroupStorage: () => {
-        Storage.prototype.setItem = original;
-      },
-    });
-  });
-  await sheet.getByRole("button", { name: "完了", exact: true }).click();
-  await expect(sheet.getByRole("alert")).toContainText("保存できませんでした");
-  await page.evaluate(() =>
-    (window as unknown as { restoreGroupStorage: () => void }).restoreGroupStorage(),
-  );
-  await sheet.getByRole("button", { name: "完了", exact: true }).click();
-  await expect(sheet).toHaveCount(0);
-  data.groups = [
-    data.groups[0],
-    data.groups[2],
-    { ...data.groups[0], id: "group-d", name: "新しい部" },
-  ];
-  await page.reload();
-  await expect(page.locator(".group-carousel h2")).toHaveText([names[2], names[0], "新しい部"]);
-  await page.evaluate((key) => {
-    localStorage.setItem(`${key}-other`, '["group-c"]');
-    localStorage.setItem(key, "broken");
-  }, key);
-  await page.reload();
-  await expect(page.locator(".group-carousel h2")).toHaveText([names[0], names[2], "新しい部"]);
-});
-
-test("タッチの通常スワイプと長押し後のカード左右移動を区別する", async ({ page }) => {
-  await setup(page);
-  const cdp = await page.context().newCDPSession(page);
-  const box = await page.locator(".group-carousel").boundingBox();
-  if (!box) throw new Error("カードがありません");
-  const y = box.y + 100;
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 300, y }] });
-  for (const x of [260, 220, 180, 140, 100, 60]) {
-    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y }] });
-  }
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await expect(page.getByRole("button", { name: "朝トレ部を表示" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect(page.locator(".group-carousel h2")).toHaveText(names);
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 160, y }] });
-  await expect(page.locator(".group-carousel .is-dragging")).toHaveCount(1);
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 25, y }] });
-  await expect(page.locator("output.sr-only")).toContainText("1番目");
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await expect(page.locator(".group-carousel h2")).toHaveText([names[1], names[0], names[2]]);
-  await expect(page.getByRole("button", { name: "朝トレ部を表示" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-});
-
-test("別ユーザーの表示順を引き継がず、元の本人は再ログイン後も復元する", async ({ page }) => {
-  const state = await setup(page);
-  const originalId = state.user.id;
-  await page.getByRole("button", { name: "グループ一覧", exact: true }).click();
-  await page.getByRole("button", { name: "並べ替え", exact: true }).click();
-  await page.getByRole("button", { name: "画面テスト部を下へ", exact: true }).click();
-  await page.getByRole("button", { name: "完了", exact: true }).click();
-  async function loginAs(id: string) {
-    await navigate(page, "設定");
-    await page.getByRole("button", { name: "ログアウト", exact: true }).click();
-    await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
-    state.user.id = id;
-    await page.getByLabel("メールアドレス", { exact: true }).fill("next@example.test");
-    await page.getByLabel("パスワード", { exact: true }).fill("ui-test-password");
-    await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  }
-  await loginAs("00000000-0000-0000-0000-000000000009");
-  await expect(page.locator(".group-carousel h2")).toHaveText(names);
-  await loginAs(originalId);
-  await expect(page.locator(".group-carousel h2")).toHaveText([names[1], names[0], names[2]]);
-});
-
-test("長押しを閉じた後のキーボード操作と、未取得時の保存防止", async ({ page }) => {
-  const { key } = await setup(page);
-  const card = page.getByRole("button", { name: "画面テスト部の詳細", exact: true });
-  await holdCard(page, card);
-  await page.keyboard.press("Escape");
-  await page.mouse.up();
-  await card.press("Enter");
-  await expect(
-    page.getByRole("heading", { name: "画面テスト部", level: 1, exact: true }),
-  ).toBeVisible();
-  await navigate(page, "ホーム");
-  await page.getByRole("button", { name: "グループ一覧", exact: true }).click();
-  await page.getByRole("button", { name: "並べ替え", exact: true }).click();
-  await page.route("**/api/groups", (route) =>
-    route.fulfill({ status: 403, json: { detail: "アクセスできません" } }),
-  );
-  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
-  const sheet = page.getByRole("dialog");
-  await expect(sheet.getByRole("button", { name: "完了", exact: true })).toBeDisabled();
-  expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();
-});
-
-test("カード移動の保存失敗は元の順序へ戻し、同じ操作で再試行できる", async ({ page }) => {
-  const { key } = await setup(page);
-  const card = page.getByRole("button", { name: "画面テスト部の詳細", exact: true });
-  await page.evaluate(() => {
-    const original = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (key, value) {
-      if (key.startsWith("gotore:group-order:"))
-        throw new DOMException("full", "QuotaExceededError");
-      original.call(this, key, value);
-    };
-    Object.assign(window, {
-      restoreGroupStorage: () => {
-        Storage.prototype.setItem = original;
-      },
-    });
-  });
-  async function dragRight() {
-    const box = await holdCard(page, card);
-    await page.mouse.move(375, box.y + 100, { steps: 8 });
-    await expect(page.locator("output.sr-only")).toContainText("2番目");
-    await page.mouse.up();
-  }
-  await dragRight();
-  await expect(page.locator(".v2-app").getByRole("alert")).toContainText(
-    "表示順を保存できませんでした",
-  );
-  await expect(page.locator(".group-carousel h2")).toHaveText(names);
-  expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();
-  await page.evaluate(() =>
-    (window as unknown as { restoreGroupStorage: () => void }).restoreGroupStorage(),
-  );
-  await dragRight();
-  await expect(page.locator(".group-carousel h2")).toHaveText([names[1], names[0], names[2]]);
-  await expect(page.locator(".v2-app").getByRole("alert")).toHaveCount(0);
-});
-
-async function touchSwipe(page: Page, distance: number) {
-  const cdp = await page.context().newCDPSession(page);
-  const box = await page.locator(".group-carousel").boundingBox();
-  if (!box) throw new Error("カードがありません");
-  const x = distance < 0 ? box.x + 180 : box.x + 80;
-  const y = box.y + 100;
-  await cdp.send("Input.dispatchTouchEvent", {
-    type: "touchStart",
-    touchPoints: [{ x, y }],
-  });
-  for (const fraction of [1 / 3, 2 / 3, 1]) {
-    await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchMove",
-      touchPoints: [{ x: x + distance * fraction, y }],
-    });
-  }
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await cdp.detach();
-}
-
-for (const width of [320, 390, 430]) {
-  test(`${width}px: スワイプを離した位置から跳ね戻らず次のカードへ進む`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 844 });
-    await setup(page);
-    const carousel = page.locator(".group-carousel");
-    await carousel.evaluate((element) => {
-      // Reactの処理前後で、離した位置が巻き戻っていないことを確認する。
-      document.addEventListener(
-        "pointerup",
-        () => {
-          element.setAttribute("data-release-before", String(element.scrollLeft));
-        },
-        { capture: true, once: true },
-      );
-      document.addEventListener(
-        "pointerup",
-        () => {
-          element.setAttribute("data-release-after", String(element.scrollLeft));
-        },
-        { once: true },
-      );
-    });
-    await touchSwipe(page, -60);
-    const before = Number(await carousel.getAttribute("data-release-before"));
-    const after = Number(await carousel.getAttribute("data-release-after"));
-    expect(before).toBeGreaterThan(40);
-    expect(after).toBeGreaterThanOrEqual(before - 1);
-    await expect(page.getByRole("button", { name: "朝トレ部を表示" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
     await expect
       .poll(() =>
-        carousel.evaluate((element) => ({
-          left: element.scrollLeft,
-          target: (element.children[1] as HTMLElement).offsetLeft,
-          snap: getComputedStyle(element).scrollSnapType,
-        })),
+        page.evaluate((storageKey) => JSON.parse(localStorage.getItem(storageKey) ?? "[]"), key),
       )
-      .toMatchObject({ snap: "x mandatory" });
-    expect(
-      await carousel.evaluate((element) =>
-        Math.abs(element.scrollLeft - (element.children[1] as HTMLElement).offsetLeft),
-      ),
-    ).toBeLessThanOrEqual(1);
-    await expect(page.locator(".group-carousel h2")).toHaveText(names);
-    await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
-    await page.screenshot({ path: `test-results/group-swipe-${width}.png`, fullPage: true });
+      .toEqual([groups[1].id, groups[0].id, groups[2].id]);
+
+    await page.locator(".group-card-list .community-card").first().click();
+    await expect(page.getByRole("heading", { name: groups[1].name, exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
   });
 }
 
-async function setupWithPausedClock(page: Page) {
-  const pausedAt = new Date();
-  // 停止時刻を初期時刻より十分先に固定し、CIの処理時間や時計の差に依存させない。
-  await page.clock.install({ time: new Date(pausedAt.getTime() - 60 * 60 * 1000) });
-  const state = await setup(page);
-  await page.clock.pauseAt(pausedAt);
-  return state;
-}
-
-test("移動中の連続スワイプは前の目標から進み、逆方向なら戻る", async ({ page }) => {
-  const { key } = await setupWithPausedClock(page);
-  await touchSwipe(page, -60);
-  await touchSwipe(page, -60);
-  await page.clock.runFor(500);
-  await expect(page.getByRole("button", { name: "週末トレ部を表示" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await touchSwipe(page, 60);
-  await touchSwipe(page, 60);
-  await page.clock.runFor(500);
-  await expect(page.getByRole("button", { name: "画面テスト部を表示" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await touchSwipe(page, -60);
-  await touchSwipe(page, 60);
-  await page.clock.runFor(500);
-  await expect(page.getByRole("button", { name: "画面テスト部を表示" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await touchSwipe(page, -30);
-  await page.clock.runFor(500);
-  await expect(page.getByRole("button", { name: "画面テスト部を表示" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect(page.locator(".group-carousel h2")).toHaveText(names);
-  expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();
+test("グループ詳細の設定でメンバーを展開し、オーナー移譲の確認へ進める", async ({ page }) => {
+  const { state } = await setup(page);
+  await page.locator(".group-card-list .community-card").first().click();
+  await page
+    .getByRole("navigation", { name: "グループの表示" })
+    .getByRole("button", { name: "設定", exact: true })
+    .click();
+  await page.getByRole("button", { name: "メンバー一覧を展開", exact: true }).click();
+  await expect(page.locator(".group-member-row")).toHaveCount(4);
+  await expect(page.getByRole("button", { name: "グループから抜ける", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "ミオの設定", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("オーナーにする");
+  expect(state.group.owner_id).toBe(state.user.id);
 });
 
-test("移動中にドットや別画面を操作しても古いアニメーションが選択を戻さない", async ({ page }) => {
-  await setupWithPausedClock(page);
-  await touchSwipe(page, -60);
-  await page.getByRole("button", { name: "週末トレ部を表示" }).click();
-  await page.clock.runFor(500);
-  await expect(page.getByRole("button", { name: "週末トレ部を表示" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await touchSwipe(page, 60);
-  await navigate(page, "設定");
-  await page.clock.runFor(500);
-  await navigate(page, "ホーム");
-  await expect(page.getByRole("button", { name: "朝トレ部を表示" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-});
-
-test("動きを減らす設定ではスワイプを離すと即時に次のカードを表示する", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await setupWithPausedClock(page);
-  await touchSwipe(page, -60);
-  expect(
-    await page
-      .locator(".group-carousel")
-      .evaluate((element) =>
-        Math.abs(element.scrollLeft - (element.children[1] as HTMLElement).offsetLeft),
-      ),
-  ).toBeLessThanOrEqual(1);
-});
-
-test("長いスワイプも1枚だけ進み、指を離すまで選択を変えない", async ({ page }) => {
-  await setupWithPausedClock(page);
-  const carousel = page.locator(".group-carousel");
-  // 端末幅やポインター種別に依存せず、2枚分を引いた場合の選択を確認する。
-  await carousel.evaluate((element) => {
-    const card = element.firstElementChild as HTMLElement;
-    const pitch = card.offsetWidth + 12;
-    const dispatch = (type: string, x: number) =>
-      card.dispatchEvent(
-        new PointerEvent(type, {
-          bubbles: true,
-          pointerId: 1,
-          pointerType: "touch",
-          isPrimary: true,
-          button: 0,
-          clientX: x,
-          clientY: 100,
-        }),
-      );
-    element.setPointerCapture = () => {};
-    dispatch("pointerdown", 250);
-    dispatch("pointermove", 250 - pitch * 2);
+test("オーナーは設定行でグループ名を直接編集して決定できる", async ({ page }) => {
+  const { state, groups } = await setup(page);
+  await page.route(`**/api/groups/${state.group.id}`, (route) => {
+    if (route.request().method() !== "PATCH") return route.fallback();
+    groups[0].name = route.request().postDataJSON().name;
+    return route.fulfill({ json: groups[0] });
   });
-  await page.clock.runFor(32);
-  await expect(page.getByRole("button", { name: "画面テスト部を表示" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await carousel.dispatchEvent("pointerup", { pointerId: 1, isPrimary: true });
-  // アニメーションを進めなくても移動先と記録の選択が確定する。
-  await expect(page.getByRole("button", { name: "朝トレ部を表示" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await page.clock.runFor(200);
-  expect(
-    await carousel.evaluate((element) =>
-      Math.abs(element.scrollLeft - (element.children[1] as HTMLElement).offsetLeft),
-    ),
-  ).toBeLessThanOrEqual(1);
+  await page.locator(".group-card-list .community-card").first().click();
+  await page
+    .getByRole("navigation", { name: "グループの表示" })
+    .getByRole("button", { name: "設定", exact: true })
+    .click();
+  await page.getByRole("button", { name: "グループ名を編集" }).click();
+  const row = page.locator(".group-setting-row.is-editing");
+  await expect(row).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await row.getByRole("textbox", { name: "グループ名" }).fill("更新したグループ名");
+  await row.getByRole("button", { name: "決定" }).click();
+  await expect(page.locator(".group-setting-row")).toContainText("更新したグループ名");
+  await expect(page.locator(".group-setting-row.is-editing")).toHaveCount(0);
 });
