@@ -29,7 +29,7 @@ export function GroupOrderSheet({
     );
   }
   return (
-    <Sheet title="グループの並べ替え" onClose={onClose}>
+    <Sheet title="グループの並べ替え" onClose={onClose} dismissOnBackdrop={false}>
       <p className="muted">上からホームの左側に表示。この端末に保存します。</p>
       <ol className="group-order-list" ref={rows}>
         {current.map((group, index) => (

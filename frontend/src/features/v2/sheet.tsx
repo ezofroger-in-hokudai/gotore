@@ -1,16 +1,34 @@
-import { type ReactNode, useEffect, useId, useRef } from "react";
+import { type PointerEvent, type ReactNode, useEffect, useId, useRef } from "react";
 
 export function Sheet({
   title,
   onClose,
   children,
   showCloseButton = true,
-}: { title: string; onClose: () => void; children: ReactNode; showCloseButton?: boolean }) {
+  dismissOnBackdrop = true,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  showCloseButton?: boolean;
+  dismissOnBackdrop?: boolean;
+}) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const backdropPointer = useRef<number | null>(null);
   const key = useId();
   const mounted = useRef(false);
   const close = useRef(onClose);
   close.current = onClose;
+  const outside = (event: PointerEvent<HTMLDialogElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    return (
+      event.target === event.currentTarget &&
+      (event.clientX < bounds.left ||
+        event.clientX >= bounds.right ||
+        event.clientY < bounds.top ||
+        event.clientY >= bounds.bottom)
+    );
+  };
   useEffect(() => {
     mounted.current = true;
     const element = dialog.current;
@@ -39,6 +57,20 @@ export function Sheet({
       ref={dialog}
       className="v2-sheet"
       aria-label={title}
+      onPointerDown={(event) => {
+        backdropPointer.current =
+          dismissOnBackdrop && event.isPrimary && event.button === 0 && outside(event)
+            ? event.pointerId
+            : null;
+      }}
+      onPointerUp={(event) => {
+        const startedOutside = backdropPointer.current === event.pointerId;
+        backdropPointer.current = null;
+        if (startedOutside && outside(event)) close.current();
+      }}
+      onPointerCancel={() => {
+        backdropPointer.current = null;
+      }}
       onCancel={(e) => {
         e.preventDefault();
         onClose();
