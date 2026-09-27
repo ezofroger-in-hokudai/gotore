@@ -39,3 +39,25 @@
 4. #225 は独立した小修正として扱える。
 
 今回の監査は Issue 化までであり、画面の仕様変更・実装は行っていない。
+
+## 追加監査: 仲間の記録・入力・読み込み
+
+同じ `main` を390×844 CSS pxで再操作した。写真未設定の仲間3人（うち2人は頭文字が同じ）、当日記録0件、前回値ありの種目を合成データで用意し、当日情報に2.2秒、共有記録詳細に1.5秒、前回値に2.2秒の遅延を別々に注入した。遅延はUIの変化を観察するための条件であり、本番の応答時間を示さない。初回のホームでは当日情報と記録詳細を表示し、その後STARTから種目選択・仲間シート・入力欄へ進んだ。
+
+| 目的 | 観察 | 対応 |
+| --- | --- | --- |
+| 仲間をすぐ見つける | 写真なしの「田中太郎」「田中花子」は両方「田」。名前はシートを開くまで見えない。0件時には空の仲間領域が残る | [#228](https://github.com/ezofroger-in-hokudai/gotore/issues/228) |
+| ホームで見た仲間を開始後も見る | 同じ当日APIを2回要求し、仲間アイコンが空の丸へ戻る。「すべて」タブの左端は166.5→118.5pxへ動く | [#227](https://github.com/ezofroger-in-hokudai/gotore/issues/227) |
+| 同じ人のセットを開き直す | ホームで詳細取得済みでも同じ共有記録詳細を再要求。シートは汎用の「記録」と大きな空欄から始まる | [#230](https://github.com/ezofroger-in-hokudai/gotore/issues/230) |
+| 最初のセットを確実に入力する | 前回62.5kg×8回の取得前は20kg×10回を表示し保存可能。待たずに押すと20kg×10回が実際に保存され、待つと入力欄が62.5kg×8回へ変わる | [#231](https://github.com/ezofroger-in-hokudai/gotore/issues/231) |
+| 0件の今日の記録を理解する | 「0種目 0セット 0kg …」を開いても内容はなく、画面上はほぼ変わらない | [#229](https://github.com/ezofroger-in-hokudai/gotore/issues/229) |
+| 通信待ちを気にせず記録する | 前回値を待つ間、種目メモ欄に可視の「メモを読み込み中…」が出る | [#232](https://github.com/ezofroger-in-hokudai/gotore/issues/232) |
+
+### 画面と参考サービス
+
+- [仲間が表示済みの種目選択](images/ux-journey-audit-2026-09-28/peer-ready.png)、[当日情報の再取得中](images/ux-journey-audit-2026-09-28/peer-loading.png)、[今日の記録がない状態](images/ux-journey-audit-2026-09-28/no-peer-record.png)。
+- [仲間の記録を開いた直後](images/ux-journey-audit-2026-09-28/peer-detail-loading.png)、[詳細取得後](images/ux-journey-audit-2026-09-28/peer-detail-ready.png)。
+- [前回値の取得前](images/ux-journey-audit-2026-09-28/context-pending.png)、[取得後](images/ux-journey-audit-2026-09-28/context-ready.png)。
+- [Instagram公式のStories案内](https://about.fb.com/news/2025/09/in-india-instagram-debuts-a-reels-first-experience-for-its-mobile-app/)は人から見る入口の配置、[Hevy公式のソーシャル案内](https://help.hevyapp.com/hc/en-us/articles/35688036014231-Hevy-App-Social-Guide-Connect-Follow-and-Share-Your-Workouts)は記録者・統計・反応を同じ投稿で見る構成の参考とした。[Hevy公式の前回値と入力値の説明](https://help.hevyapp.com/hc/en-us/articles/34105442929943-Previous-Workout-Values-Vs-Routine-Values-How-to-Adjust-in-Settings)は参照値と保存する入力値を区別する検討材料とした。いずれもGO TOREへの採用は未決定。
+
+読み込み全体は既存の[#11](https://github.com/ezofroger-in-hokudai/gotore/issues/11)に計測地点を追記した。公開環境・実機の実時間、Auth/API/DB/描画の内訳、320/430pxと文字拡大は未測定。再利用する情報の期限・権限喪失時の破棄、仲間の名前表示形式、前回値の自動入力方式は各Issueで決める。
