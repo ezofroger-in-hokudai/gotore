@@ -10,9 +10,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { createSessionId } from "../session/session-id";
-import { Sheet } from "../v2/sheet";
 import { type StampJob, StampStore, stampKey } from "./stamp-store";
-import { stampKinds } from "./types";
 
 function createClient(userId: string) {
   const prefix = `egotore:stamp-job:v1:${userId}:`;
@@ -85,21 +83,23 @@ export function StampProvider({ userId, children }: { userId: string; children: 
   const [client] = useState(() => createClient(userId));
   useEffect(() => {
     client.store.start();
-    const interval = setInterval(() => void client.refresh(), 10000);
-    const visible = () => void client.refresh();
-    document.addEventListener("visibilitychange", visible);
+    const resume = () => {
+      if (document.visibilityState === "hidden") return;
+      void client.refresh();
+      client.store.sync();
+    };
+    resume();
+    const interval = setInterval(resume, 10000);
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("online", resume);
     return () => {
       clearInterval(interval);
-      document.removeEventListener("visibilitychange", visible);
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("online", resume);
       client.stop();
     };
   }, [client]);
-  return (
-    <Context.Provider value={client}>
-      {children}
-      <StampOutbox />
-    </Context.Provider>
-  );
+  return <Context.Provider value={client}>{children}</Context.Provider>;
 }
 export function useStamps(group?: string, workout?: string, active = true) {
   const client = useContext(Context);
@@ -109,49 +109,4 @@ export function useStamps(group?: string, workout?: string, active = true) {
     if (active && group && workout) return client.register(group, workout);
   }, [client, group, workout, active]);
   return client.store;
-}
-function StampOutbox() {
-  const store = useStamps();
-  const [open, setOpen] = useState(false);
-  const failed = store.jobs.filter((job) => job.state === "failed");
-  return (
-    <>
-      {(failed.length > 0 || store.storageError) && (
-        <button type="button" className="stamp-outbox-notice" onClick={() => setOpen(true)}>
-          スタンプの未送信を確認{failed.length ? ` · ${failed.length}` : ""}
-        </button>
-      )}
-      {open && (
-        <Sheet title="スタンプの送信待ち" onClose={() => setOpen(false)}>
-          {store.storageError && (
-            <p className="error" role="alert">
-              {store.storageError}
-            </p>
-          )}
-          {!store.jobs.length && <p className="muted">送信待ちはありません</p>}
-          {store.jobs.map((job) => (
-            <div className="stamp-job" key={job.id}>
-              <p>
-                {stampKinds.find((kind) => kind.id === job.kind)?.emoji} {job.name}の記録 ·{" "}
-                {job.present ? "送信" : "取消"}
-              </p>
-              {job.state === "failed" ? (
-                <>
-                  <p className="error">{job.error}</p>
-                  <button type="button" className="secondary" onClick={() => store.retry(job.id)}>
-                    再試行
-                  </button>
-                  <button type="button" className="secondary" onClick={() => store.discard(job.id)}>
-                    送信待ちを破棄
-                  </button>
-                </>
-              ) : (
-                <span className="loading-spinner" role="status" aria-label="スタンプを送信中" />
-              )}
-            </div>
-          ))}
-        </Sheet>
-      )}
-    </>
-  );
 }

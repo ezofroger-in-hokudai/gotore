@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate } from "./mock-training";
 
-test("一覧・詳細で共有するスタンプと、画面を閉じても続く送信・失敗の再試行", async ({ page }) => {
+test("一覧・詳細で共有するスタンプと、画面を閉じても続く送信・失敗後の自動再送", async ({
+  page,
+}) => {
   const state = await mockTraining(page);
   const record = {
     id: "shared-record",
@@ -26,7 +28,6 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
   const gate: { release?: () => void } = {};
   const release = () => gate.release?.();
   let fail = false;
-  let sentAt = 0;
   const summary = () => ({
     counts: {
       encourage: 3 + Number(mine.has("encourage")),
@@ -89,7 +90,6 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
     }),
   );
   await page.route("**/api/groups/*/workouts/*/stamps/*", async (route) => {
-    sentAt = Date.now();
     await new Promise<void>((resolve) => {
       gate.release = resolve;
     });
@@ -119,21 +119,34 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
   );
   await expect(card).toHaveCSS("box-shadow", "none");
   await navigate(page, "設定");
-  await page.waitForTimeout(Math.max(0, 10000 - (Date.now() - sentAt)));
   fail = true;
   release();
-  await expect(page.getByRole("button", { name: /スタンプの未送信を確認/ })).toBeVisible();
-  await page.getByRole("button", { name: /スタンプの未送信を確認/ }).click();
-  const outbox = page.getByRole("dialog", { name: "スタンプの送信待ち" });
-  await expect(outbox).toContainText("ミオ");
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Object.keys(localStorage).some(
+          (key) =>
+            key.startsWith("egotore:stamp-job:v1:") &&
+            JSON.parse(localStorage.getItem(key) ?? "null")?.state === "failed",
+        ),
+      ),
+    )
+    .toBe(true);
+  await expect(page.getByRole("button", { name: /スタンプの未送信を確認/ })).toHaveCount(0);
   await page.screenshot({ path: "test-results/inline-stamps-failure.png", fullPage: true });
   fail = false;
   gate.release = undefined;
-  await outbox.getByRole("button", { name: "再試行", exact: true }).click();
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
   await expect.poll(() => !!gate.release).toBe(true);
   release();
-  await expect(outbox).toContainText("送信待ちはありません");
-  await outbox.getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          Object.keys(localStorage).filter((key) => key.startsWith("egotore:stamp-job:v1:")).length,
+      ),
+    )
+    .toBe(0);
   await navigate(page, "ホーム");
   await expect(card.getByRole("button", { name: "👺スタンプ", exact: true })).toHaveAttribute(
     "aria-pressed",

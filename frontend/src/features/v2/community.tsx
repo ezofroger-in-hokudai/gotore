@@ -476,7 +476,6 @@ function Feed({
                       groupId={groupIds?.get(item.workout_id) ?? data.group_id}
                       workoutId={item.workout_id}
                       name={item.display_name}
-                      alwaysVisible
                     />
                   )}
                 />

@@ -161,7 +161,8 @@ export class StampStore {
         if (!this.active) return;
         for (const id of batch) {
           if (forbidden(reason)) this.revoke(group, id);
-          else this.set(group, id, { error: "スタンプを取得できません。" });
+          else if (!this.get(group, id).summary)
+            this.set(group, id, { error: "スタンプを取得できません。" });
         }
       }
     }
@@ -234,6 +235,9 @@ export class StampStore {
     this.jobs = this.jobs.map((j) => (j.id === id ? next : j));
     this.publish();
     void this.send(next, true);
+  }
+  sync() {
+    for (const job of this.jobs.filter((value) => value.state === "failed")) this.retry(job.id);
   }
   private async send(job: StampJob, reconcile: boolean) {
     if (this.running.has(job.id)) return;

@@ -112,9 +112,10 @@ describe("画面から独立したスタンプ送信", () => {
     await tick();
     expect(f.store.jobs).toHaveLength(0);
     expect(f.store.view("g", "w")?.counts.praise).toBe(1);
+    expect(f.store.get("g", "w").error).toBe("");
     f.store.stop();
   });
-  test("再起動時は自動送信せず本人の確認後に再試行する", async () => {
+  test("再起動後の未送信はサーバー照合して自動で再送する", async () => {
     const f = fixture();
     await f.store.refresh("g", ["w"]);
     f.setMutation(async () => {
@@ -123,10 +124,17 @@ describe("画面から独立したスタンプ送信", () => {
     f.store.toggle("g", "w", "praise", "名前");
     await tick();
     f.store.stop();
+    f.setMutation(async () => {
+      f.setSummary({ counts: { praise: 1 }, mine: ["praise"], can_send: true });
+    });
     const restored = new StampStore(f.options);
     restored.start();
     expect(restored.jobs[0].state).toBe("failed");
     expect(f.calls.filter((call) => call.method === "PUT")).toHaveLength(1);
+    restored.sync();
+    await tick();
+    expect(f.calls.filter((call) => call.method === "PUT")).toHaveLength(2);
+    expect(restored.jobs).toHaveLength(0);
     restored.stop();
   });
   test("一覧を50件ずつまとめて取得する", async () => {

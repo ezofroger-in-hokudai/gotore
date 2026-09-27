@@ -3379,22 +3379,11 @@
   color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
-.inline-stamp-circle {
-  width: 30px;
-  min-width: 30px;
-  padding: 0;
-  font-size: 20px;
-}
 .inline-stamp-check {
   font-size: 10px;
 }
 .inline-stamp-more {
   font-size: 23px;
-}
-.inline-stamp-picker {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
-  gap: 4px;
 }
 .inline-stamp-choice .inline-stamp-pill {
   width: 40px;
@@ -3409,18 +3398,6 @@
   position: absolute;
   right: 1px;
   bottom: 1px;
-}
-.inline-stamp-error {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: var(--accent);
-}
-.inline-stamp-error .secondary {
-  padding: 4px 12px;
-  min-height: 36px;
 }
 .loading-spinner {
   width: 12px;
@@ -3442,29 +3419,6 @@
     border-style: dotted;
   }
 }
-.stamp-outbox-notice {
-  position: fixed;
-  z-index: 45;
-  bottom: calc(76px + env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 10px 16px;
-  background: var(--panel);
-  color: var(--text);
-  box-shadow: 0 2px 12px #0002;
-  white-space: nowrap;
-  font-size: 12px;
-}
-.stamp-job {
-  border-bottom: 1px solid var(--line);
-  padding: 12px 0;
-}
-.stamp-job button {
-  margin-right: 8px;
-}
-
 .stamp-live-row {
   display: flex;
   align-items: center;
