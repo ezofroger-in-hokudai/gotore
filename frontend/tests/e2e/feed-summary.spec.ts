@@ -17,37 +17,43 @@ for (const width of [320, 390, 430]) {
       detailReads++;
       return route.fulfill({ status: 503, json: { detail: "一時的に取得できません。" } });
     });
-    await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
+    await page.route("**/api/groups/today-activity", (route) =>
       forbidden
         ? route.fulfill({ status: 403, json: { detail: "グループを閲覧できません。" } })
         : route.fulfill({
             json: {
-              group_id: state.group.id,
-              observed_at: new Date().toISOString(),
-              member_count: 2,
-              live_count: 1,
-              today_count: 1,
-              members: [
+              groups: [
                 {
-                  id: "friend",
-                  display_name: "トレーニング仲間",
-                  live: true,
-                  today: true,
-                  live_until: new Date(Date.now() + 600000).toISOString(),
-                },
-              ],
-              feed: [
-                {
-                  workout_id: "friend-record",
-                  user_id: "friend",
-                  display_name: "トレーニング仲間",
-                  exercise: "ダンベルインクラインベンチプレス（ゆっくり下ろす）",
-                  weight: 25,
-                  reps: 10,
-                  estimated_rm: 33.3,
-                  best: false,
-                  updated_at: new Date().toISOString(),
-                  ...(legacy ? {} : { summary: { exercise_count: 3, set_count: count } }),
+                  group_id: state.group.id,
+                  name: state.group.name,
+                  member_count: 2,
+                  live_count: 1,
+                  today_count: 1,
+                  members: [
+                    {
+                      id: "friend",
+                      display_name: "トレーニング仲間",
+                      live: true,
+                      today: true,
+                      live_until: new Date(Date.now() + 600000).toISOString(),
+                    },
+                  ],
+                  feed: [
+                    {
+                      workout_id: "friend-record",
+                      user_id: "friend",
+                      display_name: "トレーニング仲間",
+                      exercise: "ダンベルインクラインベンチプレス（ゆっくり下ろす）",
+                      weight: 25,
+                      reps: 10,
+                      estimated_rm: 33.3,
+                      best: false,
+                      updated_at: new Date().toISOString(),
+                      ...(legacy
+                        ? {}
+                        : { summary: { exercise_count: 3, set_count: count, total_volume: 250 } }),
+                    },
+                  ],
                 },
               ],
             },
@@ -55,18 +61,19 @@ for (const width of [320, 390, 430]) {
     );
     await navigate(page, "ホーム");
     const card = page.locator('[data-workout-id="friend-record"]');
-    await expect(card.locator(".feed-summary")).toHaveText("3種目 · 9セット");
+    const sets = card.locator('.record-overview [aria-label="セット数"] strong');
+    await expect(sets).toHaveText("9");
     await expect.poll(() => detailReads).toBe(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
     count = 10;
     await page.clock.runFor(5000);
-    await expect(card.locator(".feed-summary")).toHaveText("3種目 · 10セット");
+    await expect(sets).toHaveText("10");
     legacy = true;
     await page.clock.runFor(5000);
-    await expect(card.locator(".feed-summary")).toHaveCount(0);
-    await expect(card).toContainText("25");
+    await expect(sets).toHaveCount(0);
+    await expect(card).toContainText("ダンベルインクラインベンチプレス");
     forbidden = true;
     await page.clock.runFor(5000);
     await expect(card).toHaveCount(0);
