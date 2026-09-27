@@ -109,7 +109,6 @@ export function HistoryBrowser({
               groupId={scope.split("/").at(-1) || ""}
               workoutId={current.id}
               name={current.display_name}
-              alwaysVisible
             />
           )}
           <RecordList

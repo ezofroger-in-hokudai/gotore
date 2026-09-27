@@ -76,10 +76,21 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
         : route.continue(),
     );
     await card.getByRole("button", { name: "👏スタンプ", exact: true }).click();
-    await expect(card.locator(".inline-stamp-error")).toContainText("送れませんでした");
-    fail = false;
-    await card.locator(".inline-stamp-error").getByRole("button", { name: "再試行" }).click();
+    await expect
+      .poll(() =>
+        pageB.evaluate(() =>
+          Object.keys(localStorage).some(
+            (key) =>
+              key.startsWith("egotore:stamp-job:v1:") &&
+              JSON.parse(localStorage.getItem(key) ?? "null")?.state === "failed",
+          ),
+        ),
+      )
+      .toBe(true);
     await expect(card.locator(".inline-stamp-error")).toHaveCount(0);
+    await expect(pageB.getByRole("button", { name: /スタンプの未送信を確認/ })).toHaveCount(0);
+    fail = false;
+    await pageB.evaluate(() => window.dispatchEvent(new Event("online")));
     await expect
       .poll(async () => {
         const response = await pageA.request.get(
