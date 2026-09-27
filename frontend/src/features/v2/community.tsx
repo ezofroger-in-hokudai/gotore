@@ -4,6 +4,7 @@ import {
   type GroupDetail,
   type GroupSummary,
   type TodayActivity,
+  type TodayGroupActivity,
   api,
 } from "@/lib/api";
 import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -243,20 +244,11 @@ export function CommunityHome({
 function HomeSummary({ data }: { data: TodayActivity | null }) {
   const groups = data?.groups ?? [];
   const members = groups.flatMap((group) => group.members);
-  const workouts = new Map(
-    groups.flatMap((group) => group.feed.map((item) => [item.workout_id, item])),
-  );
   const live = new Set(members.filter((member) => member.live).map((member) => member.id)).size;
   const todayPeople = new Set(members.filter((member) => member.today).map((member) => member.id))
     .size;
-  const sets = [...workouts.values()].reduce(
-    (sum, item) => sum + (item.summary?.set_count ?? 0),
-    0,
-  );
-  const volume = [...workouts.values()].reduce(
-    (sum, item) => sum + (item.summary?.total_volume ?? 0),
-    0,
-  );
+  const sets = data?.totals?.set_count;
+  const volume = data?.totals?.total_volume;
   return (
     <div className="home-summary-block">
       <p>TODAY</p>
@@ -264,11 +256,11 @@ function HomeSummary({ data }: { data: TodayActivity | null }) {
         {[
           { key: "live", label: "LIVE", value: data ? live : "—", unit: "人" },
           { key: "people", label: "", value: data ? todayPeople : "—", unit: "人" },
-          { key: "sets", label: "", value: data ? sets : "—", unit: "セット" },
+          { key: "sets", label: "", value: sets ?? "—", unit: "セット" },
           {
             key: "volume",
             label: "",
-            value: data ? volume.toLocaleString("ja-JP", { maximumFractionDigits: 0 }) : "—",
+            value: volume?.toLocaleString("ja-JP", { maximumFractionDigits: 0 }) ?? "—",
             unit: "kg",
           },
         ].map(({ key, label, value, unit }, index) => (
@@ -297,7 +289,7 @@ function GroupCard({
   style,
 }: {
   group: Group;
-  data: GroupActivity | null;
+  data: TodayGroupActivity | null;
   error: string;
   onClick: () => void;
   dragging: boolean;
@@ -326,10 +318,9 @@ function GroupCard({
   );
 }
 
-function GroupCardStats({ data }: { data: GroupActivity | null }) {
-  const feed = data?.feed ?? [];
-  const sets = feed.reduce((sum, item) => sum + (item.summary?.set_count ?? 0), 0);
-  const volume = feed.reduce((sum, item) => sum + (item.summary?.total_volume ?? 0), 0);
+function GroupCardStats({ data }: { data: TodayGroupActivity | null }) {
+  const sets = data?.totals?.set_count;
+  const volume = data?.totals?.total_volume;
   return (
     <>
       <div className="group-card-people">
@@ -351,11 +342,11 @@ function GroupCardStats({ data }: { data: GroupActivity | null }) {
       </div>
       <div className="group-card-stats">
         <span>
-          <b>{data ? sets : "—"}</b>
+          <b>{sets ?? "—"}</b>
           <small>セット</small>
         </span>
         <span>
-          <b>{data ? volume.toLocaleString("ja-JP", { maximumFractionDigits: 0 }) : "—"}</b>
+          <b>{volume?.toLocaleString("ja-JP", { maximumFractionDigits: 0 }) ?? "—"}</b>
           <small>kg</small>
         </span>
       </div>

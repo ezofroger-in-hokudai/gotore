@@ -81,9 +81,16 @@ class GroupActivity(GroupSummary):
     feed: list[FeedItem]
 
 
+class TodayTotals(BaseModel):
+    set_count: int
+    total_volume: float
+
+
 class TodayGroupActivity(GroupActivity):
     name: str
+    totals: TodayTotals
 
 
 class TodayActivity(BaseModel):
+    totals: TodayTotals
     groups: list[TodayGroupActivity]

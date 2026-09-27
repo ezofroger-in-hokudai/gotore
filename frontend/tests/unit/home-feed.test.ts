@@ -3,6 +3,7 @@ import { buildHomeFeed } from "../../src/features/v2/home-feed";
 import type { TodayActivity } from "../../src/lib/api";
 
 const data: TodayActivity = {
+  totals: { set_count: 2, total_volume: 1140 },
   groups: [
     {
       group_id: "first",
@@ -10,6 +11,7 @@ const data: TodayActivity = {
       member_count: 1,
       live_count: 1,
       today_count: 1,
+      totals: { set_count: 1, total_volume: 640 },
       members: [{ id: "one", display_name: "一郎", live: true, today: true }],
       feed: [
         {
@@ -31,6 +33,7 @@ const data: TodayActivity = {
       member_count: 2,
       live_count: 0,
       today_count: 2,
+      totals: { set_count: 2, total_volume: 1140 },
       members: [
         { id: "one", display_name: "一郎", live: false, today: true },
         { id: "two", display_name: "二郎", live: false, today: true },

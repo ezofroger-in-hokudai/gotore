@@ -460,14 +460,64 @@ class SessionRepository(TrainingRepository):
         feed.sort(key=lambda item: item["updated_at"], reverse=True)
         return {**self.activity_summary(group_id, members), "feed": feed}
 
+    def today_totals(self, user_id: UUID):
+        # フィードの50件上限とは別に、閲覧できる全記録を記録ID単位で集計する。
+        rows = self.connection.execute(
+            """WITH visible AS (
+                SELECT m.group_id, w.id AS workout_id
+                FROM public.gotore_group_members m
+                JOIN public.gotore_workouts w
+                  ON w.performed_on = (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date
+                 AND jsonb_array_length(w.exercises) > 0
+                 AND (w.group_id = m.group_id OR EXISTS (
+                    SELECT 1 FROM public.gotore_workout_shares s
+                    WHERE s.workout_id = w.id AND s.group_id = m.group_id))
+                WHERE m.user_id = %s
+            ), per_workout AS (
+                SELECT ids.workout_id,
+                    COALESCE(SUM(f.set_count), 0)::integer AS set_count,
+                    COALESCE(SUM(f.volume), 0) AS total_volume
+                FROM (SELECT DISTINCT workout_id FROM visible) ids
+                LEFT JOIN public.gotore_workout_statistics f
+                  ON f.workout_id = ids.workout_id
+                GROUP BY ids.workout_id
+            )
+            SELECT visible.group_id,
+                SUM(per_workout.set_count)::integer AS set_count,
+                SUM(per_workout.total_volume) AS total_volume
+            FROM visible JOIN per_workout USING (workout_id)
+            GROUP BY visible.group_id
+            UNION ALL
+            SELECT NULL::uuid, COALESCE(SUM(set_count), 0)::integer,
+                COALESCE(SUM(total_volume), 0) FROM per_workout""",
+            (user_id,),
+        ).fetchall()
+        overall = {"set_count": 0, "total_volume": 0.0}
+        groups = {}
+        for row in rows:
+            totals = {
+                "set_count": row["set_count"],
+                "total_volume": float(row["total_volume"]),
+            }
+            if row["group_id"] is None:
+                overall = totals
+            else:
+                groups[row["group_id"]] = totals
+        return overall, groups
+
     def today_activity(self, user_id: UUID):
         # 画面初期表示はグループごとのHTTP往復を避け、当日分だけを一つの応答にまとめる。
+        overall, totals_by_group = self.today_totals(user_id)
         return {
+            "totals": overall,
             "groups": [
                 {
                     **self.group_activity(user_id, group["id"], today_only=True),
                     "name": group["name"],
+                    "totals": totals_by_group.get(
+                        group["id"], {"set_count": 0, "total_volume": 0.0}
+                    ),
                 }
                 for group in self.groups(user_id)
-            ]
+            ],
         }
