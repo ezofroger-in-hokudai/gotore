@@ -69,8 +69,7 @@ export function validSnapshot(value: unknown, userId: string): value is RecordSn
       (context) =>
         context &&
         typeof context === "object" &&
-        (context.previous === null ||
-          (context.previous && Array.isArray(context.previous.sets))) &&
+        (context.previous === null || (context.previous && Array.isArray(context.previous.sets))) &&
         context.memo &&
         typeof context.memo.content === "string",
     ) &&
