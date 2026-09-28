@@ -1,5 +1,5 @@
 "use client";
-import type { Group, Workout } from "@/lib/api";
+import type { Group, TodayActivity, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
@@ -19,7 +19,7 @@ import { FloatingTraining } from "./floating-training";
 import { CommunityScreen } from "./group-screen";
 import { History } from "./history";
 import { runNavigationMotion } from "./navigation-motion";
-import { GROUP_REFRESH_MS } from "./refresh-interval";
+import { GROUP_REFRESH_MS, todayActivityRefreshMs } from "./refresh-interval";
 import { Preferences, usePreferences } from "./settings";
 import { SharedWorkoutCache } from "./shared-workout-cache";
 import { Sheet } from "./sheet";
@@ -70,6 +70,29 @@ function WorkspaceContent({ session }: { session: Session }) {
   }, [groupList.data, sharedCache]);
   const groupOrder = useGroupOrder(session.user.id, groupList.data);
   const groups = groupOrder.groups;
+  const [recordSelecting, setRecordSelecting] = useState(true);
+  const todayActivity = useResource<TodayActivity>(
+    "/groups/today-activity",
+    refreshKey,
+    todayActivityRefreshMs,
+    true,
+    {
+      enabled: groups.length > 0 && (view === "home" || (view === "record" && recordSelecting)),
+      retainOnRefresh: true,
+    },
+  );
+  const currentGroupIds = groups
+    .map((group) => group.id)
+    .toSorted()
+    .join(",");
+  const activityGroupIds = todayActivity.data?.groups
+    .map((group) => group.group_id)
+    .toSorted()
+    .join(",");
+  const visibleTodayActivity = {
+    ...todayActivity,
+    data: activityGroupIds === currentGroupIds ? todayActivity.data : null,
+  };
   const [historyReady, setHistoryReady] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   useEffect(() => {
@@ -303,6 +326,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         <ResourceError resource={groupList} />
         <div hidden={view !== "home"}>
           <CommunityHome
+            today={visibleTodayActivity}
             sharedCache={sharedCache}
             groups={groups}
             onReady={setHomeReady}
@@ -322,12 +346,13 @@ function WorkspaceContent({ session }: { session: Session }) {
               setGroupDetail(true);
               navigate("groups", "detail");
             }}
-            refreshKey={refreshKey}
             active={view === "home"}
           />
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
+            todayActivity={visibleTodayActivity}
+            onSelectingChange={setRecordSelecting}
             sharedCache={sharedCache}
             active={view === "record"}
             controller={training}
