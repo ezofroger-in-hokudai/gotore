@@ -230,10 +230,13 @@ export function CommunityHome({
               <button
                 type="button"
                 key={group.id}
+                className="group-name-tab"
+                aria-label={group.name}
                 aria-pressed={feedScope === group.id}
+                title={group.name}
                 onClick={() => setFeedScope(group.id)}
               >
-                {group.name}
+                <span aria-hidden="true">{group.name}</span>
               </button>
             ))}
           </div>
