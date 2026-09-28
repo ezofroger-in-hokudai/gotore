@@ -4544,13 +4544,14 @@
 }
 .group-action-pill {
   display: inline-flex;
-  min-height: 40px;
+  min-width: 48px;
+  min-height: 48px;
   align-items: center;
   justify-content: center;
   gap: 5px;
   padding: 0 12px;
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 24px;
   background: var(--panel);
   color: var(--text);
   font-size: 12px;
@@ -5023,7 +5024,6 @@
     font-size: 18px;
   }
   .group-action-pill {
-    min-height: 38px;
     padding: 0 9px;
   }
 }
