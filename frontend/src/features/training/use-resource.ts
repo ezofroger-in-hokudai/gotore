@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { cachedRecordResource } from "../record-cache/cached-resource";
+import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 import { resourceRequest } from "./resource-request";
 import { canRetainResource } from "./retain-resource";
 
@@ -10,6 +12,9 @@ export function useResource<T>(
   options: { enabled?: boolean; retainOnRefresh?: boolean; prefetch?: boolean } = {},
 ) {
   const { enabled = true, retainOnRefresh = false, prefetch = false } = options;
+  const recordSnapshot = useRecordSnapshot()?.snapshot ?? null;
+  const localData =
+    refreshKey === 0 ? (cachedRecordResource(recordSnapshot, path) as T | null) : null;
   const cache = useRef({
     version: refreshKey,
     pages: new Map<string, { data: T; savedAt: number }>(),
@@ -24,6 +29,7 @@ export function useResource<T>(
   const [loading, setLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const writes = useRef(0);
+  const serverResult = useRef({ path: "", version: -1, terminal: false });
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存後・再試行の操作でも再取得する。
   useEffect(() => {
     // 非表示中の無効化は再訪時に処理し、同じ種目の比較・メモを更新中も保持する。
@@ -49,6 +55,7 @@ export function useResource<T>(
       setLoading(false);
       return;
     }
+    serverResult.current = { path, version: refreshKey, terminal: false };
     const controller = new AbortController();
     let pending = false;
     let latest = previous?.data;
@@ -68,6 +75,7 @@ export function useResource<T>(
         const value = await resourceRequest<T>(path, controller.signal);
         if (!controller.signal.aborted && startedBeforeWrite === writes.current) {
           latest = value;
+          serverResult.current.terminal = true;
           setResult({ path, data: value, version: refreshKey, stale: false });
           if (remember) {
             cache.current.pages.delete(path);
@@ -82,6 +90,7 @@ export function useResource<T>(
       } catch (reason) {
         if (!controller.signal.aborted && startedBeforeWrite === writes.current) {
           if (!canRetainResource(reason)) {
+            serverResult.current.terminal = true;
             cache.current.pages.clear();
             setResult(null);
           } else {
@@ -107,6 +116,22 @@ export function useResource<T>(
       document.removeEventListener("visibilitychange", visible);
     };
   }, [path, refreshKey, retryKey, poll, remember, enabled, retainOnRefresh, prefetch]);
+  useEffect(() => {
+    if (
+      !enabled ||
+      localData === null ||
+      !path ||
+      (serverResult.current.path === path &&
+        serverResult.current.version === refreshKey &&
+        serverResult.current.terminal)
+    )
+      return;
+    setResult((current) =>
+      current?.path === path && !current.stale
+        ? current
+        : { path, data: localData, version: refreshKey, stale: true },
+    );
+  }, [enabled, localData, path, refreshKey]);
   return {
     data:
       result?.path === path && (!remember || retainOnRefresh || result.version === refreshKey)
@@ -120,6 +145,7 @@ export function useResource<T>(
       if (!path) return;
       // 成功した更新より前に始めたGETで、確定内容を巻き戻さない。
       writes.current++;
+      serverResult.current = { path, version: refreshKey, terminal: true };
       cache.current.pages.delete(path);
       setError("");
       setResult((current) => ({

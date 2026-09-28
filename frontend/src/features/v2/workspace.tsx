@@ -6,6 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { LoadingState } from "../loading/loading-state";
 import { OnboardingGuide } from "../onboarding/onboarding-guide";
+import {
+  RecordSnapshotProvider,
+  useRecordSnapshot,
+} from "../record-cache/record-snapshot-provider";
 import { SessionScreen } from "../session/session-screen";
 import { useSession } from "../session/use-session";
 import { WorkoutResult } from "../session/workout-result";
@@ -31,13 +35,16 @@ export function Workspace({ session }: { session: Session }) {
   return (
     <AvatarProvider key={session.user.id}>
       <StampProvider userId={session.user.id}>
-        <WorkspaceContent session={session} />
+        <RecordSnapshotProvider userId={session.user.id}>
+          <WorkspaceContent session={session} />
+        </RecordSnapshotProvider>
       </StampProvider>
     </AvatarProvider>
   );
 }
 
 function WorkspaceContent({ session }: { session: Session }) {
+  const recordCache = useRecordSnapshot();
   useEdgeBack();
   const [sharedCache] = useState(() => new SharedWorkoutCache());
   const [view, setView] = useState<View>("home");
@@ -46,6 +53,11 @@ function WorkspaceContent({ session }: { session: Session }) {
   const [groupId, setGroupId] = useState("");
   const [groupDetail, setGroupDetail] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  useEffect(() => {
+    if (!refreshKey) return;
+    const timer = window.setTimeout(() => void recordCache?.refresh(), 1000);
+    return () => window.clearTimeout(timer);
+  }, [refreshKey, recordCache?.refresh]);
   const [groupRefreshKey, setGroupRefreshKey] = useState(0);
   const [editing, setEditing] = useState<Workout | null>(null);
   const [copy, setCopy] = useState<Workout | null>(null);
@@ -229,9 +241,11 @@ function WorkspaceContent({ session }: { session: Session }) {
     setSigningOut(true);
     sharedCache.clear();
     try {
+      await recordCache?.clear();
       const result = await getSupabase()?.auth.signOut({ scope: "local" });
       if (result?.error) throw result.error;
     } catch {
+      recordCache?.resume();
       setNotice("ログアウトできません。再試行してください。");
     } finally {
       setSigningOut(false);
@@ -275,6 +289,9 @@ function WorkspaceContent({ session }: { session: Session }) {
           />
         )}
         {notice && <output className="notice">{notice}</output>}
+        {recordCache?.storageError && (
+          <output className="notice">端末への記録保存を利用できません。通信で読み込みます。</output>
+        )}
         {training.finishPending && training.status === "conflict" && (
           <div className="error" role="alert">
             トレーニング記録の確認が必要です。

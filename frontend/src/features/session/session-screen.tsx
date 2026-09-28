@@ -312,7 +312,15 @@ function ActiveTraining({
     (input.dirty || input.editing !== null);
 
   async function save() {
-    if (!session || !storageKey || controller.busy || stale || adding.current) return;
+    if (
+      !session ||
+      !storageKey ||
+      controller.busy ||
+      stale ||
+      adding.current ||
+      input.awaitingPrevious
+    )
+      return;
     adding.current = true;
     setError("");
     try {
@@ -771,7 +779,30 @@ function ActiveTraining({
                 <PendingMemo title="今日のメモ" content={pendingTodayMemo} />
               )}
             </section>
+            {input.awaitingPrevious && (
+              <output className="record-context-pending">
+                <span>前回の記録を確認中…</span>
+                {context.error && (
+                  <span>
+                    前回の記録を取得できませんでした。
+                    <button type="button" className="text-button" onClick={context.retry}>
+                      再試行
+                    </button>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() =>
+                        setInput((current) => ({ ...current, awaitingPrevious: false }))
+                      }
+                    >
+                      前回値なしで入力
+                    </button>
+                  </span>
+                )}
+              </output>
+            )}
             <form
+              hidden={input.awaitingPrevious}
               className={`set-entry${input.editing === null ? "" : " editing-input"}`}
               onSubmit={(e) => {
                 e.preventDefault();

@@ -1,6 +1,7 @@
 "use client";
 import { type Workout, api } from "@/lib/api";
 import { useState } from "react";
+import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 import { memoDraftKey, removeMemoDraft } from "./memo-draft";
 export function WorkoutActions({
   record,
@@ -11,6 +12,7 @@ export function WorkoutActions({
   onEdit: (record: Workout) => void;
   onDeleted: () => void;
 }) {
+  const recordCache = useRecordSnapshot();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -22,6 +24,7 @@ export function WorkoutActions({
         method: "DELETE",
       });
       removeMemoDraft(memoDraftKey(record.user_id, `/workouts/${record.id}/memo`));
+      recordCache?.removeWorkout(record.id);
       onDeleted();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "削除できませんでした。");
