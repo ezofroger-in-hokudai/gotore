@@ -54,7 +54,8 @@ for (const width of [320, 390, 430]) {
     await expect(
       page.getByRole("heading", { name: state.group.name, level: 2, exact: true }),
     ).toBeVisible();
-    await expect(floating).toHaveText("RESUME");
+    await expect(floating.locator("span").first()).toHaveText("RESUME");
+    await expect(floating.locator(".floating-training-elapsed")).toBeVisible();
     if (width === 390)
       await page.screenshot({ path: "test-results/start-groups.png", fullPage: true });
     await floating.click();
@@ -69,7 +70,8 @@ for (const width of [320, 390, 430]) {
     expect(starts).toBe(1);
     await navigate(page, "ホーム");
     await expect(page.locator(".home-training > button")).toHaveCount(0);
-    await expect(floating).toHaveText("RESUME");
+    await expect(floating.locator("span").first()).toHaveText("RESUME");
+    await expect(floating.locator(".floating-training-elapsed")).toBeVisible();
     await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
     expect(starts).toBe(1);
   });

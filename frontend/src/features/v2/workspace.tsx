@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { LoadingState } from "../loading/loading-state";
 import { OnboardingGuide } from "../onboarding/onboarding-guide";
+import { useElapsedTime } from "../session/elapsed-time";
 import { SessionScreen } from "../session/session-screen";
 import { useSession } from "../session/use-session";
 import { WorkoutResult } from "../session/workout-result";
@@ -220,6 +221,10 @@ function WorkspaceContent({ session }: { session: Session }) {
   const resumable = !!training.session || !!training.startingId;
   const canStart = training.ready && !training.finishPending && (!training.busy || resumable);
   const primaryView = ["home", "groups", "history", "settings"].includes(view);
+  const elapsed = useElapsedTime(
+    training.session?.started_at,
+    opened && !training.finishPending && (primaryView || view === "record"),
+  );
   function startOrResume() {
     if (!canStart) return;
     navigate("record");
@@ -328,6 +333,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
+            elapsed={elapsed}
             sharedCache={sharedCache}
             active={view === "record"}
             controller={training}
@@ -531,6 +537,7 @@ function WorkspaceContent({ session }: { session: Session }) {
       </main>
       {primaryView && (
         <FloatingTraining
+          elapsed={elapsed}
           userId={session.user.id}
           resumable={resumable}
           disabled={!canStart}

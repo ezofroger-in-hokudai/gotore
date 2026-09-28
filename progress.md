@@ -1,5 +1,14 @@
 # progress.md
 
+## 2026-09-29 02:10 進行中の経過時間を再開・記録画面に表示（Issue #202）
+- 変更内容: セッションの`started_at`から分単位の経過時間を計算し、固定サイズのRESUME内と種目選択・記録入力の共通ヘッダーに表示した。画面非表示中は更新を止め、復帰時に現在時刻から再計算する。
+- 目的: 画面移動や再読み込みをしても、トレーニング開始から何分かを同じ基準で確認できるようにするため。
+- 影響範囲: 進行中セッションの表示のみ。開始・終了API、保存時刻、記録内容は変更しない。
+- 関連ファイル: `frontend/src/features/session/elapsed-time.ts`、`session-screen.tsx`、`frontend/src/features/v2/floating-training.tsx`、`workspace.tsx`、`frontend/src/app/v2.css`、`frontend/tests/unit/elapsed-time.test.ts`、`frontend/tests/e2e/session-elapsed.spec.ts`、`docs/design/home-screen.md`、`docs/design/training-session.md`。
+- 検証: `make check`成功（backend単体103件、DB統合178件は専用DB未指定でskip、frontend単体111件、lint・型・build）。経過時間・STARTの関連E2E 9件成功し、320/390/430px・320px文字200%・終了後の消去を確認。390pxのホーム・記録画面を撮影した。
+- 未解決事項: 実機PWAでのスリープ復帰と全E2Eを含むCIは未実施。関連実行で`recording-accessibility.spec.ts`の6件は現行画面に存在しない旧「重量を増やす」等を待って失敗した。Issue #218で旧UI期待値の修復を追跡する。
+- 次のアクション: PRの全E2E・レビューを確認し、実機でスリープ復帰後の表示を確認する。
+
 ## 2026-09-29 00:58 長いグループ名の選択タブを一定幅に修正（Issue #203）
 - 変更内容: ホームのタイムライン絞り込みと記録中の仲間グループ選択で、個別グループ名のタブを112px幅に固定し、長い名前の右端だけをフェードさせた。正式名は読み上げ名・タイトルに保持。採用資料とプレビュー、390pxの実画面画像2枚を更新した。
 - 目的: 長い名前が隣の選択肢の幅を奪う問題を解消し、短い名前と選択状態、横スクロールを維持するため。

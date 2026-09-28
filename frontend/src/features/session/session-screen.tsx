@@ -46,6 +46,7 @@ export function SessionScreen({
   haptic,
   catalog,
   sharedCache,
+  elapsed,
 }: {
   active: boolean;
   controller: SessionController;
@@ -56,6 +57,7 @@ export function SessionScreen({
   haptic: boolean;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
   sharedCache: SharedWorkoutCache;
+  elapsed: string | null;
 }) {
   const { session } = controller;
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
@@ -93,6 +95,7 @@ export function SessionScreen({
       onPreparingInput={setDraft}
       catalog={catalog}
       sharedCache={sharedCache}
+      elapsed={elapsed}
     />
   );
 }
@@ -108,6 +111,7 @@ function ActiveTraining({
   onPreparingInput,
   catalog,
   sharedCache,
+  elapsed,
 }: {
   active: boolean;
   session: TrainingSession | null;
@@ -115,6 +119,7 @@ function ActiveTraining({
   onPreparingInput: (input: SessionInput) => void;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
   sharedCache: SharedWorkoutCache;
+  elapsed: string | null;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
@@ -422,9 +427,12 @@ function ActiveTraining({
       {selecting ? (
         <>
           <div className="section-heading selection-heading session-header">
-            <span className="session-wordmark">
-              E-GO<span>TORE</span>
-            </span>
+            <div className="session-identity">
+              <span className="session-wordmark">
+                E-GO<span>TORE</span>
+              </span>
+              {elapsed && <span className="session-elapsed">{elapsed}</span>}
+            </div>
             <button
               type="button"
               className="text-button finish-training"
@@ -590,9 +598,12 @@ function ActiveTraining({
         <>
           <div className="session-context">
             <header className="recording-header session-header">
-              <span className="session-wordmark">
-                E-GO<span>TORE</span>
-              </span>
+              <div className="session-identity">
+                <span className="session-wordmark">
+                  E-GO<span>TORE</span>
+                </span>
+                {elapsed && <span className="session-elapsed">{elapsed}</span>}
+              </div>
               <button
                 type="button"
                 className="text-button finish-training"

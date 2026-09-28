@@ -8,11 +8,13 @@ export function FloatingTraining({
   userId,
   resumable,
   disabled,
+  elapsed,
   onActivate,
 }: {
   userId: string;
   resumable: boolean;
   disabled: boolean;
+  elapsed: string | null;
   onActivate: () => void;
 }) {
   const button = useRef<HTMLButtonElement>(null);
@@ -85,6 +87,7 @@ export function FloatingTraining({
       data-testid="floating-training"
       data-tour="start"
       aria-label={resumable ? "トレーニングを再開" : "トレーニングを開始"}
+      aria-describedby={resumable && elapsed ? "floating-training-elapsed" : undefined}
       disabled={disabled}
       style={style}
       onPointerDown={(event) => {
@@ -148,7 +151,12 @@ export function FloatingTraining({
         onActivate();
       }}
     >
-      {resumable ? "RESUME" : "START"}
+      <span>{resumable ? "RESUME" : "START"}</span>
+      {resumable && elapsed && (
+        <span className="floating-training-elapsed" id="floating-training-elapsed">
+          {elapsed}
+        </span>
+      )}
     </button>
   );
 }
