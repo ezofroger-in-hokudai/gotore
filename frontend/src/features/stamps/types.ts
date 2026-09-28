@@ -22,6 +22,7 @@ export type StampItem = {
   group_name: string;
   sender_id: string;
   display_name: string;
+  avatar_version?: string | null;
   kind: StampKind;
   created_at: string;
   performed_on: string;

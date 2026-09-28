@@ -17,6 +17,7 @@ class StampItem(BaseModel):
     group_name: str
     sender_id: UUID
     display_name: str
+    avatar_version: UUID | None = None
     kind: StampKind
     created_at: datetime
     performed_on: date

@@ -1,5 +1,15 @@
 # progress.md
 
+## 2026-09-28 11:32 グループ待機表示とプロフィール画像の修正
+
+- 変更内容: グループ詳細の取得中に誤った失敗文言が出る表示を修正した。記録カード、グループメンバー、スタンプ送信者へ設定済みプロフィール画像の版情報を接続し、共通アバターを表示する。スタンプ送信者が閲覧者と共通グループを失った場合は版情報を返さず頭文字へ戻す。記録カードのLIVE表示は取得中と取得後で共通化し、詳細には可視ラベルを重ねない。
+- 目的: 取得中と失敗を区別し、設定済み画像を記録周辺で一貫して安全に表示するため。
+- 影響範囲: グループ詳細、記録カード、スタンプ詳細、画像版情報のAPI応答。DBスキーマと画像本体の閲覧権限は変更しない。
+- 関連ファイル: `backend/app/infrastructure/{training_repository,stamps}.py`、`backend/app/schemas/{training,stamps}.py`、`frontend/src/features/{v2/group-screen,v2/community,training/record-list,stamps/stamp-control}.tsx`、関連テスト、`docs/{design/group-screen,live-presence-avatars,stamps}.md`。
+- 検証: 専用`gotore_test` DBの画像関連13件を含むbackend281件、frontend単体108件、lint・型・build、グループ・共有記録・LIVE画像の関連E2E20件が成功。元の作業ブランチでの全E2Eは旧ランキングUIなど今回の修正と別の失敗10件で停止（94件成功、116件未実行）。
+- 未解決事項: 全E2Eの旧UI期待値・ランキング仕様の矛盾、iOS/Android実機での確認。
+- 次のアクション: 画像修正を独立PRでCI確認し、全E2Eの扱いをIssue #218で整理する。
+
 ## 2026-09-28 02:53 Issue #172の例外マージ判断
 
 - 変更内容: ユーザーから、全E2Eの既存失敗が残る状況で#172を例外的にマージする明示指示を受けた。PR #217の関連E2E・`make check`・現行CI成功、最新mainを含む状態を再確認した。
