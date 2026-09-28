@@ -449,10 +449,13 @@ function ActiveTraining({
                   type="button"
                   role="tab"
                   key={group.group_id}
+                  className="group-name-tab"
+                  aria-label={group.name}
                   aria-selected={selectedGroup === group.group_id}
+                  title={group.name}
                   onClick={() => setSelectedGroup(group.group_id)}
                 >
-                  {group.name}
+                  <span aria-hidden="true">{group.name}</span>
                 </button>
               ))}
             </div>
