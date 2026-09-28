@@ -14,6 +14,7 @@ import {
   type RefObject,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -26,6 +27,7 @@ import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { Feed, GroupCard } from "./community";
 import { HistoryBrowser } from "./history-browser";
+import { runNavigationMotion } from "./navigation-motion";
 import { GROUP_REFRESH_MS, activityRefreshMs } from "./refresh-interval";
 import { Sheet } from "./sheet";
 
@@ -70,6 +72,10 @@ export function CommunityScreen({
   onOrder: (ids: string[]) => void;
 }) {
   const [mode, setMode] = useState<Mode>(initialDetail ? "detail" : "list");
+  const modeRef = useRef(mode);
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  const historyPosition = useRef(0);
   const [detailTab, setDetailTab] = useState<DetailTab>("latest");
   const [groupName, setGroupName] = useState("");
   const [createdGroup, setCreatedGroup] = useState<Group | null>(null);
@@ -138,40 +144,63 @@ export function CommunityScreen({
       onChanged();
       setInvitePreview(null);
       setInviteToken("");
-      setMode("detail");
+      modeRef.current = "detail";
+      runNavigationMotion(() => {
+        modeRef.current = "detail";
+        setMode("detail");
+      }, "forward");
       setDetailTab("latest");
     },
     [onChanged, onSelect],
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!active) return;
     const restored = window.history.state?.communityMode;
-    setMode(
-      ["list", "detail", "create", "join", "invite", "members"].includes(restored)
-        ? restored
-        : initialDetail
-          ? "detail"
-          : "list",
-    );
+    const next = ["list", "detail", "create", "join", "invite", "members"].includes(restored)
+      ? (restored as Mode)
+      : initialDetail
+        ? "detail"
+        : "list";
+    modeRef.current = next;
+    setMode(next);
+    historyPosition.current = Number(window.history.state?.gotoreMotionIndex) || 0;
   }, [active, initialDetail]);
 
   useEffect(() => {
-    if (guideTarget?.target === "groups") setMode("list");
+    if (guideTarget?.target === "groups") {
+      modeRef.current = "list";
+      setMode("list");
+    }
   }, [guideTarget]);
 
   useEffect(() => {
     const back = (event: PopStateEvent) => {
       if (event.state?.gotoreView !== "groups") return;
       const restored = event.state.communityMode;
-      setMode(
-        ["list", "detail", "create", "join", "invite", "members"].includes(restored)
-          ? restored
-          : "list",
-      );
-      setActionSheet(null);
-      setInvitePreview(null);
-      setError("");
+      const next: Mode = ["list", "detail", "create", "join", "invite", "members"].includes(
+        restored,
+      )
+        ? restored
+        : "list";
+      const nextPosition = Number(event.state?.gotoreMotionIndex);
+      const direction =
+        Number.isFinite(nextPosition) && nextPosition > historyPosition.current
+          ? "forward"
+          : "back";
+      if (Number.isFinite(nextPosition)) historyPosition.current = nextPosition;
+      const update = () => {
+        modeRef.current = next;
+        setMode(next);
+        setActionSheet(null);
+        setInvitePreview(null);
+        setError("");
+      };
+      if (!activeRef.current || next === modeRef.current) update();
+      else {
+        modeRef.current = next;
+        runNavigationMotion(update, direction);
+      }
     };
     window.addEventListener("popstate", back);
     return () => window.removeEventListener("popstate", back);
@@ -185,6 +214,7 @@ export function CommunityScreen({
     setInvitePreview(null);
     setInviteError("");
     setInviteBusy(true);
+    modeRef.current = "join";
     setMode("join");
     api<InvitePreview>("/group-invites/preview", {
       method: "POST",
@@ -206,15 +236,32 @@ export function CommunityScreen({
   function change(next: Mode, groupId = selected) {
     const previous = { ...window.history.state };
     previous.gotoreSheet = undefined;
+    const nextPosition = (Number(previous.gotoreMotionIndex) || 0) + 1;
     window.history.pushState(
-      { ...previous, gotoreView: "groups", communityMode: next, groupId, gotoreBack: true },
+      {
+        ...previous,
+        gotoreView: "groups",
+        communityMode: next,
+        groupId,
+        gotoreBack: true,
+        gotoreMotionIndex: nextPosition,
+      },
       "",
     );
-    setMode(next);
-    setError("");
-    setInviteError("");
-    setActionSheet(null);
-    setEditingName(false);
+    historyPosition.current = nextPosition;
+    const direction =
+      next === "list" || (next === "detail" && ["invite", "members"].includes(modeRef.current))
+        ? "back"
+        : "forward";
+    modeRef.current = next;
+    runNavigationMotion(() => {
+      modeRef.current = next;
+      setMode(next);
+      setError("");
+      setInviteError("");
+      setActionSheet(null);
+      setEditingName(false);
+    }, direction);
   }
 
   async function createGroup(event: FormEvent<HTMLFormElement>) {
@@ -266,7 +313,11 @@ export function CommunityScreen({
       onChanged();
       setInvitePreview(null);
       setInviteToken("");
-      setMode("detail");
+      modeRef.current = "detail";
+      runNavigationMotion(() => {
+        modeRef.current = "detail";
+        setMode("detail");
+      }, "forward");
       setDetailTab("latest");
     } catch (reason) {
       setInviteError(reason instanceof Error ? reason.message : "参加できませんでした。");
@@ -312,7 +363,11 @@ export function CommunityScreen({
       "",
       `${window.location.pathname}${window.location.hash}`,
     );
-    setMode("list");
+    modeRef.current = "list";
+    runNavigationMotion(() => {
+      modeRef.current = "list";
+      setMode("list");
+    }, "back");
     setInviteError("");
   };
   const isOwner = !!group && group.owner_id === userId;
