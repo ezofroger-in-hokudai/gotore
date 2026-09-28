@@ -15,6 +15,7 @@ export function Sheet({
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const backdropPointer = useRef<number | null>(null);
+  const swipe = useRef<{ pointerId: number; x: number; y: number; distance: number } | null>(null);
   const key = useId();
   const mounted = useRef(false);
   const close = useRef(onClose);
@@ -29,6 +30,10 @@ export function Sheet({
         event.clientY >= bounds.bottom)
     );
   };
+  const resetSwipe = () => {
+    swipe.current = null;
+    if (dialog.current) dialog.current.style.transform = "";
+  };
   useEffect(() => {
     mounted.current = true;
     const element = dialog.current;
@@ -36,7 +41,7 @@ export function Sheet({
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     if (window.history.state?.gotoreSheet !== key)
-      window.history.pushState({ ...window.history.state, gotoreSheet: key }, "");
+      window.history.pushState({ ...window.history.state, gotoreSheet: key, gotoreBack: true }, "");
     const back = () => {
       if (window.history.state?.gotoreSheet !== key) close.current();
     };
@@ -76,7 +81,38 @@ export function Sheet({
         onClose();
       }}
     >
-      <div className="sheet-handle" />
+      <div
+        className="sheet-handle"
+        aria-hidden="true"
+        onPointerDown={(event) => {
+          if (!dismissOnBackdrop || !event.isPrimary || event.button !== 0) return;
+          swipe.current = {
+            pointerId: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            distance: 0,
+          };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const current = swipe.current;
+          if (!current || current.pointerId !== event.pointerId) return;
+          const dx = event.clientX - current.x;
+          const dy = event.clientY - current.y;
+          current.distance = dy > Math.abs(dx) ? Math.max(0, dy) : 0;
+          if (dialog.current)
+            dialog.current.style.transform = `translateY(${Math.min(current.distance, 220)}px)`;
+        }}
+        onPointerUp={(event) => {
+          const current = swipe.current;
+          if (!current || current.pointerId !== event.pointerId) return;
+          const dismiss = current.distance >= 80;
+          resetSwipe();
+          if (dismiss) close.current();
+        }}
+        onPointerCancel={resetSwipe}
+        onLostPointerCapture={resetSwipe}
+      />
       <div className="section-heading">
         <h2>{title}</h2>
         {showCloseButton && (
