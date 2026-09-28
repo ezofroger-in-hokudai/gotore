@@ -99,38 +99,22 @@
   animation-fill-mode: both;
 }
 ::view-transition-old(gotore-content) {
-  animation-name: gotore-content-out;
+  animation: none;
+  opacity: 0;
 }
 ::view-transition-new(gotore-content) {
   animation-name: gotore-content-in;
 }
-html[data-gotore-navigation-direction="back"]::view-transition-old(gotore-content) {
-  animation-name: gotore-content-out-back;
-}
 html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-content) {
   animation-name: gotore-content-in-back;
 }
-@keyframes gotore-content-out {
-  to {
-    opacity: 0.78;
-    transform: translateX(-10px);
-  }
-}
 @keyframes gotore-content-in {
   from {
-    opacity: 0.78;
     transform: translateX(18px);
-  }
-}
-@keyframes gotore-content-out-back {
-  to {
-    opacity: 0.78;
-    transform: translateX(10px);
   }
 }
 @keyframes gotore-content-in-back {
   from {
-    opacity: 0.78;
     transform: translateX(-18px);
   }
 }

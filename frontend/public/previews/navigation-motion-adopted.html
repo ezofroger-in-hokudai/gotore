@@ -117,7 +117,7 @@
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const options = {
       fade: { duration: 160, description: "A: 160msの淡い切り替え。進む・戻るで方向は変わりません。" },
-      slide: { duration: 180, description: "B: 18pxだけ横へ移動。戻ると方向が逆になります。" },
+      slide: { duration: 180, description: "B: 前画面を重ねず、18pxだけ横へ移動。戻ると方向が逆になります。" },
       "slide-wide": { duration: 220, description: "C: 42pxの横移動。Bより方向をはっきり感じられます。" },
       "slide-full": { duration: 280, description: "D: 次の画面が端から入り、前の画面を押し出します。" },
       parallax: { duration: 240, description: "E: 手前の画面は48px、奥の画面は16px動きます。" },
@@ -128,8 +128,8 @@
     function frames(selected, direction) {
       switch (selected) {
         case "slide": return [
-          [{ opacity: 1, transform: "translateX(0)" }, { opacity: .78, transform: `translateX(${-direction * 10}px)` }],
-          [{ opacity: .78, transform: `translateX(${direction * 18}px)` }, { opacity: 1, transform: "translateX(0)" }],
+          [{ opacity: 0 }, { opacity: 0 }],
+          [{ transform: `translateX(${direction * 18}px)` }, { transform: "translateX(0)" }],
         ];
         case "slide-wide": return [
           [{ opacity: 1, transform: "translateX(0)" }, { opacity: .85, transform: `translateX(${-direction * 22}px)` }],

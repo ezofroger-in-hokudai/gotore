@@ -1,5 +1,14 @@
 # progress.md
 
+## 2026-09-29 01:03 画面切替で前画面が残像として残る問題を修正（Issue #207）
+- 変更内容: View Transition中に旧画面のスナップショットを非表示にし、新画面を不透明のまま18px横移動させるよう変更した。API非対応時と採用固定プレビューも同じ動きへ合わせた。
+- 目的: ユーザーの実機フィードバックで前画面が強く残って見えたため、画面切替の方向は保ちながら残像をなくすため。
+- 影響範囲: 主画面の遷移表示のみ。履歴、入力、API、DBは変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/src/features/v2/navigation-motion.ts`、`frontend/tests/e2e/navigation-motion.spec.ts`、`frontend/public/previews/navigation-motion-adopted.html`、`docs/design/navigation-motion.md`、`task.md`。
+- 検証: 修正前のE2Eで旧画面スナップショットの切替開始時不透明度1を再現し、修正後は0で成功。画面遷移・左端戻り・シート・STARTの関連E2E14件成功。frontend lint・型検査・単体110件・production build、プレビューJavaScript構文、`git diff --check`成功。グループ一覧カードを押せない既存E2Eは変更前`main`でも再現し、今回の残像修正後も残るため別の原因として追跡する。
+- 未解決事項: iOS・Android実機で残像の消え方と18px横移動を再確認する。既存E2Eのグループカード表示待ちも未解決。
+- 次のアクション: 関連E2E・frontendチェックを完了し、PRで修正を共有する。
+
 ## 2026-09-29 00:22 控えめな横移動を採用して画面遷移へ適用（Issue #207）
 - 変更内容: ユーザーが8案からBを採用。主な画面内容に180ms・18pxの横移動を適用し、元画面は逆へ10px動かす。戻る・進む、グループ内の画面状態、連続操作と動き低減へ対応した。ヘッダー・下部ナビは固定し、比較プレビューと採用固定プレビューを残した。
 - 目的: 合意した動きを実アプリで使い、戻る方向を視覚的に分かりやすくするため。

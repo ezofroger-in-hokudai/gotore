@@ -1,6 +1,38 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining } from "./mock-training";
 
+test("画面を切り替えた直後に元画面のスナップショットを重ねない", async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = document.startViewTransition.bind(document);
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: (update: () => void) => {
+        const transition = original(update);
+        void transition.ready.then(() => {
+          const state = window as typeof window & { previousScreenOpacity?: string };
+          state.previousScreenOpacity = getComputedStyle(
+            document.documentElement,
+            "::view-transition-old(gotore-content)",
+          ).opacity;
+        });
+        return transition;
+      },
+    });
+  });
+  await mockTraining(page);
+  await page
+    .getByRole("navigation", { name: "メインナビゲーション" })
+    .getByRole("button", { name: "グループ" })
+    .dispatchEvent("click");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as typeof window & { previousScreenOpacity?: string }).previousScreenOpacity,
+      ),
+    )
+    .toBe("0");
+});
+
 test("画面とグループ詳細は控えめな横移動で進み、履歴では逆向きに戻る", async ({ page }) => {
   await page.addInitScript(() => {
     const original = document.startViewTransition.bind(document);
