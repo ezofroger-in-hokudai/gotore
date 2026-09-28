@@ -116,6 +116,7 @@ function ActiveTraining({
   const sessionId = session?.id ?? null;
   const revision = session?.revision;
   const exercises = session?.exercises ?? [];
+  const hasRecordedSets = exercises.some((exercise) => exercise.sets.length > 0);
   // 開始確定直後も入力欄を無効化せず、入力中のフォーカスを保つ。
   const blocking = controller.busy && !controller.startingId;
   const storageKey = sessionId ? `gotore:session-input:v2:${userId}:${sessionId}` : null;
@@ -438,24 +439,33 @@ function ActiveTraining({
                   ))}
             </div>
           </section>
-          <details className="today-training" aria-label="今日のトレーニング">
-            <summary>
-              <span>今日のトレーニング</span>
-              <span>{sessionSummary(exercises)}</span>
-              <span aria-hidden="true">…</span>
-            </summary>
-            {exercises.map((exercise, index) => (
-              <section key={`${exercise.name}-${index}`}>
-                <h2>{exercise.name}</h2>
-                {exercise.sets.map((value, setIndex) => (
-                  <p key={`${exercise.name}-${setIndex}`}>
-                    <span>SET {setIndex + 1}</span>
-                    <SetMeasurement weight={value.weight} reps={value.reps} />
-                  </p>
-                ))}
-              </section>
-            ))}
-          </details>
+          {hasRecordedSets ? (
+            <details className="today-training" aria-label="今日のトレーニング">
+              <summary>
+                <span>今日のトレーニング</span>
+                <span>{sessionSummary(exercises)}</span>
+                <span aria-hidden="true">…</span>
+              </summary>
+              {exercises.map((exercise, index) => (
+                <section key={`${exercise.name}-${index}`}>
+                  <h2>{exercise.name}</h2>
+                  {exercise.sets.map((value, setIndex) => (
+                    <p key={`${exercise.name}-${setIndex}`}>
+                      <span>SET {setIndex + 1}</span>
+                      <SetMeasurement weight={value.weight} reps={value.reps} />
+                    </p>
+                  ))}
+                </section>
+              ))}
+            </details>
+          ) : (
+            <section className="today-training" aria-label="今日のトレーニング">
+              <div className="today-training-empty">
+                <span>今日のトレーニング</span>
+                <span>0セット</span>
+              </div>
+            </section>
+          )}
           {overviewBests.error && (
             <p className="error" role="alert">
               {overviewBests.error}
