@@ -17,10 +17,20 @@ test("0セットの要約は開かず、最初のセットを追加すると展�
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await expect(today.locator("summary")).toBeVisible();
-  await expect(today.locator("summary")).toContainText("▼");
+  const marker = today.locator(".today-training-marker");
+  await expect(marker).toHaveCSS("font-size", "12px");
+  const markerBox = await marker.boundingBox();
+  const titleBox = await today.locator(".today-training-title").boundingBox();
+  expect(markerBox?.x).toBeLessThan(titleBox?.x ?? 0);
+  expect(await marker.evaluate((element) => getComputedStyle(element, "::before").content)).toBe(
+    '"▶"',
+  );
   await expect(today.locator("summary")).not.toContainText("…");
   expect((await today.boundingBox())?.height).toBe(emptyHeight);
   await today.locator("summary").click();
+  expect(await marker.evaluate((element) => getComputedStyle(element, "::before").content)).toBe(
+    '"▼"',
+  );
   await expect(today).toContainText("SET 1");
 });
 

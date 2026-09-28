@@ -3888,3 +3888,13 @@
 - 検証: `make check`成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。E2Eの期待値は実装前に追加したが、実行環境に `libnspr4.so` がなくChromiumを起動できなかったため、実装前の失敗と修正後の成功は未確認。
 - 未解決事項: 関連E2E・全E2E・実機表示は未確認。
 - 次のアクション: Chromium依存が揃う環境またはCIで関連E2Eを実行する。別ブランチでグループカードの状態別配色を実装する。
+
+## 2026-09-29 01:45 ログアウト確認と今日の記録の開閉表示を調整
+
+- 変更内容: ログアウト確認のキャンセルを確定ボタンと同じ8px角丸・同じ高さのボタンへ揃えた。`今日のトレーニング` は閉じた状態で見出し左に12pxの `▶`、展開時は同じ位置に `▼` を表示し、従来の右端記号を削除した。状態・配置・角丸を確認するE2E期待値と画面設計資料を更新した。
+- 目的: 確認シート内のボタン形状を統一し、今日の記録が開閉できることと現在の状態を一般的な位置・記号で伝えるため。
+- 影響範囲: トレーニング記録画面の本人記録要約、設定画面のログアウト確認、関連CSS・E2E・画面設計資料。保存内容、ログアウト処理、API・DBは変更していない。
+- 関連ファイル: `frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/settings.tsx`、`frontend/src/app/v2.css`、`frontend/tests/e2e/training-selection.spec.ts`、`frontend/tests/e2e/record-loading.spec.ts`、`docs/design/training-session.md`、`docs/design/settings-screen.md`、`task.md`。
+- 検証: `make check`成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。E2Eは既知の実行環境依存 `libnspr4.so` 不足によりChromiumを起動できないため未実施。
+- 未解決事項: 関連E2E・全E2E・実機表示は未確認。
+- 次のアクション: Chromium依存が揃う環境またはCIで関連E2Eを実行し、ローカル画面で閉じた `▶`、開いた `▼`、確認ボタンの形状を確認する。

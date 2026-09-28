@@ -373,9 +373,9 @@ function ActiveTraining({
           {hasRecordedSets ? (
             <details className="today-training" aria-label="今日のトレーニング">
               <summary>
-                <span>今日のトレーニング</span>
-                <span>{sessionSummary(exercises)}</span>
-                <span aria-hidden="true">▼</span>
+                <span className="today-training-marker" aria-hidden="true" />
+                <span className="today-training-title">今日のトレーニング</span>
+                <span className="today-training-summary">{sessionSummary(exercises)}</span>
               </summary>
               {exercises.map((exercise, index) => (
                 <section key={`${exercise.name}-${index}`}>
@@ -392,7 +392,7 @@ function ActiveTraining({
           ) : (
             <section className="today-training" aria-label="今日のトレーニング">
               <div className="today-training-empty">
-                <span>今日のトレーニング</span>
+                <span className="today-training-title">今日のトレーニング</span>
                 <span>0セット</span>
               </div>
             </section>

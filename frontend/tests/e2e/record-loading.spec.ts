@@ -75,10 +75,14 @@ test("ログアウト後の別利用者へ履歴と入力を引き継がない",
   await logout.click();
   const confirmation = page.getByRole("dialog", { name: "ログアウト", exact: true });
   await expect(confirmation).toBeVisible();
-  await confirmation.getByRole("button", { name: "キャンセル", exact: true }).click();
+  const cancelLogout = confirmation.getByRole("button", { name: "キャンセル", exact: true });
+  const confirmLogout = confirmation.getByRole("button", { name: "ログアウト", exact: true });
+  await expect(cancelLogout).toHaveCSS("border-radius", "8px");
+  await expect(confirmLogout).toHaveCSS("border-radius", "8px");
+  await cancelLogout.click();
   await expect(page.getByRole("button", { name: "ログイン", exact: true })).toHaveCount(0);
   await logout.click();
-  await confirmation.getByRole("button", { name: "ログアウト", exact: true }).click();
+  await confirmLogout.click();
   await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
   state.user.id = "00000000-0000-0000-0000-000000000009";
   await page.getByLabel("メールアドレス", { exact: true }).fill("next@example.test");

@@ -79,7 +79,7 @@
 }
 .header-caption {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 .v2-app .main-content {
   padding: 14px 20px calc(90px + env(safe-area-inset-bottom));
@@ -5090,7 +5090,6 @@
 }
 .today-training > :is(summary, .today-training-empty) {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 24px;
   align-items: center;
   min-height: 48px;
   gap: 8px;
@@ -5099,22 +5098,35 @@
   font-weight: 700;
 }
 .today-training > summary {
+  grid-template-columns: 12px minmax(0, 1fr) auto;
   cursor: pointer;
+}
+.today-training > .today-training-empty {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 .today-training > summary::-webkit-details-marker {
   display: none;
 }
-.today-training > :is(summary, .today-training-empty) > span:nth-child(2) {
+.today-training-marker {
+  display: inline-grid;
+  width: 12px;
+  place-items: center;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1;
+}
+.today-training-marker::before {
+  content: "▶";
+}
+.today-training[open] .today-training-marker::before {
+  content: "▼";
+}
+.today-training > .today-training-empty > span:nth-child(2),
+.today-training-summary {
   color: var(--muted);
   font-size: 11px;
   font-weight: 400;
   white-space: nowrap;
-}
-.today-training > summary > span:last-child {
-  color: var(--muted);
-  text-align: right;
-  font-size: 18px;
-  letter-spacing: 1px;
 }
 .today-training > section {
   padding: 8px 0;

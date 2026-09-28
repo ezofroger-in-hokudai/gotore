@@ -228,7 +228,12 @@ export function Preferences({
         >
           <p>ログアウトしますか？</p>
           <div className="settings-confirm-actions">
-            <button type="button" disabled={signingOut} onClick={() => setSheet(null)}>
+            <button
+              className="secondary"
+              type="button"
+              disabled={signingOut}
+              onClick={() => setSheet(null)}
+            >
               キャンセル
             </button>
             <button className="danger" type="button" disabled={signingOut} onClick={onLogout}>
