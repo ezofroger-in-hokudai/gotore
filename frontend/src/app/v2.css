@@ -83,6 +83,62 @@
 }
 .v2-app .main-content {
   padding: 14px 20px calc(90px + env(safe-area-inset-bottom));
+  view-transition-name: gotore-content;
+}
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(gotore-content),
+::view-transition-new(gotore-content) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation-fill-mode: both;
+}
+::view-transition-old(gotore-content) {
+  animation-name: gotore-content-out;
+}
+::view-transition-new(gotore-content) {
+  animation-name: gotore-content-in;
+}
+html[data-gotore-navigation-direction="back"]::view-transition-old(gotore-content) {
+  animation-name: gotore-content-out-back;
+}
+html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-content) {
+  animation-name: gotore-content-in-back;
+}
+@keyframes gotore-content-out {
+  to {
+    opacity: 0.78;
+    transform: translateX(-10px);
+  }
+}
+@keyframes gotore-content-in {
+  from {
+    opacity: 0.78;
+    transform: translateX(18px);
+  }
+}
+@keyframes gotore-content-out-back {
+  to {
+    opacity: 0.78;
+    transform: translateX(10px);
+  }
+}
+@keyframes gotore-content-in-back {
+  from {
+    opacity: 0.78;
+    transform: translateX(-18px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(gotore-content),
+  ::view-transition-new(gotore-content) {
+    animation: none;
+  }
 }
 .v2-app .panel {
   border: 0;
