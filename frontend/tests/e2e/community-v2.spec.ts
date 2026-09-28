@@ -1,5 +1,9 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate, openGroup } from "./mock-training";
+
+const avatarPng = readFileSync(resolve(__dirname, "../fixtures/avatar.png"));
 
 async function openGroupList(page: import("@playwright/test").Page) {
   await navigate(page, "グループ");
@@ -21,6 +25,87 @@ test("グループナビは選択中の詳細ではなくグループホーム�
   await navigate(page, "グループ");
   await expect(page.getByRole("heading", { name: "グループ", exact: true })).toBeVisible();
   expect(await page.evaluate(() => history.state.communityMode)).toBe("list");
+});
+
+test("グループ詳細の取得中は失敗表示を出さず、取得後に記録の空状態を表示する", async ({ page }) => {
+  const state = await mockTraining(page);
+  let releaseDetail: () => void = () => {};
+  let releaseActivity: () => void = () => {};
+  const detailPending = new Promise<void>((resolve) => {
+    releaseDetail = resolve;
+  });
+  const activityPending = new Promise<void>((resolve) => {
+    releaseActivity = resolve;
+  });
+  await page.route(`**/api/groups/${state.group.id}`, async (route) => {
+    await detailPending;
+    await route.fallback();
+  });
+  await page.route(`**/api/groups/${state.group.id}/activity`, async (route) => {
+    await activityPending;
+    await route.fulfill({
+      json: {
+        group_id: state.group.id,
+        member_count: 1,
+        live_count: 0,
+        today_count: 0,
+        members: [],
+        feed: [],
+      },
+    });
+  });
+  try {
+    await openGroupList(page);
+    await page.getByRole("button", { name: `${state.group.name}の詳細`, exact: true }).click();
+    await expect(page.locator('output[aria-label="グループ情報を読み込み中"]')).toBeVisible();
+    await expect(page.getByText("グループ情報を読み込めません")).toHaveCount(0);
+
+    releaseDetail();
+    await expect(page.getByRole("navigation", { name: "グループの表示" })).toBeVisible();
+    await expect(page.locator('output[aria-label="グループの記録を読み込み中"]')).toBeVisible();
+    await expect(page.getByText("記録を読み込めません")).toHaveCount(0);
+
+    releaseActivity();
+    await expect(page.locator(".feed-empty").last()).toBeVisible();
+  } finally {
+    releaseDetail();
+    releaseActivity();
+  }
+});
+
+test("グループ詳細と設定のメンバーに保存済み画像を表示する", async ({ page }) => {
+  const state = await mockTraining(page);
+  await page.route(`**/api/groups/${state.group.id}`, (route) =>
+    route.fulfill({
+      json: {
+        ...state.group,
+        members: [
+          {
+            id: state.user.id,
+            display_name: "画面テスト",
+            avatar_version: "group-photo",
+            joined_at: "2026-01-01T00:00:00Z",
+          },
+        ],
+      },
+    }),
+  );
+  await page.route(`**/api/profiles/${state.user.id}/avatar`, (route) =>
+    route.fulfill({
+      json: {
+        version: "group-photo",
+        data_url: `data:image/png;base64,${avatarPng.toString("base64")}`,
+      },
+    }),
+  );
+  await navigate(page, "グループ");
+  await page.getByRole("button", { name: `${state.group.name}の詳細`, exact: true }).click();
+  await expect(page.locator(".member-avatars-strip img")).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "グループの表示" })
+    .getByRole("button", { name: "設定" })
+    .click();
+  await expect(page.locator(".group-settings .group-member-row img")).toBeVisible();
 });
 
 test("招待リンクを確認してから参加する", async ({ page }) => {

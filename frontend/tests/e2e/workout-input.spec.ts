@@ -41,28 +41,30 @@ test("未保存入力と保存済みセットをタブ切替・再起動後も�
   expect(state.finished).toHaveLength(1);
 });
 
-test("ホイール・直接入力・行編集・取消を区別し、BESTとRMを表示する", async ({ page }) => {
+test("ホイール・直接入力・行編集・削除を区別し、BEST候補とRMを表示する", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
   const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
-  await weight.fill("80");
+  await weight.fill("76");
   await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("8");
-  await page.getByRole("button", { name: "重量を増やす", exact: true }).click();
+  await page.getByRole("button", { name: "重量を5kg増やす", exact: true }).click();
   await expect(weight).toHaveValue("81");
   await expect(page.locator(".record-candidate")).toBeVisible();
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-  await expect(page.locator(".save-feedback .record-celebration")).toBeVisible();
+  await expect(page.getByRole("button", { name: "セット1を編集" })).toContainText("81kg");
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await weight.fill("70");
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
+  await expect(weight).toHaveValue("81");
   expect(state.session?.exercises[0].sets[0].weight).toBe(81);
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await weight.fill("75");
   await page.getByRole("button", { name: "変更を保存", exact: true }).click();
-  expect(state.session?.exercises[0].sets).toHaveLength(1);
-  await page.getByRole("button", { name: "直前の保存を取り消す", exact: true }).click();
-  await expect(page.getByText("直前の保存を取り消しました", { exact: true })).toBeVisible();
-  await expect.poll(() => state.session?.exercises[0].sets[0].weight).toBe(81);
+  await expect.poll(() => state.session?.exercises[0].sets[0].weight).toBe(75);
+  await page.getByRole("button", { name: "セット1を削除", exact: true }).click();
+  await expect
+    .poll(() => state.session?.exercises.flatMap((exercise) => exercise.sets).length)
+    .toBe(0);
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(

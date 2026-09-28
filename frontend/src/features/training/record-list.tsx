@@ -2,6 +2,7 @@ import type { Workout } from "@/lib/api";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { dateLabel } from "../activity/calendar";
 import { estimatedRM } from "../session/session";
+import { Avatar } from "../v2/avatar";
 import { BestFlame } from "./best-flame";
 import { recordSummary } from "./record-summary";
 import { ReuseWorkout } from "./reuse-workout";
@@ -18,6 +19,7 @@ export function RecordList({
   onEdit,
   onDeleted,
   headerControl,
+  liveStatus,
   showDate = true,
   compact = false,
 }: {
@@ -29,6 +31,7 @@ export function RecordList({
   onEdit?: (record: Workout) => void;
   onDeleted?: () => void;
   headerControl?: (record: Workout) => ReactNode;
+  liveStatus?: (record: Workout) => boolean;
   showDate?: boolean;
   compact?: boolean;
 }) {
@@ -51,7 +54,7 @@ export function RecordList({
         );
         const summary = recordSummary(record);
         const own = personal && record.user_id === userId;
-        const live = Boolean(record.started_at && !record.ended_at);
+        const live = liveStatus?.(record) ?? Boolean(record.started_at && !record.ended_at);
         return (
           <article
             className={`record record-review${compact ? " is-compact" : ""}`}
@@ -73,10 +76,12 @@ export function RecordList({
               {!own && (
                 <div className="record-author">
                   <span className="record-author-avatar">
-                    <span className={`avatar${live ? " is-live" : ""}`} aria-hidden="true">
-                      {record.display_name.slice(0, 1)}
-                    </span>
-                    {live && <span className="record-author-live" aria-label="LIVE" />}
+                    <Avatar
+                      userId={record.user_id}
+                      name={record.display_name}
+                      version={record.avatar_version}
+                      live={live}
+                    />
                     {!!bests.size && (
                       <span className="record-author-best" aria-label="最高記録を更新">
                         🔥
@@ -84,6 +89,7 @@ export function RecordList({
                     )}
                   </span>
                   <strong>{record.display_name}</strong>
+                  {compact && live && <span className="record-author-live-label">LIVE</span>}
                 </div>
               )}
               <dl className="record-overview">

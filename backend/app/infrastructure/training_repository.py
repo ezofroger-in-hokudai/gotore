@@ -69,7 +69,7 @@ class TrainingRepository:
 
     def members(self, group_id: UUID):
         return self.connection.execute(
-            """SELECT p.id, p.display_name, m.joined_at,
+            """SELECT p.id, p.display_name, m.joined_at, a.version AS avatar_version,
             (SELECT max(COALESCE(w.ended_at, w.last_seen_at, w.created_at))
              FROM public.gotore_workouts w
              WHERE w.user_id = m.user_id AND (
@@ -80,6 +80,7 @@ class TrainingRepository:
              )) AS last_activity_at
             FROM public.gotore_profiles p
             JOIN public.gotore_group_members m ON m.user_id = p.id
+            LEFT JOIN public.gotore_avatars a ON a.user_id = p.id
             WHERE m.group_id = %s ORDER BY m.joined_at, p.id""",
             (group_id,),
         ).fetchall()
@@ -427,23 +428,25 @@ class TrainingRepository:
             where += " AND w.performed_on BETWEEN %s AND %s"
             values.extend([date_from, date_to])
         return self.connection.execute(
-            f"""SELECT w.*, p.display_name,
+            f"""SELECT w.*, p.display_name, a.version AS avatar_version,
             ARRAY(SELECT s.group_id FROM public.gotore_workout_shares s
                   WHERE s.workout_id = w.id AND (w.user_id = %s OR s.group_id = %s)
                   ORDER BY s.group_id) AS shared_group_ids
             FROM public.gotore_workouts w
             JOIN public.gotore_profiles p ON p.id = w.user_id
+            LEFT JOIN public.gotore_avatars a ON a.user_id = w.user_id
             WHERE {where} ORDER BY {order} LIMIT %s OFFSET %s""",
             (user_id, group_id, *values, limit, offset),
         ).fetchall()
 
     def shared_workout(self, user_id: UUID, group_id: UUID, workout_id: UUID):
         record = self.connection.execute(
-            """SELECT w.*, p.display_name,
+            """SELECT w.*, p.display_name, a.version AS avatar_version,
             ARRAY(SELECT s.group_id FROM public.gotore_workout_shares s
                   WHERE s.workout_id = w.id AND s.group_id = %s) AS shared_group_ids
             FROM public.gotore_workouts w
             JOIN public.gotore_profiles p ON p.id = w.user_id
+            LEFT JOIN public.gotore_avatars a ON a.user_id = w.user_id
             JOIN public.gotore_group_members viewer
               ON viewer.group_id = %s AND viewer.user_id = %s
             WHERE w.id = %s AND jsonb_array_length(w.exercises) > 0

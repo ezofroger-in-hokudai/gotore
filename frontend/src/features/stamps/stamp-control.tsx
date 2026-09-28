@@ -12,12 +12,14 @@ export function StampControl({
   name,
   active = true,
   direct = false,
+  disabled = false,
 }: {
   groupId: string;
   workoutId: string;
   name: string;
   active?: boolean;
   direct?: boolean;
+  disabled?: boolean;
 }) {
   const store = useStamps(groupId, workoutId, active);
   const data = store.view(groupId, workoutId);
@@ -62,7 +64,9 @@ export function StampControl({
         aria-label={`${kind.emoji}スタンプ`}
         aria-pressed={selected}
         disabled={
-          !data?.can_send || jobs.some((job) => job.kind === kind.id && job.state === "pending")
+          disabled ||
+          !data?.can_send ||
+          jobs.some((job) => job.kind === kind.id && job.state === "pending")
         }
         onClick={() => send(kind.id)}
       >
@@ -85,7 +89,7 @@ export function StampControl({
           type="button"
           className="inline-stamp-touch"
           aria-label={`${name}のリアクションの詳細`}
-          disabled={!data}
+          disabled={disabled || !data}
           onClick={() => {
             setOffset(0);
             setOpen(true);
@@ -126,7 +130,13 @@ export function StampControl({
                 </span>
                 <div className="stamp-avatar-stack">
                   {items.map((item) => (
-                    <Avatar key={item.id} userId={item.sender_id} name={item.display_name} small />
+                    <Avatar
+                      key={item.id}
+                      userId={item.sender_id}
+                      name={item.display_name}
+                      version={item.avatar_version}
+                      small
+                    />
                   ))}
                 </div>
               </section>

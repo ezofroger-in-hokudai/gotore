@@ -19,6 +19,7 @@ import {
   useState,
 } from "react";
 import { WombatBarbell } from "../branding/wombat";
+import { LoadingState } from "../loading/loading-state";
 import { GroupNameForm } from "../training/group-name-form";
 import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
@@ -437,7 +438,7 @@ export function CommunityScreen({
               </button>
             </div>
           </div>
-          {groups.length > 0 && <p className="group-order-hint">長押しドラッグで表示順を変更</p>}
+          {groups.length > 1 && <p className="group-order-hint">長押しドラッグで表示順を変更</p>}
           <div className="group-card-list" id="groupCardList" ref={cardsRef}>
             {groups.map((item) => (
               <SortableGroupCard
@@ -532,6 +533,7 @@ export function CommunityScreen({
                           key={member.id}
                           userId={member.id}
                           name={member.display_name}
+                          version={member.avatar_version}
                           small
                         />
                       ))}
@@ -543,7 +545,7 @@ export function CommunityScreen({
                     <Feed data={activity.data} active={active} trusted={!activity.refreshing} />
                   )}
                   {!activity.data && !activity.error && (
-                    <div className="resource-placeholder">記録を読み込めません</div>
+                    <LoadingState label="グループの記録を読み込み中" />
                   )}
                 </>
               )}
@@ -603,7 +605,11 @@ export function CommunityScreen({
                       <div className="group-members-list">
                         {sortedMembers.map((member) => (
                           <div className="group-member-row" key={member.id}>
-                            <Avatar userId={member.id} name={member.display_name} />
+                            <Avatar
+                              userId={member.id}
+                              name={member.display_name}
+                              version={member.avatar_version}
+                            />
                             <div className="group-member-details">
                               <b>{member.display_name}</b>
                               <small>
@@ -664,7 +670,7 @@ export function CommunityScreen({
               )}
             </>
           ) : (
-            <div className="resource-placeholder">グループ情報を読み込めません</div>
+            <LoadingState label="グループ情報を読み込み中" />
           )}
         </>
       )}

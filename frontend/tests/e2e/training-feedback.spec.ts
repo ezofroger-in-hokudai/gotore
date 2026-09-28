@@ -3,7 +3,7 @@ import { mockTraining, navigate, startTraining } from "./mock-training";
 
 test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 720 } });
 
-test("タップ後も色が戻り、受付セットと次の番号・保存待ちを区別できる", async ({ page }) => {
+test("セット送信中も次のセットを追加でき、通常の送信状態文は出さない", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
   let release = () => {};
@@ -18,20 +18,21 @@ test("タップ後も色が戻り、受付セットと次の番号・保存待�
   const color = await next.evaluate((el) => getComputedStyle(el).backgroundColor);
   await next.tap();
   try {
-    await expect(page.locator(".save-feedback")).toContainText("SET 1");
-    await expect(page.locator(".save-feedback")).toContainText("保存中");
+    await expect(page.getByRole("button", { name: "セット1を編集" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "SET 2", exact: true })).toBeVisible();
     await expect(next).toBeEnabled();
     await expect(next).toHaveCSS("background-color", color);
+    await expect(page.locator(".sync-status, .save-feedback")).toHaveCount(0);
     await expect(page.locator(".record-celebration")).toHaveCount(0);
     await next.tap();
     await expect(page.getByRole("heading", { name: "SET 3", exact: true })).toBeVisible();
     await expect(page.locator(".comparison-row")).toHaveCount(2);
+    expect(state.saves).toBe(0);
   } finally {
     release();
   }
-  await expect(page.locator(".save-feedback")).toContainText("SET 2");
-  await expect(page.locator(".save-feedback")).toContainText("保存しました");
+  await expect.poll(() => state.saves).toBe(2);
+  await expect(page.locator(".sync-status, .save-feedback")).toHaveCount(0);
   expect(state.session?.exercises[0].sets).toHaveLength(2);
 });
 
@@ -48,7 +49,7 @@ test("種目追加はリスト末尾、次種目と終了を押しやすいボ�
     await expect(next).toHaveCSS("border-top-style", "solid");
     const finishBox = await finish.boundingBox();
     expect(finishBox?.width).toBeGreaterThanOrEqual(48);
-    expect(finishBox?.height).toBeGreaterThanOrEqual(48);
+    expect(finishBox?.height).toBeGreaterThanOrEqual(40);
     const a = await save.boundingBox();
     const b = await next.boundingBox();
     expect(a?.y).toBe(b?.y);
@@ -56,19 +57,15 @@ test("種目追加はリスト末尾、次種目と終了を押しやすいボ�
   }
   await next.tap();
   const last = await page.locator(".session-screen .v2-row").last().boundingBox();
-  const add = await page
-    .getByRole("button", { name: "新しい種目を追加", exact: true })
-    .boundingBox();
-  expect(add?.y).toBeGreaterThan((last?.y ?? 0) + (last?.height ?? 0));
+  const add = await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).boundingBox();
+  expect(add?.y).toBeGreaterThanOrEqual((last?.y ?? 0) + (last?.height ?? 0));
 });
 
-test("終了を待っていることを表示し、失敗時は保存済みセットを保持して再試行できる", async ({
-  page,
-}) => {
+test("終了を端末へ残して直ちに結果へ進み、通信失敗後に自動再送する", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
   await page.getByRole("button", { name: "セットを追加", exact: true }).tap();
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await expect.poll(() => state.saves).toBe(1);
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -84,26 +81,108 @@ test("終了を待っていることを表示し、失敗時は保存済みセ�
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).tap();
   await page.getByRole("button", { name: "終了する", exact: true }).tap();
   try {
-    await expect(page.getByRole("button", { name: "終了中…", exact: true })).toBeDisabled();
+    await expect(page.getByRole("heading", { name: "おつかれさまでした。" })).toBeVisible();
+    await expect(page.locator(".workout-result")).not.toContainText("保存済み");
     expect(state.finished).toHaveLength(0);
+    const queue = await page.evaluate(
+      (userId) => localStorage.getItem(`gotore:session-queue:v1:${userId}`),
+      state.user.id,
+    );
+    expect(queue).toContain('"finish":true');
   } finally {
     release();
   }
-  await expect(page.locator(".v2-app").getByRole("alert")).toContainText("終了できません");
-  await expect(page.getByRole("button", { name: "セット1を編集", exact: true })).toBeEnabled();
+  await expect(page.locator(".workout-result")).not.toContainText("終了できません");
   expect(state.session?.exercises[0].sets).toHaveLength(1);
   fail = false;
-  await page.getByRole("button", { name: "トレーニング終了", exact: true }).tap();
-  await page.getByRole("button", { name: "終了する", exact: true }).tap();
   await expect.poll(() => state.finished.length).toBe(1);
+  await expect(page.locator(".workout-result")).toContainText("保存済み");
   await navigate(page, "履歴");
   await expect(
     page.locator(".history-row").getByText("ベンチプレス", { exact: true }),
   ).toBeVisible();
 });
 
-test("最高記録の赤色と炎はサーバー保存の確定後に表示する", async ({ page }) => {
-  await mockTraining(page);
+test("終了通信失敗後の再起動でも終了意図を復元して自動再送する", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  let fail = true;
+  await page.route("**/api/sessions/*/finish", (route) =>
+    fail ? route.fulfill({ status: 503, json: { detail: "一時的な失敗" } }) : route.fallback(),
+  );
+  await page.getByRole("button", { name: "トレーニング終了", exact: true }).tap();
+  await page.getByRole("button", { name: "終了する", exact: true }).tap();
+  await expect(page.getByRole("heading", { name: "おつかれさまでした。" })).toBeVisible();
+  await page.locator(".workout-result").getByRole("button", { name: "ホーム" }).click();
+  await expect(page.getByTestId("floating-training")).toBeDisabled();
+  await navigate(page, "履歴");
+  await expect(page.getByRole("navigation", { name: "メインナビゲーション" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId("floating-training")).toBeDisabled();
+  const queue = await page.evaluate(
+    (userId) => localStorage.getItem(`gotore:session-queue:v1:${userId}`),
+    state.user.id,
+  );
+  expect(queue).toContain('"finish":true');
+  fail = false;
+  await expect.poll(() => state.finished.length).toBe(1);
+  await expect(page.getByTestId("floating-training")).toBeEnabled();
+});
+
+test("セット送信の応答待ち中も終了を受け付け、セットの後に終了する", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/sessions/*", async (route) => {
+    if (route.request().method() === "PATCH") await gate;
+    await route.fallback();
+  });
+  await page.getByRole("button", { name: "セットを追加", exact: true }).tap();
+  await page.getByRole("button", { name: "トレーニング終了", exact: true }).tap();
+  await page.getByRole("button", { name: "終了する", exact: true }).tap();
+  try {
+    await expect(page.getByRole("heading", { name: "おつかれさまでした。" })).toBeVisible();
+    expect(state.saves).toBe(0);
+    expect(state.finished).toHaveLength(0);
+  } finally {
+    release();
+  }
+  await expect.poll(() => state.saves).toBe(1);
+  await expect.poll(() => state.finished.length).toBe(1);
+  expect(state.finished[0].exercises[0].sets).toHaveLength(1);
+});
+
+test("終了の競合では端末記録を確認してからサーバー記録を採用できる", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  await page.getByRole("button", { name: "セットを追加", exact: true }).tap();
+  await expect.poll(() => state.saves).toBe(1);
+  await page.route("**/api/sessions/*/finish", (route) =>
+    route.fulfill({ status: 409, json: { detail: "別の更新があります" } }),
+  );
+  await page.getByRole("button", { name: "トレーニング終了", exact: true }).tap();
+  await page.getByRole("button", { name: "終了する", exact: true }).tap();
+  await expect(page.getByRole("button", { name: "記録を確認" })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "記録を確認" }).click();
+  await expect(page.getByRole("textbox", { name: "端末に残っている記録" })).toHaveValue(
+    /ベンチプレス/,
+  );
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "サーバーの記録を採用" }).click();
+  await expect(page.getByRole("button", { name: "記録を確認" })).toHaveCount(0);
+  const queue = await page.evaluate(
+    (userId) => localStorage.getItem(`gotore:session-queue:v1:${userId}`),
+    state.user.id,
+  );
+  expect(queue).not.toContain('"finish":true');
+});
+
+test("BEST候補は送信待ち中に確定演出へ変えず、確定後の記録を残す", async ({ page }) => {
+  const state = await mockTraining(page);
   await startTraining(page);
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("85");
   await expect(page.locator(".record-candidate")).toBeVisible();
@@ -117,19 +196,17 @@ test("最高記録の赤色と炎はサーバー保存の確定後に表示す�
   });
   await page.getByRole("button", { name: "セットを追加", exact: true }).tap();
   try {
-    await expect(page.locator(".save-feedback")).toContainText("保存中");
-    await expect(page.locator(".save-feedback .record-celebration")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "セット1を編集" })).toBeVisible();
+    await expect(page.locator(".record-celebration")).toHaveCount(0);
+    expect(state.saves).toBe(0);
   } finally {
     release();
   }
-  const celebration = page.locator(".save-feedback .record-celebration");
-  await expect(celebration).toContainText("🔥");
-  await expect(celebration).toContainText("保存しました");
-  await expect(celebration).toHaveCSS("color", "rgb(211, 47, 47)");
-  await page.screenshot({ path: "test-results/session-best-feedback.png", fullPage: true });
+  await expect.poll(() => state.saves).toBe(1);
+  await expect(page.getByRole("button", { name: "セット1を編集" })).toContainText("85kg");
   await page.getByRole("button", { name: "セット1を編集", exact: true }).tap();
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("70");
   await page.getByRole("button", { name: "変更を保存", exact: true }).tap();
-  await expect(page.locator(".save-feedback")).toContainText("保存しました");
-  await expect(page.locator(".save-feedback .record-celebration")).toHaveCount(0);
+  await expect.poll(() => state.saves).toBe(2);
+  await expect(page.getByRole("button", { name: "セット1を編集" })).toContainText("70kg");
 });

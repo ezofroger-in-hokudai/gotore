@@ -32,6 +32,7 @@ import { HistoryBrowser } from "./history-browser";
 import { buildHomeFeed } from "./home-feed";
 import { memberIsLive, useLiveClock } from "./live-presence";
 import { GROUP_REFRESH_MS, activityRefreshMs, todayActivityRefreshMs } from "./refresh-interval";
+import type { SharedWorkoutCache } from "./shared-workout-cache";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
 import { useGroupCardDrag } from "./use-group-card-drag";
@@ -50,6 +51,7 @@ export function CommunityHome({
   loading = false,
   failed = false,
   onReady,
+  sharedCache,
 }: {
   groups: Group[];
   selected: string;
@@ -62,6 +64,7 @@ export function CommunityHome({
   loading?: boolean;
   failed?: boolean;
   onReady?: (ready: boolean) => void;
+  sharedCache?: SharedWorkoutCache;
 }) {
   const carousel = useRef<HTMLDivElement>(null);
   const [visibleGroup, setVisibleGroup] = useState(selected || groups[0]?.id || "");
@@ -238,6 +241,7 @@ export function CommunityHome({
             <Feed
               data={homeFeed.activity}
               groupIds={homeFeed.groupIds}
+              sharedCache={sharedCache}
               active={active}
               trusted={!today.refreshing}
             />
@@ -445,16 +449,18 @@ function CommunityStats({
 export function Feed({
   data,
   groupIds,
+  sharedCache,
   active,
   trusted,
 }: {
   data: GroupActivity;
   groupIds?: ReadonlyMap<string, string>;
+  sharedCache?: SharedWorkoutCache;
   active: boolean;
   trusted: boolean;
 }) {
   const clock = useLiveClock(data, active, trusted);
-  const details = useSharedWorkoutDetails(data, active && trusted, null, groupIds);
+  const details = useSharedWorkoutDetails(data, active && trusted, null, groupIds, sharedCache);
   const previous = useRef<Map<string, string> | null>(null);
   const [arrived, setArrived] = useState<string[]>([]);
   useEffect(() => {
@@ -496,9 +502,18 @@ export function Feed({
             >
               {detail.data ? (
                 <RecordList
-                  records={[detail.data]}
+                  records={[
+                    {
+                      ...detail.data,
+                      avatar_version:
+                        detail.data.avatar_version === undefined
+                          ? member?.avatar_version
+                          : detail.data.avatar_version,
+                    },
+                  ]}
                   empty=""
                   compact
+                  liveStatus={() => live}
                   headerControl={() => (
                     <StampControl
                       active={active}
@@ -511,6 +526,8 @@ export function Feed({
               ) : (
                 <PendingFeedRecord
                   item={item}
+                  avatarVersion={member?.avatar_version}
+                  live={live}
                   error={detail.error}
                   onRetry={() => details.retryRecord(item.workout_id)}
                 />
@@ -525,10 +542,14 @@ export function Feed({
 
 function PendingFeedRecord({
   item,
+  avatarVersion,
+  live,
   error,
   onRetry,
 }: {
   item: GroupActivity["feed"][number];
+  avatarVersion?: string | null;
+  live: boolean;
   error: string;
   onRetry: () => void;
 }) {
@@ -542,11 +563,15 @@ function PendingFeedRecord({
           </h2>
           <div className="record-author">
             <span className="record-author-avatar">
-              <span className="avatar" aria-hidden="true">
-                {item.display_name.slice(0, 1)}
-              </span>
+              <Avatar
+                userId={item.user_id}
+                name={item.display_name}
+                version={avatarVersion}
+                live={live}
+              />
             </span>
             <strong>{item.display_name}</strong>
+            {live && <span className="record-author-live-label">LIVE</span>}
           </div>
           <dl className="record-overview">
             <div aria-label="総負荷">

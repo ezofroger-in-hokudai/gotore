@@ -9,6 +9,7 @@ from app.domain.avatar import MAX_UPLOAD_BYTES
 from tests.test_sharing import USERS, create_group
 from tests.test_sharing import client as client_fixture
 from tests.test_sharing import connection as connection_fixture
+from tests.test_workout import payload
 
 client = client_fixture
 connection = connection_fixture
@@ -54,6 +55,11 @@ def test_avatar_is_normalized_private_and_removed(client):
     members = client.get(f"/api/groups/{group['id']}/activity").json()["members"]
     member = next(m for m in members if m["id"] == str(USERS["A"]))
     assert member["avatar_version"] == first["version"]
+    detail_members = client.get(
+        f"/api/groups/{group['id']}", headers={"X-Test-User": "B"}
+    ).json()["members"]
+    owner = next(m for m in detail_members if m["id"] == str(USERS["A"]))
+    assert owner["avatar_version"] == first["version"]
     assert client.put(path, content=picture(), headers={"X-Test-User": "B"}).status_code == 405
     second = upload(client, picture("blue")).json()
     assert second["version"] != first["version"]
@@ -70,6 +76,35 @@ def test_avatar_is_normalized_private_and_removed(client):
     assert client.delete("/api/me/avatar").status_code == 204
     assert client.get("/api/me/avatar").json()["data_url"] is None
     assert client.get(path).status_code == 404
+
+
+def test_shared_record_returns_author_avatar_version(client):
+    group = create_group(client)
+    client.post(
+        "/api/groups/join", json={"invite_code": group["invite_code"]}, headers={"X-Test-User": "B"}
+    )
+    record = client.post("/api/workouts", json=payload(group_id=group["id"])).json()
+    version = upload(client, picture()).json()["version"]
+    headers = {"X-Test-User": "B"}
+    listing = client.get(f"/api/groups/{group['id']}/workouts", headers=headers).json()
+    assert listing[0]["avatar_version"] == version
+    detail = client.get(f"/api/groups/{group['id']}/workouts/{record['id']}", headers=headers)
+    assert detail.status_code == 200
+    assert detail.json()["avatar_version"] == version
+    sender_version = upload(client, picture("blue"), user="B").json()["version"]
+    stamp_path = f"/api/groups/{group['id']}/workouts/{record['id']}/stamps"
+    assert client.put(stamp_path + "/clap", headers=headers).status_code == 200
+    stamps = client.get(stamp_path).json()["items"]
+    assert stamps[0]["avatar_version"] == sender_version
+    members = client.get(f"/api/groups/{group['id']}").json()["members"]
+    joined_at = next(m["joined_at"] for m in members if m["id"] == str(USERS["B"]))
+    assert client.delete(
+        f"/api/groups/{group['id']}/membership",
+        params={"expected_joined_at": joined_at},
+        headers=headers,
+    ).status_code == 204
+    assert client.get(stamp_path).json()["items"][0]["avatar_version"] is None
+    assert client.get(f"/api/profiles/{USERS['B']}/avatar").status_code == 404
 
 
 @pytest.mark.parametrize("content", [b"", b'<svg onload="alert(1)"/>', b"GIF89a", b"not an image"])

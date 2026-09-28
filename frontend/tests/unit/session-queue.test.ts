@@ -24,6 +24,9 @@ function fixture() {
   let fail = false;
   let loseResponse = false;
   let writes = 0;
+  let finishes = 0;
+  let failFinish = false;
+  let loseFinishResponse = false;
   const options = {
     read: () => stored,
     write: (value: string | null) => {
@@ -47,6 +50,18 @@ function fixture() {
       }
       return structuredClone(server);
     },
+    finish: async (_id: string, revision: number) => {
+      if (failFinish) throw new Error("offline");
+      if (server.ended_at && server.revision === revision + 1) return structuredClone(server);
+      if (server.revision !== revision) throw Object.assign(new Error("conflict"), { status: 409 });
+      server = { ...server, revision: revision + 1, ended_at: "2026-09-09T01:00:00Z" };
+      finishes++;
+      if (loseFinishResponse) {
+        loseFinishResponse = false;
+        throw new Error("lost finish response");
+      }
+      return structuredClone(server);
+    },
   };
   return {
     options,
@@ -60,6 +75,15 @@ function fixture() {
     get writes() {
       return writes;
     },
+    get finishes() {
+      return finishes;
+    },
+    failFinish: (value: boolean) => {
+      failFinish = value;
+    },
+    loseFinish: () => {
+      loseFinishResponse = true;
+    },
     offline: (v: boolean) => {
       fail = v;
     },
@@ -71,6 +95,70 @@ function fixture() {
     },
   };
 }
+test("終了は端末に先に記録し、未送信セットの後に送る", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  await f.queue.enqueue(exercises(1), 1);
+  await f.queue.requestFinish(() => {
+    expect(JSON.parse(f.stored as string).finish).toBe(true);
+    expect(f.queue.state.session?.id).toBe(initial.id);
+  });
+  expect(JSON.parse(f.stored as string).finish).toBe(true);
+  expect(f.queue.state.session).toBeNull();
+  expect(f.finishes).toBe(0);
+  await f.queue.sync();
+  expect(f.writes).toBe(1);
+  expect(f.finishes).toBe(1);
+  expect(f.stored).toBeNull();
+});
+test("終了通信失敗と応答喪失の後も再起動して同じ終了を再送する", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  f.failFinish(true);
+  await f.queue.requestFinish();
+  await f.queue.sync();
+  expect(f.stored).not.toBeNull();
+  f.failFinish(false);
+  f.loseFinish();
+  const reopened = new SessionQueue(f.options);
+  await reopened.restore();
+  expect(reopened.state.session).toBeNull();
+  await reopened.sync();
+  expect(f.stored).not.toBeNull();
+  await reopened.sync();
+  expect(f.finishes).toBe(1);
+  expect(f.stored).toBeNull();
+});
+test("終了の端末保存に失敗したら終了を受け付けず、記録を残す", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  f.options.write = () => {
+    throw new Error("quota");
+  };
+  await expect(f.queue.requestFinish()).rejects.toThrow("端末に記録を保存できません");
+  expect(f.queue.state.session?.id).toBe(initial.id);
+  expect(f.finishes).toBe(0);
+});
+test("終了を記録した後は同じ記録を変更できない", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  await f.queue.requestFinish();
+  await expect(f.queue.enqueue(exercises(1), 1)).rejects.toThrow();
+  expect(JSON.parse(f.stored as string).finish).toBe(true);
+});
+test("終了が別端末の更新と競合したら端末の記録を保持して確認を求める", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  await f.queue.enqueue(exercises(1), 1);
+  await f.queue.sync();
+  await f.queue.requestFinish();
+  f.remoteEdit();
+  await f.queue.sync();
+  expect(f.queue.state.status).toBe("conflict");
+  expect(f.queue.state.finishRecord?.exercises[0].sets).toHaveLength(1);
+  expect(JSON.parse(f.stored as string).finish).toBe(true);
+  expect(f.finishes).toBe(0);
+});
 test("通信なしで端末へ順番に追加し、編集と取消も同期順を保つ", async () => {
   const f = fixture();
   await f.queue.restore();
@@ -351,6 +439,8 @@ test("同じ端末の2つのキューが同時に同期しても各操作を一�
 
 for (const corrupt of [
   { version: 9, pending: [] },
+  { version: 3, pending: [] },
+  { version: 2, pending: [], finish: true },
   {
     version: 2,
     pending: [{ id: "bad", change: { kind: "exercises", start: 2, remove: 0, values: [] } }],

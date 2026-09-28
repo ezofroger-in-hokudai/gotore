@@ -8,14 +8,16 @@ import type {
   TrainingSession,
   Workout,
 } from "@/lib/api";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dateLabel } from "../activity/calendar";
 import { BODY_PARTS, BODY_PART_LABELS, normalizeBodyPart } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import { StampControl } from "../stamps/stamp-control";
+import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "../v2/avatar";
+import { type SharedWorkoutCache, sharedWorkoutVersion } from "../v2/shared-workout-cache";
 import { Sheet } from "../v2/sheet";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
@@ -43,6 +45,7 @@ export function SessionScreen({
   onFinished,
   haptic,
   catalog,
+  sharedCache,
 }: {
   active: boolean;
   controller: SessionController;
@@ -52,6 +55,7 @@ export function SessionScreen({
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  sharedCache: SharedWorkoutCache;
 }) {
   const { session } = controller;
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
@@ -63,7 +67,7 @@ export function SessionScreen({
         <button
           className="primary full"
           type="button"
-          disabled={!controller.ready || controller.busy}
+          disabled={!controller.ready || controller.busy || controller.finishPending}
           onClick={() => {
             void controller.start().catch(() => {});
           }}
@@ -88,6 +92,7 @@ export function SessionScreen({
       initialInput={draft}
       onPreparingInput={setDraft}
       catalog={catalog}
+      sharedCache={sharedCache}
     />
   );
 }
@@ -102,12 +107,14 @@ function ActiveTraining({
   initialInput,
   onPreparingInput,
   catalog,
+  sharedCache,
 }: {
   active: boolean;
   session: TrainingSession | null;
   initialInput: SessionInput;
   onPreparingInput: (input: SessionInput) => void;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  sharedCache: SharedWorkoutCache;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
@@ -116,6 +123,7 @@ function ActiveTraining({
   const sessionId = session?.id ?? null;
   const revision = session?.revision;
   const exercises = session?.exercises ?? [];
+  const hasRecordedSets = exercises.some((exercise) => exercise.sets.length > 0);
   // 開始確定直後も入力欄を無効化せず、入力中のフォーカスを保つ。
   const blocking = controller.busy && !controller.startingId;
   const storageKey = sessionId ? `gotore:session-input:v2:${userId}:${sessionId}` : null;
@@ -141,7 +149,12 @@ function ActiveTraining({
   const [storageWarning, setStorageWarning] = useState(false);
   const [selectedParts, setSelectedParts] = useState<BodyPart[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>("all");
-  const [openedPeer, setOpenedPeer] = useState<{ groupId: string; workoutId: string } | null>(null);
+  const [openedPeer, setOpenedPeer] = useState<{
+    groupId: string;
+    workoutId: string;
+    name: string;
+    version: string;
+  } | null>(null);
   const overviewBests = useResource<SessionBests>(
     sessionId ? `/sessions/${sessionId}/bests` : null,
     controller.confirmedRevision,
@@ -183,11 +196,48 @@ function ActiveTraining({
     openedPeer ? `/groups/${openedPeer.groupId}/workouts/${openedPeer.workoutId}` : null,
     0,
     false,
-    true,
-    { enabled: active && !!openedPeer, retainOnRefresh: true },
+    false,
+    { enabled: active && !!openedPeer },
   );
+  const peerFeed = openedPeer
+    ? todayActivity.data?.groups
+        .find((group) => group.group_id === openedPeer.groupId)
+        ?.feed.find((item) => item.workout_id === openedPeer.workoutId)
+    : undefined;
+  const peerVersionMatches =
+    !!openedPeer && !!peerFeed && openedPeer.version === sharedWorkoutVersion(peerFeed);
+  const cachedPeer =
+    openedPeer && peerFeed && peerVersionMatches
+      ? sharedCache.get(openedPeer.groupId, peerFeed)
+      : null;
+  const visiblePeer = peerFeed && !peerRecord.error ? (peerRecord.data ?? cachedPeer) : null;
+  useEffect(() => {
+    if (openedPeer && todayActivity.data && !peerFeed) {
+      sharedCache.delete(openedPeer.groupId, openedPeer.workoutId);
+      setOpenedPeer(null);
+    }
+  }, [openedPeer, peerFeed, todayActivity.data, sharedCache]);
+  useEffect(() => {
+    if (openedPeer && peerRecord.error)
+      sharedCache.delete(openedPeer.groupId, openedPeer.workoutId);
+  }, [openedPeer, peerRecord.error, sharedCache]);
+  useEffect(() => {
+    if (openedPeer && peerFeed && peerVersionMatches && peerRecord.data && !peerRecord.error)
+      sharedCache.put(openedPeer.groupId, peerFeed, peerRecord.data);
+  }, [openedPeer, peerFeed, peerVersionMatches, peerRecord.data, peerRecord.error, sharedCache]);
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
   const previous = context.data?.previous?.sets ?? [];
+  const pendingExerciseMemo = useMemo(
+    () =>
+      input.name ? readMemoDraft(memoDraftKey(userId, input.name))?.content.trim() : undefined,
+    [userId, input.name],
+  );
+  const pendingTodayMemo = useMemo(() => {
+    const id = sessionId ?? controller.startingId;
+    if (!id || !input.name) return undefined;
+    const path = `/sessions/${id}/exercise-memo?name=${encodeURIComponent(input.name)}`;
+    return readMemoDraft(memoDraftKey(userId, path))?.content.trim();
+  }, [userId, input.name, sessionId, controller.startingId]);
   useEffect(() => {
     if (!input.awaitingPrevious) return;
     const untouched = !input.dirty && input.editing === null && sets.length === 0;
@@ -415,7 +465,12 @@ function ActiveTraining({
                       key={`${peer.groupId}:${peer.workoutId}`}
                       aria-label={`${peer.name}の今日の記録を開く`}
                       onClick={() =>
-                        setOpenedPeer({ groupId: peer.groupId, workoutId: peer.workoutId })
+                        setOpenedPeer({
+                          groupId: peer.groupId,
+                          workoutId: peer.workoutId,
+                          name: peer.name,
+                          version: peer.version,
+                        })
                       }
                     >
                       <span className="peer-avatar-wrap">
@@ -438,24 +493,33 @@ function ActiveTraining({
                   ))}
             </div>
           </section>
-          <details className="today-training" aria-label="今日のトレーニング">
-            <summary>
-              <span>今日のトレーニング</span>
-              <span>{sessionSummary(exercises)}</span>
-              <span aria-hidden="true">…</span>
-            </summary>
-            {exercises.map((exercise, index) => (
-              <section key={`${exercise.name}-${index}`}>
-                <h2>{exercise.name}</h2>
-                {exercise.sets.map((value, setIndex) => (
-                  <p key={`${exercise.name}-${setIndex}`}>
-                    <span>SET {setIndex + 1}</span>
-                    <SetMeasurement weight={value.weight} reps={value.reps} />
-                  </p>
-                ))}
-              </section>
-            ))}
-          </details>
+          {hasRecordedSets ? (
+            <details className="today-training" aria-label="今日のトレーニング">
+              <summary>
+                <span>今日のトレーニング</span>
+                <span>{sessionSummary(exercises)}</span>
+                <span aria-hidden="true">…</span>
+              </summary>
+              {exercises.map((exercise, index) => (
+                <section key={`${exercise.name}-${index}`}>
+                  <h2>{exercise.name}</h2>
+                  {exercise.sets.map((value, setIndex) => (
+                    <p key={`${exercise.name}-${setIndex}`}>
+                      <span>SET {setIndex + 1}</span>
+                      <SetMeasurement weight={value.weight} reps={value.reps} />
+                    </p>
+                  ))}
+                </section>
+              ))}
+            </details>
+          ) : (
+            <section className="today-training" aria-label="今日のトレーニング">
+              <div className="today-training-empty">
+                <span>今日のトレーニング</span>
+                <span>0セット</span>
+              </div>
+            </section>
+          )}
           {overviewBests.error && (
             <p className="error" role="alert">
               {overviewBests.error}
@@ -557,7 +621,7 @@ function ActiveTraining({
                   singleLine
                 />
               ) : (
-                <span className="memo-text muted">メモを読み込み中…</span>
+                <PendingMemo title="種目メモ" content={pendingExerciseMemo} />
               )}
             </section>
             {context.error && (
@@ -701,7 +765,7 @@ function ActiveTraining({
                   singleLine
                 />
               ) : (
-                <span className="memo-text muted">メモを読み込み中…</span>
+                <PendingMemo title="今日のメモ" content={pendingTodayMemo} />
               )}
             </section>
             <form
@@ -841,7 +905,7 @@ function ActiveTraining({
       )}
       {openedPeer && (
         <Sheet
-          title={peerRecord.data ? dateLabel(peerRecord.data.performed_on) : "記録"}
+          title={visiblePeer ? dateLabel(visiblePeer.performed_on) : `${openedPeer.name}の記録`}
           onClose={() => setOpenedPeer(null)}
         >
           {peerRecord.error ? (
@@ -851,9 +915,9 @@ function ActiveTraining({
                 再試行
               </button>
             </p>
-          ) : peerRecord.data ? (
+          ) : visiblePeer ? (
             <RecordList
-              records={[peerRecord.data]}
+              records={[visiblePeer]}
               empty=""
               showDate={false}
               headerControl={(workout) => (
@@ -862,11 +926,19 @@ function ActiveTraining({
                   workoutId={workout.id}
                   name={workout.display_name}
                   direct
+                  disabled={!peerRecord.data || !!peerRecord.error}
                 />
               )}
             />
           ) : (
-            <div className="peer-record-placeholder" aria-label="記録を読み込み中" />
+            <div className="peer-record-placeholder" aria-label="記録を読み込み中">
+              {peerFeed && (
+                <p>
+                  {peerFeed.display_name} · {peerFeed.exercise}
+                  {peerFeed.summary ? ` · ${peerFeed.summary.set_count}セット` : ""}
+                </p>
+              )}
+            </div>
           )}
         </Sheet>
       )}
@@ -963,6 +1035,16 @@ function ActiveTraining({
   );
 }
 
+function PendingMemo({ title, content }: { title: string; content?: string }) {
+  return (
+    <span className="inline-memo single-line">
+      <button type="button" className="memo-text" aria-label={`${title}を準備中`} disabled>
+        {content || "メモ"}
+      </button>
+    </span>
+  );
+}
+
 function SetMeasurement({ weight, reps }: { weight: number; reps: number }) {
   return (
     <span className="set-measurement">
@@ -1008,6 +1090,7 @@ function peerItems(data: TodayActivity, selectedGroup: string) {
       live: boolean;
       best: boolean;
       updatedAt: string;
+      version: string;
     }
   >();
   for (const group of data.groups) {
@@ -1025,6 +1108,7 @@ function peerItems(data: TodayActivity, selectedGroup: string) {
         live: member?.live ?? false,
         best: feed.best,
         updatedAt: feed.updated_at,
+        version: sharedWorkoutVersion(feed),
       });
     }
   }
