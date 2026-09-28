@@ -41,6 +41,34 @@ async function setup(page: import("@playwright/test").Page) {
   return { state, groups };
 }
 
+test("所属グループが1件の間は並べ替え案内を出さず、2件になると案内する", async ({ page }) => {
+  const state = await mockTraining(page);
+  const groups = [state.group];
+  await page.route("**/api/groups**", (route) => {
+    if (new URL(route.request().url()).pathname === "/api/groups")
+      return route.fulfill({ json: groups });
+    return route.fallback();
+  });
+  await page.reload();
+  await navigate(page, "グループ");
+  const cards = page.locator(".group-card-list .community-card");
+  const hint = page.locator(".group-order-hint");
+  await expect(cards).toHaveCount(1);
+  await expect(hint).toHaveCount(0);
+
+  groups.push({ ...state.group, id: "group-b", name: "朝トレ部" });
+  await page.reload();
+  await navigate(page, "グループ");
+  await expect(cards).toHaveCount(2);
+  await expect(hint).toHaveText("長押しドラッグで表示順を変更");
+
+  groups.pop();
+  await page.reload();
+  await navigate(page, "グループ");
+  await expect(cards).toHaveCount(1);
+  await expect(hint).toHaveCount(0);
+});
+
 for (const width of [320, 390, 430]) {
   test(`${width}px: グループ一覧で長押しドラッグし、詳細タップと順序保存を分ける`, async ({
     page,

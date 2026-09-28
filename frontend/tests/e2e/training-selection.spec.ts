@@ -1,6 +1,27 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, openTraining } from "./mock-training";
 
+test("0セットの要約は開かず、最初のセットを追加すると展開できる", async ({ page }) => {
+  await mockTraining(page);
+  await openTraining(page);
+  await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
+
+  const today = page.locator(".today-training");
+  await expect(today).toContainText("0セット");
+  await expect(today.locator("summary")).toHaveCount(0);
+  await expect(today).not.toContainText("…");
+  const emptyHeight = (await today.boundingBox())?.height;
+
+  await page.getByRole("button", { name: /^ベンチプレス/ }).click();
+  await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
+  await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
+  await expect(today.locator("summary")).toBeVisible();
+  expect((await today.boundingBox())?.height).toBe(emptyHeight);
+  await today.locator("summary").click();
+  await expect(today).toContainText("SET 1");
+});
+
 test("種目選択は仲間の取得を待たず、部位で候補を絞り込める", async ({ page }) => {
   const state = await mockTraining(page);
   state.options = [
@@ -99,7 +120,7 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
     }),
   ).toBeLessThanOrEqual(1);
   const peers = page.getByRole("region", { name: "今日の仲間", exact: true });
-  const today = page.getByRole("group", { name: "今日のトレーニング", exact: true });
+  const today = page.locator(".today-training");
   expect((await peers.boundingBox())?.y).toBeLessThan((await today.boundingBox())?.y ?? 0);
   await expect(centeredExercise).toBeVisible();
   await page.getByRole("button", { name: "脚", exact: true }).click();
