@@ -207,7 +207,7 @@ export function CommunityScreen({
     const previous = { ...window.history.state };
     previous.gotoreSheet = undefined;
     window.history.pushState(
-      { ...previous, gotoreView: "groups", communityMode: next, groupId },
+      { ...previous, gotoreView: "groups", communityMode: next, groupId, gotoreBack: true },
       "",
     );
     setMode(next);
@@ -678,6 +678,7 @@ export function CommunityScreen({
       {mode === "create" && (
         <Sheet
           title={createdGroup ? "メンバーを招待" : "グループを作成"}
+          dismissOnBackdrop={!!createdGroup}
           onClose={() => {
             setCreatedGroup(null);
             change("list");

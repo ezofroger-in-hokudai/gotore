@@ -22,6 +22,7 @@ import { GROUP_REFRESH_MS } from "./refresh-interval";
 import { Preferences, usePreferences } from "./settings";
 import { SharedWorkoutCache } from "./shared-workout-cache";
 import { Sheet } from "./sheet";
+import { useEdgeBack } from "./use-edge-back";
 import { useGroupOrder } from "./use-group-order";
 
 type View = "home" | "record" | "history" | "settings" | "groups" | "edit" | "result";
@@ -36,6 +37,7 @@ export function Workspace({ session }: { session: Session }) {
 }
 
 function WorkspaceContent({ session }: { session: Session }) {
+  useEdgeBack();
   const [sharedCache] = useState(() => new SharedWorkoutCache());
   const [view, setView] = useState<View>("home");
   const [groupId, setGroupId] = useState("");
@@ -131,6 +133,7 @@ function WorkspaceContent({ session }: { session: Session }) {
       {
         ...window.history.state,
         gotoreView: inviteEntry ? "groups" : "home",
+        gotoreBack: false,
         communityMode: inviteEntry ? "join" : undefined,
       },
       "",
@@ -153,7 +156,10 @@ function WorkspaceContent({ session }: { session: Session }) {
   }, [view, selected]);
   function navigate(next: View, communityMode?: "detail" | "list") {
     if (next !== view)
-      window.history.pushState({ gotoreView: next, groupId: selected, communityMode }, "");
+      window.history.pushState(
+        { gotoreView: next, groupId: selected, communityMode, gotoreBack: true },
+        "",
+      );
     // 設定で追加・分類変更した候補を、記録の選択画面へ戻る前に確認する。
     if (next === "record") catalog.retry();
     setView(next);
@@ -276,7 +282,10 @@ function WorkspaceContent({ session }: { session: Session }) {
             catalog={catalog}
             onFinished={(record) => {
               setFinished(record);
-              window.history.replaceState({ gotoreView: "result", groupId: selected }, "");
+              window.history.replaceState(
+                { gotoreView: "result", groupId: selected, gotoreBack: true },
+                "",
+              );
               setView("result");
               setNotice("");
               window.scrollTo({ top: 0 });
@@ -302,7 +311,10 @@ function WorkspaceContent({ session }: { session: Session }) {
             onEdit={(record) => {
               if (record.started_at && !record.ended_at) navigate("record");
               else {
-                window.history.pushState({ gotoreView: "history", groupId: selected }, "");
+                window.history.pushState(
+                  { gotoreView: "history", groupId: selected, gotoreBack: true },
+                  "",
+                );
                 setEditing(record);
                 setView("edit");
               }
