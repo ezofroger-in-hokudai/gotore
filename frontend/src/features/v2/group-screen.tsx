@@ -438,7 +438,7 @@ export function CommunityScreen({
               </button>
             </div>
           </div>
-          {groups.length > 0 && <p className="group-order-hint">長押しドラッグで表示順を変更</p>}
+          {groups.length > 1 && <p className="group-order-hint">長押しドラッグで表示順を変更</p>}
           <div className="group-card-list" id="groupCardList" ref={cardsRef}>
             {groups.map((item) => (
               <SortableGroupCard
