@@ -409,11 +409,19 @@
   background: rgb(0 0 0 / 35%);
 }
 .v2-sheet .sheet-handle {
+  height: 24px;
+  margin-bottom: 0;
+  touch-action: none;
+  cursor: grab;
+}
+.v2-sheet .sheet-handle::before {
+  content: "";
+  display: block;
   width: 36px;
   height: 4px;
-  background: var(--line);
+  margin: 0 auto;
   border-radius: 4px;
-  margin: 0 auto 20px;
+  background: var(--line);
 }
 .v2-sheet .section-heading {
   margin-bottom: 20px;
@@ -4596,7 +4604,7 @@
   padding: 16px;
   border-radius: 14px;
   text-align: left;
-  touch-action: none;
+  touch-action: pan-y pinch-zoom;
 }
 .group-screen .community-card .section-heading {
   margin: 1px 0 6px;
