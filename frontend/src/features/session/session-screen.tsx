@@ -17,6 +17,7 @@ import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "../v2/avatar";
+import { type SharedWorkoutCache, sharedWorkoutVersion } from "../v2/shared-workout-cache";
 import { Sheet } from "../v2/sheet";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
@@ -44,6 +45,7 @@ export function SessionScreen({
   onFinished,
   haptic,
   catalog,
+  sharedCache,
 }: {
   active: boolean;
   controller: SessionController;
@@ -53,6 +55,7 @@ export function SessionScreen({
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  sharedCache: SharedWorkoutCache;
 }) {
   const { session } = controller;
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
@@ -89,6 +92,7 @@ export function SessionScreen({
       initialInput={draft}
       onPreparingInput={setDraft}
       catalog={catalog}
+      sharedCache={sharedCache}
     />
   );
 }
@@ -103,12 +107,14 @@ function ActiveTraining({
   initialInput,
   onPreparingInput,
   catalog,
+  sharedCache,
 }: {
   active: boolean;
   session: TrainingSession | null;
   initialInput: SessionInput;
   onPreparingInput: (input: SessionInput) => void;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  sharedCache: SharedWorkoutCache;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
@@ -143,7 +149,12 @@ function ActiveTraining({
   const [storageWarning, setStorageWarning] = useState(false);
   const [selectedParts, setSelectedParts] = useState<BodyPart[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>("all");
-  const [openedPeer, setOpenedPeer] = useState<{ groupId: string; workoutId: string } | null>(null);
+  const [openedPeer, setOpenedPeer] = useState<{
+    groupId: string;
+    workoutId: string;
+    name: string;
+    version: string;
+  } | null>(null);
   const overviewBests = useResource<SessionBests>(
     sessionId ? `/sessions/${sessionId}/bests` : null,
     controller.confirmedRevision,
@@ -185,9 +196,35 @@ function ActiveTraining({
     openedPeer ? `/groups/${openedPeer.groupId}/workouts/${openedPeer.workoutId}` : null,
     0,
     false,
-    true,
-    { enabled: active && !!openedPeer, retainOnRefresh: true },
+    false,
+    { enabled: active && !!openedPeer },
   );
+  const peerFeed = openedPeer
+    ? todayActivity.data?.groups
+        .find((group) => group.group_id === openedPeer.groupId)
+        ?.feed.find((item) => item.workout_id === openedPeer.workoutId)
+    : undefined;
+  const peerVersionMatches =
+    !!openedPeer && !!peerFeed && openedPeer.version === sharedWorkoutVersion(peerFeed);
+  const cachedPeer =
+    openedPeer && peerFeed && peerVersionMatches
+      ? sharedCache.get(openedPeer.groupId, peerFeed)
+      : null;
+  const visiblePeer = peerFeed && !peerRecord.error ? (peerRecord.data ?? cachedPeer) : null;
+  useEffect(() => {
+    if (openedPeer && todayActivity.data && !peerFeed) {
+      sharedCache.delete(openedPeer.groupId, openedPeer.workoutId);
+      setOpenedPeer(null);
+    }
+  }, [openedPeer, peerFeed, todayActivity.data, sharedCache]);
+  useEffect(() => {
+    if (openedPeer && peerRecord.error)
+      sharedCache.delete(openedPeer.groupId, openedPeer.workoutId);
+  }, [openedPeer, peerRecord.error, sharedCache]);
+  useEffect(() => {
+    if (openedPeer && peerFeed && peerVersionMatches && peerRecord.data && !peerRecord.error)
+      sharedCache.put(openedPeer.groupId, peerFeed, peerRecord.data);
+  }, [openedPeer, peerFeed, peerVersionMatches, peerRecord.data, peerRecord.error, sharedCache]);
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
   const previous = context.data?.previous?.sets ?? [];
   const pendingExerciseMemo = useMemo(
@@ -428,7 +465,12 @@ function ActiveTraining({
                       key={`${peer.groupId}:${peer.workoutId}`}
                       aria-label={`${peer.name}の今日の記録を開く`}
                       onClick={() =>
-                        setOpenedPeer({ groupId: peer.groupId, workoutId: peer.workoutId })
+                        setOpenedPeer({
+                          groupId: peer.groupId,
+                          workoutId: peer.workoutId,
+                          name: peer.name,
+                          version: peer.version,
+                        })
                       }
                     >
                       <span className="peer-avatar-wrap">
@@ -863,7 +905,7 @@ function ActiveTraining({
       )}
       {openedPeer && (
         <Sheet
-          title={peerRecord.data ? dateLabel(peerRecord.data.performed_on) : "記録"}
+          title={visiblePeer ? dateLabel(visiblePeer.performed_on) : `${openedPeer.name}の記録`}
           onClose={() => setOpenedPeer(null)}
         >
           {peerRecord.error ? (
@@ -873,9 +915,9 @@ function ActiveTraining({
                 再試行
               </button>
             </p>
-          ) : peerRecord.data ? (
+          ) : visiblePeer ? (
             <RecordList
-              records={[peerRecord.data]}
+              records={[visiblePeer]}
               empty=""
               showDate={false}
               headerControl={(workout) => (
@@ -884,11 +926,19 @@ function ActiveTraining({
                   workoutId={workout.id}
                   name={workout.display_name}
                   direct
+                  disabled={!peerRecord.data || !!peerRecord.error}
                 />
               )}
             />
           ) : (
-            <div className="peer-record-placeholder" aria-label="記録を読み込み中" />
+            <div className="peer-record-placeholder" aria-label="記録を読み込み中">
+              {peerFeed && (
+                <p>
+                  {peerFeed.display_name} · {peerFeed.exercise}
+                  {peerFeed.summary ? ` · ${peerFeed.summary.set_count}セット` : ""}
+                </p>
+              )}
+            </div>
           )}
         </Sheet>
       )}
@@ -1040,6 +1090,7 @@ function peerItems(data: TodayActivity, selectedGroup: string) {
       live: boolean;
       best: boolean;
       updatedAt: string;
+      version: string;
     }
   >();
   for (const group of data.groups) {
@@ -1057,6 +1108,7 @@ function peerItems(data: TodayActivity, selectedGroup: string) {
         live: member?.live ?? false,
         best: feed.best,
         updatedAt: feed.updated_at,
+        version: sharedWorkoutVersion(feed),
       });
     }
   }

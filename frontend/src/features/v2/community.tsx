@@ -32,6 +32,7 @@ import { HistoryBrowser } from "./history-browser";
 import { buildHomeFeed } from "./home-feed";
 import { memberIsLive, useLiveClock } from "./live-presence";
 import { GROUP_REFRESH_MS, activityRefreshMs, todayActivityRefreshMs } from "./refresh-interval";
+import type { SharedWorkoutCache } from "./shared-workout-cache";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
 import { useGroupCardDrag } from "./use-group-card-drag";
@@ -50,6 +51,7 @@ export function CommunityHome({
   loading = false,
   failed = false,
   onReady,
+  sharedCache,
 }: {
   groups: Group[];
   selected: string;
@@ -62,6 +64,7 @@ export function CommunityHome({
   loading?: boolean;
   failed?: boolean;
   onReady?: (ready: boolean) => void;
+  sharedCache?: SharedWorkoutCache;
 }) {
   const carousel = useRef<HTMLDivElement>(null);
   const [visibleGroup, setVisibleGroup] = useState(selected || groups[0]?.id || "");
@@ -238,6 +241,7 @@ export function CommunityHome({
             <Feed
               data={homeFeed.activity}
               groupIds={homeFeed.groupIds}
+              sharedCache={sharedCache}
               active={active}
               trusted={!today.refreshing}
             />
@@ -445,16 +449,18 @@ function CommunityStats({
 export function Feed({
   data,
   groupIds,
+  sharedCache,
   active,
   trusted,
 }: {
   data: GroupActivity;
   groupIds?: ReadonlyMap<string, string>;
+  sharedCache?: SharedWorkoutCache;
   active: boolean;
   trusted: boolean;
 }) {
   const clock = useLiveClock(data, active, trusted);
-  const details = useSharedWorkoutDetails(data, active && trusted, null, groupIds);
+  const details = useSharedWorkoutDetails(data, active && trusted, null, groupIds, sharedCache);
   const previous = useRef<Map<string, string> | null>(null);
   const [arrived, setArrived] = useState<string[]>([]);
   useEffect(() => {
