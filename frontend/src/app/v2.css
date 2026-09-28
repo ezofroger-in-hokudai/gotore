@@ -5206,6 +5206,35 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   color: var(--text);
   font-weight: 700;
 }
+.home-feed-tabs .group-name-tab,
+.peer-groups .group-name-tab {
+  position: relative;
+  flex: 0 0 112px;
+  width: 112px;
+}
+.home-feed-tabs .group-name-tab span,
+.peer-groups .group-name-tab span {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: start;
+}
+.home-feed-tabs .group-name-tab::after,
+.peer-groups .group-name-tab::after {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 12px;
+  width: 18px;
+  background: linear-gradient(to right, transparent, var(--group-tab-surface, var(--track)));
+  content: "";
+  pointer-events: none;
+}
+.home-feed-tabs .group-name-tab[aria-pressed="true"],
+.peer-groups .group-name-tab[aria-selected="true"] {
+  --group-tab-surface: var(--panel);
+}
 .peer-avatars {
   display: flex;
   align-items: center;
