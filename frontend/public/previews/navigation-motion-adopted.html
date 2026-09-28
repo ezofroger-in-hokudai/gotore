@@ -16,7 +16,7 @@
     .choices button { flex: 0 0 145px; min-height: 52px; padding: 5px 8px; border: 1px solid #d1d2d6; border-radius: 8px; background: white; color: #202127; font-size: 12px; font-weight: 700; scroll-snap-align: start; }
     .choices button[aria-pressed="true"] { border-color: #d32f2f; background: #fff4f4; color: #b71c1c; }
     .explanation { min-height: 42px; margin: 0 0 14px; font-size: 12px; color: #62646c; line-height: 1.5; }
-    .phone { width: min(390px, 100%); height: min(720px, 72dvh); min-height: 500px; margin: auto; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #c3c5c9; border-radius: 24px; background: #f7f7f8; box-shadow: 0 20px 48px #20212725; }
+    .phone { position: relative; width: min(390px, 100%); height: min(720px, 72dvh); min-height: 500px; margin: auto; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #c3c5c9; border-radius: 24px; background: #f7f7f8; box-shadow: 0 20px 48px #20212725; }
     .app-header { flex: none; display: flex; align-items: center; height: 48px; padding: 0 18px; background: #202127; color: white; font-size: 20px; font-weight: 800; letter-spacing: -.6px; }
     .app-header span { color: #e33b38; }
     .stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
@@ -46,6 +46,7 @@
     .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 15px; }
     .calendar span { display: grid; place-items: center; aspect-ratio: 1; border-radius: 6px; background: #e9e9ed; color: #666871; font-size: 11px; }
     .calendar span.active { background: #e4544b; color: white; }
+    .floating-training { position: absolute; z-index: 1; right: 16px; bottom: 78px; display: grid; place-items: center; width: 112px; height: 52px; border-radius: 28px; background: #d32f2f; color: white; box-shadow: 0 4px 16px #0003; font-size: 14px; font-weight: 800; letter-spacing: .04em; pointer-events: none; }
     .bottom-nav { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); height: 62px; border-top: 1px solid #d8d9dc; background: white; }
     .bottom-nav button { border: 0; background: transparent; color: #777982; font-size: 11px; }
     .bottom-nav button[aria-current="page"] { border-top: 2px solid #d32f2f; color: #d32f2f; font-weight: 700; }
@@ -56,11 +57,12 @@
 <body>
   <main class="comparison">
     <h1>採用案 · 控えめな横移動</h1>
-    <p class="intro">カード・戻る・下部タブを押して、採用した横移動を確認できます。表示内容は動きの確認用サンプルです。</p>
+    <p class="intro">カード・戻る・下部タブを押して、採用した横移動を確認できます。STARTは画面切替中の重なり順を確認する表示です。</p>
     <p class="explanation" id="explanation">B: 180msで18pxだけ横へ動きます。戻るときは方向が逆になります。</p>
     <div class="phone">
       <header class="app-header">E-GO<span>TORE</span></header>
       <div class="stage" id="stage" aria-live="polite"></div>
+      <div class="floating-training" aria-hidden="true">START</div>
       <nav class="bottom-nav" aria-label="比較用の下部ナビ">
         <button type="button" data-go="home" aria-current="page">ホーム</button>
         <button type="button" data-go="group">グループ</button>

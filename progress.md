@@ -1,5 +1,14 @@
 # progress.md
 
+## 2026-09-29 02:51 STARTなどの固定操作が画面遷移中に隠れる問題を修正（Issue #207）
+- 変更内容: 主画面内容とは別のView Transitionレイヤーへ`START / RESUME`、ヘッダー、下部ナビを分け、画面内容より手前へ固定した。旧スナップショットを隠し、新しい固定操作をアニメーションなしで表示する。採用固定プレビューにもSTARTの位置を追加した。
+- 目的: 画面切替中にSTART等が新画面の下へ潜り、遷移後に再表示されるように見える問題を解消するため。
+- 影響範囲: 固定操作の遷移中の描画順。ボタンの動作、画面遷移の距離・時間、API・DBは変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/tests/e2e/navigation-motion.spec.ts`、`frontend/public/previews/navigation-motion-adopted.html`、`docs/design/navigation-motion.md`、`task.md`。
+- 検証: 修正前に固定STARTの遷移名`none`・描画層`auto`でE2Eが失敗することを確認。修正後は遷移・START/RESUME・左端戻りの関連E2E13件成功。`make check`でbackend 103件成功・DB統合178件skip（専用DB未指定）、frontend単体110件・lint・型・build成功。`git diff --check`を確認。
+- 未解決事項: 実機iOS・Androidで固定操作の見え方を再確認する。PRの全E2E CI・実装者以外のレビューは未完了。
+- 次のアクション: PR #243へ追記してレビューし、実機で切替中の重なり順を確認する。
+
 ## 2026-09-29 01:03 画面切替で前画面が残像として残る問題を修正（Issue #207）
 - 変更内容: View Transition中に旧画面のスナップショットを非表示にし、新画面を不透明のまま18px横移動させるよう変更した。API非対応時と採用固定プレビューも同じ動きへ合わせた。
 - 目的: ユーザーの実機フィードバックで前画面が強く残って見えたため、画面切替の方向は保ちながら残像をなくすため。

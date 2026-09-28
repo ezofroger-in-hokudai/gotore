@@ -33,6 +33,64 @@ test("画面を切り替えた直後に元画面のスナップショットを�
     .toBe("0");
 });
 
+test("固定操作を画面内容より手前に保ち、タブ切替中も表示し続ける", async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = document.startViewTransition.bind(document);
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: (update: () => void) => {
+        const transition = original(update);
+        void transition.ready.then(() => {
+          const state = window as typeof window & {
+            fixedLayers?: { name: string; zIndex: string; opacity: string }[];
+          };
+          state.fixedLayers = [".app-header", ".floating-training", ".bottom-nav"].map(
+            (selector) => {
+              const element = document.querySelector(selector);
+              if (!element) throw new Error(`${selector}がありません`);
+              const name = getComputedStyle(element).viewTransitionName;
+              return {
+                name,
+                zIndex: getComputedStyle(
+                  document.documentElement,
+                  `::view-transition-group(${name})`,
+                ).zIndex,
+                opacity: getComputedStyle(
+                  document.documentElement,
+                  `::view-transition-new(${name})`,
+                ).opacity,
+              };
+            },
+          );
+        });
+        return transition;
+      },
+    });
+  });
+  await mockTraining(page);
+  await page
+    .getByRole("navigation", { name: "メインナビゲーション" })
+    .getByRole("button", { name: "グループ" })
+    .dispatchEvent("click");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & {
+              fixedLayers?: { name: string; zIndex: string; opacity: string }[];
+            }
+          ).fixedLayers,
+      ),
+    )
+    .toEqual([
+      { name: "gotore-header", zIndex: "1", opacity: "1" },
+      { name: "gotore-training-shortcut", zIndex: "1", opacity: "1" },
+      { name: "gotore-bottom-nav", zIndex: "1", opacity: "1" },
+    ]);
+  await expect(page.getByTestId("floating-training")).toBeVisible();
+});
+
 test("画面とグループ詳細は控えめな横移動で進み、履歴では逆向きに戻る", async ({ page }) => {
   await page.addInitScript(() => {
     const original = document.startViewTransition.bind(document);
