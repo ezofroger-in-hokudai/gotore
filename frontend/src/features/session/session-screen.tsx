@@ -1,23 +1,11 @@
 "use client";
 
-import type {
-  BodyPart,
-  ExerciseOption,
-  SessionBests,
-  TodayActivity,
-  TrainingSession,
-  Workout,
-} from "@/lib/api";
+import type { BodyPart, ExerciseOption, SessionBests, TrainingSession } from "@/lib/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { dateLabel } from "../activity/calendar";
 import { BODY_PARTS, BODY_PART_LABELS, normalizeBodyPart } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
-import { StampControl } from "../stamps/stamp-control";
 import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
-import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
-import { Avatar } from "../v2/avatar";
-import { type SharedWorkoutCache, sharedWorkoutVersion } from "../v2/shared-workout-cache";
 import { Sheet } from "../v2/sheet";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
@@ -45,7 +33,6 @@ export function SessionScreen({
   onFinished,
   haptic,
   catalog,
-  sharedCache,
 }: {
   active: boolean;
   controller: SessionController;
@@ -55,7 +42,6 @@ export function SessionScreen({
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
-  sharedCache: SharedWorkoutCache;
 }) {
   const { session } = controller;
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
@@ -92,7 +78,6 @@ export function SessionScreen({
       initialInput={draft}
       onPreparingInput={setDraft}
       catalog={catalog}
-      sharedCache={sharedCache}
     />
   );
 }
@@ -107,14 +92,12 @@ function ActiveTraining({
   initialInput,
   onPreparingInput,
   catalog,
-  sharedCache,
 }: {
   active: boolean;
   session: TrainingSession | null;
   initialInput: SessionInput;
   onPreparingInput: (input: SessionInput) => void;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
-  sharedCache: SharedWorkoutCache;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
@@ -148,13 +131,6 @@ function ActiveTraining({
   const [error, setError] = useState("");
   const [storageWarning, setStorageWarning] = useState(false);
   const [selectedParts, setSelectedParts] = useState<BodyPart[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string>("all");
-  const [openedPeer, setOpenedPeer] = useState<{
-    groupId: string;
-    workoutId: string;
-    name: string;
-    version: string;
-  } | null>(null);
   const overviewBests = useResource<SessionBests>(
     sessionId ? `/sessions/${sessionId}/bests` : null,
     controller.confirmedRevision,
@@ -185,46 +161,6 @@ function ActiveTraining({
     controller.confirmedRevision,
     active,
   );
-  const todayActivity = useResource<TodayActivity>(
-    sessionId ? "/groups/today-activity" : null,
-    controller.confirmedRevision,
-    10_000,
-    true,
-    { enabled: active && selecting, retainOnRefresh: true },
-  );
-  const peerRecord = useResource<Workout>(
-    openedPeer ? `/groups/${openedPeer.groupId}/workouts/${openedPeer.workoutId}` : null,
-    0,
-    false,
-    false,
-    { enabled: active && !!openedPeer },
-  );
-  const peerFeed = openedPeer
-    ? todayActivity.data?.groups
-        .find((group) => group.group_id === openedPeer.groupId)
-        ?.feed.find((item) => item.workout_id === openedPeer.workoutId)
-    : undefined;
-  const peerVersionMatches =
-    !!openedPeer && !!peerFeed && openedPeer.version === sharedWorkoutVersion(peerFeed);
-  const cachedPeer =
-    openedPeer && peerFeed && peerVersionMatches
-      ? sharedCache.get(openedPeer.groupId, peerFeed)
-      : null;
-  const visiblePeer = peerFeed && !peerRecord.error ? (peerRecord.data ?? cachedPeer) : null;
-  useEffect(() => {
-    if (openedPeer && todayActivity.data && !peerFeed) {
-      sharedCache.delete(openedPeer.groupId, openedPeer.workoutId);
-      setOpenedPeer(null);
-    }
-  }, [openedPeer, peerFeed, todayActivity.data, sharedCache]);
-  useEffect(() => {
-    if (openedPeer && peerRecord.error)
-      sharedCache.delete(openedPeer.groupId, openedPeer.workoutId);
-  }, [openedPeer, peerRecord.error, sharedCache]);
-  useEffect(() => {
-    if (openedPeer && peerFeed && peerVersionMatches && peerRecord.data && !peerRecord.error)
-      sharedCache.put(openedPeer.groupId, peerFeed, peerRecord.data);
-  }, [openedPeer, peerFeed, peerVersionMatches, peerRecord.data, peerRecord.error, sharedCache]);
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
   const previous = context.data?.previous?.sets ?? [];
   const pendingExerciseMemo = useMemo(
@@ -434,71 +370,12 @@ function ActiveTraining({
               トレーニング終了
             </button>
           </div>
-          <section className="training-peers" aria-label="今日の仲間">
-            <div className="peer-groups" role="tablist" aria-label="仲間のグループ">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={selectedGroup === "all"}
-                onClick={() => setSelectedGroup("all")}
-              >
-                すべて
-              </button>
-              {(todayActivity.data?.groups ?? []).map((group) => (
-                <button
-                  type="button"
-                  role="tab"
-                  key={group.group_id}
-                  aria-selected={selectedGroup === group.group_id}
-                  onClick={() => setSelectedGroup(group.group_id)}
-                >
-                  {group.name}
-                </button>
-              ))}
-            </div>
-            <div className="peer-avatars">
-              {todayActivity.data
-                ? peerItems(todayActivity.data, selectedGroup).map((peer) => (
-                    <button
-                      className="peer-avatar-button"
-                      type="button"
-                      key={`${peer.groupId}:${peer.workoutId}`}
-                      aria-label={`${peer.name}の今日の記録を開く`}
-                      onClick={() =>
-                        setOpenedPeer({
-                          groupId: peer.groupId,
-                          workoutId: peer.workoutId,
-                          name: peer.name,
-                          version: peer.version,
-                        })
-                      }
-                    >
-                      <span className="peer-avatar-wrap">
-                        <Avatar
-                          userId={peer.userId}
-                          name={peer.name}
-                          version={peer.avatarVersion}
-                          live={peer.live}
-                        />
-                        {peer.best && (
-                          <span className="peer-best" aria-label="最高記録を更新">
-                            🔥
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  ))
-                : ["first", "second", "third"].map((key) => (
-                    <span className="peer-avatar-placeholder" key={key} />
-                  ))}
-            </div>
-          </section>
           {hasRecordedSets ? (
             <details className="today-training" aria-label="今日のトレーニング">
               <summary>
                 <span>今日のトレーニング</span>
                 <span>{sessionSummary(exercises)}</span>
-                <span aria-hidden="true">…</span>
+                <span aria-hidden="true">▼</span>
               </summary>
               {exercises.map((exercise, index) => (
                 <section key={`${exercise.name}-${index}`}>
@@ -903,45 +780,6 @@ function ActiveTraining({
           />
         </Sheet>
       )}
-      {openedPeer && (
-        <Sheet
-          title={visiblePeer ? dateLabel(visiblePeer.performed_on) : `${openedPeer.name}の記録`}
-          onClose={() => setOpenedPeer(null)}
-        >
-          {peerRecord.error ? (
-            <p className="error" role="alert">
-              {peerRecord.error}
-              <button type="button" className="text-button" onClick={peerRecord.retry}>
-                再試行
-              </button>
-            </p>
-          ) : visiblePeer ? (
-            <RecordList
-              records={[visiblePeer]}
-              empty=""
-              showDate={false}
-              headerControl={(workout) => (
-                <StampControl
-                  groupId={openedPeer.groupId}
-                  workoutId={workout.id}
-                  name={workout.display_name}
-                  direct
-                  disabled={!peerRecord.data || !!peerRecord.error}
-                />
-              )}
-            />
-          ) : (
-            <div className="peer-record-placeholder" aria-label="記録を読み込み中">
-              {peerFeed && (
-                <p>
-                  {peerFeed.display_name} · {peerFeed.exercise}
-                  {peerFeed.summary ? ` · ${peerFeed.summary.set_count}セット` : ""}
-                </p>
-              )}
-            </div>
-          )}
-        </Sheet>
-      )}
       {controller.status === "conflict" && (
         <div className="sync-status" aria-live="polite">
           要確認・端末に保持
@@ -1076,44 +914,4 @@ function previousDays(performedOn: string | undefined) {
     ),
   );
   return days >= 10 ? "10日以上前" : `${days}日前`;
-}
-
-function peerItems(data: TodayActivity, selectedGroup: string) {
-  const peers = new Map<
-    string,
-    {
-      groupId: string;
-      workoutId: string;
-      userId: string;
-      name: string;
-      avatarVersion?: string | null;
-      live: boolean;
-      best: boolean;
-      updatedAt: string;
-      version: string;
-    }
-  >();
-  for (const group of data.groups) {
-    if (selectedGroup !== "all" && selectedGroup !== group.group_id) continue;
-    for (const feed of group.feed) {
-      const current = peers.get(feed.user_id);
-      if (current && current.updatedAt >= feed.updated_at) continue;
-      const member = group.members.find((item) => item.id === feed.user_id);
-      peers.set(feed.user_id, {
-        groupId: group.group_id,
-        workoutId: feed.workout_id,
-        userId: feed.user_id,
-        name: feed.display_name,
-        avatarVersion: member?.avatar_version,
-        live: member?.live ?? false,
-        best: feed.best,
-        updatedAt: feed.updated_at,
-        version: sharedWorkoutVersion(feed),
-      });
-    }
-  }
-  return [...peers.values()].toSorted(
-    (left, right) =>
-      Number(right.live) - Number(left.live) || right.updatedAt.localeCompare(left.updatedAt),
-  );
 }

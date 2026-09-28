@@ -56,7 +56,7 @@ export function Preferences({
   signingOut: boolean;
 }) {
   const [sheet, setSheet] = useState<
-    "name" | "avatar" | "theme" | "haptic" | "exercises" | "suggestion" | null
+    "name" | "avatar" | "theme" | "haptic" | "exercises" | "suggestion" | "logout" | null
   >(null);
   const suggestion = useSuggestionBox();
   const profile = useResource<{ display_name: string }>("/me");
@@ -126,7 +126,12 @@ export function Preferences({
         <button className="v2-row" type="button" data-tour="replay" onClick={onGuide}>
           使い方 <span>›</span>
         </button>
-        <button className="v2-row" type="button" disabled={signingOut} onClick={onLogout}>
+        <button
+          className="v2-row logout-row"
+          type="button"
+          disabled={signingOut}
+          onClick={() => setSheet("logout")}
+        >
           {signingOut ? "処理中…" : "ログアウト"}
         </button>
       </div>
@@ -135,7 +140,7 @@ export function Preferences({
           {preferences.error}
         </p>
       )}
-      {sheet && (
+      {sheet && sheet !== "logout" && (
         <Sheet
           title={
             sheet === "suggestion"
@@ -211,6 +216,25 @@ export function Preferences({
               </label>
             </>
           )}
+        </Sheet>
+      )}
+      {sheet === "logout" && (
+        <Sheet
+          title="ログアウト"
+          onClose={() => {
+            if (!signingOut) setSheet(null);
+          }}
+          dismissOnBackdrop={!signingOut}
+        >
+          <p>ログアウトしますか？</p>
+          <div className="settings-confirm-actions">
+            <button type="button" disabled={signingOut} onClick={() => setSheet(null)}>
+              キャンセル
+            </button>
+            <button className="danger" type="button" disabled={signingOut} onClick={onLogout}>
+              {signingOut ? "処理中…" : "ログアウト"}
+            </button>
+          </div>
         </Sheet>
       )}
     </section>

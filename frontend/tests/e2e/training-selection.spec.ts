@@ -17,12 +17,14 @@ test("0セットの要約は開かず、最初のセットを追加すると展�
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await expect(today.locator("summary")).toBeVisible();
+  await expect(today.locator("summary")).toContainText("▼");
+  await expect(today.locator("summary")).not.toContainText("…");
   expect((await today.boundingBox())?.height).toBe(emptyHeight);
   await today.locator("summary").click();
   await expect(today).toContainText("SET 1");
 });
 
-test("種目選択は仲間の取得を待たず、部位で候補を絞り込める", async ({ page }) => {
+test("種目選択は仲間のタイムラインを取得せず、部位で候補を絞り込める", async ({ page }) => {
   const state = await mockTraining(page);
   state.options = [
     {
@@ -38,9 +40,10 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
       secondary_body_parts: [],
     },
   ];
+  let todayActivityRequests = 0;
   await page.route("**/api/groups/today-activity", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-    await route.fulfill({ json: { groups: [] } });
+    todayActivityRequests++;
+    await route.fulfill({ json: { totals: { set_count: 0, total_volume: 0 }, groups: [] } });
   });
 
   // mockTrainingの初期表示後に候補を差し替えるため、選択画面を開く前に再取得する。
@@ -60,6 +63,7 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
         borderRadius: style.borderRadius,
       };
     });
+  const requestsBeforeTraining = todayActivityRequests;
   await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
 
@@ -69,18 +73,9 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
   await expect(sessionHeader).toHaveCSS("position", "sticky");
   expect((await sessionHeader.boundingBox())?.y).toBe(0);
   expect((await sessionHeader.boundingBox())?.height).toBe(homeHeaderHeight);
-  const trainingGroupOption = await page
-    .getByRole("tab", { name: "すべて", exact: true })
-    .evaluate((button) => {
-      const style = getComputedStyle(button);
-      const box = button.getBoundingClientRect();
-      return {
-        height: box.height,
-        fontSize: style.fontSize,
-        borderRadius: style.borderRadius,
-      };
-    });
-  expect(trainingGroupOption).toEqual(homeGroupOption);
+  await expect(page.getByRole("region", { name: "今日の仲間", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "すべて", exact: true })).toHaveCount(0);
+  expect(todayActivityRequests).toBe(requestsBeforeTraining);
   const firstPart = await page
     .getByRole("button", { name: "胸", exact: true })
     .evaluate((button) => {
@@ -119,9 +114,6 @@ test("種目選択は仲間の取得を待たず、部位で候補を絞り込�
         : Number.POSITIVE_INFINITY;
     }),
   ).toBeLessThanOrEqual(1);
-  const peers = page.getByRole("region", { name: "今日の仲間", exact: true });
-  const today = page.locator(".today-training");
-  expect((await peers.boundingBox())?.y).toBeLessThan((await today.boundingBox())?.y ?? 0);
   await expect(centeredExercise).toBeVisible();
   await page.getByRole("button", { name: "脚", exact: true }).click();
   await expect(page.getByRole("button", { name: /^スクワット/ })).toBeVisible();

@@ -30,6 +30,10 @@ test("初回ガイドは完了・再ログイン後に再表示せず、設定�
   await expect(guide).toHaveCount(0);
   await navigate(page, "設定");
   await page.getByRole("button", { name: "ログアウト", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "ログアウト", exact: true })
+    .getByRole("button", { name: "ログアウト", exact: true })
+    .click();
   await page.getByLabel("メールアドレス", { exact: true }).fill("ui@example.test");
   await page.getByLabel("パスワード", { exact: true }).fill("ui-test-password");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();

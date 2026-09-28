@@ -3878,3 +3878,13 @@
 - テストを先に書けなかった理由: 既存のFeed内保持が画面離脱で失われ、セッション側の取得経路と権限確認との接続方式を先に調べる必要があった。保持境界が定まった後に単体/E2Eを追加した。
 - 未解決事項: 関連E2Eを広げた実行では2件成功、3件失敗、1件中断、7件未実行。失敗のうち先読み要求数は変更前mainでも同じ期待2件/実際0件で再現し、旧`/groups/{id}/activity`モックと現行ホームの集約APIの不一致がある。起動表示の旧見出し期待も失敗した。全E2Eと実機PWA、実DBでの権限変化、他人が共有解除した瞬間の表示確認は未実施。これはCI/テスト修正中の#218と合わせて確認する。
 - 次のアクション: PRのCIで全E2Eとレビューを確認し、#218の旧期待を別作業で更新する。実機で仲間シートの初回・再訪の見え方を確認する。
+
+## 2026-09-28 17:56 記録画面の仲間表示削除とログアウト確認
+
+- 変更内容: トレーニングの種目選択画面から仲間のグループ選択、当日アイコン、共有記録詳細シートと関連取得を削除した。本人の `今日のトレーニング` は `▼` で展開する表示へ変更。設定のログアウトは赤文字にし、キャンセルと確定を選ぶ確認シートを追加した。
+- 目的: 公開先選択と誤認された仲間タイムラインを記録画面からなくして本人の入力へ集中させ、ログアウトの誤操作を防ぐため。
+- 影響範囲: トレーニング記録画面、設定画面、関連CSS・E2E・画面設計資料。記録の共有範囲、ホームのタイムライン、API・DBは変更していない。
+- 関連ファイル: `frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/settings.tsx`、`workspace.tsx`、`frontend/src/app/v2.css`、`frontend/tests/e2e/training-selection.spec.ts`、`record-loading.spec.ts`、`onboarding.spec.ts`、`google-signin.spec.ts`、削除した`peer-record-reuse.spec.ts`、`docs/design/training-session.md`、`docs/design/settings-screen.md`、`docs/design/home-screen.md`、`docs/stamps.md`、`docs/loading-performance.md`、`task.md`。
+- 検証: `make check`成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。E2Eの期待値は実装前に追加したが、実行環境に `libnspr4.so` がなくChromiumを起動できなかったため、実装前の失敗と修正後の成功は未確認。
+- 未解決事項: 関連E2E・全E2E・実機表示は未確認。
+- 次のアクション: Chromium依存が揃う環境またはCIで関連E2Eを実行する。別ブランチでグループカードの状態別配色を実装する。

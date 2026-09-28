@@ -266,7 +266,6 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
-            sharedCache={sharedCache}
             active={view === "record"}
             controller={training}
             userId={session.user.id}

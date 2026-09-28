@@ -383,6 +383,15 @@
 .preferences .v2-rows {
   margin-top: 0;
 }
+.preferences .logout-row {
+  color: #bd3038;
+}
+.settings-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
 .haptic-toggle {
   display: flex;
   flex-direction: row;
@@ -5127,85 +5136,6 @@
 .today-training .set-measurement {
   color: var(--text);
 }
-.training-peers {
-  min-height: 111px;
-  border-bottom: 1px solid var(--line);
-}
-.peer-groups {
-  display: flex;
-  justify-content: safe center;
-  gap: 6px;
-  min-height: 43px;
-  padding: 4px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-.peer-groups::-webkit-scrollbar {
-  display: none;
-}
-.peer-groups button {
-  flex: 0 0 auto;
-  min-height: 35px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 11px;
-}
-.peer-groups button[aria-selected="true"] {
-  color: var(--text);
-  font-weight: 700;
-}
-.peer-avatars {
-  display: flex;
-  align-items: center;
-  min-height: 69px;
-  gap: 12px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-.peer-avatars::-webkit-scrollbar {
-  display: none;
-}
-.peer-avatar-button {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  min-height: 56px;
-  padding: 4px;
-  border: 0;
-  background: transparent;
-}
-.peer-avatar-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-}
-.peer-avatar-wrap .person-avatar {
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border-radius: 50%;
-}
-.peer-best {
-  position: absolute;
-  top: -10px;
-  right: -11px;
-  font-size: 14px;
-  line-height: 1;
-}
-.peer-avatar-placeholder {
-  flex: 0 0 auto;
-  width: 38px;
-  height: 38px;
-  margin: 0 5px;
-  border-radius: 50%;
-  background: var(--track);
-}
 .session-body-parts {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -5238,7 +5168,6 @@
     .body-part-chips,
     .activity-part-filters,
     .analytics-metrics,
-    .peer-groups,
     .session-body-parts,
     .stamp-filters
   ) {
@@ -5250,7 +5179,6 @@
     .body-part-chips,
     .activity-part-filters,
     .analytics-metrics,
-    .peer-groups,
     .session-body-parts,
     .stamp-filters
   )
@@ -5267,16 +5195,12 @@
     .session-body-parts,
     .stamp-filters
   )
-  button[aria-pressed="true"],
-.v2-app .peer-groups button[aria-selected="true"] {
+  button[aria-pressed="true"] {
   border-color: transparent;
   background: var(--panel);
   color: var(--text);
   box-shadow: 0 1px 3px #0000000d;
   font-weight: 700;
-}
-.v2-app .peer-groups button[aria-selected="true"] {
-  border-bottom-color: transparent;
 }
 .recording-view .exercise-picker-list {
   margin: 0;
@@ -5322,9 +5246,4 @@
   text-align: left;
   font-size: 14px;
   font-weight: 700;
-}
-.peer-record-placeholder {
-  min-height: 280px;
-  background: linear-gradient(90deg, var(--track), var(--panel), var(--track));
-  padding: 16px;
 }

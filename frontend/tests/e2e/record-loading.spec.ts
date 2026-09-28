@@ -70,7 +70,15 @@ test("ログアウト後の別利用者へ履歴と入力を引き継がない",
   await navigate(page, "履歴");
   await expect(page.locator(".history-row")).toContainText("最初の利用者の記録");
   await navigate(page, "設定");
-  await page.getByRole("button", { name: "ログアウト", exact: true }).click();
+  const logout = page.getByRole("button", { name: "ログアウト", exact: true });
+  await expect(logout).toHaveCSS("color", "rgb(189, 48, 56)");
+  await logout.click();
+  const confirmation = page.getByRole("dialog", { name: "ログアウト", exact: true });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(page.getByRole("button", { name: "ログイン", exact: true })).toHaveCount(0);
+  await logout.click();
+  await confirmation.getByRole("button", { name: "ログアウト", exact: true }).click();
   await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
   state.user.id = "00000000-0000-0000-0000-000000000009";
   await page.getByLabel("メールアドレス", { exact: true }).fill("next@example.test");
