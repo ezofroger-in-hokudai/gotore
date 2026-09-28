@@ -2,6 +2,7 @@ import type { GroupActivity, Workout } from "@/lib/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { resourceRequest } from "../training/resource-request";
 import { memberIsLive } from "./live-presence";
+import type { SharedWorkoutCache } from "./shared-workout-cache";
 
 function feedVersion(item?: GroupActivity["feed"][number]) {
   // 別の記録で最高値が変わると、本文の更新日時が同じでも強調表示を読み直す。
@@ -21,6 +22,7 @@ export function useSharedWorkoutDetails(
   active: boolean,
   opened: string | null,
   groupIds?: ReadonlyMap<string, string>,
+  sharedCache?: SharedWorkoutCache,
 ) {
   const root = useRef<HTMLDivElement>(null);
   const entries = useRef(new Map<string, Entry>());
@@ -164,6 +166,8 @@ export function useSharedWorkoutDetails(
           if (!controller.signal.aborted && entries.current.get(id) === entry) {
             entry.data = data;
             entry.savedAt = Date.now();
+            const item = latest.current.activity.feed.find((item) => item.workout_id === id);
+            if (item && feedVersion(item) === version) sharedCache?.put(groupId, item, data);
           }
         })
         .catch((reason) => {
@@ -171,6 +175,7 @@ export function useSharedWorkoutDetails(
             entry.data = null;
             entry.error = reason instanceof Error ? reason.message : "取得できませんでした。";
             entry.savedAt = Date.now();
+            sharedCache?.delete(groupId, id);
           }
         })
         .finally(() => {
@@ -180,7 +185,7 @@ export function useSharedWorkoutDetails(
           }
         });
     }
-  }, [activity, active, opened, visible, tick, notify, groupIds]);
+  }, [activity, active, opened, visible, tick, notify, groupIds, sharedCache]);
 
   const current = opened ? entries.current.get(opened) : undefined;
   function record(id: string) {

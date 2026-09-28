@@ -20,6 +20,7 @@ import { CommunityScreen } from "./group-screen";
 import { History } from "./history";
 import { GROUP_REFRESH_MS } from "./refresh-interval";
 import { Preferences, usePreferences } from "./settings";
+import { SharedWorkoutCache } from "./shared-workout-cache";
 import { Sheet } from "./sheet";
 import { useGroupOrder } from "./use-group-order";
 
@@ -35,6 +36,7 @@ export function Workspace({ session }: { session: Session }) {
 }
 
 function WorkspaceContent({ session }: { session: Session }) {
+  const [sharedCache] = useState(() => new SharedWorkoutCache());
   const [view, setView] = useState<View>("home");
   const [groupId, setGroupId] = useState("");
   const [groupDetail, setGroupDetail] = useState(false);
@@ -58,6 +60,9 @@ function WorkspaceContent({ session }: { session: Session }) {
     enabled: view === "home" || view === "groups",
     retainOnRefresh: true,
   });
+  useEffect(() => {
+    if (groupList.data) sharedCache.retainGroups(new Set(groupList.data.map((group) => group.id)));
+  }, [groupList.data, sharedCache]);
   const groupOrder = useGroupOrder(session.user.id, groupList.data);
   const groups = groupOrder.groups;
   const [historyReady, setHistoryReady] = useState(false);
@@ -166,6 +171,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   }
   async function logout() {
     setSigningOut(true);
+    sharedCache.clear();
     try {
       const result = await getSupabase()?.auth.signOut({ scope: "local" });
       if (result?.error) throw result.error;
@@ -235,6 +241,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         <ResourceError resource={groupList} />
         <div hidden={view !== "home"}>
           <CommunityHome
+            sharedCache={sharedCache}
             groups={groups}
             onReady={setHomeReady}
             loading={groupList.data === null}
@@ -259,6 +266,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
+            sharedCache={sharedCache}
             active={view === "record"}
             controller={training}
             userId={session.user.id}
