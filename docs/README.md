@@ -38,6 +38,7 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [performance-best-history.md](performance-best-history.md): BEST・前回比較の履歴件数別計測と既存集計の利用。
 
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。
+- [本人データの端末保存方針案](personal-device-storage-plan.md): #185・#231の保存対象、正本、前回値、同期と段階的な実装。
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
 - [画面文言の再棚卸し](ui-copy-review-2026-09-13.md): 削減候補37件と今回採用する範囲。
