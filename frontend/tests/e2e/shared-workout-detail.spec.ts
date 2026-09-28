@@ -1,5 +1,90 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate, startTraining } from "./mock-training";
+
+const avatarPng = readFileSync(resolve(__dirname, "../fixtures/avatar.png"));
+
+test("共有記録の待機カードと本文で設定済みアイコンを表示する", async ({ page }) => {
+  const state = await mockTraining(page);
+  const record = {
+    id: "avatar-record",
+    user_id: "friend",
+    display_name: "友達A",
+    avatar_version: "photo-version",
+    group_id: state.group.id,
+    performed_on: "2026-09-28",
+    created_at: "2026-09-28T01:00:00Z",
+    revision: 1,
+    exercises: [{ name: "スクワット", sets: [{ weight: 100, reps: 5 }] }],
+  };
+  await page.route("**/api/profiles/friend/avatar", (route) =>
+    route.fulfill({
+      json: {
+        version: "photo-version",
+        data_url: `data:image/png;base64,${avatarPng.toString("base64")}`,
+      },
+    }),
+  );
+  await page.route("**/api/groups/today-activity", (route) =>
+    route.fulfill({
+      json: {
+        groups: [
+          {
+            group_id: state.group.id,
+            name: state.group.name,
+            member_count: 2,
+            live_count: 0,
+            today_count: 1,
+            members: [
+              {
+                id: "friend",
+                display_name: "友達A",
+                live: false,
+                today: true,
+                avatar_version: "photo-version",
+              },
+            ],
+            feed: [
+              {
+                workout_id: record.id,
+                user_id: record.user_id,
+                display_name: record.display_name,
+                exercise: "スクワット",
+                weight: 100,
+                reps: 5,
+                estimated_rm: 116.7,
+                updated_at: record.created_at,
+                best: false,
+                summary: { exercise_count: 1, set_count: 1, total_volume: 500 },
+              },
+            ],
+          },
+        ],
+        totals: { set_count: 1, total_volume: 500 },
+      },
+    }),
+  );
+  let release: () => void = () => {};
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(`**/api/groups/${state.group.id}/workouts/${record.id}`, async (route) => {
+    await pending;
+    await route.fulfill({ json: record });
+  });
+  try {
+    await page.reload();
+    const card = page.locator(`[data-workout-id="${record.id}"]`);
+    await expect(card.locator(".is-pending .record-author-avatar img")).toBeVisible();
+    release();
+    await expect(
+      card.locator(".record-review:not(.is-pending) .record-author-avatar img"),
+    ).toBeVisible();
+  } finally {
+    release();
+  }
+});
 
 test("ホームの記録詳細待ちと取得失敗でも旧フィードカードを表示しない", async ({ page }) => {
   const state = await mockTraining(page);

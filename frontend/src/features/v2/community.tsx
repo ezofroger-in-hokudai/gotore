@@ -496,9 +496,18 @@ export function Feed({
             >
               {detail.data ? (
                 <RecordList
-                  records={[detail.data]}
+                  records={[
+                    {
+                      ...detail.data,
+                      avatar_version:
+                        detail.data.avatar_version === undefined
+                          ? member?.avatar_version
+                          : detail.data.avatar_version,
+                    },
+                  ]}
                   empty=""
                   compact
+                  liveStatus={() => live}
                   headerControl={() => (
                     <StampControl
                       active={active}
@@ -511,6 +520,8 @@ export function Feed({
               ) : (
                 <PendingFeedRecord
                   item={item}
+                  avatarVersion={member?.avatar_version}
+                  live={live}
                   error={detail.error}
                   onRetry={() => details.retryRecord(item.workout_id)}
                 />
@@ -525,10 +536,14 @@ export function Feed({
 
 function PendingFeedRecord({
   item,
+  avatarVersion,
+  live,
   error,
   onRetry,
 }: {
   item: GroupActivity["feed"][number];
+  avatarVersion?: string | null;
+  live: boolean;
   error: string;
   onRetry: () => void;
 }) {
@@ -542,11 +557,15 @@ function PendingFeedRecord({
           </h2>
           <div className="record-author">
             <span className="record-author-avatar">
-              <span className="avatar" aria-hidden="true">
-                {item.display_name.slice(0, 1)}
-              </span>
+              <Avatar
+                userId={item.user_id}
+                name={item.display_name}
+                version={avatarVersion}
+                live={live}
+              />
             </span>
             <strong>{item.display_name}</strong>
+            {live && <span className="record-author-live-label">LIVE</span>}
           </div>
           <dl className="record-overview">
             <div aria-label="総負荷">

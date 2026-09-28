@@ -35,6 +35,7 @@ export type GroupDetail = Group & {
   members: {
     id: string;
     display_name: string;
+    avatar_version?: string | null;
     joined_at: string;
     last_activity_at?: string | null;
   }[];
@@ -76,6 +77,7 @@ export type Workout = {
   id: string;
   user_id: string;
   display_name: string;
+  avatar_version?: string | null;
   group_id: string | null;
   performed_on: string;
   exercises: Exercise[];

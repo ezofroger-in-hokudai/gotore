@@ -1,5 +1,9 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate } from "./mock-training";
+
+const avatarPng = readFileSync(resolve(__dirname, "../fixtures/avatar.png"));
 
 test("一覧・詳細で共有するスタンプと、画面を閉じても続く送信・失敗後の自動再送", async ({
   page,
@@ -79,11 +83,28 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
   await page.route("**/api/groups/*/stamps/summary", (route) =>
     route.fulfill({ json: { [record.id]: summary() } }),
   );
+  await page.route("**/api/profiles/stamp-friend/avatar", (route) =>
+    route.fulfill({
+      json: {
+        version: "stamp-photo",
+        data_url: `data:image/png;base64,${avatarPng.toString("base64")}`,
+      },
+    }),
+  );
   await page.route("**/api/groups/*/workouts/*/stamps?*", (route) =>
     route.fulfill({
       json: {
         ...summary(),
-        items: [{ id: "reaction", display_name: "タクミ", mine: false, kind: "encourage" }],
+        items: [
+          {
+            id: "reaction",
+            sender_id: "stamp-friend",
+            display_name: "タクミ",
+            avatar_version: "stamp-photo",
+            mine: false,
+            kind: "encourage",
+          },
+        ],
         total: 5,
         has_more: false,
       },
@@ -155,6 +176,7 @@ test("一覧・詳細で共有するスタンプと、画面を閉じても続�
   await card.getByRole("button", { name: "ミオのリアクションの詳細" }).click();
   const people = page.getByRole("dialog", { name: "スタンプ", exact: true });
   await expect(people.getByRole("region", { name: "💪スタンプ タクミ" })).toBeVisible();
+  await expect(people.locator(".stamp-avatar-stack img")).toBeVisible();
   await page.screenshot({ path: "test-results/inline-stamps-people.png", fullPage: true });
   await people.getByRole("button", { name: "閉じる", exact: true }).click();
   await page.evaluate(() => {

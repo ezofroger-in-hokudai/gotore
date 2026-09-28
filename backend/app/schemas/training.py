@@ -73,6 +73,7 @@ class GroupResponse(BaseModel):
 class MemberResponse(BaseModel):
     id: UUID
     display_name: str
+    avatar_version: UUID | None = None
     joined_at: datetime
     last_activity_at: datetime | None = None
 
@@ -98,6 +99,7 @@ class WorkoutResponse(BaseModel):
     id: UUID
     user_id: UUID
     display_name: str
+    avatar_version: UUID | None = None
     group_id: UUID | None
     performed_on: date
     exercises: list[Exercise]

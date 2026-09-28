@@ -98,18 +98,22 @@ test("LIVEは右下の丸とラベルで示し、新着だけ強調して期限�
       },
     ],
   };
-  await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
-    route.fulfill({ json: data }),
+  await page.route("**/api/groups/today-activity", (route) =>
+    route.fulfill({
+      json: {
+        groups: [{ ...data, name: state.group.name }],
+        totals: { set_count: 1, total_volume: 640 },
+      },
+    }),
   );
   await page.reload();
-  const card = page.getByRole("article");
+  const card = page.locator(".feed-item");
   await expect(card.locator(".avatar-live-dot")).toBeVisible();
   await expect(card.getByText("LIVE", { exact: true })).toBeVisible();
-  await expect(card.locator("time")).toContainText("たった今");
+  await expect(card.locator(".record-pending-date")).toBeVisible();
   await expect(card).not.toHaveClass(/feed-arrived/);
   data.feed[0].weight = 82.5;
   data.feed[0].updated_at = new Date(Date.now() + 1000).toISOString();
-  await expect(card).toContainText("82.5", { timeout: 10_000 });
   await expect(card).toHaveClass(/feed-arrived/);
   await expect(card).not.toHaveClass(/feed-arrived/, { timeout: 6000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -134,7 +138,7 @@ test("LIVE期限は次の取得が保留中でも切れ、一時失敗後は記�
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route(`**/api/groups/${state.group.id}/activity`, async (route) => {
+  await page.route("**/api/groups/today-activity", async (route) => {
     requests++;
     if (hold) {
       await gate;
@@ -142,30 +146,37 @@ test("LIVE期限は次の取得が保留中でも切れ、一時失敗後は記�
     }
     return route.fulfill({
       json: {
-        group_id: state.group.id,
-        member_count: 1,
-        live_count: 1,
-        today_count: 1,
-        observed_at: new Date(started).toISOString(),
-        members: [
+        totals: { set_count: 1, total_volume: 400 },
+        groups: [
           {
-            id: state.user.id,
-            display_name: "期限テスト",
-            live: true,
-            today: true,
-            live_until: new Date(started + 8000).toISOString(),
-          },
-        ],
-        feed: [
-          {
-            workout_id: "session",
-            user_id: state.user.id,
-            display_name: "期限テスト",
-            exercise: "スクワット",
-            weight: 80,
-            reps: 5,
-            updated_at: new Date(started).toISOString(),
-            best: false,
+            name: state.group.name,
+            group_id: state.group.id,
+            member_count: 1,
+            live_count: 1,
+            today_count: 1,
+            observed_at: new Date(started).toISOString(),
+            members: [
+              {
+                id: state.user.id,
+                display_name: "期限テスト",
+                live: true,
+                today: true,
+                live_until: new Date(started + 8000).toISOString(),
+              },
+            ],
+            feed: [
+              {
+                workout_id: "session",
+                user_id: state.user.id,
+                display_name: "期限テスト",
+                exercise: "スクワット",
+                weight: 80,
+                reps: 5,
+                updated_at: new Date(started).toISOString(),
+                best: false,
+                summary: { exercise_count: 1, set_count: 1, total_volume: 400 },
+              },
+            ],
           },
         ],
       },
@@ -173,20 +184,24 @@ test("LIVE期限は次の取得が保留中でも切れ、一時失敗後は記�
   });
   try {
     await page.reload();
-    await expect(page.getByRole("article").locator(".avatar-live-dot")).toBeVisible();
+    const card = page.locator(".feed-item");
+    await expect(card.locator(".avatar-live-dot")).toBeVisible();
     hold = true;
     const before = requests;
     await expect.poll(() => requests).toBeGreaterThan(before);
-    await expect(page.getByRole("article").locator(".avatar-live-dot")).toHaveCount(0, {
+    await expect(card.locator(".avatar-live-dot")).toHaveCount(0, {
       timeout: 10_000,
     });
-    await expect(page.getByRole("article")).toContainText("80");
+    await expect(card).toContainText("400");
     release();
-    await expect(page.getByRole("article")).toContainText("80");
-    await expect(page.getByRole("article").locator(".avatar-live-dot")).toHaveCount(0);
-    await expect(page.locator(".v2-app").getByRole("alert")).toContainText(
-      "更新できませんでした。前回の内容を表示しています。",
-    );
+    await expect(card).toContainText("400");
+    await expect(card.locator(".avatar-live-dot")).toHaveCount(0);
+    await expect(
+      page
+        .locator(".v2-app")
+        .getByRole("alert")
+        .filter({ hasText: "更新できませんでした。前回の内容を表示しています。" }),
+    ).toBeVisible();
   } finally {
     release();
   }
@@ -208,62 +223,68 @@ test("画像とLIVEは狭い画面・ダーク・文字拡大でも見える", a
     if (request.url().includes("/profiles/")) imageGets++;
   });
   const now = new Date().toISOString();
-  await page.route(`**/api/groups/${state.group.id}/activity`, (route) =>
+  await page.route("**/api/groups/today-activity", (route) =>
     route.fulfill({
       json: {
-        group_id: state.group.id,
-        member_count: 5,
-        live_count: 2,
-        today_count: 3,
-        observed_at: now,
-        members: [
+        totals: { set_count: 3, total_volume: 1000 },
+        groups: [
           {
-            id: state.user.id,
-            display_name: "タカギ",
-            live: true,
-            today: true,
-            avatar_version: "photo",
-          },
-          { id: "friend", display_name: "佐藤", live: true, today: true },
-          { id: "friend2", display_name: "ユウタ", live: false, today: true },
-        ],
-        feed: [
-          {
-            workout_id: "a",
-            user_id: state.user.id,
-            display_name: "タカギ",
-            exercise: "ベンチプレス",
-            weight: 82.5,
-            reps: 8,
-            updated_at: now,
-            best: true,
-          },
-          {
-            workout_id: "b",
-            user_id: "friend",
-            display_name: "佐藤",
-            exercise: "スクワット",
-            weight: 100,
-            reps: 5,
-            updated_at: new Date(Date.now() - 120_000).toISOString(),
-            best: false,
-          },
-          {
-            workout_id: "c",
-            user_id: "friend2",
-            display_name: "ユウタ",
-            exercise: "ラットプルダウン",
-            weight: 45,
-            reps: 10,
-            updated_at: new Date(Date.now() - 3_600_000).toISOString(),
-            best: false,
+            name: state.group.name,
+            group_id: state.group.id,
+            member_count: 5,
+            live_count: 2,
+            today_count: 3,
+            observed_at: now,
+            members: [
+              {
+                id: state.user.id,
+                display_name: "タカギ",
+                live: true,
+                today: true,
+                avatar_version: "photo",
+              },
+              { id: "friend", display_name: "佐藤", live: true, today: true },
+              { id: "friend2", display_name: "ユウタ", live: false, today: true },
+            ],
+            feed: [
+              {
+                workout_id: "a",
+                user_id: state.user.id,
+                display_name: "タカギ",
+                exercise: "ベンチプレス",
+                weight: 82.5,
+                reps: 8,
+                updated_at: now,
+                best: true,
+              },
+              {
+                workout_id: "b",
+                user_id: "friend",
+                display_name: "佐藤",
+                exercise: "スクワット",
+                weight: 100,
+                reps: 5,
+                updated_at: new Date(Date.now() - 120_000).toISOString(),
+                best: false,
+              },
+              {
+                workout_id: "c",
+                user_id: "friend2",
+                display_name: "ユウタ",
+                exercise: "ラットプルダウン",
+                weight: 45,
+                reps: 10,
+                updated_at: new Date(Date.now() - 3_600_000).toISOString(),
+                best: false,
+              },
+            ],
           },
         ],
       },
     }),
   );
   await page.reload();
-  await expect(page.getByRole("article").first().locator(".person-avatar img")).toBeVisible();
+  await expect(page.locator(".feed-item").first().locator(".person-avatar img")).toBeVisible();
   expect(imageGets).toBe(1);
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });

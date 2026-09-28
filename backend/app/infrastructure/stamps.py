@@ -98,8 +98,18 @@ class StampRepository:
                     ) route ON TRUE WHERE """
                 + scope
                 + """
-                ), page AS (SELECT * FROM visible ORDER BY created_at DESC,id DESC
-                    LIMIT 50 OFFSET %(offset)s)
+                ), page_base AS MATERIALIZED (
+                    SELECT * FROM visible ORDER BY created_at DESC,id DESC
+                    LIMIT 50 OFFSET %(offset)s
+                ), page AS (
+                    SELECT v.*, a.version AS avatar_version FROM page_base v
+                    LEFT JOIN public.gotore_avatars a ON a.user_id=v.sender_id
+                      AND (v.sender_id=%(user)s OR EXISTS (
+                        SELECT 1 FROM public.gotore_group_members viewer
+                        JOIN public.gotore_group_members owner
+                          ON owner.group_id=viewer.group_id
+                        WHERE viewer.user_id=%(user)s AND owner.user_id=v.sender_id))
+                )
                 SELECT count(*)::integer AS total,
                     count(DISTINCT sender_id)::integer AS people,
                     coalesce((SELECT jsonb_object_agg(kind,n) FROM
@@ -110,7 +120,8 @@ class StampRepository:
                     count(*) FILTER (WHERE read_at IS NULL)::integer AS unread,
                     coalesce((SELECT jsonb_agg(jsonb_build_object(
                       'id',id,'workout_id',workout_id,'group_id',group_id,'group_name',group_name,
-                      'sender_id',sender_id,'display_name',display_name,'kind',kind,
+                      'sender_id',sender_id,'display_name',display_name,
+                      'avatar_version',avatar_version,'kind',kind,
                       'mine',sender_id=%(user)s,
                       'created_at',created_at,'performed_on',performed_on,'exercise',exercise,
                       'read',read_at IS NOT NULL,'announced',announced_at IS NOT NULL)

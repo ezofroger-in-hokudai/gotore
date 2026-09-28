@@ -126,7 +126,13 @@ export function StampControl({
                 </span>
                 <div className="stamp-avatar-stack">
                   {items.map((item) => (
-                    <Avatar key={item.id} userId={item.sender_id} name={item.display_name} small />
+                    <Avatar
+                      key={item.id}
+                      userId={item.sender_id}
+                      name={item.display_name}
+                      version={item.avatar_version}
+                      small
+                    />
                   ))}
                 </div>
               </section>
