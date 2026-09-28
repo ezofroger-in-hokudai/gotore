@@ -8,11 +8,12 @@ import type {
   TrainingSession,
   Workout,
 } from "@/lib/api";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dateLabel } from "../activity/calendar";
 import { BODY_PARTS, BODY_PART_LABELS, normalizeBodyPart } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import { StampControl } from "../stamps/stamp-control";
+import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "../v2/avatar";
@@ -189,6 +190,17 @@ function ActiveTraining({
   );
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
   const previous = context.data?.previous?.sets ?? [];
+  const pendingExerciseMemo = useMemo(
+    () =>
+      input.name ? readMemoDraft(memoDraftKey(userId, input.name))?.content.trim() : undefined,
+    [userId, input.name],
+  );
+  const pendingTodayMemo = useMemo(() => {
+    const id = sessionId ?? controller.startingId;
+    if (!id || !input.name) return undefined;
+    const path = `/sessions/${id}/exercise-memo?name=${encodeURIComponent(input.name)}`;
+    return readMemoDraft(memoDraftKey(userId, path))?.content.trim();
+  }, [userId, input.name, sessionId, controller.startingId]);
   useEffect(() => {
     if (!input.awaitingPrevious) return;
     const untouched = !input.dirty && input.editing === null && sets.length === 0;
@@ -567,7 +579,7 @@ function ActiveTraining({
                   singleLine
                 />
               ) : (
-                <span className="memo-text muted">メモを読み込み中…</span>
+                <PendingMemo title="種目メモ" content={pendingExerciseMemo} />
               )}
             </section>
             {context.error && (
@@ -711,7 +723,7 @@ function ActiveTraining({
                   singleLine
                 />
               ) : (
-                <span className="memo-text muted">メモを読み込み中…</span>
+                <PendingMemo title="今日のメモ" content={pendingTodayMemo} />
               )}
             </section>
             <form
@@ -970,6 +982,16 @@ function ActiveTraining({
         </Sheet>
       )}
     </section>
+  );
+}
+
+function PendingMemo({ title, content }: { title: string; content?: string }) {
+  return (
+    <span className="inline-memo single-line">
+      <button type="button" className="memo-text" aria-label={`${title}を準備中`} disabled>
+        {content || "メモ"}
+      </button>
+    </span>
   );
 }
 
