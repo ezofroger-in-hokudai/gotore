@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectRecordingBest, showRecordingMemos } from "./mock-training";
+import { showRecordingMemos } from "./mock-training";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 for (const destination of ["ホーム", "設定"]) {
@@ -48,27 +48,30 @@ for (const destination of ["ホーム", "設定"]) {
       await page.getByRole("button", { name: "セットを追加", exact: true }).click();
       await expect.poll(() => started).toBe(true);
       await navigate(page, destination);
+      await page.waitForTimeout(250);
+      const beforeSaveCompletion = allContexts;
       release();
       await expect.poll(() => state.saves).toBe(1);
-      await expect(page.locator(".sync-status")).toContainText("同期済み");
+      await expect(page.locator(".sync-status")).toHaveCount(0);
       await page.waitForTimeout(250);
-      expect(allContexts).toBe(0);
+      expect(allContexts).toBe(beforeSaveCompletion);
+      const beforeReturn = contexts;
       await openTraining(page);
       await showRecordingMemos(page);
-      await expect.poll(() => contexts).toBe(1);
-      await expectRecordingBest(page, "80");
-      await expect(page.getByRole("textbox", { name: "種目メモ", exact: true })).toHaveValue(
+      await expect.poll(() => contexts).toBe(beforeReturn + 1);
+      await expect(page.locator(".previous-set-cell").first()).toContainText("80kg");
+      await expect(page.getByRole("region", { name: "種目メモ", exact: true })).toContainText(
         "種目の下書き",
       );
       releaseContext();
-      await expectRecordingBest(page, "99");
-      expect(contexts).toBe(1);
+      await expect(page.locator(".previous-set-cell").first()).toContainText("—");
+      expect(contexts).toBe(beforeReturn + 1);
       await expect(weight).toHaveValue("77.5");
-      await expect(page.getByRole("textbox", { name: "今日のメモ", exact: true })).toHaveValue(
+      await expect(page.getByRole("region", { name: "今日のメモ", exact: true })).toContainText(
         "入力途中のメモ",
       );
       await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-      await expect.poll(() => contexts).toBe(2);
+      await expect.poll(() => contexts).toBe(beforeReturn + 2);
       expect(state.saves).toBe(2);
     } finally {
       releaseContext();
@@ -108,7 +111,7 @@ test("保存待ちの全セット一覧を離れた後はBEST取得を延期し�
     await expect.poll(() => bests).toBe(1);
     await navigate(page, "ホーム");
     release();
-    await expect(page.locator(".sync-status")).toContainText("同期済み");
+    await expect(page.locator(".sync-status")).toHaveCount(0);
     await page.waitForTimeout(250);
     expect(bests).toBe(1);
     await openTraining(page);

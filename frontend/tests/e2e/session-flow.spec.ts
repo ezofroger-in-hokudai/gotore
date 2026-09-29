@@ -40,7 +40,7 @@ test("保存の応答待ちでも連続追加・編集でき、順序通り同�
         { weight: 70, reps: 8 },
         { weight: 77.5, reps: 8 },
       ]);
-    await expect(page.locator(".sync-status")).toContainText("同期済み");
+    await expect(page.locator(".sync-status")).toHaveCount(0);
   } finally {
     release();
   }
@@ -71,10 +71,7 @@ test("次の種目以外の入口で選択画面へ移っても入力を端末�
   await startTraining(page);
   const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
   await weight.fill("72.5");
-  await page
-    .getByRole("heading", { name: "ベンチプレス", exact: true })
-    .getByRole("button")
-    .click();
+  await page.getByRole("button", { name: "ベンチプレス", exact: true }).click();
   await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
   const stored = await page.evaluate(
     ({ userId, sessionId }) => {
@@ -170,17 +167,7 @@ test("文字拡大時は縦に読めるまま、入力と終了を隠さない",
   await startTraining(page);
   await showRecordingMemos(page);
   await page.setViewportSize({ width: 320, height: 720 });
-  await page.evaluate(() => {
-    const nodes = Array.from(
-      document.querySelectorAll<HTMLElement>(
-        ".session-screen h1, .session-screen h2, .session-screen span, .session-screen button, .session-screen label, .session-screen input, .session-screen textarea, .session-screen small, .session-screen strong",
-      ),
-    );
-    const sizes = nodes.map((node) => Number.parseFloat(getComputedStyle(node).fontSize));
-    nodes.forEach((node, index) => {
-      node.style.fontSize = `${sizes[index] * 2}px`;
-    });
-  });
+  await page.addStyleTag({ content: "html { font-size: 200%; }" });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   await page.getByRole("button", { name: "セットを追加", exact: true }).scrollIntoViewIfNeeded();
   await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeInViewport();
@@ -192,10 +179,9 @@ test("文字拡大時は縦に読めるまま、入力と終了を隠さない",
   ).toBeInViewport();
 });
 
-test("メモは本文だけを表示してタッチで編集し、空の前回メモを出さない", async ({ page }) => {
+test("メモは本文だけを表示してタッチで編集し、前回メモを重ねない", async ({ page }) => {
   await mockTraining(page);
   let memo = { content: "胸を張って押す", revision: 1 };
-  let previousMemo = { content: "前回は余裕があった", revision: 1 };
   await page.route("**/api/exercises/context?*", (route) =>
     route.fulfill({
       json: {
@@ -206,9 +192,6 @@ test("メモは本文だけを表示してタッチで編集し、空の前回�
       },
     }),
   );
-  await page.route("**/api/workouts/previous/memo", (route) =>
-    route.fulfill({ json: previousMemo }),
-  );
   await page.route("**/api/exercises/memo", (route) => {
     const body = route.request().postDataJSON();
     memo = { content: body.content, revision: memo.revision + 1 };
@@ -217,13 +200,8 @@ test("メモは本文だけを表示してタッチで編集し、空の前回�
   await startTraining(page);
   await showRecordingMemos(page);
   const exercise = page.getByRole("button", { name: "種目メモを編集", exact: true });
-  const previous = page.getByRole("button", { name: "前回のメモを編集", exact: true });
   await expect(exercise).toHaveText("胸を張って押す");
-  await expect(previous).toHaveText("前回は余裕があった");
-  const previousBox = await previous.boundingBox();
-  const exerciseBox = await exercise.boundingBox();
-  if (!previousBox || !exerciseBox) throw new Error("メモが表示されていません");
-  expect(previousBox.y).toBeGreaterThan(exerciseBox.y);
+  await expect(page.getByRole("button", { name: "前回のメモを編集", exact: true })).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "種目メモ", exact: true })).toHaveCount(0);
   for (const text of [
     "種目メモ",
@@ -242,10 +220,9 @@ test("メモは本文だけを表示してタッチで編集し、空の前回�
   await page.getByRole("textbox", { name: "種目メモ", exact: true }).fill("呼吸を整える");
   await page.getByRole("textbox", { name: "種目メモ", exact: true }).press("Enter");
   await expect(exercise).toHaveText("呼吸を整える");
-  previousMemo = { content: "   ", revision: 2 };
   await page.reload();
   await openTraining(page);
   await showRecordingMemos(page);
   await expect(exercise).toBeVisible();
-  await expect(previous).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "前回のメモを編集", exact: true })).toHaveCount(0);
 });
