@@ -94,6 +94,7 @@
 }
 .v2-app .app-header {
   position: static;
+  view-transition-name: gotore-header;
   height: 48px;
   padding: 0 16px;
   display: flex;
@@ -132,38 +133,40 @@
   animation-fill-mode: both;
 }
 ::view-transition-old(gotore-content) {
-  animation-name: gotore-content-out;
+  animation: none;
+  opacity: 0;
+}
+::view-transition-group(gotore-training-shortcut) {
+  z-index: 1;
+}
+::view-transition-group(gotore-header),
+::view-transition-group(gotore-bottom-nav) {
+  z-index: 1;
+}
+::view-transition-old(gotore-header),
+::view-transition-old(gotore-bottom-nav),
+::view-transition-old(gotore-training-shortcut) {
+  animation: none;
+  opacity: 0;
+}
+::view-transition-new(gotore-header),
+::view-transition-new(gotore-bottom-nav),
+::view-transition-new(gotore-training-shortcut) {
+  animation: none;
 }
 ::view-transition-new(gotore-content) {
   animation-name: gotore-content-in;
 }
-html[data-gotore-navigation-direction="back"]::view-transition-old(gotore-content) {
-  animation-name: gotore-content-out-back;
-}
 html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-content) {
   animation-name: gotore-content-in-back;
 }
-@keyframes gotore-content-out {
-  to {
-    opacity: 0.78;
-    transform: translateX(-10px);
-  }
-}
 @keyframes gotore-content-in {
   from {
-    opacity: 0.78;
     transform: translateX(18px);
-  }
-}
-@keyframes gotore-content-out-back {
-  to {
-    opacity: 0.78;
-    transform: translateX(10px);
   }
 }
 @keyframes gotore-content-in-back {
   from {
-    opacity: 0.78;
     transform: translateX(-18px);
   }
 }
@@ -216,6 +219,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   font-family: inherit;
 }
 .v2-app .bottom-nav {
+  view-transition-name: gotore-bottom-nav;
   width: 100%;
   max-width: 480px;
   background: var(--panel);
@@ -2641,6 +2645,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 .floating-training {
   position: fixed;
   z-index: 20;
+  view-transition-name: gotore-training-shortcut;
   right: max(16px, calc((100vw - 480px) / 2 + 16px));
   bottom: calc(82px + env(safe-area-inset-bottom));
   width: 112px;
