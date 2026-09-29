@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>採用案 · 控えめな横移動</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e9eaed; color: #202127; }
+    button { font: inherit; cursor: pointer; }
+    .comparison { max-width: 760px; margin: auto; padding: 20px 16px 36px; }
+    h1 { margin: 0 0 6px; font-size: 20px; }
+    .intro { margin: 0 0 16px; color: #62646c; font-size: 13px; line-height: 1.5; }
+    .choices { display: flex; gap: 8px; margin: 0 -16px 8px; padding: 0 16px 8px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: thin; }
+    .choices button { flex: 0 0 145px; min-height: 52px; padding: 5px 8px; border: 1px solid #d1d2d6; border-radius: 8px; background: white; color: #202127; font-size: 12px; font-weight: 700; scroll-snap-align: start; }
+    .choices button[aria-pressed="true"] { border-color: #d32f2f; background: #fff4f4; color: #b71c1c; }
+    .explanation { min-height: 42px; margin: 0 0 14px; font-size: 12px; color: #62646c; line-height: 1.5; }
+    .phone { position: relative; width: min(390px, 100%); height: min(720px, 72dvh); min-height: 500px; margin: auto; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #c3c5c9; border-radius: 24px; background: #f7f7f8; box-shadow: 0 20px 48px #20212725; }
+    .app-header { flex: none; display: flex; align-items: center; height: 48px; padding: 0 18px; background: #202127; color: white; font-size: 20px; font-weight: 800; letter-spacing: -.6px; }
+    .app-header span { color: #e33b38; }
+    .stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+    .screen { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px 16px 24px; background: #f7f7f8; }
+    .screen h2 { margin: 0 0 12px; font-size: 20px; }
+    .eyebrow { margin: 0 0 6px; color: #70727a; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
+    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; padding: 13px 10px; border-radius: 9px; background: #202127; color: white; }
+    .summary div { min-width: 0; padding-left: 7px; border-left: 1px solid #55575d; }
+    .summary div:first-child { border: 0; padding-left: 0; }
+    .summary small, .card small { display: block; color: #c5c6cc; font-size: 10px; }
+    .summary strong { display: block; margin-top: 3px; font-size: 16px; }
+    .card { display: block; width: 100%; margin-top: 10px; padding: 16px; border: 0; border-radius: 13px; background: #202127; color: white; text-align: left; }
+    .card .live { color: #ff655f; font-size: 10px; font-weight: 800; }
+    .card strong { display: block; margin: 9px 0 20px; font-size: 20px; }
+    .card .stats { display: flex; justify-content: space-between; border-top: 1px solid #52545b; padding-top: 13px; font-size: 12px; }
+    .section-title { margin: 24px 0 10px; font-size: 15px; font-weight: 800; }
+    .record { padding: 14px 2px; border-top: 1px solid #d9dadd; }
+    .record strong { display: block; margin-bottom: 4px; font-size: 14px; }
+    .record small { color: #70727a; }
+    .screen-back { min-height: 36px; margin: -5px 0 8px -8px; padding: 0 8px; border: 0; background: transparent; color: #555861; font-size: 13px; }
+    .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 16px 0; padding: 4px; border-radius: 9px; background: #e9e9ec; }
+    .tabs span { padding: 8px 1px; border-radius: 6px; text-align: center; color: #666871; font-size: 10px; }
+    .tabs span:first-child { background: white; color: #202127; font-weight: 700; }
+    .metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 12px; border-radius: 9px; background: #202127; color: white; }
+    .metric-row small { display: block; color: #c5c6cc; font-size: 10px; }
+    .metric-row strong { display: block; margin-top: 4px; font-size: 18px; }
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 15px; }
+    .calendar span { display: grid; place-items: center; aspect-ratio: 1; border-radius: 6px; background: #e9e9ed; color: #666871; font-size: 11px; }
+    .calendar span.active { background: #e4544b; color: white; }
+    .floating-training { position: absolute; z-index: 1; right: 16px; bottom: 78px; display: grid; place-items: center; width: 112px; height: 52px; border-radius: 28px; background: #d32f2f; color: white; box-shadow: 0 4px 16px #0003; font-size: 14px; font-weight: 800; letter-spacing: .04em; pointer-events: none; }
+    .bottom-nav { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); height: 62px; border-top: 1px solid #d8d9dc; background: white; }
+    .bottom-nav button { border: 0; background: transparent; color: #777982; font-size: 11px; }
+    .bottom-nav button[aria-current="page"] { border-top: 2px solid #d32f2f; color: #d32f2f; font-weight: 700; }
+    .hint { margin: 12px 0 0; color: #62646c; font-size: 12px; text-align: center; }
+    @media (max-width: 430px) { .comparison { padding-top: 14px; } .phone { height: 70dvh; min-height: 490px; } }
+  </style>
+</head>
+<body>
+  <main class="comparison">
+    <h1>採用案 · 控えめな横移動</h1>
+    <p class="intro">カード・戻る・下部タブを押して、採用した横移動を確認できます。STARTは画面切替中の重なり順を確認する表示です。</p>
+    <p class="explanation" id="explanation">B: 180msで18pxだけ横へ動きます。戻るときは方向が逆になります。</p>
+    <div class="phone">
+      <header class="app-header">E-GO<span>TORE</span></header>
+      <div class="stage" id="stage" aria-live="polite"></div>
+      <div class="floating-training" aria-hidden="true">START</div>
+      <nav class="bottom-nav" aria-label="比較用の下部ナビ">
+        <button type="button" data-go="home" aria-current="page">ホーム</button>
+        <button type="button" data-go="group">グループ</button>
+        <button type="button" data-go="history">履歴</button>
+        <button type="button" data-go="settings">設定</button>
+      </nav>
+    </div>
+    <p class="hint">動きを減らす端末設定では、どの案も即時に切り替わります。</p>
+  </main>
+  <template id="home">
+    <section class="screen" aria-label="ホーム画面">
+      <p class="eyebrow">TODAY</p><h2>みんなの活動</h2>
+      <div class="summary"><div><small>LIVE</small><strong>2</strong></div><div><small>今日</small><strong>3</strong></div><div><small>セット</small><strong>18</strong></div><div><small>総負荷</small><strong>820</strong></div></div>
+      <button class="card" type="button" data-go="group"><span class="live">● LIVE · 1人</span><strong>いつもの合トレ</strong><span class="stats"><span>今日 3人</span><span>18セット</span><span>820kg　›</span></span></button>
+      <p class="section-title">みんなのトレーニング</p>
+      <div class="record"><strong>ベンチプレス</strong><small>たかぎ · 3セット · 12分前</small></div>
+      <div class="record"><strong>スクワット</strong><small>みずき · 4セット · 36分前</small></div>
+    </section>
+  </template>
+  <template id="group">
+    <section class="screen" aria-label="グループ詳細画面">
+      <button class="screen-back" type="button" data-go="home">‹ 戻る</button>
+      <p class="eyebrow">GROUP</p><h2>いつもの合トレ</h2>
+      <div class="card"><span class="live">● LIVE · 1人</span><strong>いつもの合トレ</strong><span class="stats"><span>今日 3人</span><span>18セット</span><span>820kg</span></span></div>
+      <div class="tabs"><span>最新記録</span><span>カレンダー</span><span>グラフ</span><span>設定</span></div>
+      <p class="section-title">最近の記録</p>
+      <div class="record"><strong>ベンチプレス</strong><small>たかぎ · 60kg × 10回 · 3セット</small></div>
+      <div class="record"><strong>スクワット</strong><small>みずき · 80kg × 8回 · 4セット</small></div>
+    </section>
+  </template>
+  <template id="history">
+    <section class="screen" aria-label="履歴画面">
+      <p class="eyebrow">HISTORY</p><h2>積み重ね</h2>
+      <div class="metric-row"><div><small>記録日</small><strong>24日</strong></div><div><small>セット</small><strong>132</strong></div><div><small>総負荷</small><strong>8,420</strong></div></div>
+      <p class="section-title">9月の記録</p>
+      <div class="calendar"><span>1</span><span>2</span><span class="active">3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span class="active">11</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span class="active">17</span><span>18</span><span>19</span><span>20</span><span>21</span></div>
+    </section>
+  </template>
+  <template id="settings">
+    <section class="screen" aria-label="設定画面">
+      <p class="eyebrow">SETTINGS</p><h2>設定</h2>
+      <div class="record"><strong>プロフィール</strong><small>表示名と画像</small></div>
+      <div class="record"><strong>外観</strong><small>端末の設定に合わせる</small></div>
+      <div class="record"><strong>種目管理</strong><small>使う種目を整理</small></div>
+    </section>
+  </template>
+  <script>
+    const stage = document.getElementById("stage");
+    const explanation = document.getElementById("explanation");
+    const order = ["home", "group", "history", "settings"];
+    let scene = "home";
+    let mode = "slide";
+    let busy = false;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const options = {
+      fade: { duration: 160, description: "A: 160msの淡い切り替え。進む・戻るで方向は変わりません。" },
+      slide: { duration: 180, description: "B: 前画面を重ねず、18pxだけ横へ移動。戻ると方向が逆になります。" },
+      "slide-wide": { duration: 220, description: "C: 42pxの横移動。Bより方向をはっきり感じられます。" },
+      "slide-full": { duration: 280, description: "D: 次の画面が端から入り、前の画面を押し出します。" },
+      parallax: { duration: 240, description: "E: 手前の画面は48px、奥の画面は16px動きます。" },
+      "slide-fade": { duration: 210, description: "F: 28pxの横移動に、淡いフェードを重ねます。" },
+      scale: { duration: 200, description: "G: 進むと少し拡大、戻ると少し縮小します。" },
+      vertical: { duration: 190, description: "H: 進むと下から浮き、戻ると上から戻ります。" },
+    };
+    function frames(selected, direction) {
+      switch (selected) {
+        case "slide": return [
+          [{ opacity: 0 }, { opacity: 0 }],
+          [{ transform: `translateX(${direction * 18}px)` }, { transform: "translateX(0)" }],
+        ];
+        case "slide-wide": return [
+          [{ opacity: 1, transform: "translateX(0)" }, { opacity: .85, transform: `translateX(${-direction * 22}px)` }],
+          [{ opacity: .85, transform: `translateX(${direction * 42}px)` }, { opacity: 1, transform: "translateX(0)" }],
+        ];
+        case "slide-full": return [
+          [{ transform: "translateX(0)" }, { transform: `translateX(${-direction * 100}%)` }],
+          [{ transform: `translateX(${direction * 100}%)` }, { transform: "translateX(0)" }],
+        ];
+        case "parallax": return [
+          [{ opacity: 1, transform: "translateX(0) scale(1)" }, { opacity: .72, transform: `translateX(${-direction * 16}px) scale(.985)` }],
+          [{ opacity: .94, transform: `translateX(${direction * 48}px) scale(1.015)` }, { opacity: 1, transform: "translateX(0) scale(1)" }],
+        ];
+        case "slide-fade": return [
+          [{ opacity: 1, transform: "translateX(0)" }, { opacity: 0, transform: `translateX(${-direction * 14}px)` }],
+          [{ opacity: 0, transform: `translateX(${direction * 28}px)` }, { opacity: 1, transform: "translateX(0)" }],
+        ];
+        case "scale": return [
+          [{ opacity: 1, transform: "scale(1)" }, { opacity: .5, transform: `scale(${direction > 0 ? 1.025 : .975})` }],
+          [{ opacity: .5, transform: `scale(${direction > 0 ? .975 : 1.025})` }, { opacity: 1, transform: "scale(1)" }],
+        ];
+        case "vertical": return [
+          [{ opacity: 1, transform: "translateY(0)" }, { opacity: .72, transform: `translateY(${-direction * 12}px)` }],
+          [{ opacity: .72, transform: `translateY(${direction * 24}px)` }, { opacity: 1, transform: "translateY(0)" }],
+        ];
+        default: return [[{ opacity: 1 }, { opacity: 0 }], [{ opacity: 0 }, { opacity: 1 }]];
+      }
+    }
+    function screen(name) { return document.getElementById(name).content.firstElementChild.cloneNode(true); }
+    function updateNav() {
+      document.querySelectorAll(".bottom-nav button").forEach((button) => {
+        if (button.dataset.go === scene) button.setAttribute("aria-current", "page");
+        else button.removeAttribute("aria-current");
+      });
+    }
+    function navigate(next) {
+      if (busy || next === scene || !order.includes(next)) return;
+      const direction = order.indexOf(next) >= order.indexOf(scene) ? 1 : -1;
+      const oldScreen = stage.firstElementChild;
+      const newScreen = screen(next);
+      stage.append(newScreen);
+      if (reducedMotion.matches) {
+        oldScreen.remove();
+        scene = next;
+        updateNav();
+        return;
+      }
+      busy = true;
+      const duration = options[mode].duration;
+      const easing = "cubic-bezier(.2,.8,.2,1)";
+      const [oldFrames, newFrames] = frames(mode, direction);
+      const leaving = oldScreen.animate(oldFrames, { duration, easing, fill: "forwards" });
+      const entering = newScreen.animate(newFrames, { duration, easing, fill: "forwards" });
+      Promise.all([leaving.finished, entering.finished]).then(() => {
+        oldScreen.remove();
+        entering.cancel();
+        scene = next;
+        busy = false;
+        updateNav();
+      });
+    }
+    stage.append(screen(scene));
+    document.addEventListener("click", (event) => {
+      const choice = event.target.closest("[data-mode]");
+      if (choice) {
+        mode = choice.dataset.mode;
+        document.querySelectorAll("[data-mode]").forEach((button) => button.setAttribute("aria-pressed", button === choice ? "true" : "false"));
+        explanation.textContent = options[mode].description;
+        return;
+      }
+      const target = event.target.closest("[data-go]");
+      if (target) navigate(target.dataset.go);
+    });
+  </script>
+</body>
+</html>

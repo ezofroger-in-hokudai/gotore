@@ -29,6 +29,90 @@
 - 検証: 修正前の全E2Eで両ファイルの失敗を確認。修正後は各3件、合計6件成功。テスト先行の代わりに既存の失敗を再現してから期待値とモックを更新した。
 - 未解決事項: Issue #218のほかの旧UI期待値とCIの全E2E実行は未修正。グループランキングの表示方針はユーザー回答待ち。
 - 次のアクション: 残る失敗を画面仕様と照らして修復し、全E2Eを再実行する。
+## 2026-09-29 02:51 STARTなどの固定操作が画面遷移中に隠れる問題を修正（Issue #207）
+- 変更内容: 主画面内容とは別のView Transitionレイヤーへ`START / RESUME`、ヘッダー、下部ナビを分け、画面内容より手前へ固定した。旧スナップショットを隠し、新しい固定操作をアニメーションなしで表示する。採用固定プレビューにもSTARTの位置を追加した。
+- 目的: 画面切替中にSTART等が新画面の下へ潜り、遷移後に再表示されるように見える問題を解消するため。
+- 影響範囲: 固定操作の遷移中の描画順。ボタンの動作、画面遷移の距離・時間、API・DBは変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/tests/e2e/navigation-motion.spec.ts`、`frontend/public/previews/navigation-motion-adopted.html`、`docs/design/navigation-motion.md`、`task.md`。
+- 検証: 修正前に固定STARTの遷移名`none`・描画層`auto`でE2Eが失敗することを確認。修正後は遷移・START/RESUME・左端戻りの関連E2E13件成功。`make check`でbackend 103件成功・DB統合178件skip（専用DB未指定）、frontend単体110件・lint・型・build成功。`git diff --check`を確認。
+- 未解決事項: 実機iOS・Androidで固定操作の見え方を再確認する。PRの全E2E CI・実装者以外のレビューは未完了。
+- 次のアクション: PR #243へ追記してレビューし、実機で切替中の重なり順を確認する。
+
+## 2026-09-29 01:03 画面切替で前画面が残像として残る問題を修正（Issue #207）
+- 変更内容: View Transition中に旧画面のスナップショットを非表示にし、新画面を不透明のまま18px横移動させるよう変更した。API非対応時と採用固定プレビューも同じ動きへ合わせた。
+- 目的: ユーザーの実機フィードバックで前画面が強く残って見えたため、画面切替の方向は保ちながら残像をなくすため。
+- 影響範囲: 主画面の遷移表示のみ。履歴、入力、API、DBは変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/src/features/v2/navigation-motion.ts`、`frontend/tests/e2e/navigation-motion.spec.ts`、`frontend/public/previews/navigation-motion-adopted.html`、`docs/design/navigation-motion.md`、`task.md`。
+- 検証: 修正前のE2Eで旧画面スナップショットの切替開始時不透明度1を再現し、修正後は0で成功。画面遷移・左端戻り・シート・STARTの関連E2E14件成功。frontend lint・型検査・単体110件・production build、プレビューJavaScript構文、`git diff --check`成功。グループ一覧カードを押せない既存E2Eは変更前`main`でも再現し、今回の残像修正後も残るため別の原因として追跡する。
+- 未解決事項: iOS・Android実機で残像の消え方と18px横移動を再確認する。既存E2Eのグループカード表示待ちも未解決。
+- 次のアクション: 関連E2E・frontendチェックを完了し、PRで修正を共有する。
+## 2026-09-29 12:11 履歴PR #249のCI成功と統合判断
+
+- 変更内容: Issue #248に紐づくPR #249を作成し、CIのbackend・frontend・database、Vercel Previewが成功した。databaseジョブではmigration、専用DB、全E2Eが成功した。
+- 目的: 採用した履歴画面を、検証結果と未実施範囲が追える状態でmainへ統合するため。
+- 影響範囲: PR・CIの記録のみ。画面・APIの追加変更なし。
+- 関連ファイル: `progress.md`、PR #249。
+- 検証: PRは競合なし・マージ可能。ローカルの`make check`と関連E2E 16件に加え、CIの全必須チェックとVercelが成功した。
+- 未解決事項: スマホ実機でPRビルドの最終確認は未実施。第三者のコードレビューは付いていないが、mainにレビュー必須設定はなく、ユーザーからPR・マージの明示依頼があるため今回の統合を進める。
+- 次のアクション: 文書追記後のCIを再確認し、PR #249をmainへマージする。
+
+## 2026-09-29 12:03 採用した履歴画面をIssue #248のPRブランチへ分離
+
+- 変更内容: 最新main起点の専用作業ツリーを作り、個人履歴の通算・月間カレンダー・連続グラフ・人体図、グループの共通カレンダー・部位別グラフ、必要な集計API・テスト・採用プレビューと設計資料を移した。既存作業ツリーの画面遷移、スタンプ、プロフィール等の別件変更は持ち込まない。
+- 目的: ユーザーが採用した履歴画面と人体図を追跡可能な単位でレビューし、他の未コミット変更を混ぜずにmainへ統合するため。
+- 影響範囲: 個人・グループ履歴の画面、履歴集計API、共通記録カードの日付表示、関連資料。
+- 関連ファイル: `docs/design/history-screen.md`、`docs/design/group-screen.md`、`docs/history-analytics.md`、`backend/app/api/routes/analytics.py`、`frontend/src/features/v2/personal-history.tsx`、`frontend/src/features/v2/group-history-calendar.tsx`、`frontend/src/features/v2/group-history-graph.tsx`ほかIssue #248のPR差分。
+- 検証: `make check-fast`と`make check`成功、backend単体とfrontend単体116件・lint・型・本番ビルドが成功。個人履歴とグループ履歴の関連E2E 16件成功。DB統合テストは専用の`TEST_DATABASE_URL`未設定によりskipされ、CIの専用DBで実行する。
+- 未解決事項: PRの全E2Eとレビュー、スマホ実機での最終確認は未実施。
+- 次のアクション: 差分と画像・リンクを最終確認し、PRを作成してCIとレビューを確認する。
+
+## 2026-09-29 01:50 ホームの仲間情報を記録開始直後へ引き継ぐ（Issue #227）
+- 変更内容: ホームと記録画面の当日仲間データ取得を同じ画面内リソースに統合した。開始直後に取得済みのグループタブと仲間アイコンを表示し続け、記録入力中は再取得を停止する。
+- 目的: START後に取得済みの仲間情報が空の丸へ戻り、グループタブが動く問題を解消するため。
+- 影響範囲: 同一ログイン中の当日仲間表示と取得タイミング。API・DB・共有範囲は変更しない。
+- 関連ファイル: `frontend/src/features/v2/workspace.tsx`、`frontend/src/features/v2/community.tsx`、`frontend/src/features/session/session-screen.tsx`、`frontend/tests/e2e/peer-handoff.spec.ts`、`docs/design/training-session.md`。
+- 検証: 取得済みの仲間をSTART直後も表示し、背景の再確認で403が返ったら消去するブラウザE2Eが成功。`make check`成功（backend単体103件、DB統合178件は専用DB未指定でskip、frontend単体110件、lint・型・build）。関連E2E 11件成功。
+- 未解決事項: 実機PWAでの表示確認と、全E2Eを含むCIは未実施。
+- 次のアクション: PRの全E2E・レビューを確認し、実機で開始直後の表示を確認する。
+
+## 2026-09-29 00:58 長いグループ名の選択タブを一定幅に修正（Issue #203）
+- 変更内容: ホームのタイムライン絞り込みと記録中の仲間グループ選択で、個別グループ名のタブを112px幅に固定し、長い名前の右端だけをフェードさせた。正式名は読み上げ名・タイトルに保持。採用資料とプレビュー、390pxの実画面画像2枚を更新した。
+- 目的: 長い名前が隣の選択肢の幅を奪う問題を解消し、短い名前と選択状態、横スクロールを維持するため。
+- 影響範囲: 上記2つのグループ選択列のみ。カード、API、保存・共有の規則は変更しない。
+- 関連ファイル: `frontend/src/features/v2/community.tsx`、`frontend/src/features/session/session-screen.tsx`、`frontend/src/app/v2.css`、`frontend/tests/e2e/group-tab-name.spec.ts`、`docs/design/home-screen.md`、`docs/design/training-session.md`、`docs/design-system.md`、`docs/images/issue-203/`。
+- 検証: 変更前のE2Eでタブ幅244pxを再現し、修正後は日本語・英数字・絵文字の長名を320/390/430pxで112px、横はみ出しなし、正式名で選択可能と確認。関連E2E 13件中12件成功。失敗した既存のグループ一覧カード操作1件は、変更前の`main`でも単独再現した。frontend lint・型検査・単体110件・production build、backend Ruff・単体103件成功（DB統合178件は専用DB未指定でskip）。通常の`make check`は隔離作業ツリーでの`uv sync`がネットワーク制限により失敗したため、同等の各コマンドを既存依存で個別実行した。
+- 未解決事項: 既存E2Eの画面遷移中にグループカードを押せない問題と、Issue #203に含むカード・一覧の長名確認。実機での表示確認。
+- 次のアクション: PRで画面画像を共有し、画面切替時に前画面が残像として見えるユーザー報告を別作業で調査する。
+
+## 2026-09-29 00:22 控えめな横移動を採用して画面遷移へ適用（Issue #207）
+- 変更内容: ユーザーが8案からBを採用。主な画面内容に180ms・18pxの横移動を適用し、元画面は逆へ10px動かす。戻る・進む、グループ内の画面状態、連続操作と動き低減へ対応した。ヘッダー・下部ナビは固定し、比較プレビューと採用固定プレビューを残した。
+- 目的: 合意した動きを実アプリで使い、戻る方向を視覚的に分かりやすくするため。
+- 影響範囲: フロントエンドの画面切替、グループ画面内のモード切替、画面遷移E2E、画面設計資料とプレビュー。API・DB・保存ルールは変更しない。
+- 関連ファイル: `frontend/src/features/v2/navigation-motion.ts`、`workspace.tsx`、`group-screen.tsx`、`frontend/src/app/v2.css`、`frontend/tests/e2e/navigation-motion.spec.ts`、`frontend/public/previews/navigation-motion-adopted.html`、`docs/design/navigation-motion.md`、`docs/design-system.md`、`task.md`。
+- 検証: 最新main起点の専用ブランチで`make check`成功（backend lint/単体、frontend lint/型/単体110件/build）。連続タップの追加修正後、画面遷移・左端戻り・シート・下部ナビ/STARTの関連E2E 13件が320/390/430pxを含め成功。採用プレビューのブラウザ操作、`git diff --check`も確認した。DB統合テストは専用DB未指定のためskip。全E2EはPRのCIで確認する。
+- テストを先に書けなかった理由: E2Eは先に作成したが、実装前の実行は共有中の開発サーバーでログインフォームが初期化されず、対象の画面遷移まで到達しなかった。実装後は分離コピーで実行した。
+- 未解決事項: iOS・Android実機で速度と距離を確認する。PRの全E2Eを含むCIと実装者以外のレビューは未実施。
+- 次のアクション: PRのCI成功を確認して統合し、実機PWAの触感をIssue #207で追跡する。
+
+## 2026-09-28 シートと左端スワイプの戻り操作を追加
+- 変更内容: 共通シートの取っ手から下へのスワイプで閉じる操作を追加し、本文の操作では閉じないようにした。未保存のグループ作成シートでは背景・取っ手による閉じ操作を無効にした。ホーム画面追加時だけ、左端からの右スワイプでアプリ内履歴を1件戻す操作を追加した。
+- 目的: スマホで片手の戻り操作をしやすくし、入力途中の内容と既存のブラウザ履歴を守るため。
+- 影響範囲: 共通シート、グループ作成、アプリ内の履歴状態とタッチ操作。
+- 関連ファイル: `frontend/src/features/v2/sheet.tsx`、`frontend/src/features/v2/use-edge-back.ts`、`frontend/src/features/v2/workspace.tsx`、`frontend/src/features/v2/group-screen.tsx`、`frontend/tests/e2e/sheet-swipe.spec.ts`、`frontend/tests/e2e/edge-back.spec.ts`、`docs/design-system.md`、`docs/design/group-screen.md`。
+- 検証: 分離した一時コピーの実タッチE2Eで、新規・既存シート計5件、左端戻り1件、グループカードスクロール1件、グループ表示順10件が成功。シートと戻りは未実装時の失敗を先に確認。フロントエンドlint・型検査・単体105件・production buildと`git diff --check`が成功。`make check-fast`はbackend Ruff・frontend lint/型検査まで成功したが、既知の`tests/test_auth.py`で停止したため中断し、全体成功とは扱わない。
+- 未解決事項: iOS・Androidの実機でOS固有の戻るジェスチャーとの重なりを確認する。`make check`と全E2Eは未実施。画面遷移アニメーションはユーザーと最後に決める。
+- 次のアクション: スマホ実機でジェスチャーの優先順位と操作感を確認し、画面遷移アニメーションをユーザーと選ぶ。CIで全E2Eとbackendチェックを再確認する。
+
+## 2026-09-28 画面操作の改善に着手
+- 変更内容: グループ一覧カードのタッチ設定を縦スクロール許可へ変更し、実タッチ入力のE2Eを追加した。グループ画面の操作規則を設計資料へ追記した。
+- 目的: カードに指を置いて長押しせずに動かした時、ページをスクロールできるようにするため。
+- 影響範囲: グループ一覧カードのタッチ操作と関連E2E。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/tests/e2e/group-card-scroll.spec.ts`、`docs/design/group-screen.md`、`task.md`。
+- 検証: 追加E2EのBiomeと`git diff --check`成功。既存のNext開発サーバーが同じビルド領域を使用中だったため分離した一時コピーで実行し、実タッチによるスクロールE2E1件と既存の長押し並べ替えE2E10件が成功。
+- 未解決事項: 実機でのカード操作感は未確認。画面遷移アニメーションはユーザーと最後に決める。
+- 次のアクション: スマホ実機で縦スクロールと長押し並べ替えの両方を確認する。
+
+
 ## 2026-09-28 12:41 グループ管理ピルのタップ領域を拡大（Issue #223）
 
 - 変更内容: グループの作成・参加・招待と同じピル部品の実タップ領域を48×48 CSS px以上にした。白地・赤い線画とコンパクトな構成を保ち、採用プレビューも同じ寸法へ更新した。修正前後の390px画面を保存した。

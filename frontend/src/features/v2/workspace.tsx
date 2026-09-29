@@ -1,5 +1,5 @@
 "use client";
-import type { Group, Workout } from "@/lib/api";
+import type { Group, TodayActivity, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
@@ -18,10 +18,12 @@ import { CommunityHome } from "./community";
 import { FloatingTraining } from "./floating-training";
 import { CommunityScreen } from "./group-screen";
 import { History } from "./history";
-import { GROUP_REFRESH_MS } from "./refresh-interval";
+import { runNavigationMotion } from "./navigation-motion";
+import { GROUP_REFRESH_MS, todayActivityRefreshMs } from "./refresh-interval";
 import { Preferences, usePreferences } from "./settings";
 import { SharedWorkoutCache } from "./shared-workout-cache";
 import { Sheet } from "./sheet";
+import { useEdgeBack } from "./use-edge-back";
 import { useGroupOrder } from "./use-group-order";
 
 type View = "home" | "record" | "history" | "settings" | "groups" | "edit" | "result";
@@ -36,8 +38,11 @@ export function Workspace({ session }: { session: Session }) {
 }
 
 function WorkspaceContent({ session }: { session: Session }) {
+  useEdgeBack();
   const [sharedCache] = useState(() => new SharedWorkoutCache());
   const [view, setView] = useState<View>("home");
+  const viewRef = useRef(view);
+  const historyPosition = useRef(0);
   const [groupId, setGroupId] = useState("");
   const [groupDetail, setGroupDetail] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -65,6 +70,29 @@ function WorkspaceContent({ session }: { session: Session }) {
   }, [groupList.data, sharedCache]);
   const groupOrder = useGroupOrder(session.user.id, groupList.data);
   const groups = groupOrder.groups;
+  const [recordSelecting, setRecordSelecting] = useState(true);
+  const todayActivity = useResource<TodayActivity>(
+    "/groups/today-activity",
+    refreshKey,
+    todayActivityRefreshMs,
+    true,
+    {
+      enabled: groups.length > 0 && (view === "home" || (view === "record" && recordSelecting)),
+      retainOnRefresh: true,
+    },
+  );
+  const currentGroupIds = groups
+    .map((group) => group.id)
+    .toSorted()
+    .join(",");
+  const activityGroupIds = todayActivity.data?.groups
+    .map((group) => group.group_id)
+    .toSorted()
+    .join(",");
+  const visibleTodayActivity = {
+    ...todayActivity,
+    data: activityGroupIds === currentGroupIds ? todayActivity.data : null,
+  };
   const [historyReady, setHistoryReady] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   useEffect(() => {
@@ -131,17 +159,39 @@ function WorkspaceContent({ session }: { session: Session }) {
       {
         ...window.history.state,
         gotoreView: inviteEntry ? "groups" : "home",
+        gotoreBack: false,
+        gotoreMotionIndex: 0,
         communityMode: inviteEntry ? "join" : undefined,
       },
       "",
     );
-    if (inviteEntry) setView("groups");
+    if (inviteEntry) {
+      viewRef.current = "groups";
+      setView("groups");
+    }
     const back = (event: PopStateEvent) => {
       const next = event.state?.gotoreView;
-      if (["home", "record", "history", "settings", "groups", "result"].includes(next)) {
-        setView(next);
-        if (typeof event.state.groupId === "string") setGroupId(event.state.groupId);
-      } else setView("home");
+      const target: View = ["home", "record", "history", "settings", "groups", "result"].includes(
+        next,
+      )
+        ? next
+        : "home";
+      const nextPosition = Number(event.state?.gotoreMotionIndex);
+      const direction =
+        Number.isFinite(nextPosition) && nextPosition > historyPosition.current
+          ? "forward"
+          : "back";
+      if (Number.isFinite(nextPosition)) historyPosition.current = nextPosition;
+      const update = () => {
+        viewRef.current = target;
+        setView(target);
+        if (typeof event.state?.groupId === "string") setGroupId(event.state.groupId);
+      };
+      if (target === viewRef.current) update();
+      else {
+        viewRef.current = target;
+        runNavigationMotion(update, direction);
+      }
     };
     window.addEventListener("popstate", back);
     return () => window.removeEventListener("popstate", back);
@@ -152,14 +202,43 @@ function WorkspaceContent({ session }: { session: Session }) {
     window.history.replaceState({ ...window.history.state, groupId: selected }, "");
   }, [view, selected]);
   function navigate(next: View, communityMode?: "detail" | "list") {
-    if (next !== view)
-      window.history.pushState({ gotoreView: next, groupId: selected, communityMode }, "");
+    const current = viewRef.current;
+    if (next !== current) {
+      historyPosition.current = (Number(window.history.state?.gotoreMotionIndex) || 0) + 1;
+      window.history.pushState(
+        {
+          gotoreView: next,
+          groupId: selected,
+          communityMode,
+          gotoreBack: true,
+          gotoreMotionIndex: historyPosition.current,
+        },
+        "",
+      );
+    }
     // 設定で追加・分類変更した候補を、記録の選択画面へ戻る前に確認する。
     if (next === "record") catalog.retry();
-    setView(next);
-    setNotice("");
-    setEditing(null);
-    window.scrollTo({ top: 0 });
+    const update = () => {
+      viewRef.current = next;
+      setView(next);
+      setNotice("");
+      setEditing(null);
+      window.scrollTo({ top: 0 });
+    };
+    if (next === current) update();
+    else {
+      const order: View[] = ["home", "groups", "history", "settings"];
+      const direction =
+        order.includes(current) && order.includes(next)
+          ? order.indexOf(next) > order.indexOf(current)
+            ? "forward"
+            : "back"
+          : order.includes(next)
+            ? "back"
+            : "forward";
+      viewRef.current = next;
+      runNavigationMotion(update, direction);
+    }
   }
   const resumable = !!training.session || !!training.startingId;
   const canStart = training.ready && !training.finishPending && (!training.busy || resumable);
@@ -183,7 +262,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   }
   return (
     <div
-      className={`app-shell v2-app${!opened ? " is-preparing" : ""}${view === "record" ? " recording-view" : ""}${primaryView ? " has-training-shortcut" : ""}`}
+      className={`app-shell v2-app${!opened ? " is-preparing" : ""}${view === "record" ? " recording-view" : ""}${view === "history" ? " personal-history-view" : ""}${primaryView ? " has-training-shortcut" : ""}`}
     >
       {!opened && (
         <main className="auth-page startup-screen">
@@ -203,9 +282,15 @@ function WorkspaceContent({ session }: { session: Session }) {
             onVisit={(next, target) => {
               setGuideTarget({ target });
               setGroupDetail(false);
+              viewRef.current = next;
               setView(next);
               window.history.replaceState(
-                { gotoreView: next, groupId: selected, communityMode: "list" },
+                {
+                  gotoreView: next,
+                  groupId: selected,
+                  communityMode: "list",
+                  gotoreMotionIndex: historyPosition.current,
+                },
                 "",
               );
               window.scrollTo({ top: 0 });
@@ -241,6 +326,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         <ResourceError resource={groupList} />
         <div hidden={view !== "home"}>
           <CommunityHome
+            today={visibleTodayActivity}
             sharedCache={sharedCache}
             groups={groups}
             onReady={setHomeReady}
@@ -260,12 +346,13 @@ function WorkspaceContent({ session }: { session: Session }) {
               setGroupDetail(true);
               navigate("groups", "detail");
             }}
-            refreshKey={refreshKey}
             active={view === "home"}
           />
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
+            todayActivity={visibleTodayActivity}
+            onSelectingChange={setRecordSelecting}
             sharedCache={sharedCache}
             active={view === "record"}
             controller={training}
@@ -276,10 +363,22 @@ function WorkspaceContent({ session }: { session: Session }) {
             catalog={catalog}
             onFinished={(record) => {
               setFinished(record);
-              window.history.replaceState({ gotoreView: "result", groupId: selected }, "");
-              setView("result");
-              setNotice("");
-              window.scrollTo({ top: 0 });
+              window.history.replaceState(
+                {
+                  gotoreView: "result",
+                  groupId: selected,
+                  gotoreBack: true,
+                  gotoreMotionIndex: historyPosition.current,
+                },
+                "",
+              );
+              viewRef.current = "result";
+              runNavigationMotion(() => {
+                viewRef.current = "result";
+                setView("result");
+                setNotice("");
+                window.scrollTo({ top: 0 });
+              }, "forward");
             }}
           />
         </div>
@@ -291,7 +390,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             onHome={() => navigate("home")}
           />
         )}
-        <div hidden={view !== "history"}>
+        <div hidden={view !== "history"} className="personal-history-shell">
           <History
             guideTarget={guideTarget}
             recent={recentRecords}
@@ -302,9 +401,23 @@ function WorkspaceContent({ session }: { session: Session }) {
             onEdit={(record) => {
               if (record.started_at && !record.ended_at) navigate("record");
               else {
-                window.history.pushState({ gotoreView: "history", groupId: selected }, "");
+                historyPosition.current =
+                  (Number(window.history.state?.gotoreMotionIndex) || 0) + 1;
+                window.history.pushState(
+                  {
+                    gotoreView: "history",
+                    groupId: selected,
+                    gotoreBack: true,
+                    gotoreMotionIndex: historyPosition.current,
+                  },
+                  "",
+                );
                 setEditing(record);
-                setView("edit");
+                viewRef.current = "edit";
+                runNavigationMotion(() => {
+                  viewRef.current = "edit";
+                  setView("edit");
+                }, "forward");
               }
             }}
             onReuse={(record) => {

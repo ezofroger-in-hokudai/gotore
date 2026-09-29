@@ -21,6 +21,7 @@ export function RecordList({
   headerControl,
   liveStatus,
   showDate = true,
+  timeOnly = false,
   compact = false,
 }: {
   personal?: boolean;
@@ -33,6 +34,7 @@ export function RecordList({
   headerControl?: (record: Workout) => ReactNode;
   liveStatus?: (record: Workout) => boolean;
   showDate?: boolean;
+  timeOnly?: boolean;
   compact?: boolean;
 }) {
   if (!records.length)
@@ -64,7 +66,7 @@ export function RecordList({
               {showDate && (
                 <h2>
                   <time dateTime={record.performed_on}>
-                    {dateLabel(record.performed_on)}　
+                    {!timeOnly && <>{dateLabel(record.performed_on)}　</>}
                     {new Date(record.created_at).toLocaleTimeString("ja-JP", {
                       hour: "2-digit",
                       minute: "2-digit",

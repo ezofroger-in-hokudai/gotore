@@ -31,7 +31,7 @@ import { Avatar } from "./avatar";
 import { HistoryBrowser } from "./history-browser";
 import { buildHomeFeed } from "./home-feed";
 import { memberIsLive, useLiveClock } from "./live-presence";
-import { GROUP_REFRESH_MS, activityRefreshMs, todayActivityRefreshMs } from "./refresh-interval";
+import { GROUP_REFRESH_MS, activityRefreshMs } from "./refresh-interval";
 import type { SharedWorkoutCache } from "./shared-workout-cache";
 import { SharedWorkoutDetail } from "./shared-workout-detail";
 import { Sheet } from "./sheet";
@@ -46,12 +46,12 @@ export function CommunityHome({
   onGroups,
   onOrder,
   onDetail,
-  refreshKey,
   active,
   loading = false,
   failed = false,
   onReady,
   sharedCache,
+  today,
 }: {
   groups: Group[];
   selected: string;
@@ -59,12 +59,12 @@ export function CommunityHome({
   onGroups: () => void;
   onOrder: (ids: string[]) => void;
   onDetail: () => void;
-  refreshKey: number;
   active: boolean;
   loading?: boolean;
   failed?: boolean;
   onReady?: (ready: boolean) => void;
   sharedCache?: SharedWorkoutCache;
+  today: ReturnType<typeof useResource<TodayActivity>>;
 }) {
   const carousel = useRef<HTMLDivElement>(null);
   const [visibleGroup, setVisibleGroup] = useState(selected || groups[0]?.id || "");
@@ -105,13 +105,6 @@ export function CommunityHome({
     if (card) carousel.current.scrollLeft = card.offsetLeft;
     restored.current = groupIds;
   }, [groups, groupIds, visibleGroup, active, cardDrag.drag]);
-  const today = useResource<TodayActivity>(
-    "/groups/today-activity",
-    refreshKey,
-    todayActivityRefreshMs,
-    true,
-    { enabled: active && groups.length > 0, retainOnRefresh: true },
-  );
   const ready = !loading && (!groups.length || today.data !== null || !!today.error);
   useEffect(() => {
     onReady?.(ready || failed);
@@ -230,10 +223,13 @@ export function CommunityHome({
               <button
                 type="button"
                 key={group.id}
+                className="group-name-tab"
+                aria-label={group.name}
                 aria-pressed={feedScope === group.id}
+                title={group.name}
                 onClick={() => setFeedScope(group.id)}
               >
-                {group.name}
+                <span aria-hidden="true">{group.name}</span>
               </button>
             ))}
           </div>
