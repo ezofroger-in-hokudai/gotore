@@ -405,7 +405,10 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
 }
 
 export async function navigate(page: Page, name: string) {
-  await page.getByRole("navigation").getByRole("button", { name, exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "メインナビゲーション" })
+    .getByRole("button", { name, exact: true })
+    .click();
 }
 export async function openTraining(page: Page) {
   await navigate(page, "ホーム");
@@ -420,7 +423,7 @@ export async function startTraining(page: Page, name = "ベンチプレス") {
 export async function openGroup(page: Page, destination?: "members" | "invite" | "manage") {
   await navigate(page, "グループ");
   const card = page.locator(".group-card-list .community-card").first();
-  if (await card.count()) await card.click();
+  await card.click();
   if (destination === "members" || destination === "manage")
     await page
       .getByRole("navigation", { name: "グループの表示" })

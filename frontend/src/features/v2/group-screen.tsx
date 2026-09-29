@@ -546,6 +546,7 @@ export function CommunityScreen({
             </p>
           ) : group ? (
             <>
+              <ResourceError resource={detail} />
               <GroupCard
                 group={group}
                 data={groupActivity.get(group.id) ?? null}
