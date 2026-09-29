@@ -5180,10 +5180,15 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   line-height: 1;
 }
 .today-training-marker::before {
-  content: "▶";
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  content: "";
+  transform-origin: center;
 }
 .today-training[open] .today-training-marker::before {
-  content: "▼";
+  transform: rotate(90deg);
 }
 .today-training > .today-training-empty > span:nth-child(2),
 .today-training-summary {

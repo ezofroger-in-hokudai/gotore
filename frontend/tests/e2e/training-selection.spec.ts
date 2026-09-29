@@ -18,19 +18,35 @@ test("0セットの要約は開かず、最初のセットを追加すると展�
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await expect(today.locator("summary")).toBeVisible();
   const marker = today.locator(".today-training-marker");
-  await expect(marker).toHaveCSS("font-size", "12px");
+  await expect(marker).toHaveCSS("font-size", "10px");
   const markerBox = await marker.boundingBox();
   const titleBox = await today.locator(".today-training-title").boundingBox();
   expect(markerBox?.x).toBeLessThan(titleBox?.x ?? 0);
-  expect(await marker.evaluate((element) => getComputedStyle(element, "::before").content)).toBe(
-    '"▶"',
-  );
+  const closedMarkerStyle = await marker.evaluate((element) => {
+    const style = getComputedStyle(element, "::before");
+    return {
+      content: style.content,
+      height: style.height,
+      transform: style.transform,
+      width: style.width,
+    };
+  });
+  expect(closedMarkerStyle.content).toBe('""');
   await expect(today.locator("summary")).not.toContainText("…");
   expect((await today.boundingBox())?.height).toBe(emptyHeight);
   await today.locator("summary").click();
-  expect(await marker.evaluate((element) => getComputedStyle(element, "::before").content)).toBe(
-    '"▼"',
-  );
+  const openMarkerStyle = await marker.evaluate((element) => {
+    const style = getComputedStyle(element, "::before");
+    return {
+      content: style.content,
+      height: style.height,
+      transform: style.transform,
+      width: style.width,
+    };
+  });
+  expect(openMarkerStyle.width).toBe(closedMarkerStyle.width);
+  expect(openMarkerStyle.height).toBe(closedMarkerStyle.height);
+  expect(openMarkerStyle.transform).not.toBe(closedMarkerStyle.transform);
   await expect(today).toContainText("SET 1");
 });
 
@@ -53,7 +69,9 @@ test("種目選択は仲間のタイムラインを取得せず、部位で候�
   let todayActivityRequests = 0;
   await page.route("**/api/groups/today-activity", async (route) => {
     todayActivityRequests++;
-    await route.fulfill({ json: { totals: { set_count: 0, total_volume: 0 }, groups: [] } });
+    await route.fulfill({
+      json: { totals: { set_count: 0, total_volume: 0 }, groups: [] },
+    });
   });
 
   // mockTrainingの初期表示後に候補を差し替えるため、選択画面を開く前に再取得する。
@@ -133,7 +151,10 @@ test("種目選択は仲間のタイムラインを取得せず、部位で候�
   await expect(selectedPart).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(selectedPart).toHaveCSS("box-shadow", /rgba?\(0, 0, 0/);
   await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).click();
-  const addSheet = page.getByRole("dialog", { name: "種目を追加", exact: true });
+  const addSheet = page.getByRole("dialog", {
+    name: "種目を追加",
+    exact: true,
+  });
   await expect(addSheet.getByLabel("新しい種目", { exact: true })).toBeVisible();
   await expect(addSheet.getByRole("heading", { name: "種目を追加", exact: true })).toHaveCount(1);
   await expect(addSheet.getByRole("searchbox")).toHaveCount(0);
