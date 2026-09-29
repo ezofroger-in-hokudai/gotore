@@ -70,6 +70,7 @@ export type ExerciseOption = {
   id: string;
   name: string;
   revision?: number;
+  last_performed_on?: string | null;
   primary_body_part?: BodyPart | "full_body" | null;
   secondary_body_parts?: (BodyPart | "full_body")[];
 };

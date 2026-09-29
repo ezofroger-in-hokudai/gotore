@@ -1,6 +1,51 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, openTraining } from "./mock-training";
 
+test("種目候補は本人の最終実施日順で未記録を末尾に置く", async ({ page }) => {
+  const state = await mockTraining(page);
+  state.options = [
+    {
+      id: "one",
+      name: "ベンチプレス",
+      primary_body_part: "chest",
+      secondary_body_parts: [],
+      last_performed_on: "2026-09-01",
+    },
+    {
+      id: "two",
+      name: "チェストプレス",
+      primary_body_part: "chest",
+      secondary_body_parts: [],
+      last_performed_on: "2026-09-27",
+    },
+    {
+      id: "three",
+      name: "ダンベルプレス",
+      primary_body_part: "chest",
+      secondary_body_parts: [],
+      last_performed_on: "2026-09-27",
+    },
+    {
+      id: "four",
+      name: "腕立て",
+      primary_body_part: "chest",
+      secondary_body_parts: [],
+      last_performed_on: null,
+    },
+  ];
+  await page.reload();
+  await openTraining(page);
+  await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
+  const names = () => page.locator(".exercise-picker-list .v2-row strong").allTextContents();
+  await expect.poll(names).toEqual(["チェストプレス", "ダンベルプレス", "ベンチプレス", "腕立て"]);
+  await page.getByRole("button", { name: "胸", exact: true }).click();
+  await expect.poll(names).toEqual(["チェストプレス", "ダンベルプレス", "ベンチプレス", "腕立て"]);
+  await page.getByRole("button", { name: /^ベンチプレス/ }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
+  await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
+  await expect.poll(names).toEqual(["ベンチプレス", "チェストプレス", "ダンベルプレス", "腕立て"]);
+});
+
 test("0セットの要約は開かず、最初のセットを追加すると展開できる", async ({ page }) => {
   await mockTraining(page);
   await openTraining(page);
