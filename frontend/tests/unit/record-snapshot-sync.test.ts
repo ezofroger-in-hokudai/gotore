@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
+import { cachedRecordResource } from "../../src/features/record-cache/cached-resource";
 import type { RecordChanges, RecordSnapshot } from "../../src/lib/record-snapshot";
-import { applyRecordChanges, recordManifest } from "../../src/lib/record-snapshot";
+import { applyRecordChanges, recordManifest, validSnapshot } from "../../src/lib/record-snapshot";
 
 const snapshot: RecordSnapshot = {
   version: 1,
@@ -67,6 +68,32 @@ test("差分の追加と削除を端末の履歴・前回値・メモへまと�
   expect(next.contexts.ベンチプレス.previous?.sets[0].weight).toBe(70);
   expect(next.workout_memos.old).toBeUndefined();
   expect(next.session_exercise_memos.old).toBeUndefined();
+});
+
+test("壊れた端末記録は履歴表示と差分送信に使わない", () => {
+  expect(
+    validSnapshot(
+      { ...snapshot, workouts: [{ ...snapshot.workouts[0], exercises: [null] }] },
+      "owner",
+    ),
+  ).toBe(false);
+  expect(
+    validSnapshot(
+      {
+        ...snapshot,
+        contexts: { ベンチプレス: { ...snapshot.contexts.ベンチプレス, memo: { content: "前" } } },
+      },
+      "owner",
+    ),
+  ).toBe(false);
+  expect(validSnapshot({ ...snapshot, workout_memos: { old: null } }, "owner")).toBe(false);
+});
+
+test("端末の記録は本人の履歴条件だけに使い、グループの読み出しには渡さない", () => {
+  expect(cachedRecordResource(snapshot, "/workouts?offset=0&limit=50")).toEqual(snapshot.workouts);
+  expect(cachedRecordResource(snapshot, "/workouts?exercise=別の種目")).toEqual([]);
+  expect(cachedRecordResource(snapshot, "/groups/group-id/workouts?offset=0")).toBeNull();
+  expect(cachedRecordResource(snapshot, "/workouts?member_id=other-user")).toBeNull();
 });
 
 function emptyChanges(): RecordChanges {

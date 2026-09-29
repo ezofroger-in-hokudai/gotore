@@ -129,7 +129,7 @@ export function useResource<T>(
     )
       return;
     setResult((current) =>
-      current?.path === path && !current.stale
+      current?.path === path
         ? current
         : { path, data: localData, version: refreshKey, stale: true },
     );

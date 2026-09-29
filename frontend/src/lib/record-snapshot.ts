@@ -166,37 +166,81 @@ async function withStore<T>(
   }
 }
 
-export function validSnapshot(value: unknown, userId: string): value is RecordSnapshot {
-  if (!value || typeof value !== "object") return false;
-  const data = value as Partial<RecordSnapshot>;
+function objectValue(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function validMemo(value: unknown): value is SavedMemo {
   return (
-    data.version === 1 &&
-    data.user_id === userId &&
-    Array.isArray(data.workouts) &&
-    data.workouts.every(
+    objectValue(value) &&
+    typeof value.content === "string" &&
+    Number.isInteger(value.revision) &&
+    (value.revision as number) >= 0
+  );
+}
+
+function validSets(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (set) =>
+        objectValue(set) &&
+        typeof set.weight === "number" &&
+        Number.isFinite(set.weight) &&
+        typeof set.reps === "number" &&
+        Number.isFinite(set.reps),
+    )
+  );
+}
+
+export function validSnapshot(value: unknown, userId: string): value is RecordSnapshot {
+  if (!objectValue(value)) return false;
+  return (
+    value.version === 1 &&
+    value.user_id === userId &&
+    Array.isArray(value.workouts) &&
+    value.workouts.every(
       (record) =>
-        record &&
+        objectValue(record) &&
         record.user_id === userId &&
         typeof record.id === "string" &&
         typeof record.performed_on === "string" &&
-        Array.isArray(record.exercises),
+        typeof record.created_at === "string" &&
+        Number.isInteger(record.revision) &&
+        Array.isArray(record.exercises) &&
+        record.exercises.every(
+          (exercise: unknown) =>
+            objectValue(exercise) && typeof exercise.name === "string" && validSets(exercise.sets),
+        ) &&
+        (record.shared_group_ids === undefined ||
+          (Array.isArray(record.shared_group_ids) &&
+            record.shared_group_ids.every((id: unknown) => typeof id === "string"))) &&
+        (record.best_sets === undefined || Array.isArray(record.best_sets)),
     ) &&
-    Array.isArray(data.options) &&
-    data.options.every((option) => option && typeof option.name === "string") &&
-    !!data.contexts &&
-    typeof data.contexts === "object" &&
-    Object.values(data.contexts).every(
+    Array.isArray(value.options) &&
+    value.options.every(
+      (option) =>
+        objectValue(option) &&
+        typeof option.id === "string" &&
+        typeof option.name === "string" &&
+        (option.revision === undefined || Number.isInteger(option.revision)),
+    ) &&
+    objectValue(value.contexts) &&
+    Object.values(value.contexts).every(
       (context) =>
-        context &&
-        typeof context === "object" &&
-        (context.previous === null || (context.previous && Array.isArray(context.previous.sets))) &&
-        context.memo &&
-        typeof context.memo.content === "string",
+        objectValue(context) &&
+        (context.previous === null ||
+          (objectValue(context.previous) &&
+            typeof context.previous.performed_on === "string" &&
+            validSets(context.previous.sets))) &&
+        validMemo(context.memo),
     ) &&
-    !!data.workout_memos &&
-    typeof data.workout_memos === "object" &&
-    !!data.session_exercise_memos &&
-    typeof data.session_exercise_memos === "object"
+    objectValue(value.workout_memos) &&
+    Object.values(value.workout_memos).every(validMemo) &&
+    objectValue(value.session_exercise_memos) &&
+    Object.values(value.session_exercise_memos).every(
+      (memos) => objectValue(memos) && Object.values(memos).every(validMemo),
+    )
   );
 }
 
