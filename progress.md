@@ -1,5 +1,15 @@
 # progress.md
 
+## 2026-09-29 12:03 採用した履歴画面をIssue #248のPRブランチへ分離
+
+- 変更内容: 最新main起点の専用作業ツリーを作り、個人履歴の通算・月間カレンダー・連続グラフ・人体図、グループの共通カレンダー・部位別グラフ、必要な集計API・テスト・採用プレビューと設計資料を移した。既存作業ツリーの画面遷移、スタンプ、プロフィール等の別件変更は持ち込まない。
+- 目的: ユーザーが採用した履歴画面と人体図を追跡可能な単位でレビューし、他の未コミット変更を混ぜずにmainへ統合するため。
+- 影響範囲: 個人・グループ履歴の画面、履歴集計API、共通記録カードの日付表示、関連資料。
+- 関連ファイル: `docs/design/history-screen.md`、`docs/design/group-screen.md`、`docs/history-analytics.md`、`backend/app/api/routes/analytics.py`、`frontend/src/features/v2/personal-history.tsx`、`frontend/src/features/v2/group-history-calendar.tsx`、`frontend/src/features/v2/group-history-graph.tsx`ほかIssue #248のPR差分。
+- 検証: `make check-fast`と`make check`成功、backend単体とfrontend単体116件・lint・型・本番ビルドが成功。個人履歴とグループ履歴の関連E2E 16件成功。DB統合テストは専用の`TEST_DATABASE_URL`未設定によりskipされ、CIの専用DBで実行する。
+- 未解決事項: PRの全E2Eとレビュー、スマホ実機での最終確認は未実施。
+- 次のアクション: 差分と画像・リンクを最終確認し、PRを作成してCIとレビューを確認する。
+
 ## 2026-09-29 01:50 ホームの仲間情報を記録開始直後へ引き継ぐ（Issue #227）
 - 変更内容: ホームと記録画面の当日仲間データ取得を同じ画面内リソースに統合した。開始直後に取得済みのグループタブと仲間アイコンを表示し続け、記録入力中は再取得を停止する。
 - 目的: START後に取得済みの仲間情報が空の丸へ戻り、グループタブが動く問題を解消するため。

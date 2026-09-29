@@ -2,7 +2,10 @@ export type Period = "week" | "month" | "quarter" | "year" | "all";
 export type Grain = "day" | "week" | "month";
 export type Metric = "volume" | "sets" | "days" | "people" | "weight" | "rm";
 export type RankMetric = Metric | "weight_growth" | "weight_percent" | "rm_growth" | "rm_percent";
-export type Totals = Record<Metric, number | null>;
+export type Totals = Record<Metric, number | null> & {
+  weight_exercise?: string | null;
+  rm_exercise?: string | null;
+};
 export type Point = Totals & { start: string; end: string };
 export type Analytics = {
   window: {
@@ -63,10 +66,12 @@ export function analyticsPath(
   exercise: string,
   anchor = "",
   member = "",
+  bodyPart = "",
 ) {
   const query = new URLSearchParams({ period, offset: String(offset) });
   if (anchor) query.set("anchor", anchor);
   if (member) query.set("member_id", member);
   if (exercise) query.set("exercise", exercise);
+  if (bodyPart) query.set("body_part", bodyPart);
   return `${scope}/analytics?${query}`;
 }

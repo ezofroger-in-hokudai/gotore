@@ -24,6 +24,18 @@ export type MonthlyActivity = {
   days: ActivityDay[];
 };
 
+export type HistorySummary = {
+  workout_count: number;
+  total_sets: number;
+  total_volume: number;
+  first_performed_on: string | null;
+  exercises: {
+    name: string;
+    body_part: BodyPart;
+    last_performed_on: string;
+  }[];
+};
+
 export type Group = {
   id: string;
   name: string;

@@ -24,6 +24,8 @@ class Totals(BaseModel):
     people: int
     weight: float | None
     rm: float | None
+    weight_exercise: str | None = None
+    rm_exercise: str | None = None
 
 
 class Point(Totals):
@@ -47,3 +49,17 @@ class AnalyticsResponse(BaseModel):
     previous_totals: Totals | None
     series: dict[Literal["day", "week", "month"], list[Point]]
     rankings: dict[str, list[Rank]]
+
+
+class HistoryExercise(BaseModel):
+    name: str
+    body_part: str
+    last_performed_on: date
+
+
+class HistorySummary(BaseModel):
+    workout_count: int
+    total_sets: int
+    total_volume: float
+    first_performed_on: date | None
+    exercises: list[HistoryExercise]
