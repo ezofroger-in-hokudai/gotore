@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { describeElapsedTime } from "../session/elapsed-time";
 
 type Position = { side: "left" | "right"; top: number };
 
@@ -151,10 +152,15 @@ export function FloatingTraining({
         onActivate();
       }}
     >
-      <span>{resumable ? "RESUME" : "START"}</span>
+      <span className="floating-training-crown" aria-hidden="true" />
+      <span className="floating-training-pusher" aria-hidden="true" />
+      <span className="floating-training-dial" aria-hidden="true">
+        <span className="floating-training-elapsed">{resumable ? (elapsed ?? "…") : "▶"}</span>
+        <span className="floating-training-action">{resumable ? "RESUME" : "START"}</span>
+      </span>
       {resumable && elapsed && (
-        <span className="floating-training-elapsed" id="floating-training-elapsed">
-          {elapsed}
+        <span className="sr-only" id="floating-training-elapsed">
+          経過時間 {describeElapsedTime(elapsed)}
         </span>
       )}
     </button>

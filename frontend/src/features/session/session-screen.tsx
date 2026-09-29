@@ -7,6 +7,7 @@ import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
+import { describeElapsedTime } from "./elapsed-time";
 import { FinishConfirmDialog } from "./finish-confirm-dialog";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
@@ -25,6 +26,24 @@ import { TrainingOverview } from "./training-overview";
 import { useExerciseContext } from "./use-exercise-context";
 import { useFinishWeekRecords } from "./use-finish-week-records";
 import type { SessionController } from "./use-session";
+
+function ElapsedClock({ elapsed }: { elapsed: string | null }) {
+  if (!elapsed) return null;
+  return (
+    <span
+      className="session-elapsed"
+      role="timer"
+      aria-label={`経過時間 ${describeElapsedTime(elapsed)}`}
+    >
+      <svg viewBox="0 0 20 22" fill="none" aria-hidden="true">
+        <path d="M8 2h4M10 5v2M16 6l1-1" />
+        <circle cx="10" cy="14" r="6.5" />
+        <path d="M10 10v4l2.5 1.5" />
+      </svg>
+      {elapsed}
+    </span>
+  );
+}
 
 export function SessionScreen({
   active,
@@ -382,12 +401,10 @@ function ActiveTraining({
       {selecting ? (
         <>
           <div className="section-heading selection-heading session-header">
-            <div className="session-identity">
-              <span className="session-wordmark">
-                E-GO<span>TORE</span>
-              </span>
-              {elapsed && <span className="session-elapsed">{elapsed}</span>}
-            </div>
+            <span className="session-wordmark">
+              E-GO<span>TORE</span>
+            </span>
+            <ElapsedClock elapsed={elapsed} />
             <button
               type="button"
               className="text-button finish-training"
@@ -491,12 +508,10 @@ function ActiveTraining({
         <>
           <div className="session-context">
             <header className="recording-header session-header">
-              <div className="session-identity">
-                <span className="session-wordmark">
-                  E-GO<span>TORE</span>
-                </span>
-                {elapsed && <span className="session-elapsed">{elapsed}</span>}
-              </div>
+              <span className="session-wordmark">
+                E-GO<span>TORE</span>
+              </span>
+              <ElapsedClock elapsed={elapsed} />
               <button
                 type="button"
                 className="text-button finish-training"

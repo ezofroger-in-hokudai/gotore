@@ -7,7 +7,12 @@ export function formatElapsedTime(startedAt: string, now: number): string | null
   if (!Number.isFinite(start) || !Number.isFinite(now)) return null;
   const minutes = Math.max(0, Math.floor((now - start) / 60_000));
   const hours = Math.floor(minutes / 60);
-  return hours ? `${hours}時間${String(minutes % 60).padStart(2, "0")}分` : `${minutes}分`;
+  return `${hours}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+export function describeElapsedTime(elapsed: string): string {
+  const [hours, minutes] = elapsed.split(":").map(Number);
+  return hours ? `${hours}時間${minutes}分` : `${minutes}分`;
 }
 
 export function useElapsedTime(startedAt: string | null | undefined, active: boolean) {
