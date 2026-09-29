@@ -5,7 +5,7 @@
 - 目的: 3年分などの記録を持つ人が再訪するたび全件を取り直さず、履歴とトレーニング中の前回値を端末から先に安定して表示するため。
 - 影響範囲: 本人の記録スナップショットAPI・端末保存・履歴の初期表示。従来の画面ごとのAPI通信と保存操作は維持。追加migrationなし。
 - 関連ファイル: `backend/app/api/compressed_request.py`、`backend/app/api/routes/record_snapshot.py`、`backend/app/infrastructure/record_snapshot.py`、`backend/app/schemas/record_snapshot.py`、`frontend/src/lib/record-snapshot.ts`、`frontend/src/features/record-cache/record-snapshot-provider.tsx`、`frontend/src/features/training/use-resource.ts`、関連テスト、`docs/personal-device-storage-plan.md`、`task.md`。
-- 検証: 専用`gotore_test` DBで最終`make check`成功（backend 289件、frontend単体112件、lint・型・build）。端末履歴・前回値・ログアウト分離など関連E2E 10件成功。1,000件・50種目の変更なし計測では版一覧約163KB（gzip約24KB）、応答292B、5 SQL、ローカル中央値12.5ms。ロールバック内の架空データで、実機・遠隔DB・HTTP時間を含まない。`git diff --check`成功。
+- 検証: 専用`gotore_test` DBで最終`make check`成功（backend 289件、frontend単体112件、lint・型・build）。端末履歴・前回値・ログアウト分離など関連E2E 10件と、共通gzip処理の既存保存E2E 3件が成功。1,000件・50種目の変更なし計測では版一覧約163KB（gzip約24KB）、応答292B、5 SQL、ローカル中央値12.5ms。ロールバック内の架空データで、実機・遠隔DB・HTTP時間を含まない。`git diff --check`成功。
 - テストを先に書けなかった理由: 履歴の再描画ループは通信保留を加えたE2Eで発見したため、その再現テストの失敗を確認してから修正した。圧縮は版一覧の実測後に追加し、既存圧縮APIの回帰と新しいgzip要求を検証した。
 - 未解決事項: 端末データがない初回・ログアウト後は全件取得が必要。iPhone実機の保存保持・表示速度、実回線の時間、全E2Eと実装者以外のレビューは未確認。既存Issue #218の全E2E復旧まではPRをDraftで維持する。
 - 次のアクション: PR #246へ数値と検証結果を反映する。#218修正後に全E2Eとレビューを確認する。
