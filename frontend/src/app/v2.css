@@ -5465,6 +5465,10 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   width: 34px;
   height: 34px;
 }
+.group-member-row button {
+  position: relative;
+  z-index: 2;
+}
 .group-member-details b,
 .group-member-details small {
   display: block;
@@ -5503,10 +5507,9 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   box-shadow: inset 0 -14px 22px color-mix(in srgb, var(--text) 8%, transparent);
 }
 .group-members-card.expanded .group-members-fade {
-  right: 0;
-  left: auto;
-  width: 42px;
-  height: 42px;
+  inset: 0;
+  width: auto;
+  height: auto;
   background: transparent;
   box-shadow: none;
 }

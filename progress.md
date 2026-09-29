@@ -1,5 +1,14 @@
 # progress.md
 
+## 2026-09-30 00:50 グループメンバー一覧のタッチ操作を修正（#253）
+- 変更内容: 展開中のメンバーカード全体を縮小操作の対象にし、メンバー行の三点メニューをその上に配置した。タッチ操作のE2Eと画面設計を更新した。
+- 目的: 展開後にメニューを開けない問題を解消し、カードのどこでも縮小できるようにするため。
+- 影響範囲: グループ設定のメンバー一覧表示。API・DB・他画面の操作は変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/tests/e2e/membership.spec.ts`、`docs/design/group-screen.md`、Issue #253。
+- 検証: `make check` 成功（backend 292件、frontend単体130件、lint・型・build）。`membership.spec.ts` 3件成功。関連する既存の `group-real-flow.spec.ts` は一覧への復帰で失敗し、原因を調査中。
+- 未解決事項: 既存のグループ実フローE2Eの失敗原因、全E2E CI、実機でのタッチ確認。
+- 次のアクション: 実フローの失敗を整理し、PRのCIとレビューを確認してマージする。
+
 ## 2026-09-29 18:20 PR #252のCI成功
 - 変更内容: 個人履歴高速化PR #252で、競合解消後のGitHub CIが全ジョブ成功した。frontend・backend・databaseの選択E2E・Vercelを確認した。
 - 目的: 最新mainとの統合状態で、端末履歴の変更がレビュー可能であることを記録するため。
