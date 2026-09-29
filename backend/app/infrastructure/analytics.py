@@ -16,6 +16,7 @@ class AnalyticsRepository:
         exercise: str | None,
         group_id: UUID | None = None,
         member_id: UUID | None = None,
+        body_part: str | None = None,
     ):
         # 閲覧者の参加行をロックし、取得中の退出・除外と競合しないようにする。
         with self.connection.transaction():
@@ -35,6 +36,7 @@ class AnalyticsRepository:
                 "user_id": user_id,
                 "group_id": group_id,
                 "exercise": exercise,
+                "body_part": body_part,
                 "start": window.previous_start or window.start,
                 "end": window.end,
             }
@@ -48,17 +50,22 @@ class AnalyticsRepository:
             ).fetchall()
             rows = self.connection.execute(
                 """SELECT w.performed_on AS date, w.user_id, p.display_name,
+                    f.exercise_name,
                     sum(f.set_count)::integer AS sets, sum(f.volume) AS volume,
                     max(f.best_weight) AS weight, max(f.best_rm) AS rm
                     FROM public.gotore_workout_statistics f
                     JOIN public.gotore_workouts w ON w.id = f.workout_id
+                    LEFT JOIN public.gotore_exercise_options o
+                        ON o.user_id = w.user_id AND o.name = f.exercise_name
                     JOIN public.gotore_profiles p ON p.id = w.user_id WHERE """
                 + scope
                 + """
                     AND w.performed_on BETWEEN %(start)s AND %(end)s
                     AND (%(exercise)s::text IS NULL OR f.exercise_name = %(exercise)s)
-                    GROUP BY w.performed_on, w.user_id, p.display_name
-                    ORDER BY w.performed_on, w.user_id""",
+                    AND (%(body_part)s::text IS NULL OR
+                        COALESCE(NULLIF(o.primary_body_part, 'full_body'), 'other') = %(body_part)s)
+                    GROUP BY w.performed_on, w.user_id, p.display_name, f.exercise_name
+                    ORDER BY w.performed_on, w.user_id, f.exercise_name""",
                 params,
             ).fetchall()
             return build_analytics(
@@ -67,4 +74,30 @@ class AnalyticsRepository:
                 [row["exercise_name"] for row in names],
                 exercise,
                 group_id is not None,
+                group_id is None,
             )
+
+    def personal_summary(self, user_id: UUID):
+        totals = self.connection.execute(
+            """SELECT COUNT(DISTINCT w.id)::integer AS workout_count,
+                COALESCE(SUM(s.set_count), 0)::integer AS total_sets,
+                COALESCE(SUM(s.volume), 0) AS total_volume,
+                MIN(w.performed_on) AS first_performed_on
+            FROM public.gotore_workouts w
+            JOIN public.gotore_workout_statistics s ON s.workout_id = w.id
+            WHERE w.user_id = %s""",
+            (user_id,),
+        ).fetchone()
+        exercises = self.connection.execute(
+            """SELECT s.exercise_name AS name, MAX(w.performed_on) AS last_performed_on,
+                COALESCE(NULLIF(o.primary_body_part, 'full_body'), 'other') AS body_part
+            FROM public.gotore_workout_statistics s
+            JOIN public.gotore_workouts w ON w.id = s.workout_id
+            LEFT JOIN public.gotore_exercise_options o
+                ON o.user_id = w.user_id AND o.name = s.exercise_name
+            WHERE w.user_id = %s
+            GROUP BY s.exercise_name, o.primary_body_part
+            ORDER BY last_performed_on DESC, s.exercise_name""",
+            (user_id,),
+        ).fetchall()
+        return {**totals, "exercises": exercises}

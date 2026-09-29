@@ -276,7 +276,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   }
   return (
     <div
-      className={`app-shell v2-app${!opened ? " is-preparing" : ""}${view === "record" ? " recording-view" : ""}${primaryView ? " has-training-shortcut" : ""}`}
+      className={`app-shell v2-app${!opened ? " is-preparing" : ""}${view === "record" ? " recording-view" : ""}${view === "history" ? " personal-history-view" : ""}${primaryView ? " has-training-shortcut" : ""}`}
     >
       {!opened && (
         <main className="auth-page startup-screen">
@@ -407,7 +407,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             onHome={() => navigate("home")}
           />
         )}
-        <div hidden={view !== "history"}>
+        <div hidden={view !== "history"} className="personal-history-shell">
           <History
             guideTarget={guideTarget}
             recent={recentRecords}

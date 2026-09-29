@@ -1,5 +1,25 @@
 # progress.md
 
+## 2026-09-29 12:11 履歴PR #249のCI成功と統合判断
+
+- 変更内容: Issue #248に紐づくPR #249を作成し、CIのbackend・frontend・database、Vercel Previewが成功した。databaseジョブではmigration、専用DB、全E2Eが成功した。
+- 目的: 採用した履歴画面を、検証結果と未実施範囲が追える状態でmainへ統合するため。
+- 影響範囲: PR・CIの記録のみ。画面・APIの追加変更なし。
+- 関連ファイル: `progress.md`、PR #249。
+- 検証: PRは競合なし・マージ可能。ローカルの`make check`と関連E2E 16件に加え、CIの全必須チェックとVercelが成功した。
+- 未解決事項: スマホ実機でPRビルドの最終確認は未実施。第三者のコードレビューは付いていないが、mainにレビュー必須設定はなく、ユーザーからPR・マージの明示依頼があるため今回の統合を進める。
+- 次のアクション: 文書追記後のCIを再確認し、PR #249をmainへマージする。
+
+## 2026-09-29 12:03 採用した履歴画面をIssue #248のPRブランチへ分離
+
+- 変更内容: 最新main起点の専用作業ツリーを作り、個人履歴の通算・月間カレンダー・連続グラフ・人体図、グループの共通カレンダー・部位別グラフ、必要な集計API・テスト・採用プレビューと設計資料を移した。既存作業ツリーの画面遷移、スタンプ、プロフィール等の別件変更は持ち込まない。
+- 目的: ユーザーが採用した履歴画面と人体図を追跡可能な単位でレビューし、他の未コミット変更を混ぜずにmainへ統合するため。
+- 影響範囲: 個人・グループ履歴の画面、履歴集計API、共通記録カードの日付表示、関連資料。
+- 関連ファイル: `docs/design/history-screen.md`、`docs/design/group-screen.md`、`docs/history-analytics.md`、`backend/app/api/routes/analytics.py`、`frontend/src/features/v2/personal-history.tsx`、`frontend/src/features/v2/group-history-calendar.tsx`、`frontend/src/features/v2/group-history-graph.tsx`ほかIssue #248のPR差分。
+- 検証: `make check-fast`と`make check`成功、backend単体とfrontend単体116件・lint・型・本番ビルドが成功。個人履歴とグループ履歴の関連E2E 16件成功。DB統合テストは専用の`TEST_DATABASE_URL`未設定によりskipされ、CIの専用DBで実行する。
+- 未解決事項: PRの全E2Eとレビュー、スマホ実機での最終確認は未実施。
+- 次のアクション: 差分と画像・リンクを最終確認し、PRを作成してCIとレビューを確認する。
+
 ## 2026-09-29 12:22 記録読み出し経路と端末複製の回帰を確認（PR #246）
 - 変更内容: 共通の`useResource`が端末履歴を初期表示へ使う範囲を確認し、通信失敗時に保持済みAPI結果を古い端末複製で上書きしていた処理を修正した。端末複製の記録・前回値・メモの構造検証を強め、壊れた保存内容はサーバーから取り直す。別端末の追加・削除が履歴とIndexedDBへ反映されるE2Eを追加した。
 - 目的: 本人の履歴を速く表示しつつ、共通の読み出し処理を使う他の画面で確認済み内容を巻き戻さないため。

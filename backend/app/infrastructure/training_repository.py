@@ -314,7 +314,14 @@ class TrainingRepository:
                 raise Conflict("保存が競合しました。記録一覧を確認してください")
         return row
 
-    def activity(self, user_id: UUID, start: date, end: date, group_id: UUID | None = None):
+    def activity(
+        self,
+        user_id: UUID,
+        start: date,
+        end: date,
+        group_id: UUID | None = None,
+        exercise: str | None = None,
+    ):
         if group_id is not None:
             self.group(user_id, group_id)
         scope = (
@@ -340,6 +347,7 @@ class TrainingRepository:
                     ON o.user_id = w.user_id AND o.name = s.exercise_name
                 WHERE {scope} AND w.performed_on >= %(start)s AND w.performed_on < %(end)s
                   AND jsonb_array_length(w.exercises) > 0
+                  AND (%(exercise)s::text IS NULL OR s.exercise_name = %(exercise)s)
             ), workout_parts AS (
                 SELECT date, id, array_agg(DISTINCT body_part ORDER BY body_part) AS body_parts
                 FROM entries GROUP BY date, id
@@ -360,7 +368,13 @@ class TrainingRepository:
             SELECT t.*, g.workout_groups FROM totals t
             LEFT JOIN day_groups g ON g.date = t.date AND t.is_total = 1
             ORDER BY t.date, t.is_total DESC, t.body_part""",
-            {"user_id": user_id, "group_id": group_id, "start": start, "end": end},
+            {
+                "user_id": user_id,
+                "group_id": group_id,
+                "start": start,
+                "end": end,
+                "exercise": exercise,
+            },
         ).fetchall()
         metrics = ("volume", "set_count", "workout_count")
         days = {
