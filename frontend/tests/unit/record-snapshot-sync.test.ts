@@ -93,7 +93,72 @@ test("端末の記録は本人の履歴条件だけに使い、グループの�
   expect(cachedRecordResource(snapshot, "/workouts?offset=0&limit=50")).toEqual(snapshot.workouts);
   expect(cachedRecordResource(snapshot, "/workouts?exercise=別の種目")).toEqual([]);
   expect(cachedRecordResource(snapshot, "/groups/group-id/workouts?offset=0")).toBeNull();
+  expect(
+    cachedRecordResource(snapshot, "/groups/group-id/workouts/activity?month=2026-01"),
+  ).toBeNull();
   expect(cachedRecordResource(snapshot, "/workouts?member_id=other-user")).toBeNull();
+});
+
+test("本人履歴の通算値と種目一覧を保存済みセットから先に表示する", () => {
+  expect(cachedRecordResource(snapshot, "/history/summary")).toEqual({
+    workout_count: 1,
+    total_sets: 1,
+    total_volume: 480,
+    first_performed_on: "2026-01-01",
+    exercises: [{ name: "ベンチプレス", body_part: "other", last_performed_on: "2026-01-01" }],
+  });
+});
+
+test("本人の月間カレンダーを保存済みセットから先に表示する", () => {
+  expect(cachedRecordResource(snapshot, "/workouts/activity?month=2026-01")).toEqual({
+    month: "2026-01",
+    metric: "volume",
+    total_volume: 480,
+    total_sets: 1,
+    workout_count: 1,
+    active_days: 1,
+    days: [
+      {
+        date: "2026-01-01",
+        volume: 480,
+        set_count: 1,
+        workout_count: 1,
+        body_parts: [{ body_part: "other", volume: 480, set_count: 1, workout_count: 1 }],
+        workout_groups: [{ body_parts: ["other"], workout_count: 1 }],
+      },
+    ],
+  });
+});
+
+test("複数部位の同じ記録を日別件数で重複計上しない", () => {
+  const mixed: RecordSnapshot = {
+    ...snapshot,
+    options: [
+      { ...snapshot.options[0], primary_body_part: "chest" },
+      { id: "squat", name: "スクワット", primary_body_part: "legs" },
+    ],
+    workouts: [
+      {
+        ...snapshot.workouts[0],
+        exercises: [
+          ...snapshot.workouts[0].exercises,
+          { name: "スクワット", sets: [{ weight: 100, reps: 5 }] },
+        ],
+      },
+    ],
+  };
+  const activity = cachedRecordResource(mixed, "/workouts/activity?month=2026-01") as {
+    workout_count: number;
+    days: { workout_count: number; body_parts: { workout_count: number }[] }[];
+  };
+  expect(activity.workout_count).toBe(1);
+  expect(activity.days[0].workout_count).toBe(1);
+  expect(activity.days[0].body_parts.map((part) => part.workout_count)).toEqual([1, 1]);
+  const filtered = cachedRecordResource(
+    mixed,
+    "/workouts/activity?month=2026-01&exercise=スクワット",
+  ) as { total_volume: number; workout_count: number };
+  expect(filtered).toMatchObject({ total_volume: 500, workout_count: 1 });
 });
 
 function emptyChanges(): RecordChanges {

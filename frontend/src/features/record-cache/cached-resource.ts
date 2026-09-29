@@ -1,4 +1,6 @@
 import type { RecordSnapshot } from "@/lib/record-snapshot";
+import { personalHistorySummary } from "./personal-history-summary";
+import { personalMonthlyActivity } from "./personal-monthly-activity";
 
 export function cachedRecordResource(
   snapshot: RecordSnapshot | null,
@@ -6,7 +8,19 @@ export function cachedRecordResource(
 ): unknown {
   if (!snapshot || !path) return null;
   if (path === "/exercise-options") return snapshot.options;
+  if (path === "/history/summary") return personalHistorySummary(snapshot);
   const [pathname, query] = path.split("?", 2);
+  if (pathname === "/workouts/activity") {
+    const params = new URLSearchParams(query);
+    const month = params.get("month");
+    if (
+      !month ||
+      !/^\d{4}-(0[1-9]|1[0-2])$/.test(month) ||
+      [...params.keys()].some((key) => key !== "month" && key !== "exercise")
+    )
+      return null;
+    return personalMonthlyActivity(snapshot, month, params.get("exercise"));
+  }
   if (pathname !== "/workouts") return null;
   const params = new URLSearchParams(query);
   if (

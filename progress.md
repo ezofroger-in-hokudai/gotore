@@ -1,5 +1,14 @@
 # progress.md
 
+## 2026-09-29 13:16 最新の個人履歴画面へ端末記録を接続（PR #246）
+- 変更内容: mainへ統合済みの履歴画面PR #249を取り込み、`progress.md`の両方の経緯を保持して競合を解消した。保存済み本人記録から通算値・種目一覧・月間カレンダーを先に計算し、日別記録とともに画面へ表示する。従来のAPI取得は継続し、別端末の差分が届いたときは端末由来の表示を更新する。API取得済み内容の巻き戻し、遅れて届く旧応答、401/403等の認証・権限エラー後の再表示を防ぐ。旧履歴一覧を前提にしていた端末保存・認証エラー・再ログインE2Eを採用済み日別シートに合わせた。
+- 目的: 新しい履歴画面でも本人の記録を端末から速く、安全に表示し、前回値と別端末同期の挙動を維持するため。
+- 影響範囲: 本人の通算値・月間カレンダー・日別記録の初期表示と共通読み出し処理。グラフ、グループの記録・集計、従来のAPI取得と保存操作は維持する。
+- 関連ファイル: `frontend/src/features/record-cache/`、`frontend/src/features/training/use-resource.ts`、`frontend/tests/e2e/record-snapshot.spec.ts`、`frontend/tests/e2e/record-loading.spec.ts`、`frontend/tests/unit/record-snapshot-sync.test.ts`、`docs/design/history-screen.md`、`docs/history-analytics.md`、`docs/personal-device-storage-plan.md`、`progress.md`。
+- 検証: 通算値・月間カレンダーの端末投影、複数部位の記録件数、本人以外・グループへの非適用の単体テスト成功。差分同期後に通算値が古いまま残るE2Eを失敗状態で確認して修正。専用`gotore_test` DBの最終`make check`成功（backend 292件、frontend 123件、lint・型・本番build）。端末保存・個人履歴・再ログイン・前回値・グループ履歴の関連E2E 28件成功。`git diff --check`成功。
+- 未解決事項: 全E2Eは265件を開始したが、古い画面を前提とするテストなど23件が失敗し、コード修正前の実行を中断したため12件成功・2件中断・228件未実行。全件合格と実装者以外のレビューは未達。CIの全E2E化はIssue #218で追跡中。iPhone実機での容量・速度は未測定。
+- 次のアクション: PR #246へ統合と検証結果を反映し、Draftを維持する。#218のテスト修復後に全E2Eを再実行し、第三者レビューを受けてからマージ判断する。
+
 ## 2026-09-29 12:11 履歴PR #249のCI成功と統合判断
 
 - 変更内容: Issue #248に紐づくPR #249を作成し、CIのbackend・frontend・database、Vercel Previewが成功した。databaseジョブではmigration、専用DB、全E2Eが成功した。
