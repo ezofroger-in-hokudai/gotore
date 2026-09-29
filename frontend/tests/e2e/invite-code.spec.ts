@@ -1,57 +1,42 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, openGroup, openRecord, startTraining } from "./mock-training";
+import { mockTraining, openGroup } from "./mock-training";
 
-test("オーナーは影響を確認して再発行でき、失敗時は再取得できる", async ({ page }, testInfo) => {
-  const duplicateKeys: string[] = [];
-  page.on("console", (message) => {
-    if (message.text().includes("Encountered two children")) duplicateKeys.push(message.text());
-  });
+test("招待リンクの発行に失敗しても再試行でき、QRと同じリンクを共有できる", async ({ page }) => {
   const state = await mockTraining(page);
-  let fail = true;
   let requests = 0;
-  await page.route(`**/api/groups/${state.group.id}/invite-code`, (route) => {
+  await page.route(`**/api/groups/${state.group.id}/invites`, (route) => {
     requests++;
-    expect(route.request().postDataJSON()).toEqual({ expected_invite_code: "ABCDEF123456" });
-    if (fail) return route.abort();
-    state.group.invite_code = "FEDCBA654321";
-    return route.fulfill({ json: state.group });
+    return requests === 1
+      ? route.fulfill({ status: 503, json: { detail: "発行できませんでした" } })
+      : route.fulfill({
+          json: { token: "new-invite-token", expires_at: "2026-10-04T00:00:00Z" },
+        });
   });
   await openGroup(page, "invite");
-  await page.getByRole("button", { name: "再発行", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("発行できませんでした");
+  await expect(page.getByRole("button", { name: "リンクを共有" })).toBeDisabled();
+  await page.getByRole("main").getByRole("button", { name: "再発行" }).click();
   await expect(
-    page.getByText("古いコードは無効になります。", {
-      exact: true,
-    }),
+    page.getByRole("img", { name: `${state.group.name}への招待QRコード` }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-  expect(requests).toBe(0);
-  await page.getByRole("button", { name: "再発行", exact: true }).click();
-  await page.getByRole("button", { name: "再発行する", exact: true }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("通信できませんでした");
-  await expect(page.getByTestId("invite-code")).toHaveText("ABCDEF123456");
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(page.getByRole("button", { name: "コピー", exact: true })).toBeDisabled();
-  await expect(
-    page.getByRole("main").getByRole("alert").getByRole("button", { name: "再取得", exact: true }),
-  ).toBeEnabled();
-  await page.getByRole("button", { name: "再取得", exact: true }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
-  fail = false;
-  await page.getByRole("button", { name: "再発行", exact: true }).click();
-  await page.getByRole("button", { name: "再発行する", exact: true }).click();
-  await expect(page.getByTestId("invite-code")).toHaveText("FEDCBA654321");
-  await expect(page.getByRole("main")).toContainText("再発行しました。");
+  await expect(page.locator(".group-invite-expiry")).toContainText("10/4まで");
+  await expect(page.getByRole("button", { name: "リンクを共有" })).toBeEnabled();
   expect(requests).toBe(2);
-  expect(duplicateKeys).toEqual([]);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  );
-  await page.screenshot({ path: testInfo.outputPath("invite-code-mobile.png") });
 });
 
-test("通常メンバーはコードを見られるが再発行できない", async ({ page }) => {
-  await mockTraining(page, false);
+test("通常メンバーも7日間使える招待リンクを発行して共有できる", async ({ page }) => {
+  const state = await mockTraining(page, false);
+  let requests = 0;
+  await page.route(`**/api/groups/${state.group.id}/invites`, (route) => {
+    requests++;
+    return route.fulfill({
+      json: { token: "member-invite-token", expires_at: "2026-10-04T00:00:00Z" },
+    });
+  });
   await openGroup(page, "invite");
-  await expect(page.getByTestId("invite-code")).toHaveText("ABCDEF123456");
-  await expect(page.getByRole("button", { name: "再発行", exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("img", { name: `${state.group.name}への招待QRコード` }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "リンクを共有" })).toBeEnabled();
+  expect(requests).toBe(1);
 });

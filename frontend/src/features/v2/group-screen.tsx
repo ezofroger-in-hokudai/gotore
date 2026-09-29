@@ -476,6 +476,7 @@ export function CommunityScreen({
               <button
                 type="button"
                 className="group-action-pill"
+                data-tour="groups"
                 onClick={() => {
                   setGroupName("");
                   setCreatedGroup(null);

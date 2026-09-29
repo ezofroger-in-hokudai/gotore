@@ -35,6 +35,8 @@ export function runNavigationMotion(update: () => void, direction: Direction) {
     if (currentOperation === operationId) flushSync(update);
   });
   activeTransition = transition;
+  // 連続操作で意図的に中断した遷移のready拒否をページエラーにしない。
+  void transition.ready.catch(() => {});
   const cleanup = () => {
     if (activeTransition !== transition) return;
     activeTransition = null;

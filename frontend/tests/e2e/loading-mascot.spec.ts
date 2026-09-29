@@ -1,101 +1,78 @@
-import { expect, test } from "@playwright/test";
+import { type Route, expect, test } from "@playwright/test";
 import { mockTraining, navigate } from "./mock-training";
 
-test("画面内は短い読み込み表示だけにし、再確認でカレンダーを隠さない", async ({ page }) => {
+async function openHistoryDay(
+  page: import("@playwright/test").Page,
+  respond: (route: Route) => Promise<unknown>,
+) {
+  await page.clock.setFixedTime(new Date("2026-09-13T03:00:00Z"));
   await mockTraining(page);
+  await page.route("**/api/workouts?performed_on=2026-09-13*", respond);
+  await page.route("**/api/workouts/activity?*", (route) =>
+    route.fulfill({
+      json: {
+        month: "2026-09",
+        metric: "volume",
+        total_volume: 200,
+        total_sets: 1,
+        workout_count: 1,
+        active_days: 1,
+        days: [{ date: "2026-09-13", volume: 200, set_count: 1, workout_count: 1 }],
+      },
+    }),
+  );
+  await navigate(page, "履歴");
+  await page.locator('.personal-history-calendar button[aria-label*="9月13日"]').click();
+  return page.getByRole("dialog", { name: /9月13日の全メニュー/ });
+}
+
+test("日別記録の取得中は画面内だけに短い読み込み表示を出す", async ({ page }) => {
   let release = () => {};
-  let gate = new Promise<void>((resolve) => {
+  const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  let reads = 0;
-  await page.route("**/api/workouts/activity?*", async (route) => {
-    reads++;
-    await gate;
-    await route.fulfill({
-      json: {
-        month: new URL(route.request().url()).searchParams.get("month"),
-        metric: "volume",
-        total_volume: 0,
-        total_sets: 0,
-        workout_count: 0,
-        active_days: 0,
-        days: [],
-      },
-    });
-  });
-  await page.reload();
-  await navigate(page, "履歴");
-  const calendar = page.getByRole("region", {
-    name: "活動カレンダー",
-    exact: true,
-  });
-  const loading = calendar.getByRole("status", {
-    name: "活動カレンダーを読み込み中",
-  });
   try {
+    const sheet = await openHistoryDay(page, async (route) => {
+      await gate;
+      await route.fulfill({ json: [] });
+    });
+    const loading = sheet.getByRole("status", { name: "記録を読み込み中" });
     await expect(loading).toBeVisible();
     await expect(loading.locator("svg")).toHaveCount(0);
-    await expect(loading).toHaveText("");
-    await expect
-      .poll(() => loading.evaluate((el) => el.getAnimations({ subtree: true }).length))
-      .toBeGreaterThan(0);
-    await expect(calendar.locator(".activity-totals")).toContainText("—");
     for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     }
     release();
     await expect(loading).toHaveCount(0);
-    await expect(calendar.locator(".activity-totals")).toContainText("0");
-    await navigate(page, "ホーム");
-    gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const previous = reads;
-    await navigate(page, "履歴");
-    await expect.poll(() => reads).toBeGreaterThan(previous);
-    await expect(calendar.getByText("更新中…", { exact: true })).toHaveCount(0);
-    await expect(loading).toHaveCount(0);
-    await expect(calendar.locator(".activity-totals")).toContainText("0");
+    await expect(sheet.getByText("この日の記録はありません")).toBeVisible();
   } finally {
     release();
   }
 });
 
-test("取得失敗と再試行を分け、画面内ではキャラクターを出さない", async ({ page }) => {
-  await mockTraining(page);
+test("日別記録の取得失敗と再試行を分け、画面内ではキャラクターを出さない", async ({ page }) => {
   let fail = true;
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route("**/api/workouts/activity?*", async (route) => {
-    if (!fail) await gate;
-    await route.fulfill({
-      status: 503,
-      json: { detail: "記録を取得できませんでした" },
-    });
-  });
-  await page.reload();
-  await navigate(page, "履歴");
-  const calendar = page.getByRole("region", {
-    name: "活動カレンダー",
-    exact: true,
-  });
-  const loading = calendar.getByRole("status", {
-    name: "活動カレンダーを読み込み中",
-  });
-  await expect(calendar.getByRole("alert")).toBeVisible();
-  await expect(loading).toHaveCount(0);
-  fail = false;
   try {
-    await calendar.getByRole("button", { name: "再試行", exact: true }).click();
+    const sheet = await openHistoryDay(page, async (route) => {
+      if (fail)
+        return route.fulfill({ status: 503, json: { detail: "記録を取得できませんでした" } });
+      await gate;
+      return route.fulfill({ json: [] });
+    });
+    await expect(sheet.getByRole("alert")).toBeVisible();
+    fail = false;
+    await sheet.getByRole("button", { name: "再試行", exact: true }).click();
+    const loading = sheet.getByRole("status", { name: "記録を読み込み中" });
     await expect(loading).toBeVisible();
     await expect(loading.locator("svg")).toHaveCount(0);
-    await expect(calendar.getByRole("alert")).toHaveCount(0);
     release();
-    await expect(calendar.getByRole("alert")).toBeVisible();
-    await expect(loading).toHaveCount(0);
+    await expect(sheet.getByText("この日の記録はありません")).toBeVisible();
+    await expect(sheet.getByRole("alert")).toHaveCount(0);
   } finally {
     release();
   }
@@ -121,26 +98,34 @@ test("ホーム準備後は共有詳細の取得中も移動や閉じる操作�
     revision: 1,
     exercises: [{ name: "ベンチプレス", sets: [{ weight: 20, reps: 10 }] }],
   };
-  await page.route(`**/api/groups/${state.group.id}/activity`, async (route) => {
+  await page.route("**/api/groups/today-activity", async (route) => {
     await feedGate;
     await route.fulfill({
       json: {
-        group_id: state.group.id,
-        member_count: 1,
-        live_count: 0,
-        today_count: 0,
-        members: [],
-        feed: [
+        totals: { set_count: 1, total_volume: 200 },
+        groups: [
           {
-            workout_id: record.id,
-            user_id: record.user_id,
-            display_name: record.display_name,
-            exercise: "ベンチプレス",
-            weight: 20,
-            reps: 10,
-            estimated_rm: null,
-            updated_at: record.created_at,
-            best: false,
+            group_id: state.group.id,
+            name: state.group.name,
+            member_count: 1,
+            live_count: 0,
+            today_count: 1,
+            members: [],
+            totals: { set_count: 1, total_volume: 200 },
+            feed: [
+              {
+                workout_id: record.id,
+                user_id: record.user_id,
+                display_name: record.display_name,
+                exercise: "ベンチプレス",
+                weight: 20,
+                reps: 10,
+                estimated_rm: null,
+                updated_at: record.created_at,
+                best: false,
+                summary: { exercise_count: 1, set_count: 1, total_volume: 200 },
+              },
+            ],
           },
         ],
       },
@@ -161,40 +146,29 @@ test("ホーム準備後は共有詳細の取得中も移動や閉じる操作�
     await navigate(page, "ホーム");
     showFeed();
     await expect(homeLoading).toHaveCount(0);
-    const open = page.getByRole("button", {
-      name: "友達Aの記録詳細を開く",
-      exact: true,
-    });
-    await open.click();
-    const dialog = page.getByRole("dialog");
-    const loading = dialog.getByRole("status", {
-      name: "記録を読み込み中",
-    });
-    await expect(loading).toBeVisible();
-    await expect(loading.locator("svg")).toHaveCount(0);
-    await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
-    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "記録の日付を確認中" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "設定", exact: true })).toBeVisible();
     showRecord();
-    await open.click();
-    await expect(dialog.locator(".record-set")).toHaveCount(1);
-    await expect(loading).toHaveCount(0);
+    const card = page.getByRole("article").filter({ hasText: "友達A" });
+    await expect(card.locator(".record-set")).toHaveCount(1);
   } finally {
     showFeed();
     showRecord();
   }
 });
 
-test("アプリを開いた最初だけ筋トレ表示し、動き低減では静止する", async ({ page }) => {
+test("アプリ準備中だけ筋トレ表示し、動き低減では静止する", async ({ page }) => {
+  await mockTraining(page);
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route("**/_next/static/chunks/*.js", async (route) => {
+  await page.route("**/api/sessions/active", async (route) => {
     await gate;
-    await route.continue();
+    await route.fulfill({ json: null });
   });
   try {
-    await page.goto("/", { waitUntil: "commit" });
+    await page.reload({ waitUntil: "commit" });
     const loading = page.getByRole("status", { name: "アプリを読み込み中" });
     await expect(loading.locator("svg")).toBeVisible();
     await expect
@@ -213,7 +187,9 @@ test("アプリを開いた最初だけ筋トレ表示し、動き低減では�
       fullPage: true,
     });
     release();
-    await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "トレーニングを開始", exact: true }),
+    ).toBeVisible();
     await expect(loading).toHaveCount(0);
   } finally {
     release();

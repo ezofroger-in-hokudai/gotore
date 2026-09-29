@@ -17,11 +17,11 @@ test("今回の値に前回を添え、右の主ボタンで次セットへ進�
     const next = await page.getByRole("button", { name: "次の種目へ", exact: true }).boundingBox();
     expect(primary?.x).toBeGreaterThan(next?.x ?? 0);
     const row = page.locator(".comparison-row").first();
-    const current = await row.locator(".set-measurement").boundingBox();
-    const previous = await row.locator(".previous-set").boundingBox();
+    const current = await row.locator(".current-set-cell .set-measurement").boundingBox();
+    const previous = await row.locator(".previous-set-cell .set-measurement").boundingBox();
     expect(Math.abs((current?.y ?? 0) - (previous?.y ?? 0))).toBeLessThan(6);
     expect(previous?.x).toBeGreaterThan(current?.x ?? 0);
-    await expect(row.locator(".previous-set")).toContainText("前回 80kg × 8回");
+    await expect(row.locator(".previous-set-cell")).toContainText("80kg × 8");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
 });
@@ -40,7 +40,7 @@ test("今回の一覧は確定した最高記録を炎で示し、再起動・�
             revision: state.session?.revision,
             sets:
               state.session?.exercises[0]?.sets[0]?.weight === 85
-                ? [{ exercise_index: 0, set_index: 0 }]
+                ? [{ exercise_index: 0, set_index: 0, weight: true, rm: false }]
                 : [],
           },
     }),
@@ -48,28 +48,30 @@ test("今回の一覧は確定した最高記録を炎で示し、再起動・�
   await startTraining(page);
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("85");
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await expect.poll(() => state.session?.exercises[0]?.sets[0]?.weight).toBe(85);
   const next = page.getByRole("button", { name: "次の種目へ", exact: true });
-  const overview = page.getByRole("region", { name: "今回のトレーニング" });
+  const overview = page.locator(".today-training");
   await next.click();
-  await overview.getByText("セットの詳細", { exact: true }).click();
-  await expect(overview.locator(".record-celebration")).toContainText("85kg");
-  await expect(overview.locator(".record-celebration")).toContainText("🔥");
+  await overview.locator("summary").click();
+  await expect(overview).toContainText("85kg");
+  await expect(overview.getByRole("img", { name: "自己最高重量" })).toBeVisible();
   await page.screenshot({ path: "test-results/session-overview-bests.png", fullPage: true });
   await page.reload();
   await openTraining(page);
   await next.click();
-  await expect(overview.locator(".record-celebration")).toHaveCount(1);
+  await overview.locator("summary").click();
+  await expect(overview.getByRole("img", { name: "自己最高重量" })).toBeVisible();
   await page.getByRole("button", { name: /^ベンチプレス/ }).click();
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("70");
   await page.getByRole("button", { name: "変更を保存", exact: true }).click();
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await expect.poll(() => state.session?.exercises[0]?.sets[0]?.weight).toBe(70);
   await next.click();
-  await expect(overview.locator(".record-celebration")).toHaveCount(0);
+  await overview.locator("summary").click();
+  await expect(overview.getByRole("img")).toHaveCount(0);
   fail = true;
   await page.getByRole("button", { name: /^ベンチプレス/ }).click();
   await next.click();
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("読み込めません");
-  await expect(overview.locator(".record-celebration")).toHaveCount(0);
+  await expect(overview.getByRole("img")).toHaveCount(0);
 });

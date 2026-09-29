@@ -259,17 +259,18 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
               name: group.name,
               member_count: 1,
               live_count: state.session ? 1 : 0,
-              today_count: latest ? 1 : 0,
-              members: latest
-                ? [
-                    {
-                      id: user.id,
-                      display_name: user.user_metadata.display_name,
-                      live: !!state.session,
-                      today: true,
-                    },
-                  ]
-                : [],
+              today_count: state.session || latest ? 1 : 0,
+              members:
+                state.session || latest
+                  ? [
+                      {
+                        id: user.id,
+                        display_name: user.user_metadata.display_name,
+                        live: !!state.session,
+                        today: true,
+                      },
+                    ]
+                  : [],
               feed,
             },
           ],
@@ -429,7 +430,8 @@ export async function openGroup(page: Page, destination?: "members" | "invite" |
 }
 export async function openRecord(page: Page) {
   await navigate(page, "履歴");
-  await page.locator(".history-row").first().click();
+  await page.locator(".personal-history-days button:not([disabled])").last().click();
+  await expect(page.getByRole("dialog").locator(".record-review").first()).toBeVisible();
 }
 
 export async function showRecordingMemos(page: Page) {

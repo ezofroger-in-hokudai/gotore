@@ -35,12 +35,13 @@ test("未保存メモを終了時に案内し、履歴でも元の版を保っ�
       localStorage.setItem(k, JSON.stringify({ content: "別対象のメモ", revision: 7 }));
   }, otherKeys);
   await page.getByRole("button", { name: "今日のメモを編集" }).click();
-  await page.getByLabel("今日のメモ", { exact: true }).fill("消したくないメモ");
+  await page.getByRole("textbox", { name: "今日のメモ" }).fill("消したくないメモ");
+  failSave = true;
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "トレーニング終了" });
   await expect(confirmation).toContainText("未保存のメモ");
   await confirmation.getByRole("button", { name: "トレーニングに戻る", exact: true }).click();
-  await expect(page.getByLabel("今日のメモ", { exact: true })).toHaveValue("消したくないメモ");
+  await expect(page.getByRole("textbox", { name: "今日のメモ" })).toHaveValue("消したくないメモ");
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
   await confirmation.getByRole("button", { name: "終了する", exact: true }).click();
   await expect.poll(() => state.finished.length).toBe(1);
@@ -53,13 +54,13 @@ test("未保存メモを終了時に案内し、履歴でも元の版を保っ�
   failSave = true;
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText("通信できません");
-  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await page.getByRole("article").getByRole("button", { name: "閉じる", exact: true }).click();
   await page.getByRole("button", { name: "メモ", exact: true }).click();
   await expect(field).toHaveValue("消したくないメモ");
   failSave = false;
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText("別の操作");
-  expect(revisions).toEqual([0, 0]);
+  expect(revisions).toEqual([0, 0, 0]);
   expect(memo.content).toBe("別端末で保存したメモ");
   await expect
     .poll(() => page.evaluate((k) => JSON.parse(localStorage.getItem(k) || "null"), key))
@@ -75,7 +76,7 @@ test("未保存メモを終了時に案内し、履歴でも元の版を保っ�
   await field.fill("確認して更新したメモ");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "保存しました" })).toBeVisible();
-  expect(revisions).toEqual([0, 0, 1]);
+  expect(revisions).toEqual([0, 0, 0, 1]);
   expect(await page.evaluate((k) => localStorage.getItem(k), key)).toBeNull();
   expect(
     await page.evaluate(
@@ -87,6 +88,9 @@ test("未保存メモを終了時に案内し、履歴でも元の版を保っ�
 
 test("端末保存できないメモを履歴から復元できると案内しない", async ({ page }) => {
   await mockTraining(page);
+  await page.route("**/api/workouts/*/memo", (route) =>
+    route.request().method() === "PUT" ? route.abort() : route.fallback(),
+  );
   await startTraining(page);
   await showRecordingMemos(page);
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
@@ -99,11 +103,13 @@ test("端末保存できないメモを履歴から復元できると案内し�
     };
   });
   await page.getByRole("button", { name: "今日のメモを編集" }).click();
-  await page.getByLabel("今日のメモ", { exact: true }).fill("端末保存できないメモ");
+  await page.getByRole("textbox", { name: "今日のメモ" }).fill("端末保存できないメモ");
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "トレーニング終了" });
   await expect(confirmation).toContainText("端末に保持できていません");
   await expect(confirmation).not.toContainText("履歴から保存できます");
   await confirmation.getByRole("button", { name: "トレーニングに戻る", exact: true }).click();
-  await expect(page.getByLabel("今日のメモ", { exact: true })).toHaveValue("端末保存できないメモ");
+  await expect(page.getByRole("textbox", { name: "今日のメモ" })).toHaveValue(
+    "端末保存できないメモ",
+  );
 });

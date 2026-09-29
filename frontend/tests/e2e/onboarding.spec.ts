@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { mockTraining, navigate } from "./mock-training";
 
 test("初回ガイドは完了・再ログイン後に再表示せず、設定から読み直せる", async ({
   page,
@@ -52,11 +52,8 @@ test("他ユーザーの表示済み状態を使わず、スキップしても�
   const state = await mockTraining(page, true, true);
   const guide = page.getByRole("region", { name: "使い方ガイド" });
   await expect(guide).toBeVisible();
-  await startTraining(page);
-  const key = `gotore:session-input:v2:${state.user.id}:${state.session?.id}`;
-  await expect
-    .poll(() => page.evaluate((value) => localStorage.getItem(value), key))
-    .not.toBeNull();
+  const key = `gotore:session-input:v2:${state.user.id}:saved-draft`;
+  await page.evaluate((value) => localStorage.setItem(value, "保存済みの入力"), key);
   const draft = await page.evaluate((value) => localStorage.getItem(value), key);
   await guide.getByRole("button", { name: "スキップ", exact: true }).click();
   await expect(guide).toHaveCount(0);

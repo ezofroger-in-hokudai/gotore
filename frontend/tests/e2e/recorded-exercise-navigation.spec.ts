@@ -6,33 +6,30 @@ test("記録済み種目から1タップで復帰し、未保存入力は確認�
   await startTraining(page);
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("60");
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await expect.poll(() => state.session?.exercises[0]?.sets[0]?.weight).toBe(60);
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
-  const overview = page.getByRole("region", { name: "今回のトレーニング" });
-  await expect(overview.getByRole("button", { name: "記録に戻る：ベンチプレス" })).toHaveAttribute(
-    "aria-current",
-    "true",
-  );
-  await expect(overview.getByText("セットの詳細", { exact: true })).toBeVisible();
+  const overview = page.locator(".today-training");
+  await expect(overview).toContainText("ベンチプレス");
+  await expect(overview).toContainText("1セット");
   await page.getByRole("button", { name: /^スクワット/ }).click();
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("80");
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await expect.poll(() => state.session?.exercises[1]?.sets[0]?.weight).toBe(80);
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("82.5");
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   page.once("dialog", (dialog) => dialog.dismiss());
-  await overview.getByRole("button", { name: "記録に戻る：ベンチプレス" }).click();
+  await page.getByRole("button", { name: /^ベンチプレス/ }).click();
   await expect(overview).toBeVisible();
-  await overview.getByRole("button", { name: "記録に戻る：スクワット" }).click();
+  await page.getByRole("button", { name: /^スクワット/ }).click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("82.5");
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   page.once("dialog", (dialog) => dialog.accept());
-  await overview.getByRole("button", { name: "記録に戻る：ベンチプレス" }).click();
+  await page.getByRole("button", { name: /^ベンチプレス/ }).click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("60");
   await page.getByRole("button", { name: "セット1を編集", exact: true }).click();
   await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("9");
   await page.getByRole("button", { name: "変更を保存", exact: true }).click();
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await expect.poll(() => state.session?.exercises[0]?.sets[0]?.reps).toBe(9);
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect.poll(() => state.session?.exercises[0].sets.length).toBe(2);
   expect(state.session?.exercises[1].sets).toEqual([{ weight: 80, reps: 8 }]);

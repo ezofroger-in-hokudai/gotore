@@ -1,6 +1,22 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate } from "./mock-training";
 
+function todayForGroups(groups: { id: string; name: string }[]) {
+  return {
+    totals: { set_count: 0, total_volume: 0 },
+    groups: groups.map((group) => ({
+      group_id: group.id,
+      name: group.name,
+      member_count: 1,
+      live_count: 0,
+      today_count: 0,
+      members: [],
+      feed: [],
+      totals: { set_count: 0, total_volume: 0 },
+    })),
+  };
+}
+
 async function setup(page: import("@playwright/test").Page) {
   const state = await mockTraining(page);
   const groups = [
@@ -11,7 +27,8 @@ async function setup(page: import("@playwright/test").Page) {
   await page.route("**/api/groups**", (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/groups") return route.fulfill({ json: groups });
-    if (path === "/api/groups/today-activity") return route.fulfill({ json: { groups: [] } });
+    if (path === "/api/groups/today-activity")
+      return route.fulfill({ json: todayForGroups(groups) });
     const group = groups.find((item) => path === `/api/groups/${item.id}`);
     if (group)
       return route.fulfill({
@@ -38,6 +55,7 @@ async function setup(page: import("@playwright/test").Page) {
   await page.reload();
   await navigate(page, "グループ");
   await expect(page.locator(".group-card-list .community-card")).toHaveCount(3);
+  await expect(page.locator("html")).not.toHaveAttribute("data-gotore-navigation-direction", /.+/);
   return { state, groups };
 }
 
@@ -45,8 +63,10 @@ test("所属グループが1件の間は並べ替え案内を出さず、2件に
   const state = await mockTraining(page);
   const groups = [state.group];
   await page.route("**/api/groups**", (route) => {
-    if (new URL(route.request().url()).pathname === "/api/groups")
-      return route.fulfill({ json: groups });
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/groups") return route.fulfill({ json: groups });
+    if (path === "/api/groups/today-activity")
+      return route.fulfill({ json: todayForGroups(groups) });
     return route.fallback();
   });
   await page.reload();

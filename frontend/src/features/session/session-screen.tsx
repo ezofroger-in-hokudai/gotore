@@ -13,7 +13,8 @@ import { dateLabel } from "../activity/calendar";
 import { BODY_PARTS, BODY_PART_LABELS, normalizeBodyPart } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import { StampControl } from "../stamps/stamp-control";
-import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
+import { BestFlame } from "../training/best-flame";
+import { type MemoDraftState, memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "../v2/avatar";
@@ -156,6 +157,7 @@ function ActiveTraining({
   const [conflictOpen, setConflictOpen] = useState(false);
   const adding = useRef(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [memoDrafts, setMemoDrafts] = useState<Record<string, MemoDraftState>>({});
   const [error, setError] = useState("");
   const [storageWarning, setStorageWarning] = useState(false);
   const [selectedParts, setSelectedParts] = useState<BodyPart[]>([]);
@@ -173,12 +175,25 @@ function ActiveTraining({
     true,
     { enabled: active && selecting && exercises.length > 0 },
   );
-  const bestPositions = new Set(
+  const overviewBestByPosition = new Map(
     overviewBests.data && overviewBests.data.revision === revision && !controller.pending
-      ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
+      ? overviewBests.data.sets.map(
+          (set) => [`${set.exercise_index}:${set.set_index}`, set] as const,
+        )
       : [],
   );
-  const candidates = (catalog.data ?? [])
+  const catalogOptions = catalog.data ?? [];
+  const usedNames = [
+    ...new Set([...exercises.map((exercise) => exercise.name), input.name]),
+  ].filter((name) => name && !catalogOptions.some((option) => option.name === name));
+  const candidates = [
+    ...catalogOptions,
+    ...usedNames.map((name) => ({
+      id: `session:${name}`,
+      name,
+      primary_body_part: "other" as const,
+    })),
+  ]
     .filter(
       (option) =>
         selectedParts.length === 0 ||
@@ -230,6 +245,21 @@ function ActiveTraining({
       sharedCache.put(openedPeer.groupId, peerFeed, peerRecord.data);
   }, [openedPeer, peerFeed, peerVersionMatches, peerRecord.data, peerRecord.error, sharedCache]);
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
+  const confirmedContextBests = context.data?.current_bests;
+  const recordingBestByPosition = new Map(
+    confirmedContextBests && confirmedContextBests.revision === revision && !controller.pending
+      ? confirmedContextBests.sets.map(
+          (set) => [`${set.exercise_index}:${set.set_index}`, set] as const,
+        )
+      : [],
+  );
+  const currentSetBests = exercises.flatMap((exercise, exerciseIndex) =>
+    exercise.name === input.name
+      ? exercise.sets.map((_, setIndex) =>
+          recordingBestByPosition.get(`${exerciseIndex}:${setIndex}`),
+        )
+      : [],
+  );
   const previous = context.data?.previous?.sets ?? [];
   const pendingExerciseMemo = useMemo(
     () =>
@@ -239,7 +269,7 @@ function ActiveTraining({
   const pendingTodayMemo = useMemo(() => {
     const id = sessionId ?? controller.startingId;
     if (!id || !input.name) return undefined;
-    const path = `/sessions/${id}/exercise-memo?name=${encodeURIComponent(input.name)}`;
+    const path = `/workouts/${id}/memo`;
     return readMemoDraft(memoDraftKey(userId, path))?.content.trim();
   }, [userId, input.name, sessionId, controller.startingId]);
   useEffect(() => {
@@ -323,13 +353,18 @@ function ActiveTraining({
       const value = setValue(input.weight, input.reps);
       const nextExercises = updateSet(exercises, input.name, value, input.editing);
       const result = await controller.save(nextExercises, revision);
-      const nextInput = { ...input, revision: result.revision, editing: null, dirty: false };
-      setInput(nextInput);
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(nextInput));
-      } catch {
-        setStorageWarning(true);
-      }
+      setInput((current) => {
+        const unchanged =
+          current.name === input.name &&
+          current.weight === input.weight &&
+          current.reps === input.reps &&
+          current.editing === input.editing;
+        return {
+          ...current,
+          revision: result.revision,
+          ...(unchanged ? { editing: null, dirty: false } : {}),
+        };
+      });
       if (haptic && typeof navigator.vibrate === "function") navigator.vibrate(15);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "保存できませんでした。");
@@ -513,7 +548,14 @@ function ActiveTraining({
                   {exercise.sets.map((value, setIndex) => (
                     <p key={`${exercise.name}-${setIndex}`}>
                       <span>SET {setIndex + 1}</span>
-                      <SetMeasurement weight={value.weight} reps={value.reps} />
+                      <SetMeasurement
+                        weight={value.weight}
+                        reps={value.reps}
+                        best={overviewBestByPosition.get(`${index}:${setIndex}`)}
+                      />
+                      {overviewBestByPosition.has(`${index}:${setIndex}`) && (
+                        <BestFlame best={overviewBestByPosition.get(`${index}:${setIndex}`)} />
+                      )}
                     </p>
                   ))}
                 </section>
@@ -625,6 +667,13 @@ function ActiveTraining({
                   initial={context.data.memo}
                   userId={userId}
                   onSaved={context.retry}
+                  onDraftChange={(state) =>
+                    setMemoDrafts((current) =>
+                      current[`exercise:${input.name}`] === state
+                        ? current
+                        : { ...current, [`exercise:${input.name}`]: state },
+                    )
+                  }
                   singleLine
                 />
               ) : (
@@ -710,7 +759,14 @@ function ActiveTraining({
                             }}
                           >
                             <span className="current-set-selection">
-                              <SetMeasurement weight={current.weight} reps={current.reps} />
+                              <SetMeasurement
+                                weight={current.weight}
+                                reps={current.reps}
+                                best={currentSetBests[index]}
+                              />
+                              {currentSetBests[index] && (
+                                <BestFlame best={currentSetBests[index]} />
+                              )}
                             </span>
                           </button>
                         </>
@@ -767,8 +823,13 @@ function ActiveTraining({
               {sessionId ? (
                 <InlineMemo
                   title="今日のメモ"
-                  path={`/sessions/${sessionId}/exercise-memo?name=${encodeURIComponent(input.name)}`}
+                  path={`/workouts/${sessionId}/memo`}
                   userId={userId}
+                  onDraftChange={(state) =>
+                    setMemoDrafts((current) =>
+                      current.today === state ? current : { ...current, today: state },
+                    )
+                  }
                   singleLine
                 />
               ) : (
@@ -1005,6 +1066,14 @@ function ActiveTraining({
               入力中の数値はセットに追加されていません。追加済みのセットだけを残して終了しますか？
             </p>
           )}
+          {Object.values(memoDrafts).some((state) => state !== "saved") && (
+            <p>
+              未保存のメモがあります。
+              {Object.values(memoDrafts).includes("memory")
+                ? "端末に保持できていません。戻って保存してください。"
+                : "端末に保持しています。終了後も履歴から保存できます。"}
+            </p>
+          )}
           <button
             className="secondary full"
             type="button"
@@ -1052,13 +1121,20 @@ function PendingMemo({ title, content }: { title: string; content?: string }) {
   );
 }
 
-function SetMeasurement({ weight, reps }: { weight: number; reps: number }) {
+function SetMeasurement({
+  weight,
+  reps,
+  best,
+}: { weight: number; reps: number; best?: Pick<SessionBests["sets"][number], "weight" | "rm"> }) {
   return (
     <span className="set-measurement">
       <span>
-        {weight}kg × {reps}
+        <span className={best?.weight ? "personal-best-value" : undefined}>{weight}kg</span> ×{" "}
+        {reps}
       </span>
-      <small>RM {displayEstimatedRM(weight, reps) ?? "—"}</small>
+      <small className={best?.rm ? "personal-best-value" : undefined}>
+        RM {displayEstimatedRM(weight, reps) ?? "—"}
+      </small>
     </span>
   );
 }

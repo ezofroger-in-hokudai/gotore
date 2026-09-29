@@ -15,7 +15,10 @@ async function login(page: Page, name: string, email: string) {
 
 async function groupSettings(page: Page, name: string) {
   await navigate(page, "グループ");
-  await page.getByRole("button", { name: `${name}の詳細`, exact: true }).click();
+  await page
+    .locator(".group-card-list .community-card")
+    .getByRole("heading", { name, exact: true })
+    .click();
   await page
     .getByRole("navigation", { name: "グループの表示" })
     .getByRole("button", { name: "設定", exact: true })

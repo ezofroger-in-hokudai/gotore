@@ -38,9 +38,22 @@ test("A案の全セット表をすぐ表示し、幅・文字拡大・大量セ�
       ],
     },
   ];
+  await page.route("**/api/workouts/activity?*", (route) =>
+    route.fulfill({
+      json: {
+        month: new URL(route.request().url()).searchParams.get("month"),
+        metric: "volume",
+        total_volume: 3000,
+        total_sets: 34,
+        workout_count: 1,
+        active_days: 1,
+        days: [{ date: "2026-09-13", volume: 3000, set_count: 34, workout_count: 1 }],
+      },
+    }),
+  );
   await navigate(page, "履歴");
-  await page.locator(".history-row").click();
-  const detail = page.locator(".history-detail");
+  await page.locator('.personal-history-calendar button[aria-label*="9月13日"]').click();
+  const detail = page.getByRole("dialog", { name: /9月13日の全メニュー/ });
   await expect(detail.getByRole("table")).toHaveCount(3);
   await expect(detail.locator(".record-set")).toHaveCount(34);
   await expect(detail.locator("details")).toHaveCount(0);
@@ -72,6 +85,8 @@ test("A案の全セット表をすぐ表示し、幅・文字拡大・大量セ�
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "";
   });
-  await page.getByRole("button", { name: "‹ 履歴", exact: true }).click();
-  await expect(page.locator(".history-row")).toBeVisible();
+  await detail.getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(
+    page.locator('.personal-history-calendar button[aria-label*="9月13日"]'),
+  ).toBeVisible();
 });

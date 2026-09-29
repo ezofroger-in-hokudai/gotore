@@ -40,7 +40,10 @@ test("ホーム画面に追加したアプリでは左端スワイプで直前�
     };
 
     await navigate(page, "グループ");
-    await page.getByRole("button", { name: `${state.group.name}の詳細`, exact: true }).click();
+    await page
+      .locator(".group-card-list")
+      .getByRole("button", { name: `${state.group.name}の詳細`, exact: true })
+      .click();
     await expect(page.getByRole("heading", { name: state.group.name, level: 2 })).toBeVisible();
     await swipeBack();
     await expect(page.getByRole("heading", { name: "グループ", exact: true })).toBeVisible();

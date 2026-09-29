@@ -11,7 +11,22 @@ async function setup(page: import("@playwright/test").Page) {
   await page.route("**/api/groups**", (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/groups") return route.fulfill({ json: groups });
-    if (path === "/api/groups/activity/summary") return route.fulfill({ json: [] });
+    if (path === "/api/groups/today-activity")
+      return route.fulfill({
+        json: {
+          totals: { set_count: 0, total_volume: 0 },
+          groups: groups.map((group) => ({
+            group_id: group.id,
+            name: group.name,
+            member_count: 1,
+            live_count: 0,
+            today_count: 0,
+            members: [],
+            feed: [],
+            totals: { set_count: 0, total_volume: 0 },
+          })),
+        },
+      });
     const group = groups.find(
       (item) => path === `/api/groups/${item.id}` || path === `/api/groups/${item.id}/activity`,
     );

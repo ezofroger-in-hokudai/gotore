@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { type TourView, tourSteps } from "./tour-steps";
 import { useTourPosition } from "./use-tour-position";
 
@@ -70,7 +71,7 @@ export function OnboardingGuide({
     return storageWarning ? (
       <p className="muted">次回もガイドが表示される場合があります。</p>
     ) : null;
-  return (
+  return createPortal(
     <div className="tour-layer" hidden={position?.suspended}>
       {position?.target && (
         <div className="tour-highlight" aria-hidden="true" style={position.target} />
@@ -162,6 +163,7 @@ export function OnboardingGuide({
           <path d="M12 2v17m-6-6 6 6 6-6" />
         </svg>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }

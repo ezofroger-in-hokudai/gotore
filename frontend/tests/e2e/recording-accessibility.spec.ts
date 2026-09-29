@@ -8,15 +8,15 @@ for (const width of [320, 390, 430]) {
     await startTraining(page);
     await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     const labels = [
-      "重量を増やす",
-      "重量を減らす",
-      "回数を増やす",
-      "回数を減らす",
+      "重量を5kg増やす",
+      "重量を5kg減らす",
+      "回数を5回増やす",
+      "回数を5回減らす",
       "セットを追加",
       "次の種目へ",
       "トレーニング終了",
       "セット1を編集",
-      "メモを常に表示",
+      "今日のメモを編集",
     ];
     for (const name of labels) {
       const button = page.getByRole("button", { name, exact: true });
@@ -105,8 +105,8 @@ for (const mode of ["文字200%", "キーボード相当の高さ", "safe area�
       expect(fits, name).toBe(true);
     }
     for (const name of [
-      "重量を増やす",
-      "回数を減らす",
+      "重量を5kg増やす",
+      "回数を5回減らす",
       "セットを追加",
       "次の種目へ",
       "トレーニング終了",

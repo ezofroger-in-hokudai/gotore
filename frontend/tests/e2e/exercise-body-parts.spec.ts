@@ -144,7 +144,7 @@ test("今回の種目に戻れて、未保存入力の保護と削除済み種�
   const state = await prepare(page);
   await startTraining(page);
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-  await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "セット1を編集" })).toBeVisible();
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await page
     .locator(".exercise-picker-list")
@@ -153,7 +153,10 @@ test("今回の種目に戻れて、未保存入力の保護と削除済み種�
   await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("95");
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   page.once("dialog", (dialog) => dialog.dismiss());
-  await page.getByRole("button", { name: "記録に戻る：ベンチプレス", exact: true }).click();
+  await page
+    .locator(".exercise-picker-list")
+    .getByRole("button", { name: /^ベンチプレス/ })
+    .click();
   await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
   await page
     .locator(".exercise-picker-list")
@@ -170,12 +173,16 @@ test("今回の種目に戻れて、未保存入力の保護と削除済み種�
     .click();
   await expect(page.locator(".exercise-picker-list")).toContainText("ベンチプレス");
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "記録に戻る：ベンチプレス", exact: true }).click();
+  await page
+    .locator(".exercise-picker-list")
+    .getByRole("button", { name: /^ベンチプレス/ })
+    .click();
   await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("80");
   await page.locator(".exercise-information").click();
   await expect(
-    page.getByRole("dialog", { name: "種目情報" }).locator(".body-part-tags"),
-  ).toHaveText("その他");
+    page.locator('[aria-label="部位で絞り込み"]').getByRole("button", { name: "その他" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".exercise-picker-list")).toContainText("ベンチプレス");
   expect(state.session?.exercises).toHaveLength(1);
 });
 

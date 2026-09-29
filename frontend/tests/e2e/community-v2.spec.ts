@@ -56,7 +56,7 @@ test("グループ詳細の取得中は失敗表示を出さず、取得後に�
   });
   try {
     await openGroupList(page);
-    await page.getByRole("button", { name: `${state.group.name}の詳細`, exact: true }).click();
+    await page.locator(".group-card-list .community-card").first().click();
     await expect(page.locator('output[aria-label="グループ情報を読み込み中"]')).toBeVisible();
     await expect(page.getByText("グループ情報を読み込めません")).toHaveCount(0);
 
@@ -99,7 +99,10 @@ test("グループ詳細と設定のメンバーに保存済み画像を表示�
     }),
   );
   await navigate(page, "グループ");
-  await page.getByRole("button", { name: `${state.group.name}の詳細`, exact: true }).click();
+  await page
+    .locator(".group-card-list")
+    .getByRole("button", { name: `${state.group.name}の詳細`, exact: true })
+    .click();
   await expect(page.locator(".member-avatars-strip img")).toBeVisible();
   await page
     .getByRole("navigation", { name: "グループの表示" })
@@ -233,6 +236,23 @@ test("上段のグループカードと下段のタイムライン絞り込み�
   const state = await mockTraining(page);
   const second = { ...state.group, id: "second", name: "大学トレ部" };
   await page.route("**/api/groups", (route) => route.fulfill({ json: [state.group, second] }));
+  await page.route("**/api/groups/today-activity", (route) =>
+    route.fulfill({
+      json: {
+        totals: { set_count: 0, total_volume: 0 },
+        groups: [state.group, second].map((group) => ({
+          group_id: group.id,
+          name: group.name,
+          member_count: 1,
+          live_count: 0,
+          today_count: 0,
+          members: [],
+          feed: [],
+          totals: { set_count: 0, total_volume: 0 },
+        })),
+      },
+    }),
+  );
   const firstActivity = {
     group_id: state.group.id,
     name: state.group.name,
@@ -390,25 +410,33 @@ test("一覧で選んだグループを戻る・進むとメンバー・招待�
   await page.route("**/api/groups/second", (route) =>
     route.fulfill({ json: { ...second, members: [] } }),
   );
-  await page.reload();
-  await page.route("**/api/groups/second/activity", (route) =>
+  await page.route("**/api/groups/today-activity", (route) =>
     route.fulfill({
       json: {
-        group_id: second.id,
-        member_count: 0,
-        live_count: 0,
-        today_count: 0,
-        members: [],
-        feed: [],
+        totals: { set_count: 0, total_volume: 0 },
+        groups: [state.group, second].map((group) => ({
+          group_id: group.id,
+          name: group.name,
+          member_count: 1,
+          live_count: 0,
+          today_count: 0,
+          members: [],
+          feed: [],
+          totals: { set_count: 0, total_volume: 0 },
+        })),
       },
     }),
   );
+  await page.reload();
   const length = await page.evaluate(() => history.length);
   await page.getByRole("button", { name: "大学トレ部を表示", exact: true }).click();
   expect(await page.evaluate(() => history.length)).toBe(length);
   await page.getByRole("button", { name: `${state.group.name}を表示`, exact: true }).click();
   await openGroupList(page);
-  await page.getByRole("button", { name: "大学トレ部の詳細", exact: true }).click();
+  await page
+    .locator(".group-card-list")
+    .getByRole("button", { name: "大学トレ部の詳細", exact: true })
+    .click();
   await expect(page.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("heading", { name: "グループ", exact: true })).toBeVisible();
