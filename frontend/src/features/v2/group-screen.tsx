@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  BodyPart,
   Group,
   GroupActivity,
   GroupDetail,
@@ -26,7 +27,8 @@ import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { Feed, GroupCard } from "./community";
-import { HistoryBrowser } from "./history-browser";
+import { GroupHistoryCalendar } from "./group-history-calendar";
+import { GroupHistoryGraph } from "./group-history-graph";
 import { runNavigationMotion } from "./navigation-motion";
 import { GROUP_REFRESH_MS, activityRefreshMs } from "./refresh-interval";
 import { Sheet } from "./sheet";
@@ -77,6 +79,13 @@ export function CommunityScreen({
   activeRef.current = active;
   const historyPosition = useRef(0);
   const [detailTab, setDetailTab] = useState<DetailTab>("latest");
+  const [historySelection, setHistorySelection] = useState<{
+    groupId: string;
+    part: BodyPart | "all";
+  }>({ groupId: selected, part: "all" });
+  const historyPart = historySelection.groupId === selected ? historySelection.part : "all";
+  const setHistoryPart = (part: BodyPart | "all") =>
+    setHistorySelection({ groupId: selected, part });
   const [groupName, setGroupName] = useState("");
   const [createdGroup, setCreatedGroup] = useState<Group | null>(null);
   const [busy, setBusy] = useState(false);
@@ -604,16 +613,24 @@ export function CommunityScreen({
                   )}
                 </>
               )}
-              {(detailTab === "calendar" || detailTab === "graph") && (
-                <HistoryBrowser
-                  key={`${selected}:${detailTab}`}
+              {detailTab === "calendar" && (
+                <GroupHistoryCalendar
+                  key={selected}
+                  groupId={selected}
                   userId={userId}
-                  scope={`/groups/${selected}`}
-                  members={group.members}
                   active={active}
-                  prefetch={false}
                   refreshKey={refreshKey}
-                  tab={detailTab}
+                  part={historyPart}
+                  onPartChange={setHistoryPart}
+                />
+              )}
+              {detailTab === "graph" && (
+                <GroupHistoryGraph
+                  groupId={selected}
+                  active={active}
+                  refreshKey={refreshKey}
+                  part={historyPart}
+                  onPartChange={setHistoryPart}
                 />
               )}
               {detailTab === "settings" && (

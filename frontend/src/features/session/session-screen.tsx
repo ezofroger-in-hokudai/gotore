@@ -46,6 +46,8 @@ export function SessionScreen({
   haptic,
   catalog,
   sharedCache,
+  todayActivity,
+  onSelectingChange,
 }: {
   active: boolean;
   controller: SessionController;
@@ -56,6 +58,8 @@ export function SessionScreen({
   haptic: boolean;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
   sharedCache: SharedWorkoutCache;
+  todayActivity: ReturnType<typeof useResource<TodayActivity>>;
+  onSelectingChange: (selecting: boolean) => void;
 }) {
   const { session } = controller;
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
@@ -93,6 +97,8 @@ export function SessionScreen({
       onPreparingInput={setDraft}
       catalog={catalog}
       sharedCache={sharedCache}
+      todayActivity={todayActivity}
+      onSelectingChange={onSelectingChange}
     />
   );
 }
@@ -108,6 +114,8 @@ function ActiveTraining({
   onPreparingInput,
   catalog,
   sharedCache,
+  todayActivity,
+  onSelectingChange,
 }: {
   active: boolean;
   session: TrainingSession | null;
@@ -115,6 +123,8 @@ function ActiveTraining({
   onPreparingInput: (input: SessionInput) => void;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
   sharedCache: SharedWorkoutCache;
+  todayActivity: ReturnType<typeof useResource<TodayActivity>>;
+  onSelectingChange: (selecting: boolean) => void;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
@@ -139,6 +149,7 @@ function ActiveTraining({
     if (!sessionId) onPreparingInput(input);
   }, [input, sessionId, onPreparingInput]);
   const [selecting, setSelecting] = useState(!input.name);
+  useEffect(() => onSelectingChange(selecting), [selecting, onSelectingChange]);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [inputOpen, setInputOpen] = useState(true);
   const repsField = useRef<HTMLInputElement>(null);
@@ -184,13 +195,6 @@ function ActiveTraining({
     candidates.map((candidate) => candidate.name).filter((name) => name !== input.name),
     controller.confirmedRevision,
     active,
-  );
-  const todayActivity = useResource<TodayActivity>(
-    sessionId ? "/groups/today-activity" : null,
-    controller.confirmedRevision,
-    10_000,
-    true,
-    { enabled: active && selecting, retainOnRefresh: true },
   );
   const peerRecord = useResource<Workout>(
     openedPeer ? `/groups/${openedPeer.groupId}/workouts/${openedPeer.workoutId}` : null,

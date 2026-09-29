@@ -70,6 +70,13 @@ def totals(rows: list[dict], strength: bool) -> dict:
         values = [row[key] for row in rows if row[key] is not None]
         return rounded(max(values)) if strength and values else None
 
+    def maximum_exercise(key):
+        candidates = [row for row in rows if row[key] is not None]
+        if not strength or not candidates:
+            return None
+        best = max(candidates, key=lambda row: (row[key], row.get("exercise_name") or ""))
+        return best.get("exercise_name")
+
     return {
         "sets": sum(row["sets"] for row in rows),
         "volume": rounded(sum(Decimal(str(row["volume"])) for row in rows)),
@@ -77,6 +84,8 @@ def totals(rows: list[dict], strength: bool) -> dict:
         "people": len({row["user_id"] for row in rows}),
         "weight": maximum("weight"),
         "rm": maximum("rm"),
+        "weight_exercise": maximum_exercise("weight"),
+        "rm_exercise": maximum_exercise("rm"),
     }
 
 
@@ -96,13 +105,8 @@ def next_bucket(value: date, grain: str) -> date:
 
 def series(rows: list[dict], start: date, end: date, strength: bool) -> dict:
     result = {}
-    for grain, limit in [("day", 366), ("week", 1092), ("month", None)]:
+    for grain, limit in [("day", 366), ("week", None), ("month", None)]:
         if limit and (end - start).days + 1 > limit:
-            continue
-        if (
-            grain == "week"
-            and (bucket_start(end, grain) - bucket_start(start, grain)).days // 7 + 1 > 156
-        ):
             continue
         buckets = defaultdict(list)
         for row in rows:
@@ -180,6 +184,7 @@ def build_analytics(
     exercises: list[str],
     exercise: str | None,
     group: bool,
+    personal_strength: bool = False,
 ) -> dict:
     current = [row for row in rows if window.start <= row["date"] <= window.end]
     previous = [
@@ -188,7 +193,7 @@ def build_analytics(
         if window.previous_start is not None
         and window.previous_start <= row["date"] <= window.previous_end
     ]
-    strength = exercise is not None
+    strength = exercise is not None or personal_strength
     # 全期間の空白26年を描画せず、最初の対象記録から系列を作る。
     start = (
         min((row["date"] for row in current), default=window.end)

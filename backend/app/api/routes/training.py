@@ -148,9 +148,13 @@ def workouts(
 
 
 @router.get("/workouts/activity", response_model=MonthlyActivity)
-def activity(month: str, service: Service):
+def activity(
+    month: str,
+    service: Service,
+    exercise: str | None = Query(default=None, max_length=80),
+):
     try:
-        return service.activity(month)
+        return service.activity(month, exercise=exercise)
     except ValueError:
         raise HTTPException(
             422, "月は2000年1月から当月までをYYYY-MM形式で指定してください"
