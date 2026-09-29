@@ -1,5 +1,14 @@
 # progress.md
 
+## 2026-09-29 13:44 PR #246へ最新mainの画面遷移修正を統合
+- 変更内容: mainへ統合されたPR #243の残像解消・固定START表示を取り込み、`progress.md`の両方の履歴を保持して競合を解消した。
+- 目的: PR #246を最新mainに追従させ、端末保存と画面遷移が併存する状態を確認するため。
+- 影響範囲: 画面遷移の表示と端末保存の統合検証。本人記録のAPI契約やDBは変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/src/features/v2/navigation-motion.ts`、`frontend/tests/e2e/navigation-motion.spec.ts`、`progress.md`、PR #243・#246。
+- 検証: 専用`gotore_test` DBで統合後の`make check`成功（backend 292件、frontend単体124件、lint・型・build）。端末保存・前回値・認証分離・画面遷移のE2E 18件すべて成功。`git diff --check`成功。
+- 未解決事項: Issue #218の旧UIテストとCI全E2E設定が残り、PR #246の全E2E合格・第三者レビューは未達。iPhone実機の保存・速度も未確認。
+- 次のアクション: 最終コミットのCIを確認し、Issue #218の修復後に全E2Eを実行してマージ判断する。
+
 ## 2026-09-29 13:39 PR #246のマージ前検証と本人履歴の絞り込み修正
 - 変更内容: 保存済み本人記録の種目絞り込みで、セット0件の種目を履歴検索に含めていた差を修正した。サーバーの`gotore_workout_statistics`と同じく、セットがある種目だけを一致とする。失敗する単体テストを先に追加した。
 - 目的: 端末から先に表示する本人履歴とAPIの検索結果を一致させるため。
