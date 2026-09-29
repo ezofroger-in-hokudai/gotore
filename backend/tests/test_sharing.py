@@ -580,6 +580,29 @@ def test_exercise_options_are_private_persistent_and_idempotent(client):
     assert len(client.get(path).json()) == 1
 
 
+def test_exercise_options_include_own_latest_performed_date(client):
+    path = "/api/exercise-options"
+    assert all(option["last_performed_on"] is None for option in client.get(path).json())
+    for day, name in [
+        ("2026-01-01", "スクワット"),
+        ("2026-01-02", "ベンチプレス"),
+        ("2026-01-03", "スクワット"),
+    ]:
+        result = client.post(
+            "/api/workouts",
+            json=payload(
+                performed_on=day,
+                exercises=[{"name": name, "sets": [{"weight": 20, "reps": 5}]}],
+            ),
+        )
+        assert result.status_code == 201, result.text
+    options = {option["name"]: option for option in client.get(path).json()}
+    assert options["スクワット"]["last_performed_on"] == "2026-01-03"
+    assert options["ベンチプレス"]["last_performed_on"] == "2026-01-02"
+    other_options = client.get(path, headers={"X-Test-User": "B"}).json()
+    assert all(option["last_performed_on"] is None for option in other_options)
+
+
 @pytest.mark.parametrize(
     "data",
     [

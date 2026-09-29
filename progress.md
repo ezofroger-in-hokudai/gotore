@@ -1,5 +1,14 @@
 # progress.md
 
+## 2026-09-30 00:50 トレーニングの種目候補を最終実施日順に修正（#254）
+- 変更内容: 本人の記録から種目ごとの最終実施日を取得して候補APIへ加え、記録中の種目を先頭にした上で実施日が新しい順に表示する。同日の種目と未記録の種目は元のリスト順を保つ。本人以外の記録を参照しないテスト、画面E2E、設計資料を更新した。
+- 目的: 最後に実施した日が近い種目を見つけやすくし、記録の共有範囲を守るため。
+- 影響範囲: 種目候補APIと記録画面の候補順。DBスキーマは変更しない。
+- 関連ファイル: `backend/app/infrastructure/exercise_catalog.py`、`backend/app/schemas/exercise_catalog.py`、`backend/tests/test_sharing.py`、`frontend/src/features/session/session-screen.tsx`、`frontend/src/lib/api.ts`、`frontend/tests/e2e/training-selection.spec.ts`、`docs/design/training-session.md`、Issue #254。
+- 検証: `make check` 成功（backend 293件、frontend単体130件、lint・型・build）。`training-selection.spec.ts` 3件成功。
+- 未解決事項: 全E2E CI、実機での表示確認。
+- 次のアクション: PRのCIとレビューを確認してマージする。
+
 ## 2026-09-29 18:20 PR #252のCI成功
 - 変更内容: 個人履歴高速化PR #252で、競合解消後のGitHub CIが全ジョブ成功した。frontend・backend・databaseの選択E2E・Vercelを確認した。
 - 目的: 最新mainとの統合状態で、端末履歴の変更がレビュー可能であることを記録するため。
