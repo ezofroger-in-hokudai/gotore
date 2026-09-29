@@ -86,8 +86,8 @@ test("ログアウト後の別利用者へ履歴と入力を引き継がない",
   await page.getByLabel("メールアドレス", { exact: true }).fill("next@example.test");
   await page.getByLabel("パスワード", { exact: true }).fill("ui-test-password");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await navigate(page, "履歴");
   await page.getByRole("button", { name: "スキップ" }).click();
+  await navigate(page, "履歴");
   await page.locator(".personal-history-days button").nth(27).click();
   await expect(page.getByRole("table", { name: "最初の利用者の記録" })).toHaveCount(0);
   await expect(page.getByText("この日の記録はありません", { exact: true })).toBeVisible();
