@@ -1,5 +1,15 @@
 # progress.md
 
+## 2026-09-30 01:30 採用したE-5ストップウォッチをPR #245へ実装（Issue #202）
+- 変更内容: PR #245専用作業ツリーへ最新mainを統合し、既存の経過計算を`時間:分`表記へ更新した。浮遊する開始・再開入口を72×80pxの赤いE-5時計に変更し、幅広つまみ・右押し部品・細い内枠・白い数字を付けた。記録中は赤い時計アイコンと同じ経過時間を終了ボタン左へ移し、種目選択・入力の双方へ適用した。採用形を固定名のプレビューと画面設計・デザインシステムへ記録した。
+- 目的: ユーザーが選んだE-5の形で、開始から終了まで経過時間を自然に確認できるようにし、PRをメンバーが画面と操作でレビューできる状態にするため。
+- 影響範囲: 進行中トレーニングのUIと表示のみ。開始・終了・保存のAPI、DB、共有範囲は変更しない。時計のつまみと押し部品は装飾で、時計全体のタップで開始・再開する。
+- 関連ファイル: `frontend/src/features/session/elapsed-time.ts`、`session-screen.tsx`、`frontend/src/features/v2/floating-training.tsx`、`frontend/src/app/v2.css`、`frontend/public/previews/session-stopwatch-adopted.html`、関連テスト、`docs/design/training-session.md`、`docs/design/home-screen.md`、`docs/design-system.md`、`docs/images/issue-202/`。
+- 検証: 先に`0:00`等を期待する単体テストを追加して旧`0分`表示の失敗を確認。修正後、専用`gotore_test` DBで`make check`成功（backend 293件、frontend単体131件、lint・型・build）。関連E2E 10件成功。320/390/430px、長押し移動、画面移動、終了後の消去、`0:10→0:11`更新と再読込後の継続を確認。実画面の390px画像を採用プレビューと照合した。`git diff --check`を最終確認する。
+- 未解決事項: 実機PWAのスリープ復帰とレビュー担当の意見、全E2EおよびPRのCI確認は残る。旧UIテストの修復はIssue #218で追跡する。PRはレビュー中のためマージしない。
+- 次のアクション: PR #245へ画面画像と検証結果を反映し、メンバーの意見とCI結果を確認する。
+
+
 ## 2026-09-30 01:02 不具合修正PRのCI確認と統合準備
 - 変更内容: 種目候補修正PR #256のchanges・frontend・backend・databaseの全ジョブ成功を確認してmainへマージした。グループメンバー修正PR #255も同じ4ジョブが成功し、最新mainを取り込んだ。競合した進捗記録は両Issueの経緯を保持して解消した。
 - 目的: 二件の修正を独立した履歴で統合し、相互の変更を落とさないため。

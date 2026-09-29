@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>採用した赤いストップウォッチ E-5</title>
+  <style>
+    :root { font-family: Arial, "Noto Sans JP", sans-serif; color: #202127; background: #e9ebef; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button { font: inherit; cursor: pointer; }
+    .toolbar { position: sticky; top: 0; z-index: 10; padding: 15px max(16px, calc((100vw - 1700px)/2)); background: white; box-shadow: 0 2px 12px #20212720; }
+    h1 { margin: 0 0 4px; font-size: 19px; }
+    .toolbar p { margin: 0 0 11px; color: #59616d; font-size: 12px; line-height: 1.5; }
+    .controls { display: flex; flex-wrap: wrap; gap: 7px 18px; align-items: center; }
+    .controls > div { display: flex; align-items: center; gap: 4px; }
+    .controls strong { margin-right: 3px; font-size: 12px; }
+    .controls button { padding: 5px 9px; border: 1px solid #cdd2d9; border-radius: 7px; background: white; color: #30343d; font-size: 12px; }
+    .controls button[aria-pressed="true"] { border-color: #202127; background: #202127; color: white; }
+    .detail-grid { display: flex; gap: 12px; overflow-x: auto; padding: 16px max(16px, calc((100vw - 1700px)/2)); background: #f2f3f6; }
+    .detail { display: flex; flex: none; flex-direction: column; align-items: center; width: 182px; height: 150px; border: 1px solid #d3d6dd; border-radius: 11px; background: white; }
+    .detail h2 { align-self: flex-start; margin: 10px 12px 0; font-size: 12px; }
+    .detail .watch-button { margin: auto; transform: scale(1.12); pointer-events: none; }
+    .grid { display: flex; gap: 16px; overflow-x: auto; padding: 18px max(16px, calc((100vw - 1700px)/2)) 30px; scroll-snap-type: x proximity; }
+    .option { flex: none; width: var(--phone-width); scroll-snap-align: start; }
+    .option h2 { margin: 0 0 4px; font-size: 16px; }
+    .description { min-height: 50px; margin: 0; color: #5b636d; font-size: 12px; line-height: 1.45; }
+    .phone { position: relative; width: var(--phone-width); height: 690px; overflow: hidden; border: 1px solid #cbd0d8; background: #f6f6f8; box-shadow: 0 8px 24px #20212718; }
+    .app-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; height: 48px; padding: 0 16px; background: #202127; color: white; }
+    .brand { flex: none; font-size: 22px; font-weight: 800; letter-spacing: -.8px; white-space: nowrap; }
+    .brand em { color: #e52c30; font-style: normal; }
+    .header-right { display: flex; align-items: center; gap: 5px; min-width: 0; }
+    .header-time { display: flex; align-items: center; gap: 3px; color: #fff; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .header-time svg { width: 14px; height: 16px; }
+    .finish { flex: none; width: 114px; height: 40px; padding: 0 3px; border: 0; border-radius: 8px; background: #d9292d; color: white; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .finish i { display: inline-block; width: 7px; height: 7px; margin-right: 5px; background: white; }
+    .home-content { padding: 18px 20px 80px; }
+    .eyebrow { color: #747b87; font-size: 10px; font-weight: 800; letter-spacing: .07em; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); margin: 12px 0; padding: 3px 0 13px; border-bottom: 1px solid #d9dbe0; text-align: center; }
+    .metrics div + div { border-left: 1px solid #d9dbe0; }
+    .metrics small { display: block; height: 16px; color: #dd3035; font-size: 10px; }
+    .metrics b { font-size: 18px; }
+    .metrics span { color: #858b96; font-size: 10px; }
+    .group-card { height: 155px; padding: 18px 16px; border-radius: 12px; background: #202127; color: white; }
+    .group-card small { color: #ec3439; font-size: 11px; font-weight: 800; }
+    .group-card h3 { margin: 10px 0 32px; font-size: 19px; }
+    .group-card p { margin: 0; padding-top: 14px; border-top: 1px solid #686b74; color: #dee0e4; font-size: 12px; }
+    .home-content h4 { margin: 39px 0 12px; font-size: 16px; }
+    .feed-tabs { display: flex; align-items: center; gap: 17px; height: 44px; padding: 4px 24px; border-radius: 12px; background: #eceef1; color: #888e99; font-size: 12px; }
+    .feed-tabs b { padding: 8px 13px; border-radius: 8px; background: white; color: #202127; }
+    .empty { margin-top: 28px; color: #818894; font-size: 12px; }
+    .bottom-nav { position: absolute; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: space-around; height: 64px; border-top: 1px solid #d9dbe0; background: white; color: #858b96; font-size: 12px; }
+    .bottom-nav button { padding: 8px 4px; border: 0; background: none; color: inherit; }
+    .bottom-nav button:first-child { color: #d9292d; font-weight: 700; }
+    .watch-area { position: absolute; right: 16px; bottom: 76px; display: flex; align-items: flex-end; }
+    .side-left .watch-area { right: auto; left: 16px; }
+    .watch-button { position: relative; display: block; flex: none; padding: 0; border: 0; background: none; color: white; font-weight: 800; line-height: 1; filter: drop-shadow(0 4px 8px #0003); touch-action: none; }
+    .watch-button span { pointer-events: none; }
+    .watch-button .crown, .watch-button .pusher, .watch-button .face, .watch-button .rim, .watch-button .hand { position: absolute; display: block; }
+    .watch-button .crown { background: #b72028; }
+    .watch-button .pusher { background: #a81e26; }
+    .watch-button .face { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+    .watch-button .reading { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .watch-button .action { white-space: nowrap; }
+    .watch-button .dial-ticks { display: none; position: absolute; border-radius: 50%; background: repeating-conic-gradient(#ffffff8c 0 2deg, transparent 2deg 30deg); mask: radial-gradient(transparent 0 28px, #000 29px); }
+    .record-content { padding: 17px 16px; }
+    .record-content h3 { margin: 0; padding-bottom: 13px; border-bottom: 1px solid #d9dbe0; font-size: 18px; }
+    .record-content p { padding-bottom: 11px; border-bottom: 1px solid #d9dbe0; color: #79808a; font-size: 12px; }
+    .set-row { display: flex; justify-content: space-between; padding: 12px 4px; border-bottom: 1px solid #d9dbe0; color: #5f6772; font-size: 13px; }
+    .input-card { position: absolute; right: 16px; bottom: 80px; left: 16px; height: 180px; padding: 14px 12px; border: 1px solid #d9dce2; border-radius: 12px; background: white; }
+    .input-card .numbers { display: flex; justify-content: space-around; margin: 20px 0; text-align: center; }
+    .input-card .numbers b { font-size: 28px; }
+    .input-card .add-set { width: 100%; height: 42px; border: 0; border-radius: 8px; background: #d9292d; color: white; font-weight: 700; }
+    .size-note { margin: 7px 0 0; color: #5c6571; font-size: 12px; }
+    .dialog-backdrop { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; background: #0007; }
+    .dialog { width: min(280px, calc(100% - 32px)); padding: 17px; border-radius: 12px; background: white; }
+    .dialog h3 { margin: 0 0 16px; font-size: 15px; }
+    .dialog button { width: 100%; height: 40px; margin-top: 7px; border: 1px solid #a0a5ad; border-radius: 8px; background: white; font-weight: 700; }
+    .dialog button:last-child { border: 0; background: #d9292d; color: white; }
+    @media (max-width: 600px) { .toolbar { position: relative; } }
+    .header-time svg { color: #f0444a; }
+    :is(.option,.detail) .watch-button { width: 72px; height: 80px; }
+    :is(.option,.detail) .watch-button .crown { top: 0; left: 30px; width: 12px; height: 9px; border-radius: 3px 3px 0 0; background: #b72028; }
+    :is(.option,.detail) .watch-button .pusher { display: none; }
+    :is(.option,.detail) .watch-button .rim { inset: 8px 0 0; width: auto; height: auto; border: 0; border-radius: 50%; background: #d9292d; clip-path: none; }
+    :is(.option,.detail) .watch-button .face { inset: 11px 3px 3px; width: auto; height: auto; gap: 2px; background: none; color: #fff; clip-path: none; }
+    :is(.option,.detail) .watch-button .reading { font-family: Arial, "Noto Sans JP", sans-serif; font-size: 18px; letter-spacing: -.04em; }
+    :is(.option,.detail) .watch-button .action { font-size: 11px; letter-spacing: 0; }
+    :is(.option,.detail) .watch-button .dial-ticks { display: none; }
+    .option-b .watch-button .crown { left: 24px; width: 24px; height: 11px; border-radius: 5px 5px 1px 1px; }
+    .option-c .watch-button .pusher { display: block; top: 17px; right: 0; width: 11px; height: 7px; border-radius: 2px; background: #ac1d24; transform: rotate(36deg); }
+    .option-d .watch-button .pusher { display: block; top: 19px; right: 0; width: 11px; height: 7px; border-radius: 2px; background: #af1e26; transform: rotate(36deg); }
+    .option-d .watch-button .pusher-left { display: block; position: absolute; top: 19px; left: 0; width: 11px; height: 7px; border-radius: 2px; background: #af1e26; transform: rotate(-36deg); }
+    .option-e .watch-button .crown { left: 24px; width: 24px; height: 11px; border-radius: 5px 5px 1px 1px; }
+    .option-e .watch-button .pusher { display: block; top: 17px; right: 0; width: 11px; height: 7px; border-radius: 2px; background: #aa1c24; transform: rotate(36deg); }
+    .option-e .watch-button .rim { box-shadow: inset 0 0 0 3px #f25b5e; }
+  </style>
+</head>
+<body>
+  <header class="toolbar">
+    <h1>採用形 · 赤いストップウォッチ E-5</h1>
+    <p>E-5を採用。赤い丸と白い時間・操作名、幅広つまみ、右の押し部品、細い内枠。時計全体を押すと開始・再開します。0:10 は10分を表します。</p>
+    <div class="controls">
+      <div data-control="phase"><strong>状態</strong><button data-value="before" aria-pressed="false">開始前</button><button data-value="running" aria-pressed="true">計時中</button></div>
+      <div data-control="minute"><strong>経過</strong><button data-value="0" aria-pressed="false">0分</button><button data-value="10" aria-pressed="true">10分</button><button data-value="72" aria-pressed="false">1時間12分</button></div>
+      <div data-control="width"><strong>幅</strong><button data-value="320" aria-pressed="false">320</button><button data-value="390" aria-pressed="true">390</button><button data-value="430" aria-pressed="false">430</button></div>
+      <div data-control="side"><strong>位置</strong><button data-value="right" aria-pressed="true">右</button><button data-value="left" aria-pressed="false">左</button></div>
+      <div data-control="view"><strong>画面</strong><button data-value="home" aria-pressed="true">ホーム</button><button data-value="record" aria-pressed="false">記録入力</button></div>
+    </div>
+  </header>
+  <section class="detail-grid" id="detail" aria-label="ストップウォッチ型ボタンの拡大比較"></section>
+  <main class="grid" id="grid" style="--phone-width:390px"></main>
+  <script>
+    const icon='<svg width="15" height="17" viewBox="0 0 20 22" fill="none" aria-hidden="true"><path d="M8 2h4M10 5v2M16 6l1-1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="10" cy="14" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="M10 10v4l2.5 1.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+    const options=[
+      {id:'e',title:'採用 · E-5',description:'小さな赤い丸に幅広つまみ、右プッシュ、細い内枠。時計全体で開始・再開。',size:'72×80px。開始前も計時中も同じ外形。'},
+    ];
+    const state={phase:'running',minute:10,width:390,side:'right',view:'home',dialog:null};
+    const fullTime=()=>state.minute<60?`${state.minute}分`:`${Math.floor(state.minute/60)}時間${String(state.minute%60).padStart(2,'0')}分`;
+    const shortTime=()=>`${Math.floor(state.minute/60)}:${String(state.minute%60).padStart(2,'0')}`;
+    function watch(option){
+      const before=state.phase==='before';
+      const reading=before?'▶':shortTime();
+      const action=before?'START':'RESUME';
+      const main=`<span class="crown"></span><span class="pusher"></span><span class="pusher-left"></span><span class="rim"></span><span class="dial-ticks"></span><span class="face"><span class="reading">${reading}</span><span class="action">${action}</span></span>`;
+      return `<button class="watch-button" data-action="activate" aria-label="トレーニングを${before?'開始':'再開'}。${before?'':`経過 ${fullTime()}`}">${main}</button>`;
+    }
+    function card(option){
+      const before=state.phase==='before',home=before||state.view==='home';
+      return `<section class="option option-${option.id}"><h2>${option.title}</h2><p class="description">${option.description}</p>
+        <div class="phone ${home?'home':'record'} side-${state.side}">
+          <div class="app-header"><span class="brand">E-GO<em>TORE</em></span>${home?'':`<span class="header-right"><span class="header-time" aria-label="経過 ${fullTime()}">${icon}${shortTime()}</span><button class="finish" data-action="finish"><i></i>トレーニング終了</button></span>`}</div>
+          ${home?`<div class="home-content"><div class="eyebrow">TODAY</div><div class="metrics"><div><small>● LIVE</small><b>1</b><span>人</span></div><div><small>&nbsp;</small><b>2</b><span>人</span></div><div><small>&nbsp;</small><b>5</b><span>セット</span></div><div><small>&nbsp;</small><b>3,240</b><span>kg</span></div></div><div class="group-card"><small>● 1人がトレーニング中</small><h3>画面テスト部</h3><p>今日のトレーニング　5セット</p></div><h4>みんなのトレーニング</h4><div class="feed-tabs"><b>すべて</b><span>画面テスト部</span></div><p class="empty">みんなのトレーニングを待っています</p></div><div class="watch-area">${watch(option)}</div>`:`<div class="record-content"><h3>ベンチプレス</h3><p>種目メモ：メモ</p><div class="set-row"><span>今回 1</span><b>80kg × 8回</b></div><div class="set-row"><span>今回 2</span><b>75kg × 10回</b></div><div class="input-card"><strong>SET 1　　重量 kg　　　　　回数 回</strong><div class="numbers"><b>80</b><b>8</b></div><button class="add-set">セットを追加</button></div></div>`}
+          <nav class="bottom-nav"><button data-action="home">ホーム</button><button>グループ</button><button>履歴</button><button>設定</button></nav>
+          ${state.dialog===option.id?`<div class="dialog-backdrop"><div class="dialog" role="dialog" aria-modal="true"><h3>今回のトレーニングを終了しますか？</h3><button data-action="cancel">トレーニングに戻る</button><button data-action="confirm">終了する</button></div></div>`:''}
+        </div><p class="size-note">${option.size}</p></section>`;
+    }
+    function render(){
+      document.getElementById('detail').innerHTML=options.map(option=>`<div class="detail option-${option.id}"><h2>${option.title}</h2>${watch(option)}</div>`).join('');
+      document.getElementById('grid').innerHTML=options.map(card).join('');
+      document.getElementById('grid').style.setProperty('--phone-width',`${state.width}px`);
+      for(const group of document.querySelectorAll('[data-control]')) for(const button of group.querySelectorAll('button')) button.setAttribute('aria-pressed',String(button.dataset.value===String(state[group.dataset.control])));
+    }
+    document.querySelector('.controls').addEventListener('click',event=>{
+      const button=event.target.closest('button[data-value]'); if(!button)return;
+      const key=button.parentElement.dataset.control;
+      state[key]=key==='minute'||key==='width'?Number(button.dataset.value):button.dataset.value;
+      if(state.phase==='before')state.view='home';
+      state.dialog=null;render();
+    });
+    document.getElementById('grid').addEventListener('click',event=>{
+      const button=event.target.closest('[data-action]'); if(!button)return;
+      const option=button.closest('.option').classList[1].slice(-1);
+      if(button.dataset.action==='activate'){if(state.phase==='before')state.minute=0;state.phase='running';state.view='record';}
+      if(button.dataset.action==='home')state.view='home';
+      if(button.dataset.action==='finish')state.dialog=option;
+      if(button.dataset.action==='cancel')state.dialog=null;
+      if(button.dataset.action==='confirm'){state.phase='before';state.view='home';state.minute=0;state.dialog=null;}
+      render();
+    });
+    render();
+  </script>
+</body>
+</html>
