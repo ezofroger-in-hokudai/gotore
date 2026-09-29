@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mockTraining, startTraining } from "./mock-training";
 
 for (const width of [320, 390, 430]) {
-  test(`${width}pxで5セットと現行入力を表示しメモ切替で入力が動かない`, async ({ page }) => {
+  test(`${width}pxで全セットをスクロールでき、メモ切替で現行入力が動かない`, async ({ page }) => {
     await page.setViewportSize({ width, height: 720 });
     const state = await mockTraining(page);
     await page.route("**/api/exercises/context?*", (route) =>
@@ -38,16 +38,21 @@ for (const width of [320, 390, 430]) {
         return box.top >= bounds.top && box.bottom <= bounds.bottom;
       }).length;
     });
-    expect(visible).toBeGreaterThanOrEqual(5);
+    expect(visible).toBeGreaterThanOrEqual(2);
+    await table.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+    await expect(page.getByRole("button", { name: "セット8を編集", exact: true })).toBeInViewport();
     const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
     await weight.fill("62.5");
     const before = await weight.boundingBox();
-    await page.getByRole("button", { name: "メモを常に表示", exact: true }).click();
-    await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "種目メモを編集", exact: true }).click();
+    const memo = page.getByRole("textbox", { name: "種目メモ", exact: true });
+    await expect(memo).toBeVisible();
     await expect(weight).toHaveValue("62.5");
     if (width === 390) await page.screenshot({ path: "test-results/visible-sets-memo.png" });
     expect((await weight.boundingBox())?.y).toBe(before?.y);
-    await page.getByRole("button", { name: "メモを畳む", exact: true }).click();
+    await memo.press("Enter");
     await page.screenshot({ path: `test-results/visible-sets-${width}.png` });
     await table.evaluate((el) => {
       el.scrollTop = 0;
@@ -63,29 +68,22 @@ for (const width of [320, 390, 430]) {
   });
 }
 
-test("畳んだメモの未保存入力を保持し、種目情報と終了確認から戻れる", async ({ page }) => {
+test("未保存メモを再起動と終了確認の後も保持する", async ({ page }) => {
   await mockTraining(page);
   await startTraining(page);
-  await page.getByRole("button", { name: "メモを常に表示" }).click();
   await page.getByRole("button", { name: "種目メモを編集", exact: true }).click();
   const memo = page.getByRole("textbox", { name: "種目メモ", exact: true });
   await memo.fill("肩甲骨を寄せてゆっくり下ろす");
-  await page.getByRole("button", { name: "メモを畳む" }).click();
-  await page.getByRole("button", { name: "メモを常に表示" }).click();
-  await expect(memo).toHaveValue("肩甲骨を寄せてゆっくり下ろす");
   await page.reload();
   const { openTraining } = await import("./mock-training");
   await openTraining(page);
   await expect(memo).toHaveValue("肩甲骨を寄せてゆっくり下ろす");
-  await page.getByRole("button", { name: "ベンチプレスの種目情報", exact: true }).click();
-  const info = page.getByRole("dialog", { name: "種目情報", exact: true });
-  await expect(info).toContainText("最高重量");
-  await page.screenshot({ path: "test-results/visible-sets-info.png" });
-  await info.getByRole("button", { name: "閉じる", exact: true }).click();
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
   const finish = page.getByRole("dialog", { name: "トレーニング終了", exact: true });
   await expect(finish).toBeVisible();
   await page.screenshot({ path: "test-results/visible-sets-finish.png" });
   await finish.getByRole("button", { name: "トレーニングに戻る", exact: true }).click();
-  await expect(memo).toHaveValue("肩甲骨を寄せてゆっくり下ろす");
+  await expect(page.getByRole("region", { name: "種目メモ", exact: true })).toContainText(
+    "肩甲骨を寄せてゆっくり下ろす",
+  );
 });

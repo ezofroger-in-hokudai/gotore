@@ -97,9 +97,29 @@ test("終了を端末へ残して直ちに結果へ進み、通信失敗後に�
   fail = false;
   await expect.poll(() => state.finished.length).toBe(1);
   await expect(page.locator(".workout-result")).toContainText("保存済み");
+  await page.route("**/api/workouts/activity?*", (route) => {
+    const record = state.finished[0];
+    const volume = record.exercises.reduce(
+      (total, exercise) =>
+        total + exercise.sets.reduce((sum, set) => sum + set.weight * set.reps, 0),
+      0,
+    );
+    return route.fulfill({
+      json: {
+        month: record.performed_on.slice(0, 7),
+        metric: "volume",
+        total_volume: volume,
+        total_sets: 1,
+        workout_count: 1,
+        active_days: 1,
+        days: [{ date: record.performed_on, volume, set_count: 1, workout_count: 1 }],
+      },
+    });
+  });
   await navigate(page, "履歴");
+  await page.locator('.personal-history-calendar button[aria-label*="kg"]').first().click();
   await expect(
-    page.locator(".history-row").getByText("ベンチプレス", { exact: true }),
+    page.getByRole("dialog").getByRole("heading", { name: "ベンチプレス" }),
   ).toBeVisible();
 });
 

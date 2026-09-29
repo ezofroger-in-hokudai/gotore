@@ -31,6 +31,7 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     ] as ExerciseOption[],
     failOptions: false,
     failOptionWrite: false,
+    exerciseMemo: { content: "", revision: 0 },
     authUpdates: 0,
     syncs: 0,
     session: null as TrainingSession | null,
@@ -169,13 +170,16 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
               { weight: 75, reps: 10 },
             ],
           },
-          memo: { content: "", revision: 0 },
+          memo: state.exerciseMemo,
         },
       });
-    if (path === "/api/exercises/memo")
-      return route.fulfill({
-        json: { content: route.request().postDataJSON().content, revision: 1 },
-      });
+    if (path === "/api/exercises/memo") {
+      state.exerciseMemo = {
+        content: route.request().postDataJSON().content,
+        revision: state.exerciseMemo.revision + 1,
+      };
+      return route.fulfill({ json: state.exerciseMemo });
+    }
     if (path.endsWith("/memo")) return route.fulfill({ json: { content: "", revision: 0 } });
     if (path === `/api/groups/${group.id}/activity`) {
       const latest = state.session?.exercises.length ? state.session : state.finished.at(-1);
