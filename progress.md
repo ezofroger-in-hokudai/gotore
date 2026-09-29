@@ -1,5 +1,14 @@
 # progress.md
 
+## 2026-09-29 18:10 個人履歴のグラフと日別全件を端末から先に表示
+- 変更内容: 保存済み本人記録から全期間の週/月グラフを集計し、個人履歴の読み出しへ接続した。日別詳細は端末に対象日の記録があれば50件を超えても全件表示する。記録操作で`refreshKey`が増えた後も端末先行表示を維持し、サーバーへの要求と差分照合は背景で続ける。端末に対象日がなくAPIに記録がある場合はAPI結果を表示する。
+- 目的: 履歴を開いた時の通信待ちを減らし、個人の通算・カレンダー・日別・グラフを同じ端末記録から素早く表示するため。サーバーを確定データの正本とし、送信待ちセットは既存キューで区別する。
+- 影響範囲: 個人履歴と本人記録の共通読み出し。グループの集計・共有権限、API/DB契約は変更しない。
+- 関連ファイル: `frontend/src/features/record-cache/personal-analytics.ts`、`cached-resource.ts`、`frontend/src/features/training/use-resource.ts`、`frontend/src/features/v2/personal-history.tsx`、`frontend/tests/unit/personal-analytics.test.ts`、`frontend/tests/e2e/record-snapshot.spec.ts`、`docs/personal-device-storage-plan.md`、`docs/history-analytics.md`、`docs/design/history-screen.md`、`docs/current-state.md`、`task.md`。
+- 検証: frontend lint、単体126件の全件実行と追加後の個人集計3件、production build、型チェック成功。端末保存中にAPI応答を止めた履歴・グラフ表示、記録操作後の再訪、同日51件の端末表示、認証失効時の非表示を含む関連E2E21件すべて成功。初回の関連E2Eで端末に該当日の記録がない場合の2件が失敗したためAPI表示へ修正し、最終の全件再実行で成功。`git diff --check`成功。
+- 未解決事項: iPhone実機での表示速度・保存容量の測定、実装者以外のレビュー。初回の端末保存がない状態はサーバー取得時間に依存する。
+- 次のアクション: 変更差分と関連テストをレビューし、実機で履歴を再訪した時の体感と計測値を確認する。
+
 ## 2026-09-29 17:21 PR #246の関連CI成功とレビュー開始
 - 変更内容: 端末保存に関係するE2E15件を含む更新後のGitHub CIが全ジョブ成功した。PR #246の説明を関連テストに絞ったマージ判定へ更新し、Draftを解除した。
 - 目的: 実装と検証結果をレビューできる状態にし、旧画面E2Eの修復は別Issue #218で進めるため。

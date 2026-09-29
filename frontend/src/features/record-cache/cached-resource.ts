@@ -1,4 +1,6 @@
 import type { RecordSnapshot } from "@/lib/record-snapshot";
+import { today } from "../training/draft";
+import { personalAnalytics } from "./personal-analytics";
 import { personalHistorySummary } from "./personal-history-summary";
 import { personalMonthlyActivity } from "./personal-monthly-activity";
 
@@ -10,6 +12,16 @@ export function cachedRecordResource(
   if (path === "/exercise-options") return snapshot.options;
   if (path === "/history/summary") return personalHistorySummary(snapshot);
   const [pathname, query] = path.split("?", 2);
+  if (pathname === "/analytics") {
+    const params = new URLSearchParams(query);
+    if (
+      params.get("period") !== "all" ||
+      params.get("offset") !== "0" ||
+      [...params.keys()].some((key) => !["period", "offset", "exercise", "body_part"].includes(key))
+    )
+      return null;
+    return personalAnalytics(snapshot, today(), params.get("exercise"), params.get("body_part"));
+  }
   if (pathname === "/workouts/activity") {
     const params = new URLSearchParams(query);
     const month = params.get("month");
