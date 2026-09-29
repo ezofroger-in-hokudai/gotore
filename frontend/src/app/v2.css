@@ -5176,7 +5176,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   width: 12px;
   place-items: center;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
 }
 .today-training-marker::before {
