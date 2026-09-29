@@ -49,6 +49,10 @@ export function cachedRecordResource(
     .filter((record) => !date || record.performed_on === date)
     .filter((record) => !from || record.performed_on >= from)
     .filter((record) => !to || record.performed_on <= to)
-    .filter((record) => !exercise || record.exercises.some((item) => item.name === exercise))
+    .filter(
+      (record) =>
+        !exercise ||
+        record.exercises.some((item) => item.name === exercise && item.sets.length > 0),
+    )
     .slice(offset, offset + limit);
 }

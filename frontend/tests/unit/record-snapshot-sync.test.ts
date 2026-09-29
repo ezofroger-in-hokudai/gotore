@@ -99,6 +99,19 @@ test("端末の記録は本人の履歴条件だけに使い、グループの�
   expect(cachedRecordResource(snapshot, "/workouts?member_id=other-user")).toBeNull();
 });
 
+test("セットがない種目では本人の記録を絞り込み結果へ含めない", () => {
+  const withEmptyExercise: RecordSnapshot = {
+    ...snapshot,
+    workouts: [
+      {
+        ...snapshot.workouts[0],
+        exercises: [...snapshot.workouts[0].exercises, { name: "未記録の種目", sets: [] }],
+      },
+    ],
+  };
+  expect(cachedRecordResource(withEmptyExercise, "/workouts?exercise=未記録の種目")).toEqual([]);
+});
+
 test("本人履歴の通算値と種目一覧を保存済みセットから先に表示する", () => {
   expect(cachedRecordResource(snapshot, "/history/summary")).toEqual({
     workout_count: 1,
