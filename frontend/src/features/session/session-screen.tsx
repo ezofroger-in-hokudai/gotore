@@ -7,6 +7,7 @@ import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
+import { FinishConfirmDialog } from "./finish-confirm-dialog";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
 import {
@@ -22,6 +23,7 @@ import {
 } from "./session";
 import { TrainingOverview } from "./training-overview";
 import { useExerciseContext } from "./use-exercise-context";
+import { useFinishWeekRecords } from "./use-finish-week-records";
 import type { SessionController } from "./use-session";
 
 export function SessionScreen({
@@ -128,6 +130,12 @@ function ActiveTraining({
   const [conflictOpen, setConflictOpen] = useState(false);
   const adding = useRef(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const finishRecords = useFinishWeekRecords(
+    active,
+    sessionId,
+    session?.performed_on ?? null,
+    finishOpen,
+  );
   const [error, setError] = useState("");
   const [storageWarning, setStorageWarning] = useState(false);
   const [selectedParts, setSelectedParts] = useState<BodyPart[]>([]);
@@ -856,30 +864,16 @@ function ActiveTraining({
         </Sheet>
       )}
       {finishOpen && session && (
-        <Sheet
-          title="トレーニング終了"
+        <FinishConfirmDialog
+          session={session}
+          records={finishRecords}
+          dirty={input.dirty}
+          busy={controller.busy}
           onClose={() => {
             if (!controller.busy) setFinishOpen(false);
           }}
-        >
-          {input.dirty && (
-            <p>
-              入力中の数値はセットに追加されていません。追加済みのセットだけを残して終了しますか？
-            </p>
-          )}
-          <button
-            className="secondary full"
-            type="button"
-            disabled={controller.busy}
-            onClick={() => setFinishOpen(false)}
-          >
-            トレーニングに戻る
-          </button>
-          <button
-            className="primary full finish-confirm"
-            type="button"
-            disabled={controller.busy}
-            onClick={async () => {
+          onFinish={() => {
+            void (async () => {
               try {
                 const finished = await controller.finish(() => {
                   // 終了で入力画面が消える前に、確認シートの自動「戻る」を解除する。
@@ -894,11 +888,9 @@ function ActiveTraining({
               } catch {
                 setFinishOpen(false);
               }
-            }}
-          >
-            {controller.busy ? "終了中…" : "終了する"}
-          </button>
-        </Sheet>
+            })();
+          }}
+        />
       )}
     </section>
   );

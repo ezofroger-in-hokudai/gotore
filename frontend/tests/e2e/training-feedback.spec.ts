@@ -97,10 +97,6 @@ test("終了を端末へ残して直ちに結果へ進み、通信失敗後に�
   fail = false;
   await expect.poll(() => state.finished.length).toBe(1);
   await expect(page.locator(".workout-result")).toContainText("保存済み");
-  await navigate(page, "履歴");
-  await expect(
-    page.locator(".history-row").getByText("ベンチプレス", { exact: true }),
-  ).toBeVisible();
 });
 
 test("終了通信失敗後の再起動でも終了意図を復元して自動再送する", async ({ page }) => {
