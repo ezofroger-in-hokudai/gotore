@@ -17,8 +17,8 @@ export function useResource<T>(
   const latestSnapshot = useRef(recordSnapshot);
   latestSnapshot.current = recordSnapshot;
   const localData = useMemo(
-    () => (refreshKey === 0 ? (cachedRecordResource(recordSnapshot, path) as T | null) : null),
-    [recordSnapshot, path, refreshKey],
+    () => cachedRecordResource(recordSnapshot, path) as T | null,
+    [recordSnapshot, path],
   );
   const cache = useRef({
     version: refreshKey,
@@ -173,7 +173,10 @@ export function useResource<T>(
     )
       return;
     setResult((current) =>
-      current?.path === path && current.source === "server" && current.snapshot === recordSnapshot
+      current?.path === path &&
+      current.version === refreshKey &&
+      current.source === "server" &&
+      current.snapshot === recordSnapshot
         ? current
         : {
             path,

@@ -7,14 +7,14 @@ import {
   type Workout,
   api,
 } from "@/lib/api";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { activityForPart } from "../activity/body-parts";
 import { dateLabel, shiftMonth } from "../activity/calendar";
 import { number } from "../analytics/chart";
-import type { Metric, Point } from "../analytics/types";
-import { useAnalytics } from "../analytics/use-analytics";
+import { type Analytics, type Metric, type Point, analyticsPath } from "../analytics/types";
 import { BODY_PART_LABELS, PART_FILTERS } from "../exercises/body-parts";
 import { LoadingState } from "../loading/loading-state";
+import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 import { today } from "../training/draft";
 import { RecordList } from "../training/record-list";
 import { ResourceError } from "../training/resource-error";
@@ -81,6 +81,7 @@ export function PersonalHistory({
   const [extraDayRecords, setExtraDayRecords] = useState<Workout[]>([]);
   const [extraDayError, setExtraDayError] = useState("");
   const [extraDayRetry, setExtraDayRetry] = useState(0);
+  const recordSnapshot = useRecordSnapshot()?.snapshot;
   useEffect(() => {
     if (guideTarget?.target === "graph") setTab("graph");
     if (guideTarget?.target === "calendar") setTab("calendar");
@@ -119,17 +120,20 @@ export function PersonalHistory({
       retainOnRefresh: true,
     },
   );
-  const graph = useAnalytics(
-    "",
-    "all",
-    0,
-    scope.exercise,
-    active && tab === "graph",
-    false,
+  const graph = useResource<Analytics>(
+    analyticsPath(
+      "",
+      "all",
+      0,
+      scope.exercise,
+      "",
+      "",
+      scope.exercise || scope.part === "all" ? "" : scope.part,
+    ),
     refreshKey,
-    "",
-    "",
-    scope.exercise ? "" : scope.part === "all" ? "" : scope.part,
+    false,
+    true,
+    { enabled: active && tab === "graph", retainOnRefresh: true },
   );
   const dayRecords = useResource<Workout[]>(
     selectedDay ? `/workouts?performed_on=${selectedDay}&limit=50` : null,
@@ -138,11 +142,18 @@ export function PersonalHistory({
     true,
     { enabled: active && !!selectedDay, retainOnRefresh: true },
   );
+  const savedDayRecords = useMemo(
+    () =>
+      recordSnapshot?.workouts.filter(
+        (record) => record.performed_on === selectedDay && record.exercises.length > 0,
+      ),
+    [recordSnapshot, selectedDay],
+  );
   // biome-ignore lint/correctness/useExhaustiveDependencies: 残りのページの再試行時にも同じ日付から取得し直す。
   useEffect(() => {
     setExtraDayRecords([]);
     setExtraDayError("");
-    if (!selectedDay || dayRecords.data?.length !== 50) return;
+    if (!selectedDay || savedDayRecords?.length || dayRecords.data?.length !== 50) return;
     const controller = new AbortController();
     const load = async () => {
       try {
@@ -163,7 +174,13 @@ export function PersonalHistory({
     };
     void load();
     return () => controller.abort();
-  }, [selectedDay, dayRecords.data, extraDayRetry]);
+  }, [selectedDay, dayRecords.data, extraDayRetry, savedDayRecords]);
+  const displayedDayRecords =
+    dayRecords.data === null
+      ? null
+      : savedDayRecords?.length
+        ? savedDayRecords
+        : [...dayRecords.data, ...extraDayRecords];
   const monthlyActivity = activity.data?.month === month ? activity.data : null;
   const filteredActivity =
     monthlyActivity && scope.part !== "all" && !scope.exercise
@@ -171,7 +188,7 @@ export function PersonalHistory({
       : monthlyActivity;
   const exercises = recentExercises(summary.data ?? undefined, scope.part);
   const oldest = summary.data?.first_performed_on;
-  const graphData = graphPoints(graph.data, grain, oldest);
+  const graphData = graphPoints(graph.data ?? undefined, grain, oldest);
   const exerciseRail = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -369,13 +386,13 @@ export function PersonalHistory({
               {extraDayError}
             </button>
           )}
-          {dayRecords.loading && !dayRecords.data && (
+          {dayRecords.loading && !displayedDayRecords && (
             <LoadingState label="記録を読み込み中" compact />
           )}
-          {dayRecords.data?.length === 0 && <p className="muted">この日の記録はありません</p>}
-          {dayRecords.data && (
+          {displayedDayRecords?.length === 0 && <p className="muted">この日の記録はありません</p>}
+          {displayedDayRecords && (
             <RecordList
-              records={[...dayRecords.data, ...extraDayRecords]}
+              records={displayedDayRecords}
               userId={userId}
               personal
               compact

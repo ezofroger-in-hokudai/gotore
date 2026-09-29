@@ -1,5 +1,32 @@
 # progress.md
 
+## 2026-09-29 18:20 PR #252のCI成功
+- 変更内容: 個人履歴高速化PR #252で、競合解消後のGitHub CIが全ジョブ成功した。frontend・backend・databaseの選択E2E・Vercelを確認した。
+- 目的: 最新mainとの統合状態で、端末履歴の変更がレビュー可能であることを記録するため。
+- 影響範囲: PRの検証記録のみ。アプリ・API・DBの追加変更はない。
+- 関連ファイル: `progress.md`、PR #252。
+- 検証: GitHub Actions run 36547966436 のchanges・frontend・backend・databaseが成功。Vercelも成功。ローカルの関連E2E24件成功と併せて確認した。
+- 未解決事項: 実装者以外のレビュー、iPhone実機での表示速度・容量測定。全E2EにはIssue #218の旧画面期待値が残るため、今回のCI成功を全E2E成功とは扱わない。
+- 次のアクション: PR #252をレビュー可能にし、実機で履歴再訪の体感と数値を確認する。
+
+## 2026-09-29 18:15 PR #252へ最新mainの終了確認画面を統合
+- 変更内容: PR #251の終了確認画面を含む最新mainを個人履歴高速化ブランチへ統合した。`progress.md`の競合は双方の時系列を保持して解消した。
+- 目的: 個人履歴の端末先行表示と終了確認の7日集計を同じ状態で検証し、PR #252の競合をなくすため。
+- 影響範囲: PR #252の統合状態と進捗記録。既存の終了確認の仕様は変更しない。
+- 関連ファイル: `progress.md`、PR #251・#252。
+- 検証: 統合後のfrontend lint、単体130件、production buildと型チェック成功。個人履歴・端末保存・終了確認の関連E2E24件すべて成功。`git diff --check`成功。
+- 未解決事項: PR #252のCI、実装者以外のレビュー、iPhone実機での表示速度・容量測定。
+- 次のアクション: PRの競合・CIを再確認し、レビュー可能にする。
+
+## 2026-09-29 18:10 個人履歴のグラフと日別全件を端末から先に表示
+- 変更内容: 保存済み本人記録から全期間の週/月グラフを集計し、個人履歴の読み出しへ接続した。日別詳細は端末に対象日の記録があれば50件を超えても全件表示する。記録操作で`refreshKey`が増えた後も端末先行表示を維持し、サーバーへの要求と差分照合は背景で続ける。端末に対象日がなくAPIに記録がある場合はAPI結果を表示する。
+- 目的: 履歴を開いた時の通信待ちを減らし、個人の通算・カレンダー・日別・グラフを同じ端末記録から素早く表示するため。サーバーを確定データの正本とし、送信待ちセットは既存キューで区別する。
+- 影響範囲: 個人履歴と本人記録の共通読み出し。グループの集計・共有権限、API/DB契約は変更しない。
+- 関連ファイル: `frontend/src/features/record-cache/personal-analytics.ts`、`cached-resource.ts`、`frontend/src/features/training/use-resource.ts`、`frontend/src/features/v2/personal-history.tsx`、`frontend/tests/unit/personal-analytics.test.ts`、`frontend/tests/e2e/record-snapshot.spec.ts`、`docs/personal-device-storage-plan.md`、`docs/history-analytics.md`、`docs/design/history-screen.md`、`docs/current-state.md`、`task.md`。
+- 検証: frontend lint、単体126件の全件実行と追加後の個人集計3件、production build、型チェック成功。端末保存中にAPI応答を止めた履歴・グラフ表示、記録操作後の再訪、同日51件の端末表示、認証失効時の非表示を含む関連E2E21件すべて成功。初回の関連E2Eで端末に該当日の記録がない場合の2件が失敗したためAPI表示へ修正し、最終の全件再実行で成功。`git diff --check`成功。
+- 未解決事項: iPhone実機での表示速度・保存容量の測定、実装者以外のレビュー。初回の端末保存がない状態はサーバー取得時間に依存する。
+- 次のアクション: 変更差分と関連テストをレビューし、実機で履歴を再訪した時の体感と計測値を確認する。
+
 ## 2026-09-29 17:52 終了確認PRを最新mainへ統合し、先行マージ判断を記録
 
 - 変更内容: PR #251へ最新mainの端末記録機能（PR #246）を取り込んだ。競合した設計資料では終了確認と前回値待ちの両方の採用プレビューを保持し、`task.md`と過去の`progress.md`も両方残した。ユーザーは全E2E未通過を説明した後、終了画面のマージを明示的に依頼した。

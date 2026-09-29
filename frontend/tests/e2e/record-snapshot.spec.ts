@@ -107,6 +107,10 @@ test("端末に保存した前回値を通信前に表示する", async ({ page 
     await gate;
     await route.fulfill({ status: 503, json: { detail: "カレンダーを取得できません" } });
   });
+  await page.route("**/api/analytics?*", async (route) => {
+    await gate;
+    await route.fulfill({ status: 503, json: { detail: "グラフを取得できません" } });
+  });
   try {
     await page.reload();
     await page.getByRole("navigation").getByRole("button", { name: "履歴", exact: true }).click();
@@ -115,13 +119,138 @@ test("端末に保存した前回値を通信前に表示する", async ({ page 
     await page.locator(".personal-history-days button").nth(27).click();
     await expect(page.getByRole("table", { name: "端末の履歴種目" })).toBeVisible();
     await page.getByRole("button", { name: "閉じる" }).click();
+    await page.getByRole("tab", { name: "グラフ" }).click();
+    await expect(page.locator(".personal-history-graph-value strong")).toContainText("500");
     await startTraining(page);
     await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("62.5");
     await expect(page.getByRole("spinbutton", { name: "回数", exact: true })).toHaveValue("8");
     await expect(page.getByRole("button", { name: "種目メモを編集" })).toContainText(
       "端末の種目メモ",
     );
+    await page.getByRole("navigation").getByRole("button", { name: "履歴", exact: true }).click();
+    await expect(page.locator(".personal-history-summary")).toContainText("500");
+    await expect(page.locator(".personal-history-graph-value strong")).toContainText("500");
     expect(fullFetches).toBe(0);
+  } finally {
+    release();
+  }
+});
+
+test("同じ日の51件も端末から通信前に表示する", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-09-28T03:00:00Z"));
+  const state = await mockTraining(page);
+  await page.evaluate(async (userId) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("gotore-record-snapshot", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction("users", "readwrite");
+      transaction.objectStore("users").put(
+        {
+          version: 1,
+          user_id: userId,
+          workouts: Array.from({ length: 51 }, (_, index) => ({
+            id: `cached-${index}`,
+            user_id: userId,
+            display_name: "本人",
+            group_id: null,
+            performed_on: "2026-09-28",
+            created_at: `2026-09-28T${String(index % 24).padStart(2, "0")}:00:00Z`,
+            revision: 1,
+            exercises: [{ name: `種目${index + 1}`, sets: [{ weight: 10, reps: 1 }] }],
+          })),
+          options: [],
+          contexts: {},
+          workout_memos: {},
+          session_exercise_memos: {},
+        },
+        userId,
+      );
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+  }, state.user.id);
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/me/record-snapshot/changes", async (route) => {
+    await gate;
+    await route.abort();
+  });
+  await page.route("**/api/workouts?*", async (route) => {
+    await gate;
+    await route.fulfill({ json: [] });
+  });
+  try {
+    await page.reload();
+    await page.getByRole("navigation").getByRole("button", { name: "履歴", exact: true }).click();
+    await page.locator(".personal-history-days button").filter({ hasText: "28" }).click();
+    await expect(page.locator(".record-review")).toHaveCount(51);
+    await expect(page.getByRole("heading", { name: "種目51" })).toBeVisible();
+  } finally {
+    release();
+  }
+});
+
+test("認証が失効したら端末の日別記録を隠す", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-09-28T03:00:00Z"));
+  const state = await mockTraining(page);
+  await page.evaluate(async (userId) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("gotore-record-snapshot", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction("users", "readwrite");
+      transaction.objectStore("users").put(
+        {
+          version: 1,
+          user_id: userId,
+          workouts: [
+            {
+              id: "cached",
+              user_id: userId,
+              display_name: "本人",
+              group_id: null,
+              performed_on: "2026-09-28",
+              created_at: "2026-09-28T03:00:00Z",
+              revision: 1,
+              exercises: [{ name: "非表示にする記録", sets: [{ weight: 10, reps: 1 }] }],
+            },
+          ],
+          options: [],
+          contexts: {},
+          workout_memos: {},
+          session_exercise_memos: {},
+        },
+        userId,
+      );
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+  }, state.user.id);
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/workouts?*", async (route) => {
+    await gate;
+    await route.fulfill({ status: 401, json: { detail: "ログインし直してください。" } });
+  });
+  try {
+    await page.reload();
+    await page.getByRole("navigation").getByRole("button", { name: "履歴", exact: true }).click();
+    await page.locator(".personal-history-days button").filter({ hasText: "28" }).click();
+    await expect(page.getByRole("table", { name: "非表示にする記録" })).toBeVisible();
+    release();
+    await expect(page.getByRole("table", { name: "非表示にする記録" })).toHaveCount(0);
+    await expect(page.locator(".v2-app").getByRole("alert")).toContainText("ログインし直して");
   } finally {
     release();
   }
