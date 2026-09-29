@@ -126,6 +126,10 @@ test("初回は本名を使わず表示名を保存し、再ログインでは�
   await expect(page.getByRole("navigation")).toBeVisible();
   await navigate(page, "設定");
   await page.getByRole("button", { name: "ログアウト", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "ログアウト", exact: true })
+    .getByRole("button", { name: "ログアウト", exact: true })
+    .click();
   await page.getByLabel("メールアドレス", { exact: true }).fill("ui@example.test");
   await page.getByLabel("パスワード", { exact: true }).fill("ui-test-password");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
@@ -172,6 +176,10 @@ test("Authに名前のない既存利用者はDBの名前を保持し、取得�
   await page.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(page.getByLabel("表示名", { exact: true })).toHaveValue("以前の名前");
   await page.getByRole("button", { name: "ログアウト", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "ログアウト", exact: true })
+    .getByRole("button", { name: "ログアウト", exact: true })
+    .click();
   await expect(page.getByRole("button", { name: "Googleで続ける" })).toBeVisible();
 });
 

@@ -70,14 +70,13 @@ function WorkspaceContent({ session }: { session: Session }) {
   }, [groupList.data, sharedCache]);
   const groupOrder = useGroupOrder(session.user.id, groupList.data);
   const groups = groupOrder.groups;
-  const [recordSelecting, setRecordSelecting] = useState(true);
   const todayActivity = useResource<TodayActivity>(
     "/groups/today-activity",
     refreshKey,
     todayActivityRefreshMs,
     true,
     {
-      enabled: groups.length > 0 && (view === "home" || (view === "record" && recordSelecting)),
+      enabled: groups.length > 0 && view === "home",
       retainOnRefresh: true,
     },
   );
@@ -351,9 +350,6 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
-            todayActivity={visibleTodayActivity}
-            onSelectingChange={setRecordSelecting}
-            sharedCache={sharedCache}
             active={view === "record"}
             controller={training}
             userId={session.user.id}

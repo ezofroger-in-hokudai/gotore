@@ -32,7 +32,7 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [design-system.md](design-system.md): スマホアプリを見据えた色・文字・余白・操作と共通部品の基準。[画面見本](design-preview.html)。
 
-- [画面設計の判断](design/README.md): 画面ごとの採用判断の一覧。[トレーニング中](design/training-session.md)、[ホーム](design/home-screen.md)、[グループ](design/group-screen.md)、[グループ作成](design/group-create.md)の画面設計を参照する。
+- [画面設計の判断](design/README.md): 画面ごとの採用判断の一覧。[トレーニング中](design/training-session.md)、[ホーム](design/home-screen.md)、[グループ](design/group-screen.md)、[グループ作成](design/group-create.md)、[設定](design/settings-screen.md)の画面設計を参照する。
 - [画面遷移の動き](design/navigation-motion.md): 採用した控えめな横移動、固定プレビューと比較経緯。
 - [履歴画面の設計](design/history-screen.md): 個人の通算・カレンダー・連続グラフ・部位別人体図の採用案と比較経緯。
 

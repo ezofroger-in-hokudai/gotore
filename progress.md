@@ -3961,3 +3961,48 @@
 - テストを先に書けなかった理由: 既存のFeed内保持が画面離脱で失われ、セッション側の取得経路と権限確認との接続方式を先に調べる必要があった。保持境界が定まった後に単体/E2Eを追加した。
 - 未解決事項: 関連E2Eを広げた実行では2件成功、3件失敗、1件中断、7件未実行。失敗のうち先読み要求数は変更前mainでも同じ期待2件/実際0件で再現し、旧`/groups/{id}/activity`モックと現行ホームの集約APIの不一致がある。起動表示の旧見出し期待も失敗した。全E2Eと実機PWA、実DBでの権限変化、他人が共有解除した瞬間の表示確認は未実施。これはCI/テスト修正中の#218と合わせて確認する。
 - 次のアクション: PRのCIで全E2Eとレビューを確認し、#218の旧期待を別作業で更新する。実機で仲間シートの初回・再訪の見え方を確認する。
+
+## 2026-09-28 17:56 記録画面の仲間表示削除とログアウト確認
+
+- 変更内容: トレーニングの種目選択画面から仲間のグループ選択、当日アイコン、共有記録詳細シートと関連取得を削除した。本人の `今日のトレーニング` は `▼` で展開する表示へ変更。設定のログアウトは赤文字にし、キャンセルと確定を選ぶ確認シートを追加した。
+- 目的: 公開先選択と誤認された仲間タイムラインを記録画面からなくして本人の入力へ集中させ、ログアウトの誤操作を防ぐため。
+- 影響範囲: トレーニング記録画面、設定画面、関連CSS・E2E・画面設計資料。記録の共有範囲、ホームのタイムライン、API・DBは変更していない。
+- 関連ファイル: `frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/settings.tsx`、`workspace.tsx`、`frontend/src/app/v2.css`、`frontend/tests/e2e/training-selection.spec.ts`、`record-loading.spec.ts`、`onboarding.spec.ts`、`google-signin.spec.ts`、削除した`peer-record-reuse.spec.ts`、`docs/design/training-session.md`、`docs/design/settings-screen.md`、`docs/design/home-screen.md`、`docs/stamps.md`、`docs/loading-performance.md`、`task.md`。
+- 検証: `make check`成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。E2Eの期待値は実装前に追加したが、実行環境に `libnspr4.so` がなくChromiumを起動できなかったため、実装前の失敗と修正後の成功は未確認。
+- 未解決事項: 関連E2E・全E2E・実機表示は未確認。
+- 次のアクション: Chromium依存が揃う環境またはCIで関連E2Eを実行する。別ブランチでグループカードの状態別配色を実装する。
+
+## 2026-09-29 01:45 ログアウト確認と今日の記録の開閉表示を調整
+
+- 変更内容: ログアウト確認のキャンセルを確定ボタンと同じ8px角丸・同じ高さのボタンへ揃えた。`今日のトレーニング` は閉じた状態で見出し左に12pxの `▶`、展開時は同じ位置に `▼` を表示し、従来の右端記号を削除した。状態・配置・角丸を確認するE2E期待値と画面設計資料を更新した。
+- 目的: 確認シート内のボタン形状を統一し、今日の記録が開閉できることと現在の状態を一般的な位置・記号で伝えるため。
+- 影響範囲: トレーニング記録画面の本人記録要約、設定画面のログアウト確認、関連CSS・E2E・画面設計資料。保存内容、ログアウト処理、API・DBは変更していない。
+- 関連ファイル: `frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/settings.tsx`、`frontend/src/app/v2.css`、`frontend/tests/e2e/training-selection.spec.ts`、`frontend/tests/e2e/record-loading.spec.ts`、`docs/design/training-session.md`、`docs/design/settings-screen.md`、`task.md`。
+- 検証: `make check`成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。E2Eは既知の実行環境依存 `libnspr4.so` 不足によりChromiumを起動できないため未実施。
+- 未解決事項: 関連E2E・全E2E・実機表示は未確認。
+- 次のアクション: Chromium依存が揃う環境またはCIで関連E2Eを実行し、ローカル画面で閉じた `▶`、開いた `▼`、確認ボタンの形状を確認する。
+
+## 2026-09-29 02:21 PR #247へ最新mainを統合
+
+- 変更内容: PR #247の作成後に判明した最新`main`との競合を解消した。`main`側の画面遷移、戻る操作、長いホームグループ名の表示改善を保持し、記録画面では今回採用した仲間タイムライン削除と本人記録の `▶` / `▼` を優先した。
+- 目的: グループカード用の別ブランチを含めず、PR #247を最新`main`へ統合可能な状態にするため。
+- 影響範囲: `main`の4コミットを取り込んだマージコミットと、競合した設計資料・記録画面・CSS。今回の仕様外の挙動は変更していない。
+- 関連ファイル: `docs/README.md`、`docs/design/README.md`、`docs/design/training-session.md`、`frontend/src/features/session/session-screen.tsx`、`frontend/src/app/v2.css`、および`main`から取り込んだファイル。
+- 検証: 競合マーカーと削除対象の仲間表示コードが残っていないことを確認。統合後の`make check`成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。
+- 未解決事項: 関連E2E・全E2E・実機表示は未確認。
+- 次のアクション: PRのCIとレビューを確認する。
+
+## 2026-09-29 今日のトレーニングの開閉三角を同寸に調整
+
+- 変更内容: `今日のトレーニング` 左の開閉記号を、別々の文字グリフではなく同じ10px四方の三角形を回転させる表示へ変更した。閉じた `▶` と開いた `▼` の占有サイズ・視覚サイズが一致する。リモート側で先行していた12pxのマーカー指定も保持した。
+- 目的: 展開前後で三角形だけが大きく見えたり、見出し位置が揺れたりしないようにするため。
+- 影響範囲: トレーニング記録画面の開閉記号、関連E2E、画面設計資料。開閉動作、記録内容、API・DBは変更しない。
+- 検証: 閉じた状態と開いた状態の疑似要素の幅・高さが一致し、回転状態だけが変わることをE2E期待値へ追加した。`make check` 成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。
+
+## 2026-09-29 最新mainの統合と競合解消
+
+- 変更内容: `origin/main` の `5153b4c` までを取り込み、記録画面・設計資料・タスク資料・ワークスペースの競合を解消した。mainの履歴画面とホーム側の当日仲間データ共有は保持し、記録画面への仲間タイムライン再導入だけを除外した。
+- 目的: PR #247を最新mainへ統合可能にし、記録画面から仲間表示をなくす確定仕様を維持するため。
+- 影響範囲: mainから追加された履歴・分析・画面遷移関連一式と、競合した記録画面・ワークスペース・資料。記録画面では当日仲間APIを取得せず、ホームでは従来どおり取得する。
+- 競合対応: `docs/design/training-session.md`、`frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/workspace.tsx`、`task.md` の4件を解消。記録画面への仲間引き継ぎ専用E2E `peer-handoff.spec.ts` は確定仕様と矛盾するため統合対象から除外した。
+- 検証: `make check` 成功（backend 104件成功/180件DBなしskip、frontend単体116件成功、lint・型・production build成功）。競合マーカーと未解消ファイルがないことを確認する。
