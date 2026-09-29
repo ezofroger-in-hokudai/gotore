@@ -18,13 +18,15 @@ export function runNavigationMotion(update: () => void, direction: Direction) {
   root.dataset.gotoreNavigationDirection = direction;
   if (!document.startViewTransition) {
     flushSync(update);
-    document.querySelector<HTMLElement>(".v2-app .main-content")?.animate(
-      [
-        { opacity: 0.78, transform: `translateX(${direction === "forward" ? 18 : -18}px)` },
-        { opacity: 1, transform: "translateX(0)" },
-      ],
-      { duration: 180, easing: "cubic-bezier(.2,.8,.2,1)" },
-    );
+    document
+      .querySelector<HTMLElement>(".v2-app .main-content")
+      ?.animate(
+        [
+          { transform: `translateX(${direction === "forward" ? 18 : -18}px)` },
+          { transform: "translateX(0)" },
+        ],
+        { duration: 180, easing: "cubic-bezier(.2,.8,.2,1)" },
+      );
     delete root.dataset.gotoreNavigationDirection;
     return;
   }

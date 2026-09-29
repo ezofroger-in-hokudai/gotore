@@ -1,5 +1,253 @@
 # progress.md
 
+## 2026-09-30 01:02 不具合修正PRのCI確認と統合準備
+- 変更内容: 種目候補修正PR #256のchanges・frontend・backend・databaseの全ジョブ成功を確認してmainへマージした。グループメンバー修正PR #255も同じ4ジョブが成功し、最新mainを取り込んだ。競合した進捗記録は両Issueの経緯を保持して解消した。
+- 目的: 二件の修正を独立した履歴で統合し、相互の変更を落とさないため。
+- 影響範囲: PR #255・#256と進捗記録。マージ時のアプリコード競合はない。
+- 関連ファイル: `progress.md`、PR #255・#256、Issue #253・#254。
+- 検証: PR #255のGitHub CI run 36593977420 とPR #256のrun 36593986167で全ジョブ成功。CIのE2Eは現在の設定では選択対象のみ。二件の統合後に`make check`成功（backend 293件、frontend単体130件、lint・型・build）。関連E2Eは6件中5件成功し、既存の`training-selection.spec.ts`の「仲間のタイムラインを取得しない」で通信回数が期待1に対して2となり失敗（単独でも再現）。既存の`group-real-flow.spec.ts`も再読み込み後の一覧復帰で失敗する。全E2E成功とは記載しない。
+- 未解決事項: Issue #218の全E2E修復、統合後に再現した2件のE2E失敗、実機確認、PR #255更新後のCI。第三者レビューは未取得。二件を先にマージするユーザーの明示指示に沿って進める。
+- 次のアクション: PR #255更新後のCIを確認し、マージする。
+
+## 2026-09-30 00:50 グループメンバー一覧のタッチ操作を修正（#253）
+- 変更内容: 展開中のメンバーカード全体を縮小操作の対象にし、メンバー行の三点メニューをその上に配置した。タッチ操作のE2Eと画面設計を更新した。
+- 目的: 展開後にメニューを開けない問題を解消し、カードのどこでも縮小できるようにするため。
+- 影響範囲: グループ設定のメンバー一覧表示。API・DB・他画面の操作は変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/tests/e2e/membership.spec.ts`、`docs/design/group-screen.md`、Issue #253。
+- 検証: `make check` 成功（backend 292件、frontend単体130件、lint・型・build）。`membership.spec.ts` 3件成功。関連する既存の `group-real-flow.spec.ts` は一覧への復帰で失敗し、原因を調査中。
+- 未解決事項: 既存のグループ実フローE2Eの失敗原因、全E2E CI、実機でのタッチ確認。
+- 次のアクション: 実フローの失敗を整理し、PRのCIとレビューを確認してマージする。
+
+## 2026-09-30 00:50 トレーニングの種目候補を最終実施日順に修正（#254）
+- 変更内容: 本人の記録から種目ごとの最終実施日を取得して候補APIへ加え、記録中の種目を先頭にした上で実施日が新しい順に表示する。同日の種目と未記録の種目は元のリスト順を保つ。本人以外の記録を参照しないテスト、画面E2E、設計資料を更新した。
+- 目的: 最後に実施した日が近い種目を見つけやすくし、記録の共有範囲を守るため。
+- 影響範囲: 種目候補APIと記録画面の候補順。DBスキーマは変更しない。
+- 関連ファイル: `backend/app/infrastructure/exercise_catalog.py`、`backend/app/schemas/exercise_catalog.py`、`backend/tests/test_sharing.py`、`frontend/src/features/session/session-screen.tsx`、`frontend/src/lib/api.ts`、`frontend/tests/e2e/training-selection.spec.ts`、`docs/design/training-session.md`、Issue #254。
+- 検証: `make check` 成功（backend 293件、frontend単体130件、lint・型・build）。`training-selection.spec.ts` 3件成功。
+- 未解決事項: 全E2E CI、実機での表示確認。
+- 次のアクション: PRのCIとレビューを確認してマージする。
+
+## 2026-09-29 18:20 PR #252のCI成功
+- 変更内容: 個人履歴高速化PR #252で、競合解消後のGitHub CIが全ジョブ成功した。frontend・backend・databaseの選択E2E・Vercelを確認した。
+- 目的: 最新mainとの統合状態で、端末履歴の変更がレビュー可能であることを記録するため。
+- 影響範囲: PRの検証記録のみ。アプリ・API・DBの追加変更はない。
+- 関連ファイル: `progress.md`、PR #252。
+- 検証: GitHub Actions run 36547966436 のchanges・frontend・backend・databaseが成功。Vercelも成功。ローカルの関連E2E24件成功と併せて確認した。
+- 未解決事項: 実装者以外のレビュー、iPhone実機での表示速度・容量測定。全E2EにはIssue #218の旧画面期待値が残るため、今回のCI成功を全E2E成功とは扱わない。
+- 次のアクション: PR #252をレビュー可能にし、実機で履歴再訪の体感と数値を確認する。
+
+## 2026-09-29 18:15 PR #252へ最新mainの終了確認画面を統合
+- 変更内容: PR #251の終了確認画面を含む最新mainを個人履歴高速化ブランチへ統合した。`progress.md`の競合は双方の時系列を保持して解消した。
+- 目的: 個人履歴の端末先行表示と終了確認の7日集計を同じ状態で検証し、PR #252の競合をなくすため。
+- 影響範囲: PR #252の統合状態と進捗記録。既存の終了確認の仕様は変更しない。
+- 関連ファイル: `progress.md`、PR #251・#252。
+- 検証: 統合後のfrontend lint、単体130件、production buildと型チェック成功。個人履歴・端末保存・終了確認の関連E2E24件すべて成功。`git diff --check`成功。
+- 未解決事項: PR #252のCI、実装者以外のレビュー、iPhone実機での表示速度・容量測定。
+- 次のアクション: PRの競合・CIを再確認し、レビュー可能にする。
+
+## 2026-09-29 18:10 個人履歴のグラフと日別全件を端末から先に表示
+- 変更内容: 保存済み本人記録から全期間の週/月グラフを集計し、個人履歴の読み出しへ接続した。日別詳細は端末に対象日の記録があれば50件を超えても全件表示する。記録操作で`refreshKey`が増えた後も端末先行表示を維持し、サーバーへの要求と差分照合は背景で続ける。端末に対象日がなくAPIに記録がある場合はAPI結果を表示する。
+- 目的: 履歴を開いた時の通信待ちを減らし、個人の通算・カレンダー・日別・グラフを同じ端末記録から素早く表示するため。サーバーを確定データの正本とし、送信待ちセットは既存キューで区別する。
+- 影響範囲: 個人履歴と本人記録の共通読み出し。グループの集計・共有権限、API/DB契約は変更しない。
+- 関連ファイル: `frontend/src/features/record-cache/personal-analytics.ts`、`cached-resource.ts`、`frontend/src/features/training/use-resource.ts`、`frontend/src/features/v2/personal-history.tsx`、`frontend/tests/unit/personal-analytics.test.ts`、`frontend/tests/e2e/record-snapshot.spec.ts`、`docs/personal-device-storage-plan.md`、`docs/history-analytics.md`、`docs/design/history-screen.md`、`docs/current-state.md`、`task.md`。
+- 検証: frontend lint、単体126件の全件実行と追加後の個人集計3件、production build、型チェック成功。端末保存中にAPI応答を止めた履歴・グラフ表示、記録操作後の再訪、同日51件の端末表示、認証失効時の非表示を含む関連E2E21件すべて成功。初回の関連E2Eで端末に該当日の記録がない場合の2件が失敗したためAPI表示へ修正し、最終の全件再実行で成功。`git diff --check`成功。
+- 未解決事項: iPhone実機での表示速度・保存容量の測定、実装者以外のレビュー。初回の端末保存がない状態はサーバー取得時間に依存する。
+- 次のアクション: 変更差分と関連テストをレビューし、実機で履歴を再訪した時の体感と計測値を確認する。
+
+## 2026-09-29 17:52 終了確認PRを最新mainへ統合し、先行マージ判断を記録
+
+- 変更内容: PR #251へ最新mainの端末記録機能（PR #246）を取り込んだ。競合した設計資料では終了確認と前回値待ちの両方の採用プレビューを保持し、`task.md`と過去の`progress.md`も両方残した。ユーザーは全E2E未通過を説明した後、終了画面のマージを明示的に依頼した。
+- 目的: 端末に先に表示する前回値と7日バーの終了確認を両立させ、既知の全E2E未整合を隠さずに先行マージするため。
+- 影響範囲: 終了確認PRのmain統合と設計・進捗資料。最新mainの端末記録仕様は変更しない。
+- 関連ファイル: `docs/design/training-session.md`、`frontend/src/features/session/session-screen.tsx`、`task.md`、`progress.md`、PR #251、Issue #218・#250。
+- 検証: 最新main取り込み後の`make check`成功（backend 112件成功/180件DBなしskip、frontend単体127件成功、lint・型・production build成功）。終了確認・保存待ち・前回値・端末記録の関連E2E20件成功。全E2Eは旧履歴画面の期待値が残るため未通過で、Issue #218で追跡する。
+- 未解決事項: 全E2Eの旧UI期待値、CIの全件実行、スマホ実機の最終確認。先行マージは今回のユーザー指示による例外とし、全件合格と記載しない。
+- 次のアクション: PR #251の更新後CIを確認し、競合がないことを再確認してマージする。Issue #218で全E2Eを修復する。
+
+## 2026-09-29 17:50 終了確認PRのCI結果とマージ保留
+
+- 変更内容: Issue #250の変更を最新mainから分離したブランチへコミットし、PR #251を作成した。PR本文に全E2Eの既存失敗と現行CIの実行範囲を明記した。
+- 目的: 別件の未コミット変更を混ぜずにレビュー可能な差分とし、CIの緑表示を全E2E成功と誤認しないようにするため。
+- 影響範囲: PRと進捗記録。アプリのコード・API・DBの追加変更はなし。
+- 関連ファイル: `progress.md`、PR #251、Issue #218・#250。
+- 検証: PR #251のCI #319は全ジョブ成功。ただしCIの `test:e2e:ci` は `recording-style.spec.ts` のみを実行する。ローカル全E2Eでは最新の履歴画面と旧テストの不一致で冒頭6件が失敗し、全件成功を確認できていない。
+- 未解決事項: `docs/testing.md` が求める全E2E成功と原則の第三者レビューを満たしていない。Issue #218の全E2E/CI復旧、またはユーザーによる明示的な例外判断が必要。
+- 次のアクション: マージ条件の扱いをユーザーに確認する。例外なしならIssue #218の解決後に全E2Eを再実行し、レビューを経てマージする。
+
+## 2026-09-29 17:30 採用した7日バーの終了確認を最新mainへ統合
+
+- 変更内容: Issue #250として、トレーニング終了確認を中央ダイアログに変更し、今回の総負荷・セット数・種目数と、記録日を終点とする直近7暦日の日別総負荷バーを表示した。同じ日の複数セッションは合算し、今回のセッションは端末上の最新セットを一度だけ数える。未取得・取得失敗時も7本の位置を保ち、終了は止めない。別件の未コミット変更を含めないため、最新mainから専用の作業ツリーを作って変更を移した。
+- 目的: 採用プレビューを実画面へ反映し、1日に複数回記録する場合も終了対象の「今回」と日別合計を混同しないようにするため。
+- 影響範囲: 記録画面の終了確認と共通シートの中央表示オプション。API・DB・端末保存/自動再送の規則は変更しない。
+- 関連ファイル: `frontend/src/features/session/finish-confirm-dialog.tsx`、`finish-confirm-dialog.css`、`finish-week.ts`、`use-finish-week-records.ts`、`session-screen.tsx`、`frontend/src/features/v2/sheet.tsx`、`frontend/tests/unit/finish-week.test.ts`、`frontend/tests/e2e/finish-confirmation.spec.ts`、`docs/design/training-session.md`、`docs/design-system.md`、`task.md`。
+- 検証: 集計の失敗する単体テストを先に追加。最新mainの専用作業ツリーで `make check` 成功（backend 104件成功/180件DBなしskip、frontend単体119件成功、lint・型・production build成功）。終了確認・保存待ち・自動再送の関連E2Eは10件成功。320/390/430pxでダイアログが収まることを確認。全E2Eでは冒頭の履歴系6件が旧画面のセレクタを探して失敗し、継続しても同種の失敗が見込まれたため途中で停止した。
+- 未解決事項: 全E2Eの履歴系既存テストが最新の採用画面に未整合。該当テストと今回の終了確認のコードには共通変更がなく、CIの全件成功要件を満たせない可能性がある。スマホ実機での最終操作感は未確認。別件の未コミット変更は元の作業ツリーに残す。
+- 次のアクション: 専用PRのCIで失敗範囲を確認し、履歴テストの整理を別作業として扱う。全E2Eとレビュー条件を満たしたらmainへマージする。
+
+## 2026-09-29 17:21 PR #246の関連CI成功とレビュー開始
+- 変更内容: 端末保存に関係するE2E15件を含む更新後のGitHub CIが全ジョブ成功した。PR #246の説明を関連テストに絞ったマージ判定へ更新し、Draftを解除した。
+- 目的: 実装と検証結果をレビューできる状態にし、旧画面E2Eの修復は別Issue #218で進めるため。
+- 影響範囲: PR #246の説明とレビュー状態。アプリ・API・DBの動作変更はない。
+- 関連ファイル: `frontend/package.json`、`frontend/tests/e2e/record-loading.spec.ts`、`progress.md`、PR #246。
+- 検証: GitHub CIのchanges・frontend・backend・database・Vercelが成功。databaseジョブの対象E2Eも成功。PRは競合なしでレビュー可能。
+- 未解決事項: 実装者以外のレビュー、iPhone実機の保存速度・容量の計測。全E2Eの旧画面期待値はIssue #218で追跡する。
+- 次のアクション: レビュー指摘があれば修正し、承認後にマージを判断する。
+
+## 2026-09-29 17:15 PR #246の関連E2Eへ検証範囲を絞る
+- 変更内容: 利用者の指定により、端末保存と関係の薄い旧画面E2Eの修復をPR #246のマージ前作業から分離した。別利用者への再ログインを確認するE2Eは、使い方ガイドを閉じてから履歴へ移動する現行操作順に直した。CIのブラウザテストへ端末記録、前回値、履歴読出しの3ファイルを追加した。
+- 目的: 本人記録の先行表示、差分反映、アカウント分離をPRのCIでも直接検証し、旧UIテストの修復待ちで端末保存のレビューを止めないため。
+- 影響範囲: E2Eの操作順とCI対象のみ。端末保存・API・DBの実装は変更しない。
+- 関連ファイル: `frontend/tests/e2e/record-loading.spec.ts`、`frontend/package.json`、`progress.md`、PR #246、Issue #218。
+- 検証: 最終実装で対象12件のうち11件が初回成功。残るログアウト後のアカウント分離1件はガイド中の画面遷移でクリックが安定しなかったため順序を変更し、単独再実行で成功した。変更後の`make test-e2e-ci`は対象15件すべて成功し、frontend lintと`git diff --check`も成功。既存コミットで専用`gotore_test` DBの`make check`、関連E2E18件、GitHub CIは成功済み。
+- 未解決事項: 新しいコミットのGitHub CI、実装者以外のレビュー、iPhone実機の保存速度・容量は未確認。全E2Eには旧画面を参照する失敗が残り、Issue #218で追跡する。
+- 次のアクション: PR #246をレビュー可能にし、更新後のGitHub CIを確認する。
+
+## 2026-09-29 13:44 PR #246へ最新mainの画面遷移修正を統合
+- 変更内容: mainへ統合されたPR #243の残像解消・固定START表示を取り込み、`progress.md`の両方の履歴を保持して競合を解消した。
+- 目的: PR #246を最新mainに追従させ、端末保存と画面遷移が併存する状態を確認するため。
+- 影響範囲: 画面遷移の表示と端末保存の統合検証。本人記録のAPI契約やDBは変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/src/features/v2/navigation-motion.ts`、`frontend/tests/e2e/navigation-motion.spec.ts`、`progress.md`、PR #243・#246。
+- 検証: 専用`gotore_test` DBで統合後の`make check`成功（backend 292件、frontend単体124件、lint・型・build）。端末保存・前回値・認証分離・画面遷移のE2E 18件すべて成功。`git diff --check`成功。
+- 未解決事項: Issue #218の旧UIテストとCI全E2E設定が残り、PR #246の全E2E合格・第三者レビューは未達。iPhone実機の保存・速度も未確認。
+- 次のアクション: 最終コミットのCIを確認し、Issue #218の修復後に全E2Eを実行してマージ判断する。
+
+## 2026-09-29 13:39 PR #246のマージ前検証と本人履歴の絞り込み修正
+- 変更内容: 保存済み本人記録の種目絞り込みで、セット0件の種目を履歴検索に含めていた差を修正した。サーバーの`gotore_workout_statistics`と同じく、セットがある種目だけを一致とする。失敗する単体テストを先に追加した。
+- 目的: 端末から先に表示する本人履歴とAPIの検索結果を一致させるため。
+- 影響範囲: 本人の`/workouts?exercise=...`の端末先行表示のみ。API・DB・グループ履歴は変更しない。
+- 関連ファイル: `frontend/src/features/record-cache/cached-resource.ts`、`frontend/tests/unit/record-snapshot-sync.test.ts`、PR #246、Issue #218。
+- 検証: 専用`gotore_test` DBで修正後の`make check`成功（backend 292件、frontend単体124件・lint・型・build）。関連E2E 22件中21件成功し、端末保存E2E 4件はすべて成功。残るグループ画面1件は単独でも失敗し、同じテストを最新`main`で実行して同じ行のクリック待ちを再現した。全E2Eは265件を2 workerで開始し、20件失敗・6件成功・1件中断・238件未実施の時点で打ち切った。旧画面を参照するテストが多数を占め、実行中のコード更新があったため後半の失敗は確定判定に使わない。`git diff --check`成功。
+- 未解決事項: CIは現状E2Eの1ファイルだけを実行しており、`docs/testing.md`が要求する全件成功は未達。Issue #218の旧UIテスト・CI修復、ランキングの仕様判断、実装者以外のレビュー、iPhone実機での保存・速度確認が残る。PRはDraftのままとし、マージしない。
+- 次のアクション: ランキングの採用方針を反映してIssue #218の全E2EとCIを修復し、PR #246の最終コードで全件成功と第三者レビューを確認する。
+
+## 2026-09-29 13:16 最新の個人履歴画面へ端末記録を接続（PR #246）
+- 変更内容: mainへ統合済みの履歴画面PR #249を取り込み、`progress.md`の両方の経緯を保持して競合を解消した。保存済み本人記録から通算値・種目一覧・月間カレンダーを先に計算し、日別記録とともに画面へ表示する。従来のAPI取得は継続し、別端末の差分が届いたときは端末由来の表示を更新する。API取得済み内容の巻き戻し、遅れて届く旧応答、401/403等の認証・権限エラー後の再表示を防ぐ。旧履歴一覧を前提にしていた端末保存・認証エラー・再ログインE2Eを採用済み日別シートに合わせた。
+- 目的: 新しい履歴画面でも本人の記録を端末から速く、安全に表示し、前回値と別端末同期の挙動を維持するため。
+- 影響範囲: 本人の通算値・月間カレンダー・日別記録の初期表示と共通読み出し処理。グラフ、グループの記録・集計、従来のAPI取得と保存操作は維持する。
+- 関連ファイル: `frontend/src/features/record-cache/`、`frontend/src/features/training/use-resource.ts`、`frontend/tests/e2e/record-snapshot.spec.ts`、`frontend/tests/e2e/record-loading.spec.ts`、`frontend/tests/unit/record-snapshot-sync.test.ts`、`docs/design/history-screen.md`、`docs/history-analytics.md`、`docs/personal-device-storage-plan.md`、`progress.md`。
+- 検証: 通算値・月間カレンダーの端末投影、複数部位の記録件数、本人以外・グループへの非適用の単体テスト成功。差分同期後に通算値が古いまま残るE2Eを失敗状態で確認して修正。専用`gotore_test` DBの最終`make check`成功（backend 292件、frontend 123件、lint・型・本番build）。端末保存・個人履歴・再ログイン・前回値・グループ履歴の関連E2E 28件成功。`git diff --check`成功。
+- 未解決事項: 全E2Eは265件を開始したが、古い画面を前提とするテストなど23件が失敗し、コード修正前の実行を中断したため12件成功・2件中断・228件未実行。全件合格と実装者以外のレビューは未達。CIの全E2E化はIssue #218で追跡中。iPhone実機での容量・速度は未測定。
+- 次のアクション: PR #246へ統合と検証結果を反映し、Draftを維持する。#218のテスト修復後に全E2Eを再実行し、第三者レビューを受けてからマージ判断する。
+
+## 2026-09-29 02:51 STARTなどの固定操作が画面遷移中に隠れる問題を修正（Issue #207）
+- 変更内容: 主画面内容とは別のView Transitionレイヤーへ`START / RESUME`、ヘッダー、下部ナビを分け、画面内容より手前へ固定した。旧スナップショットを隠し、新しい固定操作をアニメーションなしで表示する。採用固定プレビューにもSTARTの位置を追加した。
+- 目的: 画面切替中にSTART等が新画面の下へ潜り、遷移後に再表示されるように見える問題を解消するため。
+- 影響範囲: 固定操作の遷移中の描画順。ボタンの動作、画面遷移の距離・時間、API・DBは変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/tests/e2e/navigation-motion.spec.ts`、`frontend/public/previews/navigation-motion-adopted.html`、`docs/design/navigation-motion.md`、`task.md`。
+- 検証: 修正前に固定STARTの遷移名`none`・描画層`auto`でE2Eが失敗することを確認。修正後は遷移・START/RESUME・左端戻りの関連E2E13件成功。`make check`でbackend 103件成功・DB統合178件skip（専用DB未指定）、frontend単体110件・lint・型・build成功。`git diff --check`を確認。
+- 未解決事項: 実機iOS・Androidで固定操作の見え方を再確認する。PRの全E2E CI・実装者以外のレビューは未完了。
+- 次のアクション: PR #243へ追記してレビューし、実機で切替中の重なり順を確認する。
+
+## 2026-09-29 01:03 画面切替で前画面が残像として残る問題を修正（Issue #207）
+- 変更内容: View Transition中に旧画面のスナップショットを非表示にし、新画面を不透明のまま18px横移動させるよう変更した。API非対応時と採用固定プレビューも同じ動きへ合わせた。
+- 目的: ユーザーの実機フィードバックで前画面が強く残って見えたため、画面切替の方向は保ちながら残像をなくすため。
+- 影響範囲: 主画面の遷移表示のみ。履歴、入力、API、DBは変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/src/features/v2/navigation-motion.ts`、`frontend/tests/e2e/navigation-motion.spec.ts`、`frontend/public/previews/navigation-motion-adopted.html`、`docs/design/navigation-motion.md`、`task.md`。
+- 検証: 修正前のE2Eで旧画面スナップショットの切替開始時不透明度1を再現し、修正後は0で成功。画面遷移・左端戻り・シート・STARTの関連E2E14件成功。frontend lint・型検査・単体110件・production build、プレビューJavaScript構文、`git diff --check`成功。グループ一覧カードを押せない既存E2Eは変更前`main`でも再現し、今回の残像修正後も残るため別の原因として追跡する。
+- 未解決事項: iOS・Android実機で残像の消え方と18px横移動を再確認する。既存E2Eのグループカード表示待ちも未解決。
+- 次のアクション: 関連E2E・frontendチェックを完了し、PRで修正を共有する。
+
+## 2026-09-29 12:11 履歴PR #249のCI成功と統合判断
+
+- 変更内容: Issue #248に紐づくPR #249を作成し、CIのbackend・frontend・database、Vercel Previewが成功した。databaseジョブではmigration、専用DB、全E2Eが成功した。
+- 目的: 採用した履歴画面を、検証結果と未実施範囲が追える状態でmainへ統合するため。
+- 影響範囲: PR・CIの記録のみ。画面・APIの追加変更なし。
+- 関連ファイル: `progress.md`、PR #249。
+- 検証: PRは競合なし・マージ可能。ローカルの`make check`と関連E2E 16件に加え、CIの全必須チェックとVercelが成功した。
+- 未解決事項: スマホ実機でPRビルドの最終確認は未実施。第三者のコードレビューは付いていないが、mainにレビュー必須設定はなく、ユーザーからPR・マージの明示依頼があるため今回の統合を進める。
+- 次のアクション: 文書追記後のCIを再確認し、PR #249をmainへマージする。
+
+## 2026-09-29 12:03 採用した履歴画面をIssue #248のPRブランチへ分離
+
+- 変更内容: 最新main起点の専用作業ツリーを作り、個人履歴の通算・月間カレンダー・連続グラフ・人体図、グループの共通カレンダー・部位別グラフ、必要な集計API・テスト・採用プレビューと設計資料を移した。既存作業ツリーの画面遷移、スタンプ、プロフィール等の別件変更は持ち込まない。
+- 目的: ユーザーが採用した履歴画面と人体図を追跡可能な単位でレビューし、他の未コミット変更を混ぜずにmainへ統合するため。
+- 影響範囲: 個人・グループ履歴の画面、履歴集計API、共通記録カードの日付表示、関連資料。
+- 関連ファイル: `docs/design/history-screen.md`、`docs/design/group-screen.md`、`docs/history-analytics.md`、`backend/app/api/routes/analytics.py`、`frontend/src/features/v2/personal-history.tsx`、`frontend/src/features/v2/group-history-calendar.tsx`、`frontend/src/features/v2/group-history-graph.tsx`ほかIssue #248のPR差分。
+- 検証: `make check-fast`と`make check`成功、backend単体とfrontend単体116件・lint・型・本番ビルドが成功。個人履歴とグループ履歴の関連E2E 16件成功。DB統合テストは専用の`TEST_DATABASE_URL`未設定によりskipされ、CIの専用DBで実行する。
+- 未解決事項: PRの全E2Eとレビュー、スマホ実機での最終確認は未実施。
+- 次のアクション: 差分と画像・リンクを最終確認し、PRを作成してCIとレビューを確認する。
+
+## 2026-09-29 12:22 記録読み出し経路と端末複製の回帰を確認（PR #246）
+- 変更内容: 共通の`useResource`が端末履歴を初期表示へ使う範囲を確認し、通信失敗時に保持済みAPI結果を古い端末複製で上書きしていた処理を修正した。端末複製の記録・前回値・メモの構造検証を強め、壊れた保存内容はサーバーから取り直す。別端末の追加・削除が履歴とIndexedDBへ反映されるE2Eを追加した。
+- 目的: 本人の履歴を速く表示しつつ、共通の読み出し処理を使う他の画面で確認済み内容を巻き戻さないため。
+- 影響範囲: 本人の履歴初期表示と端末複製の採用判定。グループ記録・集計と従来のAPI取得経路は変更しない。
+- 関連ファイル: `frontend/src/features/training/use-resource.ts`、`frontend/src/lib/record-snapshot.ts`、`frontend/tests/e2e/record-snapshot.spec.ts`、`frontend/tests/unit/record-snapshot-sync.test.ts`、`docs/personal-device-storage-plan.md`。
+- 検証: 端末複製の不正構造を拒否する単体テストが修正前に失敗し、修正後成功。`main`で通る履歴保持E2EがPRで失敗することを確認して修正し、再実行で成功。記録複製E2E 4件成功。専用`gotore_test` DBの`make check`成功（backend 289件、frontend 114件、lint・型・build）。変更前の全E2Eは247件中140件成功・107件失敗。失敗した記録入力・最高記録表示とホーム保持の各1件は`main`でも同じ失敗を再現した。
+- 未解決事項: 全E2E成功と実装者以外のレビューは未達。CIのE2EはIssue #218により1ファイルのみ。iPhone実機の速度・保存保持は未測定。
+- 次のアクション: 検証結果をPR #246へ反映しDraftを維持する。#218の全E2E修復後に全件を再実行し、実装者以外のレビューを受ける。
+
+## 2026-09-29 保存済み本人記録の差分取得と先行表示（PR #246）
+- 変更内容: 保存済みスナップショットの版一覧をgzipで送信し、本人の記録・種目・メモの追加、更新、削除と影響を受ける前回値・BESTだけを取得するAPIと端末側の差分適用を追加した。変更なしなら本文を返さず端末スナップショットも書き直さない。履歴を通信保留中に表示した際の再描画ループを修正した。
+- 目的: 3年分などの記録を持つ人が再訪するたび全件を取り直さず、履歴とトレーニング中の前回値を端末から先に安定して表示するため。
+- 影響範囲: 本人の記録スナップショットAPI・端末保存・履歴の初期表示。従来の画面ごとのAPI通信と保存操作は維持。追加migrationなし。
+- 関連ファイル: `backend/app/api/compressed_request.py`、`backend/app/api/routes/record_snapshot.py`、`backend/app/infrastructure/record_snapshot.py`、`backend/app/schemas/record_snapshot.py`、`frontend/src/lib/record-snapshot.ts`、`frontend/src/features/record-cache/record-snapshot-provider.tsx`、`frontend/src/features/training/use-resource.ts`、関連テスト、`docs/personal-device-storage-plan.md`、`task.md`。
+- 検証: 専用`gotore_test` DBで最終`make check`成功（backend 289件、frontend単体112件、lint・型・build）。端末履歴・前回値・ログアウト分離など関連E2E 10件と、共通gzip処理の既存保存E2E 3件が成功。1,000件・50種目の変更なし計測では版一覧約163KB（gzip約24KB）、応答292B、5 SQL、ローカル中央値12.5ms。ロールバック内の架空データで、実機・遠隔DB・HTTP時間を含まない。`git diff --check`成功。
+- テストを先に書けなかった理由: 履歴の再描画ループは通信保留を加えたE2Eで発見したため、その再現テストの失敗を確認してから修正した。圧縮は版一覧の実測後に追加し、既存圧縮APIの回帰と新しいgzip要求を検証した。
+- 未解決事項: 端末データがない初回・ログアウト後は全件取得が必要。iPhone実機の保存保持・表示速度、実回線の時間、全E2Eと実装者以外のレビューは未確認。既存Issue #218の全E2E復旧まではPRをDraftで維持する。
+- 次のアクション: PR #246へ数値と検証結果を反映する。#218修正後に全E2Eとレビューを確認する。
+
+## 2026-09-29 3年分を想定した記録の全件再取得を計測（PR #246）
+- 変更内容: 専用`_test` DBのロールバック内で500/1,000件、種目名5/50種類の架空記録を作り、スナップショットのJSON応答量、SQL数、ローカル処理時間を測った。結果と未採用の差分取得案を設計資料へ追記した。
+- 目的: 3年分の記録がある場合に、全件取得を起動・保存・画面復帰で繰り返す費用を明らかにするため。
+- 影響範囲: 資料のみ。API、端末保存、画面の動作は変更していない。
+- 関連ファイル: `docs/personal-device-storage-plan.md`、`progress.md`。
+- 検証: 1,000件・50種類でJSON約875KB、106 SQL、ローカル中央値430ms。Auth・遠隔DB・実回線・IndexedDBの時間は含まない。測定データはロールバックし、既存データを残した。
+- テストを先に書けなかった理由: 動作変更を含まない性能計測と資料追記のため。
+- 未解決事項: 差分取得案はユーザー未確認。実機・実回線の速度、種目やメモの実分布、初回の段階取得は未測定。現行の全件再取得を最適とみなさない。
+- 次のアクション: 初回全件・以後差分取得の方針を確認し、採用なら#246のAPIと端末保存を改めてからマージ判断する。
+
+## 2026-09-29 PR #246を最新mainへ統合
+- 変更内容: PR #244などを含む最新mainをPR #246のブランチへ取り込み、進捗記録の競合を両方残して解消した。
+- 目的: 記録キャッシュと開始直後の仲間表示の変更を同時に動作させ、PRの競合をなくすため。
+- 影響範囲: 統合された記録画面・ワークスペース・設計資料。
+- 関連ファイル: `frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/workspace.tsx`、`progress.md`。
+- 検証: 専用`gotore_test` DBで`make check`成功（backend 284件、frontend 110件、lint・型・build）。関連E2E 9件成功。`git diff --check`成功。
+- 未解決事項: PRの全E2E・レビュー、iPhone実機での端末保存と速度計測。
+- 次のアクション: PRのCIとレビューを確認する。
+
+## 2026-09-29 PR #246の全E2E実行結果と旧テストの切り分け
+- 変更内容: 端末保存済みの履歴がある場合の一時的な取得失敗は旧エラー文言ではなく「更新できませんでした。前回の内容を表示しています。」となるため、該当E2Eの期待を更新した。
+- 目的: 今回導入した端末保存時の表示状態を正しく検証するため。
+- 影響範囲: `frontend/tests/e2e/activity-heatmap.spec.ts` の1アサーションのみ。
+- 関連ファイル: `frontend/tests/e2e/activity-heatmap.spec.ts`、`progress.md`。
+- 検証: 更新したE2Eは単独成功。全E2Eを2 worker・最大20失敗で実行し、45件成功・20件失敗・1件中断・181件未実行。旧グループランキング操作と比較一覧の1px差は隔離した最新mainでも同じ失敗を確認した。GitHub CIのbackend・frontend・database・Vercelは成功したが、CIのE2Eは現設定で1ファイルのみ。
+- テストを先に書けなかった理由: 全件実行で保存済み履歴のエラー文言との差を発見し、既存の期待を変更した。
+- 未解決事項: 全E2E成功は未達。旧UIの期待とCI全件実行の復旧はIssue #218で追跡中。PR #246はDraftを維持し、全件合格と実装者以外のレビュー前にマージしない。実機速度・容量も未測定。
+- 次のアクション: #218で旧テストを修復してCIを全件へ戻し、PR #246の全件成功とレビューを確認する。
+
+## 2026-09-29 端末の本人記録を表示へ利用（Issue #185・#231 / PR #246）
+- 変更内容: 本人の全記録・種目・前回比較・メモを一貫した読み取りで返すAPIを追加し、IndexedDBへユーザー別に保存する。履歴・種目候補・メモ・前回値を保存済み内容から先に表示して従来のAPIで再確認する。端末に前回値がない場合はホイールを取得完了まで隠し、失敗時に再試行・明示的な手入力を出す。ログアウトと記録削除時は端末複製も更新する。
+- 目的: 再訪時の表示を速くし、仮の重量・回数を前回値として表示しないため。確認済み記録と既存の未送信キューを混同しない。
+- 影響範囲: 本人記録の読み取りAPI、ブラウザ保存、記録・履歴・種目選択画面。共有記録、操作の送信方法、DB構造は変更しない。
+- 関連ファイル: `backend/app/api/routes/record_snapshot.py`、`backend/app/infrastructure/record_snapshot.py`、`frontend/src/lib/record-snapshot.ts`、`frontend/src/features/record-cache/`、`frontend/src/features/session/`、`frontend/src/features/training/`、`docs/personal-device-storage-plan.md`、`docs/design/training-session.md`、`frontend/public/previews/training-previous-pending-adopted.html`。
+- 検証: 専用`gotore_test` DBの`make check`成功（backend 284件、frontend 110件、lint・型・build）。関連ブラウザE2Eは前回値6件・端末保存と別アカウント分離2件が成功。`git diff --check`も成功。
+- テストを先に書けなかった理由: 端末保存の読み取り契約と既存のセッション比較APIとの接続を先に定める必要があった。契約確定後にDB統合テストと遅延通信のE2Eを追加した。
+- 未解決事項: 大量データでの全件同期時間・容量、iPhone実機での保存と再起動は未測定。PRの全E2Eと実装者以外のレビューは未確認。
+- 次のアクション: CIの全E2Eとレビューを確認し、実機で再訪速度・保存領域を計測する。
+
+## 2026-09-29 03:15 記録の端末保存範囲と前回値の表示を確定（Issue #185・#231）
+- 変更内容: ユーザーの追加指定により、今回の端末保存を本人の記録・セット・種目・関連メモに絞った。操作とサーバー通信は現行どおりに保ち、新しいオフライン編集・送信キューやプロフィール保存を対象外にした。前回値が未確定の間はホイールを開かない。
+- 目的: 本人の記録を端末から速く表示し、仮の重量・回数を誤って保存する経路を防ぐため。
+- 影響範囲: `docs/personal-device-storage-plan.md`、`docs/README.md`、`task.md`。実装前の仕様更新。
+- 未解決事項: 全件同期APIの実装と保存失敗・別端末削除・初回読み込みの検証。
+- 次のアクション: 保存契約、端末複製、前回値の表示を順に実装する。
+
+## 2026-09-29 02:20 本人データの端末保存と前回値の方針を整理（Issue #185・#231）
+- 変更内容: ユーザーの指摘に合わせ、#231の中心を「前回値の取得前にホイールが仮の値で開く問題」と整理した。本人データ全件の端末保存について、対象・正本・ストレージ候補・同期の段階・未決事項を設計案にまとめた。
+- 目的: 端末保存の導入で前回値を速く表示しつつ、初回・別端末更新・保存失敗で誤った数値や記録の欠落を起こさないため。
+- 影響範囲: 文書・計画のみ。アプリ、API、DB、端末データは変更しない。
+- 関連ファイル: `docs/personal-device-storage-plan.md`、`docs/README.md`、`task.md`、`progress.md`。
+- 検証: 文書の参照先、既存API・端末保存実装との整合、`git diff --check`を確認。文書のみで実際の挙動を変えないため、失敗するアプリテストは先に書かない。
+- 未解決事項: 前回値未取得時のホイール表示、プロフィール画像の保存形式と容量、未送信操作があるログアウト、全件同期のAPI契約は採用判断待ち。
+- 次のアクション: 設計案をレビューし、保存契約と本人データ複製を小さなIssueに分けて実装する。
+## 2026-09-29 01:50 ホームの仲間情報を記録開始直後へ引き継ぐ（Issue #227）
+- 変更内容: ホームと記録画面の当日仲間データ取得を同じ画面内リソースに統合した。開始直後に取得済みのグループタブと仲間アイコンを表示し続け、記録入力中は再取得を停止する。
+- 目的: START後に取得済みの仲間情報が空の丸へ戻り、グループタブが動く問題を解消するため。
+- 影響範囲: 同一ログイン中の当日仲間表示と取得タイミング。API・DB・共有範囲は変更しない。
+- 関連ファイル: `frontend/src/features/v2/workspace.tsx`、`frontend/src/features/v2/community.tsx`、`frontend/src/features/session/session-screen.tsx`、`frontend/tests/e2e/peer-handoff.spec.ts`、`docs/design/training-session.md`。
+- 検証: 取得済みの仲間をSTART直後も表示し、背景の再確認で403が返ったら消去するブラウザE2Eが成功。`make check`成功（backend単体103件、DB統合178件は専用DB未指定でskip、frontend単体110件、lint・型・build）。関連E2E 11件成功。
+- 未解決事項: 実機PWAでの表示確認と、全E2Eを含むCIは未実施。
+- 次のアクション: PRの全E2E・レビューを確認し、実機で開始直後の表示を確認する。
 ## 2026-09-29 02:10 進行中の経過時間を再開・記録画面に表示（Issue #202）
 - 変更内容: セッションの`started_at`から分単位の経過時間を計算し、固定サイズのRESUME内と種目選択・記録入力の共通ヘッダーに表示した。画面非表示中は更新を止め、復帰時に現在時刻から再計算する。
 - 目的: 画面移動や再読み込みをしても、トレーニング開始から何分かを同じ基準で確認できるようにするため。
@@ -3924,3 +4172,48 @@
 - テストを先に書けなかった理由: 既存のFeed内保持が画面離脱で失われ、セッション側の取得経路と権限確認との接続方式を先に調べる必要があった。保持境界が定まった後に単体/E2Eを追加した。
 - 未解決事項: 関連E2Eを広げた実行では2件成功、3件失敗、1件中断、7件未実行。失敗のうち先読み要求数は変更前mainでも同じ期待2件/実際0件で再現し、旧`/groups/{id}/activity`モックと現行ホームの集約APIの不一致がある。起動表示の旧見出し期待も失敗した。全E2Eと実機PWA、実DBでの権限変化、他人が共有解除した瞬間の表示確認は未実施。これはCI/テスト修正中の#218と合わせて確認する。
 - 次のアクション: PRのCIで全E2Eとレビューを確認し、#218の旧期待を別作業で更新する。実機で仲間シートの初回・再訪の見え方を確認する。
+
+## 2026-09-28 17:56 記録画面の仲間表示削除とログアウト確認
+
+- 変更内容: トレーニングの種目選択画面から仲間のグループ選択、当日アイコン、共有記録詳細シートと関連取得を削除した。本人の `今日のトレーニング` は `▼` で展開する表示へ変更。設定のログアウトは赤文字にし、キャンセルと確定を選ぶ確認シートを追加した。
+- 目的: 公開先選択と誤認された仲間タイムラインを記録画面からなくして本人の入力へ集中させ、ログアウトの誤操作を防ぐため。
+- 影響範囲: トレーニング記録画面、設定画面、関連CSS・E2E・画面設計資料。記録の共有範囲、ホームのタイムライン、API・DBは変更していない。
+- 関連ファイル: `frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/settings.tsx`、`workspace.tsx`、`frontend/src/app/v2.css`、`frontend/tests/e2e/training-selection.spec.ts`、`record-loading.spec.ts`、`onboarding.spec.ts`、`google-signin.spec.ts`、削除した`peer-record-reuse.spec.ts`、`docs/design/training-session.md`、`docs/design/settings-screen.md`、`docs/design/home-screen.md`、`docs/stamps.md`、`docs/loading-performance.md`、`task.md`。
+- 検証: `make check`成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。E2Eの期待値は実装前に追加したが、実行環境に `libnspr4.so` がなくChromiumを起動できなかったため、実装前の失敗と修正後の成功は未確認。
+- 未解決事項: 関連E2E・全E2E・実機表示は未確認。
+- 次のアクション: Chromium依存が揃う環境またはCIで関連E2Eを実行する。別ブランチでグループカードの状態別配色を実装する。
+
+## 2026-09-29 01:45 ログアウト確認と今日の記録の開閉表示を調整
+
+- 変更内容: ログアウト確認のキャンセルを確定ボタンと同じ8px角丸・同じ高さのボタンへ揃えた。`今日のトレーニング` は閉じた状態で見出し左に12pxの `▶`、展開時は同じ位置に `▼` を表示し、従来の右端記号を削除した。状態・配置・角丸を確認するE2E期待値と画面設計資料を更新した。
+- 目的: 確認シート内のボタン形状を統一し、今日の記録が開閉できることと現在の状態を一般的な位置・記号で伝えるため。
+- 影響範囲: トレーニング記録画面の本人記録要約、設定画面のログアウト確認、関連CSS・E2E・画面設計資料。保存内容、ログアウト処理、API・DBは変更していない。
+- 関連ファイル: `frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/settings.tsx`、`frontend/src/app/v2.css`、`frontend/tests/e2e/training-selection.spec.ts`、`frontend/tests/e2e/record-loading.spec.ts`、`docs/design/training-session.md`、`docs/design/settings-screen.md`、`task.md`。
+- 検証: `make check`成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。E2Eは既知の実行環境依存 `libnspr4.so` 不足によりChromiumを起動できないため未実施。
+- 未解決事項: 関連E2E・全E2E・実機表示は未確認。
+- 次のアクション: Chromium依存が揃う環境またはCIで関連E2Eを実行し、ローカル画面で閉じた `▶`、開いた `▼`、確認ボタンの形状を確認する。
+
+## 2026-09-29 02:21 PR #247へ最新mainを統合
+
+- 変更内容: PR #247の作成後に判明した最新`main`との競合を解消した。`main`側の画面遷移、戻る操作、長いホームグループ名の表示改善を保持し、記録画面では今回採用した仲間タイムライン削除と本人記録の `▶` / `▼` を優先した。
+- 目的: グループカード用の別ブランチを含めず、PR #247を最新`main`へ統合可能な状態にするため。
+- 影響範囲: `main`の4コミットを取り込んだマージコミットと、競合した設計資料・記録画面・CSS。今回の仕様外の挙動は変更していない。
+- 関連ファイル: `docs/README.md`、`docs/design/README.md`、`docs/design/training-session.md`、`frontend/src/features/session/session-screen.tsx`、`frontend/src/app/v2.css`、および`main`から取り込んだファイル。
+- 検証: 競合マーカーと削除対象の仲間表示コードが残っていないことを確認。統合後の`make check`成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。
+- 未解決事項: 関連E2E・全E2E・実機表示は未確認。
+- 次のアクション: PRのCIとレビューを確認する。
+
+## 2026-09-29 今日のトレーニングの開閉三角を同寸に調整
+
+- 変更内容: `今日のトレーニング` 左の開閉記号を、別々の文字グリフではなく同じ10px四方の三角形を回転させる表示へ変更した。閉じた `▶` と開いた `▼` の占有サイズ・視覚サイズが一致する。リモート側で先行していた12pxのマーカー指定も保持した。
+- 目的: 展開前後で三角形だけが大きく見えたり、見出し位置が揺れたりしないようにするため。
+- 影響範囲: トレーニング記録画面の開閉記号、関連E2E、画面設計資料。開閉動作、記録内容、API・DBは変更しない。
+- 検証: 閉じた状態と開いた状態の疑似要素の幅・高さが一致し、回転状態だけが変わることをE2E期待値へ追加した。`make check` 成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。
+
+## 2026-09-29 最新mainの統合と競合解消
+
+- 変更内容: `origin/main` の `5153b4c` までを取り込み、記録画面・設計資料・タスク資料・ワークスペースの競合を解消した。mainの履歴画面とホーム側の当日仲間データ共有は保持し、記録画面への仲間タイムライン再導入だけを除外した。
+- 目的: PR #247を最新mainへ統合可能にし、記録画面から仲間表示をなくす確定仕様を維持するため。
+- 影響範囲: mainから追加された履歴・分析・画面遷移関連一式と、競合した記録画面・ワークスペース・資料。記録画面では当日仲間APIを取得せず、ホームでは従来どおり取得する。
+- 競合対応: `docs/design/training-session.md`、`frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/workspace.tsx`、`task.md` の4件を解消。記録画面への仲間引き継ぎ専用E2E `peer-handoff.spec.ts` は確定仕様と矛盾するため統合対象から除外した。
+- 検証: `make check` 成功（backend 104件成功/180件DBなしskip、frontend単体116件成功、lint・型・production build成功）。競合マーカーと未解消ファイルがないことを確認する。

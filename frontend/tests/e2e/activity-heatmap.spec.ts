@@ -135,7 +135,7 @@ test("月と日付の取得失敗を再試行し、遅い前日の応答を表�
   await chooseHistoryMonth(page, "2024-02");
   state.failDay(true);
   await page.getByRole("button", { name: /2024年2月29日/ }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "通信できません" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "更新できませんでした" })).toBeVisible();
   state.failDay(false);
   await page.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(page.locator(".history-row")).toHaveCount(50);

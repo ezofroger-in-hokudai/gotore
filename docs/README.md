@@ -32,12 +32,14 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [design-system.md](design-system.md): スマホアプリを見据えた色・文字・余白・操作と共通部品の基準。[画面見本](design-preview.html)。
 
-- [画面設計の判断](design/README.md): 画面ごとの採用判断の一覧。[トレーニング中](design/training-session.md)、[ホーム](design/home-screen.md)、[グループ](design/group-screen.md)、[グループ作成](design/group-create.md)の画面設計を参照する。
+- [画面設計の判断](design/README.md): 画面ごとの採用判断の一覧。[トレーニング中](design/training-session.md)、[ホーム](design/home-screen.md)、[グループ](design/group-screen.md)、[グループ作成](design/group-create.md)、[設定](design/settings-screen.md)の画面設計を参照する。
 - [画面遷移の動き](design/navigation-motion.md): 採用した控えめな横移動、固定プレビューと比較経緯。
+- [履歴画面の設計](design/history-screen.md): 個人の通算・カレンダー・連続グラフ・部位別人体図の採用案と比較経緯。
 
 - [performance-best-history.md](performance-best-history.md): BEST・前回比較の履歴件数別計測と既存集計の利用。
 
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。
+- [記録に関する本人データの端末保存](personal-device-storage-plan.md): #185・#231の保存対象、正本、前回値、実装と残る実機確認。
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
 - [画面文言の再棚卸し](ui-copy-review-2026-09-13.md): 削減候補37件と今回採用する範囲。

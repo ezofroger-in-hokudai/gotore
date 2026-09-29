@@ -2,9 +2,11 @@
 
 import { api } from "@/lib/api";
 import { useState } from "react";
+import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 
 import { type Memo, memoDraftKey, readMemoDraft, removeMemoDraft } from "./memo-draft";
 export function WorkoutMemo({ workoutId, userId }: { workoutId: string; userId: string }) {
+  const recordCache = useRecordSnapshot();
   const [open, setOpen] = useState(false);
   const [memo, setMemo] = useState<Memo | null>(null);
   const [content, setContent] = useState("");
@@ -15,6 +17,12 @@ export function WorkoutMemo({ workoutId, userId }: { workoutId: string; userId: 
   const path = `/workouts/${workoutId}/memo`;
   const key = memoDraftKey(userId, path);
   async function load(discardDraft = false) {
+    const cached = recordCache?.snapshot?.workout_memos[workoutId];
+    if (cached && !discardDraft) {
+      const draft = readMemoDraft(key);
+      setMemo(draft ?? cached);
+      setContent(draft?.content ?? cached.content);
+    }
     setBusy(true);
     setError("");
     setNotice("");
@@ -49,6 +57,7 @@ export function WorkoutMemo({ workoutId, userId }: { workoutId: string; userId: 
       setNotice(
         removeMemoDraft(key) ? "保存しました。" : "保存しましたが、端末の下書きを消去できません。",
       );
+      void recordCache?.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "保存できませんでした。");
     } finally {

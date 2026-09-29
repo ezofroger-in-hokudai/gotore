@@ -59,56 +59,50 @@ for (const first of [{ weight: 0, reps: 12 }, null]) {
   });
 }
 
-for (const edited of [false, true]) {
-  test(`前回の応答が遅いとき${edited ? "手入力を上書きしない" : "未入力なら最初のセットを反映する"}`, async ({
-    page,
-  }) => {
-    const state = await mockTraining(page);
-    let release = () => {};
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await page.route("**/api/exercises/context?*", async (route) => {
-      await gate;
-      await route.fulfill({
-        json: {
-          best_weight: 62.5,
-          best_rm: 79.2,
-          previous: {
-            id: "previous",
-            performed_on: "2026-01-01",
-            sets: [{ weight: 62.5, reps: 8 }],
-          },
-          memo: { content: "", revision: 0 },
-        },
-      });
-    });
-    try {
-      await startTraining(page);
-      const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
-      const reps = page.getByRole("spinbutton", { name: "回数", exact: true });
-      await expect(weight).toHaveValue("20");
-      if (edited) {
-        await weight.fill("91.5");
-        await reps.fill("7");
-      }
-      release();
-      await expect(page.locator(".comparison-table")).toContainText("62.5");
-      await expect(weight).toHaveValue(edited ? "91.5" : "62.5");
-      await expect(reps).toHaveValue(edited ? "7" : "8");
-      expect(state.saves).toBe(0);
-      const key = `gotore:session-input:v2:${state.user.id}:${state.session?.id}`;
-      await expect
-        .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), key))
-        .toMatchObject({ awaitingPrevious: false, weight: edited ? "91.5" : "62.5" });
-      await page.reload();
-      await openTraining(page);
-      await expect(weight).toHaveValue(edited ? "91.5" : "62.5");
-    } finally {
-      release();
-    }
+test("前回の応答が遅い間はホイールを開かず、届いた値を初期値にする", async ({ page }) => {
+  const state = await mockTraining(page);
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
   });
-}
+  await page.route("**/api/exercises/context?*", async (route) => {
+    await gate;
+    await route.fulfill({
+      json: {
+        best_weight: 62.5,
+        best_rm: 79.2,
+        previous: {
+          id: "previous",
+          performed_on: "2026-01-01",
+          sets: [{ weight: 62.5, reps: 8 }],
+        },
+        memo: { content: "", revision: 0 },
+      },
+    });
+  });
+  try {
+    await startTraining(page);
+    const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
+    const reps = page.getByRole("spinbutton", { name: "回数", exact: true });
+    await expect(page.getByText("前回の記録を確認中…")).toBeVisible();
+    await expect(weight).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "セットを追加" })).toHaveCount(0);
+    release();
+    await expect(page.locator(".comparison-table")).toContainText("62.5");
+    await expect(weight).toHaveValue("62.5");
+    await expect(reps).toHaveValue("8");
+    expect(state.saves).toBe(0);
+    const key = `gotore:session-input:v2:${state.user.id}:${state.session?.id}`;
+    await expect
+      .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), key))
+      .toMatchObject({ awaitingPrevious: false, weight: "62.5" });
+    await page.reload();
+    await openTraining(page);
+    await expect(weight).toHaveValue("62.5");
+  } finally {
+    release();
+  }
+});
 
 test("以前保存した端末入力は前回値で置き換えない", async ({ page }) => {
   const state = await mockTraining(page);
@@ -163,7 +157,7 @@ test("切り替え前の種目の遅い応答で現在の初期値を変えな�
   });
   try {
     await startTraining(page);
-    await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
+    await page.locator(".exercise-information").click();
     await page.getByRole("button", { name: /^スクワット/ }).click();
     const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
     await expect(weight).toHaveValue("100");
