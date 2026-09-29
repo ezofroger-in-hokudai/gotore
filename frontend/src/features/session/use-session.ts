@@ -4,38 +4,46 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createSessionId } from "./session-id";
 import { SessionQueue } from "./session-queue";
 
-export function useSession(userId: string, onChanged: () => void) {
+export function useSession(userId: string, onChanged: () => void, trainingVisible: boolean) {
   const storageKey = `gotore:session-queue:v1:${userId}`;
   const changed = useRef(onChanged);
   changed.current = onChanged;
-  const [queue] = useState(
-    () =>
-      new SessionQueue({
-        read: () => localStorage.getItem(storageKey),
-        write: (value) =>
-          value === null
-            ? localStorage.removeItem(storageKey)
-            : localStorage.setItem(storageKey, value),
-        // 通信のロックと端末保存のロックを分け、別タブの同期中も入力を止めない。
-        lock: (name, work) =>
-          navigator.locks ? navigator.locks.request(`${storageKey}:${name}`, work) : work(),
-        load: () =>
-          api<TrainingSession | null>("/sessions/active", { signal: AbortSignal.timeout(15_000) }),
-        send: createSessionSender(api<TrainingSession>),
-        finish: (id, revision) =>
-          api<TrainingSession>(`/sessions/${id}/finish`, {
-            method: "POST",
-            body: JSON.stringify({ expected_revision: revision }),
-            signal: AbortSignal.timeout(15_000),
-          }),
-      }),
-  );
+  const [queue] = useState(() => {
+    const sender = createSessionSender(api<TrainingSession>);
+    return new SessionQueue({
+      read: () => localStorage.getItem(storageKey),
+      write: (value) =>
+        value === null
+          ? localStorage.removeItem(storageKey)
+          : localStorage.setItem(storageKey, value),
+      // 通信のロックと端末保存のロックを分け、別タブの同期中も入力を止めない。
+      lock: (name, work) =>
+        navigator.locks ? navigator.locks.request(`${storageKey}:${name}`, work) : work(),
+      load: () =>
+        api<TrainingSession | null>("/sessions/active", { signal: AbortSignal.timeout(15_000) }),
+      send: (id, revision, exercises, activityAt) =>
+        sender(id, revision, exercises, AbortSignal.timeout(15_000), activityAt),
+      reconcile: (id, occurredAt) =>
+        api<TrainingSession>(`/sessions/${id}/activity`, {
+          method: "POST",
+          body: JSON.stringify({ occurred_at: occurredAt }),
+          signal: AbortSignal.timeout(15_000),
+        }),
+      finish: (id, revision) =>
+        api<TrainingSession>(`/sessions/${id}/finish`, {
+          method: "POST",
+          body: JSON.stringify({ expected_revision: revision }),
+          signal: AbortSignal.timeout(15_000),
+        }),
+    });
+  });
   const state = useSyncExternalStore(queue.subscribe, queue.getSnapshot, queue.getSnapshot);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const lock = useRef(false);
   const startId = useRef<string | null>(null);
   const lastActivity = useRef(0);
+  const [locallyExpired, setLocallyExpired] = useState(false);
   useEffect(() => {
     queue.start();
     let restoring: Promise<void> | null = null;
@@ -76,6 +84,60 @@ export function useSession(userId: string, onChanged: () => void) {
     }
   }, [state.saved]);
   const sessionId = state.session?.id;
+  useEffect(() => {
+    if (!sessionId) {
+      setLocallyExpired(false);
+      return;
+    }
+    let syncTimer = 0;
+    const lastLocalActivity = () => {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        const saved = raw ? JSON.parse(raw) : null;
+        return saved?.lastActivityAt ?? saved?.base?.last_activity_at ?? saved?.base?.started_at;
+      } catch {
+        return null;
+      }
+    };
+    const record = () => {
+      if (!trainingVisible || locallyExpired || !queue.getSnapshot().session) return;
+      const last = lastLocalActivity();
+      if (last && Date.now() - Date.parse(last) >= 3_600_000) {
+        check();
+        return;
+      }
+      void queue
+        .touch(new Date().toISOString())
+        .then(() => {
+          window.clearTimeout(syncTimer);
+          syncTimer = window.setTimeout(() => void queue.sync(), 1000);
+        })
+        .catch((reason) =>
+          setError(reason instanceof Error ? reason.message : "操作を保存できませんでした。"),
+        );
+    };
+    const check = () => {
+      const last = lastLocalActivity();
+      if (last && Date.now() - Date.parse(last) >= 3_600_000) {
+        setLocallyExpired(true);
+        void queue.sync().then(() => queue.refresh());
+      }
+    };
+    window.addEventListener("pointerdown", record);
+    window.addEventListener("keydown", record);
+    window.addEventListener("input", record);
+    document.addEventListener("visibilitychange", check);
+    const timer = window.setInterval(check, 5000);
+    check();
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(syncTimer);
+      window.removeEventListener("pointerdown", record);
+      window.removeEventListener("keydown", record);
+      window.removeEventListener("input", record);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [sessionId, queue, storageKey, locallyExpired, trainingVisible]);
   useEffect(() => {
     if (!sessionId) return;
     let pending = false;
@@ -124,6 +186,9 @@ export function useSession(userId: string, onChanged: () => void) {
   }
   return {
     ...state,
+    locallyExpired,
+    session: locallyExpired ? null : state.session,
+    finishPending: locallyExpired || state.finishPending,
     startingId: startId.current,
     busy,
     error: error || (!state.ready ? state.error : ""),

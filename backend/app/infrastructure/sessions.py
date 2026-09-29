@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from psycopg.types.json import Jsonb
@@ -19,6 +19,9 @@ from app.infrastructure.training_repository import TrainingRepository
 
 class SessionRepository(TrainingRepository):
     def active(self, user_id: UUID):
+        self.connection.execute(
+            "SELECT public.gotore_expire_inactive_sessions(%s)", (user_id,)
+        )
         return self.connection.execute(
             """SELECT w.*, p.display_name,
             ARRAY(SELECT s.group_id FROM public.gotore_workout_shares s
@@ -69,9 +72,9 @@ class SessionRepository(TrainingRepository):
             # 所属の行ロックを保持したまま、開始・共有・当日の活動を一括で保存する。
             row = self.connection.execute(
                 """WITH started AS (INSERT INTO public.gotore_workouts
-                (id, user_id, performed_on, exercises, started_at, last_seen_at)
+                (id, user_id, performed_on, exercises, started_at, last_seen_at, last_activity_at)
                 VALUES (%s, %s, (clock_timestamp() AT TIME ZONE 'Asia/Tokyo')::date,
-                '[]', clock_timestamp(), clock_timestamp()) RETURNING *),
+                '[]', clock_timestamp(), clock_timestamp(), clock_timestamp()) RETURNING *),
                 shared AS (INSERT INTO public.gotore_workout_shares (workout_id, group_id, user_id)
                     SELECT s.id, g.id, s.user_id FROM started s, unnest(%s::uuid[]) AS g(id)),
                 activity AS (INSERT INTO public.gotore_session_days (workout_id, day)
@@ -92,13 +95,80 @@ class SessionRepository(TrainingRepository):
             raise NotFound("トレーニングが見つかりません")
         return record
 
+    def _expire_locked(self, row):
+        expired = self.connection.execute(
+            """UPDATE public.gotore_workouts
+            SET ended_at = greatest(started_at, last_activity_at), auto_ended = true
+            WHERE id = %s AND ended_at IS NULL
+              AND last_activity_at <= clock_timestamp() - interval '1 hour'
+            RETURNING *""",
+            (row["id"],),
+        ).fetchone()
+        return {**row, **expired} if expired else row
+
+    def _reconcile_activity_locked(self, user_id: UUID, row, occurred_at: datetime):
+        if row["ended_at"] is not None and not row["auto_ended"]:
+            raise Conflict("終了済みです。履歴から編集してください")
+        now = datetime.now(UTC)
+        # 端末時計の進み過ぎで未来へ期限を延ばさない。
+        occurred_at = min(now, max(row["started_at"], occurred_at))
+        if occurred_at <= row["last_activity_at"]:
+            return row
+        if row["auto_ended"] and occurred_at - row["last_activity_at"] >= timedelta(hours=1):
+            return row
+        reopen = False
+        if row["auto_ended"] and occurred_at > now - timedelta(hours=1):
+            another_active = self.connection.execute(
+                """SELECT 1 FROM public.gotore_workouts
+                WHERE user_id = %s AND id <> %s AND started_at IS NOT NULL
+                  AND ended_at IS NULL""",
+                (user_id, row["id"]),
+            ).fetchone()
+            reopen = not another_active
+        updated = self.connection.execute(
+            """UPDATE public.gotore_workouts
+            SET last_activity_at = %s,
+                ended_at = CASE WHEN %s THEN NULL
+                    WHEN auto_ended THEN greatest(started_at, %s) ELSE ended_at END,
+                auto_ended = CASE WHEN %s THEN false ELSE auto_ended END
+            WHERE id = %s RETURNING *""",
+            (occurred_at, reopen, occurred_at, reopen, row["id"]),
+        ).fetchone()
+        return {**row, **updated}
+
+    def record_activity(self, user_id: UUID, workout_id: UUID, occurred_at: datetime):
+        with self.connection.transaction():
+            self.connection.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 1))", (str(user_id),)
+            )
+            self.lock_workout(workout_id)
+            row = self._expire_locked(self.session(user_id, workout_id))
+            previous_end = row["ended_at"]
+            row = self._reconcile_activity_locked(user_id, row, occurred_at)
+            if row["auto_ended"] and row["ended_at"] != previous_end:
+                updated = self.connection.execute(
+                    """UPDATE public.gotore_workouts
+                    SET revision = revision + 1, updated_at = clock_timestamp()
+                    WHERE id = %s RETURNING *""",
+                    (workout_id,),
+                ).fetchone()
+                row = {**row, **updated}
+            return self.with_shares(row)
+
     def save_session(self, user_id: UUID, workout_id: UUID, data: SessionUpdate):
         exercises = data.model_dump(mode="json")["exercises"]
         with self.connection.transaction():
+            self.connection.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 1))", (str(user_id),)
+            )
             self.lock_workout(workout_id)
-            row = self.session(user_id, workout_id)
-            if row["ended_at"] is not None:
+            row = self._expire_locked(self.session(user_id, workout_id))
+            if row["auto_ended"] and data.activity_at is not None:
+                row = self._reconcile_activity_locked(user_id, row, data.activity_at)
+            if row["ended_at"] is not None and not row["auto_ended"]:
                 raise Conflict("終了済みです。履歴から編集してください")
+            if row["auto_ended"] and data.activity_at is None:
+                raise Conflict("自動終了済みです。端末の記録を確認してください")
             unchanged = row["exercises"] == exercises
             if row["revision"] != data.expected_revision:
                 if row["revision"] == data.expected_revision + 1 and unchanged:
@@ -125,12 +195,29 @@ class SessionRepository(TrainingRepository):
                     """WITH updated AS (UPDATE public.gotore_workouts
                     SET exercises = %s, revision = revision + 1,
                     updated_at = clock_timestamp(), last_seen_at = clock_timestamp(),
+                    last_activity_at = CASE WHEN auto_ended THEN last_activity_at
+                        WHEN %s::timestamptz IS NULL THEN clock_timestamp()
+                        ELSE greatest(last_activity_at,
+                            least(clock_timestamp(), greatest(started_at, %s))) END,
                     feed_exercise = %s, feed_set = %s, feed_best = %s WHERE id = %s RETURNING *),
                     activity AS (INSERT INTO public.gotore_session_days (workout_id, day)
                         SELECT id, (last_seen_at AT TIME ZONE 'Asia/Tokyo')::date FROM updated
                         ON CONFLICT DO NOTHING)
                     SELECT * FROM updated""",
-                    (Jsonb(exercises), ei, si, is_best, workout_id),
+                    (
+                        Jsonb(exercises), data.activity_at, data.activity_at,
+                        ei, si, is_best, workout_id,
+                    ),
+                ).fetchone()
+                row = {**row, **updated}
+            elif not row["auto_ended"]:
+                updated = self.connection.execute(
+                    """UPDATE public.gotore_workouts
+                    SET last_activity_at = CASE WHEN %s::timestamptz IS NULL
+                        THEN clock_timestamp() ELSE greatest(last_activity_at,
+                        least(clock_timestamp(), greatest(started_at, %s))) END
+                    WHERE id = %s RETURNING *""",
+                    (data.activity_at, data.activity_at, workout_id),
                 ).fetchone()
                 row = {**row, **updated}
             return self.with_shares(row)
@@ -138,9 +225,16 @@ class SessionRepository(TrainingRepository):
     def finish(self, user_id: UUID, workout_id: UUID, revision: int):
         with self.connection.transaction():
             self.lock_workout(workout_id)
-            row = self.session(user_id, workout_id)
+            row = self._expire_locked(self.session(user_id, workout_id))
             if row["ended_at"] is not None and row["revision"] == revision + 1:
                 return self.with_shares(row)
+            if row["auto_ended"] and row["revision"] == revision:
+                updated = self.connection.execute(
+                    """UPDATE public.gotore_workouts SET revision = revision + 1
+                    WHERE id = %s RETURNING *""",
+                    (workout_id,),
+                ).fetchone()
+                return self.with_shares({**row, **updated})
             if row["revision"] != revision or row["ended_at"] is not None:
                 raise Conflict("別の更新があります。保存済みを読み直してください")
             updated = self.connection.execute(
@@ -153,7 +247,8 @@ class SessionRepository(TrainingRepository):
 
     def heartbeat(self, user_id: UUID, workout_id: UUID):
         with self.connection.transaction():
-            row = self.session(user_id, workout_id)
+            self.lock_workout(workout_id)
+            row = self._expire_locked(self.session(user_id, workout_id))
             if row["ended_at"] is not None:
                 raise Conflict("トレーニングは終了しています")
             self.connection.execute(

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from tests.test_sharing import USERS, create_group
@@ -98,6 +99,182 @@ def test_expired_live_does_not_erase_session_and_departure_never_reshares(client
     )
     client.post(f"/api/sessions/{session['id']}/heartbeat", headers={"X-Test-User": "B"})
     assert client.get(f"/api/groups/{group['id']}/activity").json()["today_count"] == 0
+
+
+def test_inactivity_expires_once_at_last_activity_without_counting_heartbeat(client, connection):
+    session = start(client)
+    connection.execute(
+        """UPDATE public.gotore_workouts
+        SET started_at = clock_timestamp() - interval '2 hours',
+            last_activity_at = clock_timestamp() - interval '59 minutes'
+        WHERE id = %s""",
+        (session["id"],),
+    )
+    assert client.post(f"/api/sessions/{session['id']}/heartbeat").status_code == 204
+    expired = connection.execute("SELECT public.gotore_expire_inactive_sessions() AS n").fetchone()
+    assert expired["n"] == 0
+    connection.execute(
+        """UPDATE public.gotore_workouts
+        SET last_activity_at = clock_timestamp() - interval '61 minutes'
+        WHERE id = %s""",
+        (session["id"],),
+    )
+    expired = connection.execute("SELECT public.gotore_expire_inactive_sessions() AS n").fetchone()
+    assert expired["n"] == 1
+    row = connection.execute(
+        "SELECT started_at, ended_at, last_activity_at, auto_ended, revision "
+        "FROM public.gotore_workouts WHERE id = %s",
+        (session["id"],),
+    ).fetchone()
+    assert row["ended_at"] == row["last_activity_at"]
+    assert row["ended_at"] - row["started_at"] < timedelta(hours=1)
+    assert row["auto_ended"] is True
+    assert row["revision"] == session["revision"]
+    expired = connection.execute("SELECT public.gotore_expire_inactive_sessions() AS n").fetchone()
+    assert expired["n"] == 0
+    assert client.get("/api/sessions/active").json() is None
+
+
+def test_activity_and_offline_set_after_auto_finish_reconcile_without_loss(client, connection):
+    session = start(client)
+    connection.execute(
+        """UPDATE public.gotore_workouts
+        SET started_at = clock_timestamp() - interval '2 hours',
+            last_activity_at = clock_timestamp() - interval '61 minutes'
+        WHERE id = %s""",
+        (session["id"],),
+    )
+    connection.execute("SELECT public.gotore_expire_inactive_sessions()")
+    recent_action = datetime.now(UTC) - timedelta(minutes=5)
+    response = client.post(
+        f"/api/sessions/{session['id']}/activity",
+        json={"occurred_at": recent_action.isoformat()},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["ended_at"] is None
+    assert response.json()["auto_ended"] is False
+    saved = save(client, session)
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["exercises"][0]["sets"] == [{"weight": 80, "reps": 8}]
+
+    connection.execute(
+        """UPDATE public.gotore_workouts
+        SET last_activity_at = clock_timestamp() - interval '90 minutes'
+        WHERE id = %s""",
+        (session["id"],),
+    )
+    connection.execute("SELECT public.gotore_expire_inactive_sessions()")
+    late_action = datetime.now(UTC) - timedelta(minutes=65)
+    response = client.patch(
+        f"/api/sessions/{session['id']}",
+        json={
+            "expected_revision": saved.json()["revision"],
+            "activity_at": late_action.isoformat(),
+            "exercises": [{"name": "ベンチプレス", "sets": [{"weight": 85, "reps": 8}]}],
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["auto_ended"] is True
+    assert response.json()["exercises"][0]["sets"][0]["weight"] == 85
+    row = connection.execute(
+        "SELECT ended_at, last_activity_at FROM public.gotore_workouts WHERE id = %s",
+        (session["id"],),
+    ).fetchone()
+    assert row["ended_at"] == row["last_activity_at"]
+
+
+def test_delayed_set_sync_uses_original_activity_time(client, connection):
+    session = start(client)
+    connection.execute(
+        """UPDATE public.gotore_workouts
+        SET started_at = clock_timestamp() - interval '40 minutes',
+            last_activity_at = clock_timestamp() - interval '20 minutes'
+        WHERE id = %s""",
+        (session["id"],),
+    )
+    occurred_at = datetime.now(UTC) - timedelta(minutes=10)
+    response = client.patch(
+        f"/api/sessions/{session['id']}",
+        json={
+            "expected_revision": 1,
+            "activity_at": occurred_at.isoformat(),
+            "exercises": [{"name": "ベンチプレス", "sets": [{"weight": 80, "reps": 8}]}],
+        },
+    )
+    assert response.status_code == 200, response.text
+    actual = connection.execute(
+        "SELECT last_activity_at FROM public.gotore_workouts WHERE id = %s", (session["id"],)
+    ).fetchone()["last_activity_at"]
+    assert abs(actual - occurred_at) < timedelta(seconds=1)
+
+
+def test_late_offline_activity_adjusts_auto_finish_and_revision(client, connection):
+    session = start(client)
+    connection.execute(
+        """UPDATE public.gotore_workouts
+        SET started_at = clock_timestamp() - interval '3 hours',
+            last_activity_at = clock_timestamp() - interval '2 hours'
+        WHERE id = %s""",
+        (session["id"],),
+    )
+    connection.execute("SELECT public.gotore_expire_inactive_sessions()")
+    occurred_at = datetime.now(UTC) - timedelta(minutes=90)
+    response = client.post(
+        f"/api/sessions/{session['id']}/activity",
+        json={"occurred_at": occurred_at.isoformat()},
+    )
+    assert response.status_code == 200, response.text
+    actual = response.json()
+    assert actual["auto_ended"] is True
+    assert actual["revision"] == session["revision"] + 1
+    assert abs(datetime.fromisoformat(actual["ended_at"]) - occurred_at) < timedelta(seconds=1)
+
+
+def test_activity_after_one_hour_gap_cannot_reopen_or_extend_duration(client, connection):
+    session = start(client)
+    connection.execute(
+        """UPDATE public.gotore_workouts
+        SET started_at = clock_timestamp() - interval '3 hours',
+            last_activity_at = clock_timestamp() - interval '2 hours'
+        WHERE id = %s""",
+        (session["id"],),
+    )
+    connection.execute("SELECT public.gotore_expire_inactive_sessions()")
+    before = connection.execute(
+        "SELECT ended_at FROM public.gotore_workouts WHERE id = %s", (session["id"],)
+    ).fetchone()["ended_at"]
+    response = client.patch(
+        f"/api/sessions/{session['id']}",
+        json={
+            "expected_revision": 1,
+            "activity_at": (datetime.now(UTC) - timedelta(minutes=10)).isoformat(),
+            "exercises": [{"name": "ベンチプレス", "sets": [{"weight": 80, "reps": 8}]}],
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["auto_ended"] is True
+    assert datetime.fromisoformat(response.json()["ended_at"]) == before
+    assert response.json()["exercises"][0]["sets"] == [{"weight": 80, "reps": 8}]
+
+
+def test_continuous_offline_activity_can_resume_after_server_auto_finish(client, connection):
+    session = start(client)
+    connection.execute(
+        """UPDATE public.gotore_workouts
+        SET started_at = clock_timestamp() - interval '2 hours',
+            last_activity_at = clock_timestamp() - interval '2 hours'
+        WHERE id = %s""",
+        (session["id"],),
+    )
+    connection.execute("SELECT public.gotore_expire_inactive_sessions()")
+    for minutes_ago in (90, 70, 40):
+        result = client.post(
+            f"/api/sessions/{session['id']}/activity",
+            json={"occurred_at": (datetime.now(UTC) - timedelta(minutes=minutes_ago)).isoformat()},
+        )
+        assert result.status_code == 200, result.text
+    assert result.json()["ended_at"] is None
+    assert result.json()["auto_ended"] is False
 
 
 def test_invite_preview_does_not_join_and_only_returns_summary(client):

@@ -5,7 +5,13 @@ from fastapi import APIRouter, Depends
 
 from app.api.compressed_request import GzipRoute
 from app.api.dependencies import training_service
-from app.domain.session import ExerciseMemoInput, SessionRevision, SessionStart, SessionUpdate
+from app.domain.session import (
+    ExerciseMemoInput,
+    SessionActivity,
+    SessionRevision,
+    SessionStart,
+    SessionUpdate,
+)
 from app.domain.workout import Name
 from app.domain.workout_memo import WorkoutMemoInput
 from app.infrastructure.sessions import SessionRepository
@@ -72,6 +78,11 @@ def finish_session(session_id: UUID, data: SessionRevision, service: Service):
 @router.post("/sessions/{session_id}/heartbeat", status_code=204)
 def heartbeat(session_id: UUID, service: Service):
     repository(service).heartbeat(service.user.id, session_id)
+
+
+@router.post("/sessions/{session_id}/activity", response_model=SessionResponse)
+def session_activity(session_id: UUID, data: SessionActivity, service: Service):
+    return repository(service).record_activity(service.user.id, session_id, data.occurred_at)
 
 
 @router.post("/groups/preview", response_model=InvitePreview)

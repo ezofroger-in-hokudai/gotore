@@ -126,6 +126,7 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
         ),
         created_at: new Date().toISOString(),
         started_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString(),
         ended_at: null,
       };
       return route.fulfill({ status: 201, json: state.session });
@@ -141,7 +142,17 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     }
     if (path.startsWith("/api/sessions/")) {
       if (path.endsWith("/heartbeat")) return route.fulfill({ status: 204 });
+      if (path.endsWith("/activity") && !state.session) {
+        const finished = state.finished.find((record) => path.includes(record.id));
+        return finished
+          ? route.fulfill({ json: finished })
+          : route.fulfill({ status: 409, json: { detail: "終了済み" } });
+      }
       if (!state.session) return route.fulfill({ status: 409, json: { detail: "終了済み" } });
+      if (path.endsWith("/activity")) {
+        state.session.last_activity_at = route.request().postDataJSON().occurred_at;
+        return route.fulfill({ json: state.session });
+      }
       const body =
         route.request().headers()["content-encoding"] === "gzip"
           ? JSON.parse(gunzipSync(route.request().postDataBuffer() ?? Buffer.alloc(0)).toString())
