@@ -2,12 +2,17 @@
 
 import { api } from "@/lib/api";
 import {
+  type RecordChanges,
   type RecordSnapshot,
+  applyRecordChanges,
   clearRecordSnapshot,
   readRecordSnapshot,
+  recordManifest,
   saveRecordSnapshot,
+  validChanges,
   validSnapshot,
 } from "@/lib/record-snapshot";
+import { sessionBody as compressedJsonBody } from "@/lib/session-transport";
 import {
   type ReactNode,
   createContext,
@@ -59,19 +64,37 @@ export function RecordSnapshotProvider({
       return request.current;
     }
     const startedAtEpoch = epoch.current;
-    const pending = api<RecordSnapshot>("/me/record-snapshot", {
-      signal: AbortSignal.timeout(15_000),
-    })
+    const base = currentSnapshot.current;
+    const signal = AbortSignal.timeout(15_000);
+    const pending = (
+      base
+        ? compressedJsonBody(JSON.stringify(recordManifest(base)), signal).then((payload) =>
+            api<RecordChanges>("/me/record-snapshot/changes", {
+              method: "POST",
+              ...payload,
+              signal,
+            }),
+          )
+        : api<RecordSnapshot>("/me/record-snapshot", {
+            signal,
+          })
+    )
       .then(async (value) => {
-        if (!validSnapshot(value, userId)) throw new Error("記録データを確認できません");
+        if (base && !validChanges(value, userId)) throw new Error("記録の差分を確認できません");
+        const next = base
+          ? applyRecordChanges(base, value as RecordChanges)
+          : (value as RecordSnapshot);
+        if (!validSnapshot(next, userId)) throw new Error("記録データを確認できません");
         if (startedAtEpoch !== epoch.current || clearing.current) {
           rerun.current = true;
           return;
         }
         lastRefresh.current = Date.now();
-        currentSnapshot.current = value;
-        setSnapshot(value);
-        persist(value);
+        if (next !== base) {
+          currentSnapshot.current = next;
+          setSnapshot(next);
+          persist(next);
+        }
       })
       .catch(() => {})
       .finally(() => {

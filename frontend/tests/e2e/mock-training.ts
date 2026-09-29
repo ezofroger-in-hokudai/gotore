@@ -73,6 +73,23 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
           session_exercise_memos: {},
         },
       });
+    if (path === "/api/me/record-snapshot/changes")
+      return route.fulfill({
+        json: {
+          version: 1,
+          user_id: user.id,
+          workouts: [],
+          deleted_workout_ids: [],
+          options: [],
+          deleted_option_ids: [],
+          contexts: {},
+          deleted_context_names: [],
+          workout_memos: {},
+          deleted_workout_memo_ids: [],
+          session_exercise_memos: {},
+          deleted_session_exercise_memos: {},
+        },
+      });
     if (path.endsWith("/stamps/summary"))
       return route.fulfill({
         json: Object.fromEntries(

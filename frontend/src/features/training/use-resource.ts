@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cachedRecordResource } from "../record-cache/cached-resource";
 import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 import { resourceRequest } from "./resource-request";
@@ -13,8 +13,10 @@ export function useResource<T>(
 ) {
   const { enabled = true, retainOnRefresh = false, prefetch = false } = options;
   const recordSnapshot = useRecordSnapshot()?.snapshot ?? null;
-  const localData =
-    refreshKey === 0 ? (cachedRecordResource(recordSnapshot, path) as T | null) : null;
+  const localData = useMemo(
+    () => (refreshKey === 0 ? (cachedRecordResource(recordSnapshot, path) as T | null) : null),
+    [recordSnapshot, path, refreshKey],
+  );
   const cache = useRef({
     version: refreshKey,
     pages: new Map<string, { data: T; savedAt: number }>(),

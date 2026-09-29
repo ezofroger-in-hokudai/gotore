@@ -15,7 +15,20 @@ test("端末に保存した前回値を通信前に表示する", async ({ page 
         {
           version: 1,
           user_id: userId,
-          workouts: [],
+          workouts: [
+            {
+              id: "cached-history",
+              user_id: userId,
+              display_name: "画面テスト",
+              group_id: null,
+              performed_on: new Date().toISOString().slice(0, 10),
+              created_at: new Date().toISOString(),
+              revision: 1,
+              exercises: [{ name: "端末の履歴種目", sets: [{ weight: 62.5, reps: 8 }] }],
+              best_sets: [],
+              shared_group_ids: [],
+            },
+          ],
           options: [
             { id: "option-bench", name: "ベンチプレス" },
             { id: "option-squat", name: "スクワット" },
@@ -46,17 +59,27 @@ test("端末に保存した前回値を通信前に表示する", async ({ page 
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
+  let fullFetches = 0;
   await page.route("**/api/me/record-snapshot", async (route) => {
+    fullFetches++;
+    await route.fallback();
+  });
+  await page.route("**/api/me/record-snapshot/changes", async (route) => {
     await gate;
     await route.fulfill({
       json: {
         version: 1,
         user_id: state.user.id,
         workouts: [],
-        options: state.options,
+        deleted_workout_ids: [],
+        options: [],
+        deleted_option_ids: [],
         contexts: {},
+        deleted_context_names: [],
         workout_memos: {},
+        deleted_workout_memo_ids: [],
         session_exercise_memos: {},
+        deleted_session_exercise_memos: {},
       },
     });
   });
@@ -71,14 +94,21 @@ test("端末に保存した前回値を通信前に表示する", async ({ page 
       },
     });
   });
+  await page.route("**/api/workouts?*", async (route) => {
+    await gate;
+    await route.fulfill({ json: [] });
+  });
   try {
     await page.reload();
+    await page.getByRole("navigation").getByRole("button", { name: "履歴", exact: true }).click();
+    await expect(page.locator(".history-row").getByText("端末の履歴種目")).toBeVisible();
     await startTraining(page);
     await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("62.5");
     await expect(page.getByRole("spinbutton", { name: "回数", exact: true })).toHaveValue("8");
     await expect(page.getByRole("button", { name: "種目メモを編集" })).toContainText(
       "端末の種目メモ",
     );
+    expect(fullFetches).toBe(0);
   } finally {
     release();
   }
