@@ -9,6 +9,8 @@ MAX_BODY_BYTES = 128 * 1024
 
 
 class GzipRequest(Request):
+    max_body_bytes = MAX_BODY_BYTES
+
     async def body(self) -> bytes:
         if hasattr(self, "_body"):
             return self._body
@@ -23,10 +25,10 @@ class GzipRequest(Request):
         try:
             async for chunk in self.stream():
                 received += len(chunk)
-                if received > MAX_BODY_BYTES:
+                if received > self.max_body_bytes:
                     raise HTTPException(413, "保存データが大きすぎます。")
-                result.extend(decoder.decompress(chunk, MAX_BODY_BYTES + 1 - len(result)))
-                if len(result) > MAX_BODY_BYTES:
+                result.extend(decoder.decompress(chunk, self.max_body_bytes + 1 - len(result)))
+                if len(result) > self.max_body_bytes:
                     raise HTTPException(413, "保存データが大きすぎます。")
                 if decoder.unused_data:
                     raise HTTPException(400, "圧縮データを読み取れません。")
@@ -39,10 +41,21 @@ class GzipRequest(Request):
 
 
 class GzipRoute(APIRoute):
+    request_type = GzipRequest
+
     def get_route_handler(self) -> Callable[[Request], Awaitable[Response]]:
         handler = super().get_route_handler()
 
         async def read_compressed(request: Request) -> Response:
-            return await handler(GzipRequest(request.scope, request.receive))
+            return await handler(self.request_type(request.scope, request.receive))
 
         return read_compressed
+
+
+class SnapshotGzipRequest(GzipRequest):
+    # 版一覧は記録本文より件数が多いため、展開後4MiBまで許可する。
+    max_body_bytes = 4 * 1024 * 1024
+
+
+class SnapshotGzipRoute(GzipRoute):
+    request_type = SnapshotGzipRequest

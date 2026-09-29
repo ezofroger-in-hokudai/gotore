@@ -1,5 +1,6 @@
 import type { ExerciseContext } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
+import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 import { resourceRequest } from "../training/resource-request";
 import { ExerciseContextCache } from "./exercise-context-cache";
 
@@ -10,6 +11,7 @@ export function useExerciseContext(
   revision: number,
   enabled: boolean,
 ) {
+  const snapshot = useRecordSnapshot()?.snapshot;
   const [, render] = useState(0);
   const currentSessionId = useRef(sessionId);
   currentSessionId.current = sessionId;
@@ -51,10 +53,14 @@ export function useExerciseContext(
   }, [cache, enabled, wanted, revision, retry, sessionId]);
   useEffect(() => () => cache.stop(), [cache]);
   const entry = cache.read(name);
+  const active = snapshot?.workouts.find((record) => record.started_at && !record.ended_at);
+  const localContexts = !active || active.id === sessionId ? snapshot?.contexts : undefined;
   return {
-    data: entry?.data ?? null,
-    firstPreviousSet: (candidate: string) => cache.read(candidate)?.data?.previous?.sets[0],
-    previousPerformedOn: (candidate: string) => cache.read(candidate)?.data?.previous?.performed_on,
+    data: entry?.data ?? localContexts?.[name] ?? null,
+    firstPreviousSet: (candidate: string) =>
+      (cache.read(candidate)?.data ?? localContexts?.[candidate])?.previous?.sets[0],
+    previousPerformedOn: (candidate: string) =>
+      (cache.read(candidate)?.data ?? localContexts?.[candidate])?.previous?.performed_on,
     error: entry?.error ?? "",
     retry: () => {
       cache.invalidate(name);
