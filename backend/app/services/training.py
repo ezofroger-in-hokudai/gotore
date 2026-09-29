@@ -53,11 +53,11 @@ class TrainingService:
     def save_workout(self, workout: WorkoutInput):
         return self.repository.save_workout(self.user.id, workout)
 
-    def activity(self, month: str, group_id: UUID | None = None):
+    def activity(self, month: str, group_id: UUID | None = None, exercise: str | None = None):
         start, end = month_bounds(month)
         days = [
             ActivityDay.model_validate(row)
-            for row in self.repository.activity(self.user.id, start, end, group_id)
+            for row in self.repository.activity(self.user.id, start, end, group_id, exercise)
         ]
         return MonthlyActivity(
             month=month,
