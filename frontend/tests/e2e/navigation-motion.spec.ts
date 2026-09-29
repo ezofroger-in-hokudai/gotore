@@ -147,6 +147,45 @@ test("遷移直後に元のタブを選び直しても最後の画面を表示�
   await expect(page.getByRole("region", { name: "今日の活動", exact: true })).toBeVisible();
 });
 
+test("選択中の各タブを再タップすると入口の先頭へ戻る", async ({ page }) => {
+  await mockTraining(page);
+  const nav = page.getByRole("navigation", { name: "メインナビゲーション" });
+  await page.evaluate(() => {
+    const spacer = document.createElement("div");
+    spacer.style.height = "2400px";
+    document.querySelector(".main-content")?.append(spacer);
+  });
+
+  for (const name of ["ホーム", "グループ", "履歴", "設定"]) {
+    const button = nav.getByRole("button", { name, exact: true });
+    if ((await button.getAttribute("aria-current")) !== "page") await button.click();
+    await page.evaluate(() => {
+      window.scrollTo({ top: 900 });
+      document.querySelector<HTMLElement>(".main-content")?.scrollTo({ top: 900 });
+    });
+    expect(
+      await page.evaluate(() =>
+        Math.max(
+          window.scrollY,
+          document.querySelector<HTMLElement>(".main-content")?.scrollTop ?? 0,
+        ),
+      ),
+    ).toBeGreaterThan(0);
+
+    await button.click();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Math.max(
+            window.scrollY,
+            document.querySelector<HTMLElement>(".main-content")?.scrollTop ?? 0,
+          ),
+        ),
+      )
+      .toBe(0);
+  }
+});
+
 test("動きを減らす設定では画面を即時に切り替える", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockTraining(page);
