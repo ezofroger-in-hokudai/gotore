@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
+import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 
 import {
   type Memo,
@@ -29,13 +30,23 @@ export function InlineMemo({
   omitWhenEmpty?: boolean;
   singleLine?: boolean;
 }) {
+  const recordCache = useRecordSnapshot();
+  const sessionMemo = path.match(/^\/sessions\/([^/]+)\/exercise-memo\?name=(.+)$/);
+  const cachedMemo = sessionMemo
+    ? recordCache?.snapshot?.session_exercise_memos[sessionMemo[1]]?.[
+        decodeURIComponent(sessionMemo[2])
+      ]
+    : undefined;
   const key = memoDraftKey(userId, name ?? path);
   const [draft] = useState(() => readMemoDraft(key));
   const [draftState, setDraftState] = useState<MemoDraftState>(draft ? "stored" : "saved");
   useEffect(() => onDraftChange?.(draftState), [onDraftChange, draftState]);
-  const [memo, setMemo] = useState<Memo | null>(draft ?? initial ?? null);
-  const [content, setContent] = useState(draft?.content ?? initial?.content ?? "");
+  const [memo, setMemo] = useState<Memo | null>(draft ?? initial ?? cachedMemo ?? null);
+  const [content, setContent] = useState(
+    draft?.content ?? initial?.content ?? cachedMemo?.content ?? "",
+  );
   const dirty = useRef(!!draft);
+  const serverMemoPath = useRef<string | null>(initial ? path : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(!!draft);
@@ -44,7 +55,14 @@ export function InlineMemo({
     if (editing) field.current?.focus();
   }, [editing]);
   useEffect(() => {
+    if (cachedMemo && !dirty.current && serverMemoPath.current !== path) {
+      setMemo(cachedMemo);
+      setContent(cachedMemo.content);
+    }
+  }, [cachedMemo, path]);
+  useEffect(() => {
     if (initial) {
+      serverMemoPath.current = path;
       if (!dirty.current) {
         setMemo(initial);
         setContent(initial.content);
@@ -55,6 +73,7 @@ export function InlineMemo({
     void api<Memo>(path)
       .then((value) => {
         if (!stopped) {
+          serverMemoPath.current = path;
           if (!dirty.current) {
             setMemo(value);
             setContent(value.content);
@@ -76,6 +95,7 @@ export function InlineMemo({
         ? (await api<{ memo: Memo }>(`/exercises/context?name=${encodeURIComponent(name)}`)).memo
         : await api<Memo>(path);
       setMemo(value);
+      serverMemoPath.current = path;
       setContent(value.content);
       dirty.current = false;
       setDraftState("saved");
@@ -106,11 +126,13 @@ export function InlineMemo({
             }),
           });
           setMemo(saved);
+          serverMemoPath.current = path;
           dirty.current = false;
           setDraftState("saved");
           if (!removeMemoDraft(key)) setError("保存しましたが、端末の下書きを消去できません。");
           setEditing(false);
           onSaved?.();
+          void recordCache?.refresh();
         } catch (reason) {
           setError(reason instanceof Error ? reason.message : "保存できません");
         } finally {

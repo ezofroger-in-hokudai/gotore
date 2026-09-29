@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>前回値の取得待ち・採用状態</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #eee; color: #222; font-family: system-ui, sans-serif; }
+    main { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; padding: 24px; }
+    section { width: min(390px, 100%); min-height: 720px; background: white; }
+    header { height: 48px; padding: 10px 16px; background: #171717; color: white; display: flex; justify-content: space-between; align-items: center; }
+    header button { background: #d52c35; color: white; border: 0; border-radius: 8px; padding: 9px; }
+    h1 { margin: 18px 16px; font-size: 21px; }
+    .sets { margin: 16px; min-height: 175px; border-bottom: 1px solid #ddd; color: #777; font-size: 14px; }
+    .memo { margin: 12px 16px; font-size: 14px; }
+    .waiting { margin: 16px; min-height: 144px; border: 1px solid #e5e5e5; border-radius: 12px; display: grid; align-content: center; justify-items: center; gap: 12px; color: #666; font-size: 14px; }
+    .actions { display: flex; gap: 18px; }
+    .actions button { color: #333; background: none; border: 0; text-decoration: underline; font: inherit; }
+    label { display: block; text-align: center; margin: 16px; color: #666; }
+  </style>
+</head>
+<body>
+<main>
+  <div><label>取得中</label><section><header><strong>E-GOTORE</strong><button>トレーニング終了</button></header><h1>ベンチプレス</h1><div class="sets">今回のセット　／　前回のセット</div><p class="memo">種目メモ：メモ</p><p class="memo">今日のメモ：メモ</p><div class="waiting">前回の記録を確認中…</div></section></div>
+  <div><label>取得失敗</label><section><header><strong>E-GOTORE</strong><button>トレーニング終了</button></header><h1>ベンチプレス</h1><div class="sets">今回のセット　／　前回のセット</div><p class="memo">種目メモ：メモ</p><p class="memo">今日のメモ：メモ</p><div class="waiting"><span>前回の記録を確認中…</span><span>前回の記録を取得できませんでした。</span><div class="actions"><button>再試行</button><button>前回値なしで入力</button></div></div></section></div>
+</main>
+</body>
+</html>
