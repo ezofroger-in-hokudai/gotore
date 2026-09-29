@@ -18,7 +18,7 @@ test("0セットの要約は開かず、最初のセットを追加すると展�
   await page.getByRole("button", { name: "次の種目へ", exact: true }).click();
   await expect(today.locator("summary")).toBeVisible();
   const marker = today.locator(".today-training-marker");
-  await expect(marker).toHaveCSS("font-size", "10px");
+  await expect(marker).toHaveCSS("font-size", "12px");
   const markerBox = await marker.boundingBox();
   const titleBox = await today.locator(".today-training-title").boundingBox();
   expect(markerBox?.x).toBeLessThan(titleBox?.x ?? 0);
