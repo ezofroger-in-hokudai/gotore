@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>E-GOTORE 履歴画面の方向性 3案</title>
+    <style>
+      :root { color-scheme: light; --ink:#202127; --red:#d32f2f; --paper:#f5f5f6; --white:#fff; --line:#e1e2e5; --muted:#6b6d74; --track:#ededf0; }
+      * { box-sizing:border-box; }
+      html,body { margin:0; min-height:100%; }
+      body { background:#e9eaed; color:var(--ink); font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-tap-highlight-color:transparent; }
+      button,select { font:inherit; }
+      button { cursor:pointer; }
+      button:focus-visible,select:focus-visible { outline:3px solid rgba(211,47,47,.38); outline-offset:2px; }
+      .preview-bar { position:sticky; top:0; z-index:20; padding:10px 12px 12px; background:rgba(255,255,255,.97); border-bottom:1px solid #d4d5d8; backdrop-filter:blur(10px); }
+      .preview-inner { max-width:760px; margin:auto; }
+      .preview-title { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+      .preview-title strong { font-size:15px; }
+      .preview-title small { color:var(--muted); }
+      .option-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:8px; padding:4px; border-radius:8px; background:var(--track); }
+      .option-tabs button { min-height:42px; border:0; border-radius:6px; background:transparent; color:#5a5c62; font-size:12px; font-weight:700; }
+      .option-tabs button[aria-pressed="true"] { background:var(--white); color:var(--ink); box-shadow:0 1px 4px #0002; }
+      .option-note { margin:7px 2px 0; min-height:18px; color:#55575c; font-size:12px; }
+      .stage { display:flex; justify-content:center; padding:16px 12px 24px; }
+      .phone { position:relative; display:flex; flex-direction:column; width:min(100%,390px); height:min(844px,calc(100dvh - 155px)); min-height:540px; overflow:hidden; background:var(--paper); box-shadow:0 16px 42px #16181e2b; }
+      .app-header { flex:none; display:flex; align-items:center; height:48px; padding:0 16px; background:var(--ink); color:var(--white); }
+      .logo { font-size:22px; font-weight:900; letter-spacing:-.7px; }
+      .logo span { color:#ff625b; }
+      .screen { flex:1; overflow-y:auto; padding:15px 16px 128px; scrollbar-width:thin; }
+      h1,h2,h3,p { margin:0; }
+      h1 { font-size:21px; line-height:1.25; }
+      h2 { font-size:16px; line-height:1.3; }
+      .eyebrow { color:var(--red); font-size:10px; font-weight:800; letter-spacing:.12em; }
+      .muted { color:var(--muted); }
+      .small { font-size:12px; }
+      .intro { margin:3px 0 15px; color:var(--muted); font-size:12px; }
+      .section { margin-top:19px; }
+      .section-head { display:flex; align-items:end; justify-content:space-between; gap:8px; margin-bottom:9px; }
+      .section-head small { color:var(--muted); font-size:11px; }
+      .metric-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); background:var(--white); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+      .metric { min-width:0; padding:11px 2px 10px; text-align:center; }
+      .metric+.metric { border-left:1px solid var(--line); }
+      .metric b { display:block; font-size:18px; line-height:1.2; letter-spacing:-.5px; white-space:nowrap; }
+      .metric small { display:block; margin-top:3px; color:var(--muted); font-size:10px; }
+      .dark-summary { padding:15px 15px 13px; border-radius:12px; background:var(--ink); color:#fff; }
+      .dark-summary .eyebrow { color:#ff766f; }
+      .dark-summary h2 { margin:3px 0 11px; font-size:17px; }
+      .dark-summary .metric-grid { background:transparent; border-color:#505158; }
+      .dark-summary .metric+.metric { border-color:#505158; }
+      .dark-summary .metric small { color:#c7c8ce; }
+      .dark-summary .metric { padding-bottom:1px; }
+      .summary-line { display:flex; justify-content:space-between; gap:8px; padding:11px 1px 0; color:#d2d3d8; font-size:11px; }
+      .summary-line strong { color:#fff; font-size:13px; }
+      .period-card { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px; background:#fff; border:1px solid var(--line); border-radius:9px; }
+      .period-card b { font-size:13px; }
+      .period-card span { color:var(--muted); font-size:11px; }
+      .heatmap-wrap { padding:11px 10px 10px; border:1px solid var(--line); border-radius:11px; background:#fff; }
+      .heatmap-months { display:flex; justify-content:space-around; margin:0 0 6px 16px; color:var(--muted); font-size:10px; }
+      .heatmap-body { display:flex; gap:5px; }
+      .heatmap-weekdays { display:grid; grid-template-rows:repeat(7,10px); gap:3px; width:15px; color:var(--muted); font-size:9px; line-height:10px; }
+      .heatmap { display:grid; flex:1; grid-auto-flow:column; grid-template-rows:repeat(7,10px); grid-auto-columns:minmax(0,1fr); gap:3px; }
+      .heatmap button { width:100%; min-width:0; height:10px; padding:0; border:0; border-radius:2px; background:#e9eaec; }
+      .heatmap button[data-level="1"] { background:#f6d8d6; }
+      .heatmap button[data-level="2"] { background:#eaa19d; }
+      .heatmap button[data-level="3"] { background:#d95550; }
+      .heatmap button[data-level="4"] { background:#ad2525; }
+      .heatmap button[aria-pressed="true"] { outline:2px solid #27282d; outline-offset:1px; }
+      .heatmap-foot { display:flex; justify-content:space-between; gap:6px; margin-top:8px; color:var(--muted); font-size:10px; }
+      .heatmap-key { display:flex; gap:3px; align-items:center; white-space:nowrap; }
+      .heatmap-key i { width:9px; height:9px; border-radius:2px; background:#e9eaec; }
+      .heatmap-key i:nth-of-type(2) { background:#f6d8d6; }
+      .heatmap-key i:nth-of-type(3) { background:#eaa19d; }
+      .heatmap-key i:nth-of-type(4) { background:#d95550; }
+      .heatmap-key i:nth-of-type(5) { background:#ad2525; }
+      .day-detail { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:45px; margin-top:8px; padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:#fafafa; font-size:12px; }
+      .day-detail b { white-space:nowrap; }
+      .day-detail span { color:var(--muted); text-align:right; }
+      .graph-panel { padding:13px 13px 9px; border:1px solid var(--line); border-radius:11px; background:#fff; }
+      .graph-head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+      .graph-head select { width:136px; height:36px; padding:0 8px; border:1px solid #cfd0d3; border-radius:7px; background:#fff; font-size:12px; }
+      .graph-sub { margin:10px 0 6px; color:var(--muted); font-size:11px; }
+      .graph-numbers { display:flex; align-items:baseline; gap:9px; }
+      .graph-numbers strong { font-size:29px; line-height:1.2; letter-spacing:-1px; }
+      .graph-numbers b { color:var(--red); font-size:13px; }
+      .graph-svg { display:block; width:100%; height:132px; margin-top:3px; overflow:visible; }
+      .graph-labels { display:grid; grid-template-columns:repeat(6,1fr); color:var(--muted); font-size:10px; text-align:center; }
+      .graph-caption { display:flex; justify-content:space-between; gap:6px; margin-top:10px; padding-top:9px; border-top:1px solid var(--line); color:var(--muted); font-size:11px; }
+      .graph-caption b { color:var(--ink); }
+      .milestones { border-top:1px solid var(--line); }
+      .milestone { display:grid; grid-template-columns:33px 1fr auto; align-items:center; gap:9px; min-height:59px; border-bottom:1px solid var(--line); }
+      .milestone-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:#f9e6e5; color:var(--red); font-size:16px; font-weight:800; }
+      .milestone b { display:block; font-size:12px; }
+      .milestone small { display:block; color:var(--muted); font-size:10px; }
+      .milestone time { color:var(--muted); font-size:10px; }
+      .record-list { border-top:1px solid var(--line); }
+      .record { display:block; width:100%; padding:11px 1px; border:0; border-bottom:1px solid var(--line); background:transparent; text-align:left; }
+      .record-top { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+      .record-top b { font-size:12px; }
+      .record-top small { color:var(--muted); font-size:11px; }
+      .record-name { display:block; margin-top:2px; font-size:12px; }
+      .record-extra { display:block; margin-top:7px; padding:7px 9px; border-left:2px solid var(--red); color:#55575d; background:#fff; font-size:11px; }
+      .wide-hint { display:flex; justify-content:space-between; gap:8px; padding:11px 12px; border-radius:9px; background:#fff; border:1px solid var(--line); font-size:11px; }
+      .wide-hint strong { font-size:12px; }
+      .wide-hint span { color:var(--muted); text-align:right; }
+      .bottom-nav { flex:none; display:grid; grid-template-columns:repeat(4,1fr); height:66px; border-top:1px solid var(--line); background:#fff; }
+      .bottom-nav button { position:relative; border:0; background:transparent; color:#73757a; font-size:12px; }
+      .bottom-nav button.on { color:var(--red); font-weight:800; }
+      .bottom-nav button.on:before { content:""; position:absolute; top:0; left:20%; right:20%; height:2px; background:var(--red); }
+      .start { position:absolute; right:16px; bottom:78px; z-index:4; width:112px; height:52px; border:0; border-radius:12px; background:var(--red); color:#fff; box-shadow:0 7px 20px #661d1d46; font-weight:900; letter-spacing:.08em; }
+      @media(max-width:520px) { .stage { padding:0; } .phone { width:100%; height:calc(100dvh - 116px); min-height:480px; box-shadow:none; } .preview-title small { display:none; } }
+    </style>
+  </head>
+  <body>
+    <aside class="preview-bar" aria-label="案の切り替え">
+      <div class="preview-inner">
+        <div class="preview-title"><strong>履歴画面・方向性 3案</strong><small>架空データを用いた操作可能なプレビュー</small></div>
+        <div class="option-tabs" id="optionTabs"></div>
+        <p class="option-note" id="optionNote"></p>
+      </div>
+    </aside>
+    <main class="stage"><div class="phone" id="phone"></div></main>
+    <script>
+      const options = [
+        { label:"A 積み重ね", note:"累計 → 活動の分布 → 種目別の成長 → 記録。まず全体像を見る基本形。" },
+        { label:"B 成長を主役", note:"種目の伸びを大きく見せ、累計と活動を補助に置く。" },
+        { label:"C 活動を主役", note:"長期ヒートマップと節目から、自分の続けてきた時間を振り返る。" }
+      ];
+      const records = [
+        { date:"9月27日 日", title:"ベンチプレス・ダンベルフライ・スクワット", meta:"3種目 · 12セット · 4,890kg", detail:"ベンチプレス 70kg × 5回 × 3セット / ダンベルフライ 16kg × 10回 × 4セット / スクワット 80kg × 8回 × 5セット" },
+        { date:"9月24日 木", title:"スクワット・レッグプレス", meta:"2種目 · 10セット · 9,000kg", detail:"スクワット 90kg × 5回 × 4セット / レッグプレス 120kg × 10回 × 6セット" },
+        { date:"9月21日 月", title:"懸垂・ラットプルダウン", meta:"2種目 · 9セット · 2,500kg", detail:"懸垂 0kg × 8回 × 4セット / ラットプルダウン 50kg × 10回 × 5セット" }
+      ];
+      const exercises = {
+        bench:{ name:"ベンチプレス", start:50, latest:70, values:[50,55,57.5,62.5,65,70], note:"2025年11月の初記録から +20kg" },
+        squat:{ name:"スクワット", start:70, latest:100, values:[70,75,80,85,90,100], note:"2025年11月の初記録から +30kg" },
+        lat:{ name:"ラットプルダウン", start:35, latest:50, values:[35,37.5,40,42.5,47.5,50], note:"2025年12月の初記録から +15kg" }
+      };
+      let selectedOption = 0;
+      let selectedExercise = "bench";
+      let selectedDay = "2026-09-27";
+      let expandedRecord = -1;
+      const escape = (value) => String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+      const dateLabel = (value) => `${Number(value.slice(5,7))}月${Number(value.slice(8,10))}日`;
+      const sampleDays = {"2026-09-27":{ sets:12, volume:4890, level:3 },"2026-09-24":{ sets:10, volume:9000, level:4 },"2026-09-21":{ sets:9, volume:2500, level:2 }};
+      function dayLevel(index) { return (index * 11 + Math.floor(index / 7) * 5) % 17 < 8 ? 0 : 1 + ((index * 3 + Math.floor(index / 6)) % 4); }
+      function dayStats(day,index) { return sampleDays[day] ?? (()=>{ const level=dayLevel(index); return {level,sets:level*2+1,volume:level*620+480}; })(); }
+      function metricGrid() {
+        return `<div class="metric-grid" aria-label="これまでの活動"><div class="metric"><b>76日</b><small>活動日数</small></div><div class="metric"><b>84回</b><small>記録回数</small></div><div class="metric"><b>1,026</b><small>セット</small></div><div class="metric"><b>246,380</b><small>kg</small></div></div>`;
+      }
+      function heatmap() {
+        const first = new Date(Date.UTC(2026,5,29));
+        const cells = Array.from({length:91},(_,index) => {
+          const day = new Date(first.getTime()+index*86400000).toISOString().slice(0,10);
+          const stats = dayStats(day,index);
+          return `<button type="button" data-day="${day}" data-level="${stats.level}" aria-label="${dateLabel(day)} ${stats.level ? `${stats.sets}セット` : "記録なし"}" aria-pressed="${day===selectedDay}"></button>`;
+        }).join("");
+        const selectedIndex = Math.round((Date.parse(`${selectedDay}T00:00:00Z`)-first.getTime())/86400000);
+        const stats = dayStats(selectedDay,selectedIndex);
+        return `<div class="heatmap-wrap"><div class="heatmap-months"><span>7月</span><span>8月</span><span>9月</span></div><div class="heatmap-body"><div class="heatmap-weekdays"><span>月</span><span></span><span>水</span><span></span><span>金</span><span></span><span>日</span></div><div class="heatmap">${cells}</div></div><div class="heatmap-foot"><span>6/29–9/27 · 濃さは日別の総負荷</span><span class="heatmap-key">少 <i></i><i></i><i></i><i></i><i></i><i></i> 多</span></div><div class="day-detail"><b>${dateLabel(selectedDay)}</b><span>${stats.level ? `${stats.sets}セット · ${stats.volume.toLocaleString("ja-JP")}kg` : "この日の記録はありません"}</span></div></div>`;
+      }
+      function graph() {
+        const selected = exercises[selectedExercise];
+        const values = selected.values;
+        const min = Math.min(...values)-8;
+        const max = Math.max(...values)+8;
+        const points = values.map((value,index) => `${24+index*55},${111-((value-min)/(max-min))*89}`).join(" ");
+        const dots = values.map((value,index) => `<circle cx="${24+index*55}" cy="${111-((value-min)/(max-min))*89}" r="${index===5?5:3.5}" fill="${index===5?'#d32f2f':'#fff'}" stroke="#d32f2f" stroke-width="2" />`).join("");
+        return `<div class="graph-panel"><div class="graph-head"><h2>種目の成長</h2><select id="exerciseChoice" aria-label="成長を見る種目">${Object.entries(exercises).map(([key,value])=>`<option value="${key}" ${key===selectedExercise?'selected':''}>${value.name}</option>`).join("")}</select></div><p class="graph-sub">最高重量 · 2025年11月–2026年9月</p><div class="graph-numbers"><strong>${selected.latest}<small style="font-size:14px">kg</small></strong><b>初記録から +${selected.latest-selected.start}kg</b></div><svg class="graph-svg" viewBox="0 0 320 135" role="img" aria-label="${selected.name}の最高重量が${selected.start}kgから${selected.latest}kgへ伸びた折れ線グラフ"><path d="M18 111H308M18 66H308M18 22H308" fill="none" stroke="#e9eaec" stroke-width="1"/><polyline points="${points}" fill="none" stroke="#d32f2f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg><div class="graph-labels"><span>11月</span><span>1月</span><span>3月</span><span>5月</span><span>7月</span><span>9月</span></div><div class="graph-caption"><span>初記録 <b>${selected.start}kg</b></span><span>最近の最高 <b>${selected.latest}kg</b></span></div></div>`;
+      }
+      function milestoneList() {
+        return `<div class="milestones"><div class="milestone"><span class="milestone-icon">✦</span><span><b>1,000セットに到達</b><small>小さな積み重ねが大きな記録に</small></span><time>9/21</time></div><div class="milestone"><span class="milestone-icon">↗</span><span><b>ベンチプレス 70kg</b><small>初記録より20kgアップ</small></span><time>9/15</time></div><div class="milestone"><span class="milestone-icon">●</span><span><b>最初のトレーニング</b><small>ここから始まりました</small></span><time>2025/11</time></div></div>`;
+      }
+      function recordList(limit=3) {
+        return `<div class="record-list">${records.slice(0,limit).map((item,index)=>`<button type="button" class="record" data-record="${index}" aria-expanded="${expandedRecord===index}"><span class="record-top"><b>${item.date}</b><small>${item.meta}　›</small></span><span class="record-name">${item.title}</span>${expandedRecord===index?`<span class="record-extra">${escape(item.detail)}</span>`:''}</button>`).join("")}</div>`;
+      }
+      function optionA() {
+        return `<p class="eyebrow">MY HISTORY</p><h1>自分の積み重ね</h1><p class="intro">2025年11月から今日まで</p><div class="dark-summary"><p class="eyebrow">ALL TIME</p><h2>ここまでの頑張り</h2>${metricGrid()}<div class="summary-line"><span>今月も14日、体を動かしました</span><strong>9月 +37,790kg</strong></div></div><section class="section"><div class="section-head"><h2>トレーニングの足あと</h2><small>直近13週間</small></div>${heatmap()}</section><section class="section"><div class="section-head"><h2>伸びてきた記録</h2></div>${graph()}</section><section class="section"><div class="section-head"><h2>最近の記録</h2></div>${recordList()}</section>`;
+      }
+      function optionB() {
+        return `<p class="eyebrow">YOUR PROGRESS</p><h1>伸びた分が、見えてくる</h1><p class="intro">積み重ねを種目ごとの記録で振り返る</p>${graph()}<section class="section"><div class="section-head"><h2>ここまでの頑張り</h2><small>2025年11月から</small></div>${metricGrid()}</section><section class="section"><div class="section-head"><h2>続けた日々</h2><small>直近13週間</small></div>${heatmap()}</section><section class="section"><div class="section-head"><h2>最近の記録</h2></div>${recordList(2)}</section>`;
+      }
+      function optionC() {
+        return `<p class="eyebrow">YOUR JOURNEY</p><h1>続けてきた日々</h1><p class="intro">休んだ日も含めて、自分の歩みを振り返る</p><div class="wide-hint"><strong>直近13週間で 49日</strong><span>トレーニングを記録</span></div><section class="section" style="margin-top:11px">${heatmap()}</section><section class="section"><div class="section-head"><h2>これまでの節目</h2></div>${milestoneList()}</section><section class="section"><div class="section-head"><h2>積み重ねた量</h2></div>${metricGrid()}</section><section class="section"><div class="section-head"><h2>種目の成長</h2></div>${graph()}</section><section class="section"><div class="section-head"><h2>最近の記録</h2></div>${recordList(2)}</section>`;
+      }
+      function render(resetScroll=false) {
+        document.getElementById("optionTabs").innerHTML = options.map((option,index)=>`<button type="button" data-option="${index}" aria-pressed="${index===selectedOption}">${option.label}</button>`).join("");
+        document.getElementById("optionNote").textContent = options[selectedOption].note;
+        const phone = document.getElementById("phone");
+        const scroll = phone.querySelector(".screen")?.scrollTop ?? 0;
+        phone.innerHTML = `<header class="app-header"><div class="logo">E-GO<span>TORE</span></div></header><div class="screen">${[optionA,optionB,optionC][selectedOption]()}</div><button type="button" class="start" aria-label="記録を開始する見本">START</button><nav class="bottom-nav" aria-label="メインナビゲーション"><button type="button">ホーム</button><button type="button">グループ</button><button type="button" class="on" aria-current="page">履歴</button><button type="button">設定</button></nav>`;
+        phone.querySelector(".screen").scrollTop = resetScroll ? 0 : scroll;
+      }
+      document.addEventListener("click",event=>{
+        const option=event.target.closest("[data-option]");
+        if(option){ selectedOption=Number(option.dataset.option); expandedRecord=-1; render(true); return; }
+        const day=event.target.closest("[data-day]");
+        if(day){ selectedDay=day.dataset.day; render(); return; }
+        const record=event.target.closest("[data-record]");
+        if(record){ const index=Number(record.dataset.record); expandedRecord=expandedRecord===index?-1:index; render(); return; }
+      });
+      document.addEventListener("change",event=>{ if(event.target.id==="exerciseChoice"){ selectedExercise=event.target.value; render(); } });
+      render();
+    </script>
+  </body>
+</html>

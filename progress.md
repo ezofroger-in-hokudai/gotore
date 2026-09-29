@@ -1,5 +1,51 @@
 # progress.md
 
+## 2026-09-29 02:51 STARTなどの固定操作が画面遷移中に隠れる問題を修正（Issue #207）
+- 変更内容: 主画面内容とは別のView Transitionレイヤーへ`START / RESUME`、ヘッダー、下部ナビを分け、画面内容より手前へ固定した。旧スナップショットを隠し、新しい固定操作をアニメーションなしで表示する。採用固定プレビューにもSTARTの位置を追加した。
+- 目的: 画面切替中にSTART等が新画面の下へ潜り、遷移後に再表示されるように見える問題を解消するため。
+- 影響範囲: 固定操作の遷移中の描画順。ボタンの動作、画面遷移の距離・時間、API・DBは変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/tests/e2e/navigation-motion.spec.ts`、`frontend/public/previews/navigation-motion-adopted.html`、`docs/design/navigation-motion.md`、`task.md`。
+- 検証: 修正前に固定STARTの遷移名`none`・描画層`auto`でE2Eが失敗することを確認。修正後は遷移・START/RESUME・左端戻りの関連E2E13件成功。`make check`でbackend 103件成功・DB統合178件skip（専用DB未指定）、frontend単体110件・lint・型・build成功。`git diff --check`を確認。
+- 未解決事項: 実機iOS・Androidで固定操作の見え方を再確認する。PRの全E2E CI・実装者以外のレビューは未完了。
+- 次のアクション: PR #243へ追記してレビューし、実機で切替中の重なり順を確認する。
+
+## 2026-09-29 01:03 画面切替で前画面が残像として残る問題を修正（Issue #207）
+- 変更内容: View Transition中に旧画面のスナップショットを非表示にし、新画面を不透明のまま18px横移動させるよう変更した。API非対応時と採用固定プレビューも同じ動きへ合わせた。
+- 目的: ユーザーの実機フィードバックで前画面が強く残って見えたため、画面切替の方向は保ちながら残像をなくすため。
+- 影響範囲: 主画面の遷移表示のみ。履歴、入力、API、DBは変更しない。
+- 関連ファイル: `frontend/src/app/v2.css`、`frontend/src/features/v2/navigation-motion.ts`、`frontend/tests/e2e/navigation-motion.spec.ts`、`frontend/public/previews/navigation-motion-adopted.html`、`docs/design/navigation-motion.md`、`task.md`。
+- 検証: 修正前のE2Eで旧画面スナップショットの切替開始時不透明度1を再現し、修正後は0で成功。画面遷移・左端戻り・シート・STARTの関連E2E14件成功。frontend lint・型検査・単体110件・production build、プレビューJavaScript構文、`git diff --check`成功。グループ一覧カードを押せない既存E2Eは変更前`main`でも再現し、今回の残像修正後も残るため別の原因として追跡する。
+- 未解決事項: iOS・Android実機で残像の消え方と18px横移動を再確認する。既存E2Eのグループカード表示待ちも未解決。
+- 次のアクション: 関連E2E・frontendチェックを完了し、PRで修正を共有する。
+## 2026-09-29 12:11 履歴PR #249のCI成功と統合判断
+
+- 変更内容: Issue #248に紐づくPR #249を作成し、CIのbackend・frontend・database、Vercel Previewが成功した。databaseジョブではmigration、専用DB、全E2Eが成功した。
+- 目的: 採用した履歴画面を、検証結果と未実施範囲が追える状態でmainへ統合するため。
+- 影響範囲: PR・CIの記録のみ。画面・APIの追加変更なし。
+- 関連ファイル: `progress.md`、PR #249。
+- 検証: PRは競合なし・マージ可能。ローカルの`make check`と関連E2E 16件に加え、CIの全必須チェックとVercelが成功した。
+- 未解決事項: スマホ実機でPRビルドの最終確認は未実施。第三者のコードレビューは付いていないが、mainにレビュー必須設定はなく、ユーザーからPR・マージの明示依頼があるため今回の統合を進める。
+- 次のアクション: 文書追記後のCIを再確認し、PR #249をmainへマージする。
+
+## 2026-09-29 12:03 採用した履歴画面をIssue #248のPRブランチへ分離
+
+- 変更内容: 最新main起点の専用作業ツリーを作り、個人履歴の通算・月間カレンダー・連続グラフ・人体図、グループの共通カレンダー・部位別グラフ、必要な集計API・テスト・採用プレビューと設計資料を移した。既存作業ツリーの画面遷移、スタンプ、プロフィール等の別件変更は持ち込まない。
+- 目的: ユーザーが採用した履歴画面と人体図を追跡可能な単位でレビューし、他の未コミット変更を混ぜずにmainへ統合するため。
+- 影響範囲: 個人・グループ履歴の画面、履歴集計API、共通記録カードの日付表示、関連資料。
+- 関連ファイル: `docs/design/history-screen.md`、`docs/design/group-screen.md`、`docs/history-analytics.md`、`backend/app/api/routes/analytics.py`、`frontend/src/features/v2/personal-history.tsx`、`frontend/src/features/v2/group-history-calendar.tsx`、`frontend/src/features/v2/group-history-graph.tsx`ほかIssue #248のPR差分。
+- 検証: `make check-fast`と`make check`成功、backend単体とfrontend単体116件・lint・型・本番ビルドが成功。個人履歴とグループ履歴の関連E2E 16件成功。DB統合テストは専用の`TEST_DATABASE_URL`未設定によりskipされ、CIの専用DBで実行する。
+- 未解決事項: PRの全E2Eとレビュー、スマホ実機での最終確認は未実施。
+- 次のアクション: 差分と画像・リンクを最終確認し、PRを作成してCIとレビューを確認する。
+
+## 2026-09-29 01:50 ホームの仲間情報を記録開始直後へ引き継ぐ（Issue #227）
+- 変更内容: ホームと記録画面の当日仲間データ取得を同じ画面内リソースに統合した。開始直後に取得済みのグループタブと仲間アイコンを表示し続け、記録入力中は再取得を停止する。
+- 目的: START後に取得済みの仲間情報が空の丸へ戻り、グループタブが動く問題を解消するため。
+- 影響範囲: 同一ログイン中の当日仲間表示と取得タイミング。API・DB・共有範囲は変更しない。
+- 関連ファイル: `frontend/src/features/v2/workspace.tsx`、`frontend/src/features/v2/community.tsx`、`frontend/src/features/session/session-screen.tsx`、`frontend/tests/e2e/peer-handoff.spec.ts`、`docs/design/training-session.md`。
+- 検証: 取得済みの仲間をSTART直後も表示し、背景の再確認で403が返ったら消去するブラウザE2Eが成功。`make check`成功（backend単体103件、DB統合178件は専用DB未指定でskip、frontend単体110件、lint・型・build）。関連E2E 11件成功。
+- 未解決事項: 実機PWAでの表示確認と、全E2Eを含むCIは未実施。
+- 次のアクション: PRの全E2E・レビューを確認し、実機で開始直後の表示を確認する。
+
 ## 2026-09-29 00:58 長いグループ名の選択タブを一定幅に修正（Issue #203）
 - 変更内容: ホームのタイムライン絞り込みと記録中の仲間グループ選択で、個別グループ名のタブを112px幅に固定し、長い名前の右端だけをフェードさせた。正式名は読み上げ名・タイトルに保持。採用資料とプレビュー、390pxの実画面画像2枚を更新した。
 - 目的: 長い名前が隣の選択肢の幅を奪う問題を解消し、短い名前と選択状態、横スクロールを維持するため。
@@ -3952,3 +3998,11 @@
 - 目的: 展開前後で三角形だけが大きく見えたり、見出し位置が揺れたりしないようにするため。
 - 影響範囲: トレーニング記録画面の開閉記号、関連E2E、画面設計資料。開閉動作、記録内容、API・DBは変更しない。
 - 検証: 閉じた状態と開いた状態の疑似要素の幅・高さが一致し、回転状態だけが変わることをE2E期待値へ追加した。`make check` 成功（backend 103件成功/178件DBなしskip、frontend単体110件成功、lint・型・production build成功）。
+
+## 2026-09-29 最新mainの統合と競合解消
+
+- 変更内容: `origin/main` の `5153b4c` までを取り込み、記録画面・設計資料・タスク資料・ワークスペースの競合を解消した。mainの履歴画面とホーム側の当日仲間データ共有は保持し、記録画面への仲間タイムライン再導入だけを除外した。
+- 目的: PR #247を最新mainへ統合可能にし、記録画面から仲間表示をなくす確定仕様を維持するため。
+- 影響範囲: mainから追加された履歴・分析・画面遷移関連一式と、競合した記録画面・ワークスペース・資料。記録画面では当日仲間APIを取得せず、ホームでは従来どおり取得する。
+- 競合対応: `docs/design/training-session.md`、`frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/workspace.tsx`、`task.md` の4件を解消。記録画面への仲間引き継ぎ専用E2E `peer-handoff.spec.ts` は確定仕様と矛盾するため統合対象から除外した。
+- 検証: `make check` 成功（backend 104件成功/180件DBなしskip、frontend単体116件成功、lint・型・production build成功）。競合マーカーと未解消ファイルがないことを確認する。

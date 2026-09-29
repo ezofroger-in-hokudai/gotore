@@ -43,6 +43,8 @@ def test_personal_statistics_include_private_and_old_rows_but_not_other_users(cl
         "volume": 700,
         "weight": 100,
         "rm": 100,
+        "weight_exercise": "ベンチ",
+        "rm_exercise": "ベンチ",
         "days": 2,
         "people": 1,
     }
@@ -51,6 +53,38 @@ def test_personal_statistics_include_private_and_old_rows_but_not_other_users(cl
     assert client.get("/api/analytics?period=all&offset=1").status_code == 422
     assert client.get("/api/analytics?exercise=不存在").json()["totals"]["sets"] == 0
     assert client.get("/api/analytics").headers["cache-control"] == "no-store"
+
+
+def test_personal_history_summary_and_all_exercise_strength_follow_current_classification(client):
+    from tests.test_body_part_activity import option
+
+    option(client, "ベンチ", "chest")
+    option(client, "スクワット", "legs")
+    save(client, day="2026-09-01", name="ベンチ", weight=60)
+    save(client, day="2026-09-02", name="スクワット", weight=80)
+    save(client, user="B", day="2026-09-03", name="ベンチ", weight=200)
+
+    summary = client.get("/api/history/summary").json()
+    assert summary["workout_count"] == 2
+    assert summary["total_sets"] == 2
+    assert summary["total_volume"] == 1400
+    assert [(row["name"], row["body_part"]) for row in summary["exercises"]] == [
+        ("スクワット", "legs"),
+        ("ベンチ", "chest"),
+    ]
+    assert client.get("/api/history/summary", headers={"X-Test-User": "B"}).json()[
+        "workout_count"
+    ] == 1
+    assert client.get("/api/analytics?body_part=unknown").status_code == 422
+    monthly = client.get("/api/analytics?period=month").json()["totals"]
+    assert monthly["weight"] == 80
+    assert monthly["weight_exercise"] == "スクワット"
+    chest = client.get("/api/analytics?period=month&body_part=chest").json()["totals"]
+    assert chest["volume"] == 600
+    assert chest["weight"] == 60
+    assert client.get("/api/workouts/activity?month=2026-09&exercise=ベンチ").json()[
+        "total_volume"
+    ] == 600
 
 
 def test_group_scope_ties_and_revoked_access(client, connection):
@@ -83,6 +117,24 @@ def test_group_scope_ties_and_revoked_access(client, connection):
     assert response.status_code == 204, response.text
     assert client.get(endpoint).json()["totals"]["sets"] == 1
     assert client.get(endpoint, headers={"X-Test-User": "B"}).status_code == 404
+
+
+def test_group_graph_filters_shared_records_by_body_part(client):
+    from tests.test_body_part_activity import option
+
+    option(client, "ベンチ", "chest")
+    option(client, "スクワット", "legs")
+    group = create_group(client)
+    gid = group["id"]
+    save(client, group=gid, name="ベンチ", weight=60)
+    save(client, group=gid, name="スクワット", weight=80)
+    save(client, name="ベンチ", weight=200)
+    endpoint = f"/api/groups/{gid}/analytics?period=all&body_part=chest"
+    data = client.get(endpoint).json()
+    assert data["totals"]["volume"] == 600
+    assert data["totals"]["sets"] == 1
+    assert "week" in data["series"]
+    assert client.get(f"/api/groups/{gid}/analytics?body_part=invalid").status_code == 422
 
 
 def test_projection_follows_edit_date_delete_and_rollback(client, connection):

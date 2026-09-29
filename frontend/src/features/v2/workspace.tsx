@@ -1,5 +1,5 @@
 "use client";
-import type { Group, Workout } from "@/lib/api";
+import type { Group, TodayActivity, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
@@ -19,7 +19,7 @@ import { FloatingTraining } from "./floating-training";
 import { CommunityScreen } from "./group-screen";
 import { History } from "./history";
 import { runNavigationMotion } from "./navigation-motion";
-import { GROUP_REFRESH_MS } from "./refresh-interval";
+import { GROUP_REFRESH_MS, todayActivityRefreshMs } from "./refresh-interval";
 import { Preferences, usePreferences } from "./settings";
 import { SharedWorkoutCache } from "./shared-workout-cache";
 import { Sheet } from "./sheet";
@@ -70,6 +70,28 @@ function WorkspaceContent({ session }: { session: Session }) {
   }, [groupList.data, sharedCache]);
   const groupOrder = useGroupOrder(session.user.id, groupList.data);
   const groups = groupOrder.groups;
+  const todayActivity = useResource<TodayActivity>(
+    "/groups/today-activity",
+    refreshKey,
+    todayActivityRefreshMs,
+    true,
+    {
+      enabled: groups.length > 0 && view === "home",
+      retainOnRefresh: true,
+    },
+  );
+  const currentGroupIds = groups
+    .map((group) => group.id)
+    .toSorted()
+    .join(",");
+  const activityGroupIds = todayActivity.data?.groups
+    .map((group) => group.group_id)
+    .toSorted()
+    .join(",");
+  const visibleTodayActivity = {
+    ...todayActivity,
+    data: activityGroupIds === currentGroupIds ? todayActivity.data : null,
+  };
   const [historyReady, setHistoryReady] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   useEffect(() => {
@@ -239,7 +261,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   }
   return (
     <div
-      className={`app-shell v2-app${!opened ? " is-preparing" : ""}${view === "record" ? " recording-view" : ""}${primaryView ? " has-training-shortcut" : ""}`}
+      className={`app-shell v2-app${!opened ? " is-preparing" : ""}${view === "record" ? " recording-view" : ""}${view === "history" ? " personal-history-view" : ""}${primaryView ? " has-training-shortcut" : ""}`}
     >
       {!opened && (
         <main className="auth-page startup-screen">
@@ -303,6 +325,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         <ResourceError resource={groupList} />
         <div hidden={view !== "home"}>
           <CommunityHome
+            today={visibleTodayActivity}
             sharedCache={sharedCache}
             groups={groups}
             onReady={setHomeReady}
@@ -322,7 +345,6 @@ function WorkspaceContent({ session }: { session: Session }) {
               setGroupDetail(true);
               navigate("groups", "detail");
             }}
-            refreshKey={refreshKey}
             active={view === "home"}
           />
         </div>
@@ -364,7 +386,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             onHome={() => navigate("home")}
           />
         )}
-        <div hidden={view !== "history"}>
+        <div hidden={view !== "history"} className="personal-history-shell">
           <History
             guideTarget={guideTarget}
             recent={recentRecords}

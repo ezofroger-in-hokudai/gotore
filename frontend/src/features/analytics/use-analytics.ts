@@ -13,10 +13,11 @@ export function useAnalytics(
   refreshKey: number,
   anchor = "",
   member = "",
+  bodyPart = "",
 ) {
   const [cache] = useState(() => new AnalyticsCache<Analytics>(resourceRequest));
   const wasActive = useRef(false);
-  const path = analyticsPath(scope, period, offset, exercise, anchor, member);
+  const path = analyticsPath(scope, period, offset, exercise, anchor, member, bodyPart);
   useSyncExternalStore(cache.subscribe, cache.snapshot, cache.snapshot);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存や共有変更で全期間の集計を無効化する。
   useEffect(() => {
@@ -59,6 +60,7 @@ export function useAnalytics(
           exercise,
           anchor,
           member,
+          bodyPart,
         ),
         analyticsPath(
           scope,
@@ -67,6 +69,7 @@ export function useAnalytics(
           exercise ? "" : (entry.data?.exercises[0] ?? ""),
           anchor,
           member,
+          bodyPart,
         ),
       ];
       for (const candidate of candidates) if (candidate !== path) cache.request(candidate);
@@ -81,6 +84,7 @@ export function useAnalytics(
     exercise,
     anchor,
     member,
+    bodyPart,
     active,
     prefetch,
     entry?.data,

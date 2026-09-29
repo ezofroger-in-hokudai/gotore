@@ -76,7 +76,8 @@ def test_all_exercises_hide_strength_and_long_ranges_bound_series():
         False,
     )
     assert result["totals"]["weight"] is None
-    assert result["series"].keys() == {"month"}
+    assert result["series"].keys() == {"week", "month"}
+    assert len(result["series"]["week"]) > 1000
     assert len(result["series"]["month"]) <= 321
     assert result["previous_totals"] is None
     assert result["rankings"] == {}
@@ -90,7 +91,24 @@ def test_week_series_limit_includes_partial_weeks():
         None,
         False,
     )
-    assert len(result["series"].get("week", [])) <= 156
+    assert len(result["series"].get("week", [])) > 156
+
+
+def test_personal_all_exercises_reports_source_of_maximum_without_adding_exercises():
+    bench = {**row("2026-09-01", weight=60, rm=70), "exercise_name": "ベンチ"}
+    squat = {**row("2026-09-02", weight=80, rm=85), "exercise_name": "スクワット"}
+    result = build_analytics(
+        analytics_window("month", 0, date(2026, 9, 11)),
+        [bench, squat],
+        ["ベンチ", "スクワット"],
+        None,
+        False,
+        True,
+    )
+    assert result["totals"]["weight"] == 80
+    assert result["totals"]["weight_exercise"] == "スクワット"
+    assert result["totals"]["rm_exercise"] == "スクワット"
+    assert result["series"]["day"][0]["weight_exercise"] == "ベンチ"
 
 
 def test_anchor_selects_complete_past_month_and_week_without_future_records():
