@@ -73,3 +73,7 @@
 ### 実装画面（架空データ）
 
 [個人カレンダー](images/unified-history/personal-calendar.png) · [個人の週グラフ](images/unified-history/personal-graph.png) · [週の実施日](images/unified-history/personal-days.png) · [グループカレンダー](images/unified-history/group-calendar.png) · [グループのメンバー別重量](images/unified-history/group-weight.png)
+
+## 2026-09-29 グループランキングの画面表示を終了
+
+ユーザーとの確認により、グループ詳細にランキングタブを戻さない。現行の詳細タブは「最新記録」「カレンダー」「グラフ」「設定」の4つとし、上記の旧画面配置と「ランキングも残す」という記述は画面について適用しない。集計・共有範囲を確認する既存API契約は今回変更せず、画面のE2Eは現行のグラフと記録一覧に合わせる。APIのランキング項目の廃止は互換性への影響を別途確認して判断する。
