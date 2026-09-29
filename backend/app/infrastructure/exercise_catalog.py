@@ -23,10 +23,18 @@ class ExerciseCatalogRepository:
 
     def options(self, user_id: UUID):
         return self.connection.execute(
-            """SELECT id, name, primary_body_part, secondary_body_parts, revision
-            FROM public.gotore_exercise_options
-            WHERE user_id = %s ORDER BY created_at, name, id""",
-            (user_id,),
+            """SELECT o.id, o.name, o.primary_body_part, o.secondary_body_parts,
+                o.revision, recent.last_performed_on
+            FROM public.gotore_exercise_options o
+            LEFT JOIN (
+                SELECT s.exercise_name, MAX(w.performed_on) AS last_performed_on
+                FROM public.gotore_workout_statistics s
+                JOIN public.gotore_workouts w ON w.id = s.workout_id
+                WHERE w.user_id = %s
+                GROUP BY s.exercise_name
+            ) recent ON recent.exercise_name = o.name
+            WHERE o.user_id = %s ORDER BY o.created_at, o.name, o.id""",
+            (user_id, user_id),
         ).fetchall()
 
     def add(self, user_id: UUID, name: str, primary_body_part="other", secondary_body_parts=None):

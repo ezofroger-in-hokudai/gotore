@@ -160,7 +160,10 @@ function ActiveTraining({
     .toSorted((left, right) => {
       const leftUsed = exercises.some((exercise) => exercise.name === left.name);
       const rightUsed = exercises.some((exercise) => exercise.name === right.name);
-      return Number(rightUsed) - Number(leftUsed) || left.name.localeCompare(right.name, "ja");
+      return (
+        Number(rightUsed) - Number(leftUsed) ||
+        (right.last_performed_on ?? "").localeCompare(left.last_performed_on ?? "")
+      );
     });
   const context = useExerciseContext(
     sessionId,
