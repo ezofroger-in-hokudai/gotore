@@ -49,6 +49,7 @@ export class SessionQueue {
   };
   private listeners = new Set<() => void>();
   private running: Promise<void> | null = null;
+  private rerunRequested = false;
   private stopped = false;
   constructor(private options: Options) {}
   subscribe = (listener: () => void) => {
@@ -235,7 +236,10 @@ export class SessionQueue {
     });
   }
   sync() {
-    if (this.running) return this.running;
+    if (this.running) {
+      this.rerunRequested = true;
+      return this.running;
+    }
     this.running = this.options
       .lock("send", async () => {
         while (!this.stopped) {
@@ -378,8 +382,11 @@ export class SessionQueue {
         }
       })
       .catch((reason) => this.fail(reason))
-      .finally(() => {
+      .finally(async () => {
         this.running = null;
+        const rerun = this.rerunRequested && !this.stopped;
+        this.rerunRequested = false;
+        if (rerun) await this.sync();
       });
     return this.running;
   }
