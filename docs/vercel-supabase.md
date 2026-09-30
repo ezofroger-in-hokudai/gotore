@@ -57,7 +57,7 @@ Config／Secretと反映タイミングは [Vercel環境変数](https://vercel.c
 
 - 公開URLは `https://egotore.com/`。[Google認証ガイド](google-signin.md) に従い、登録前hookとGoogleプロバイダーを設定してから新規登録を許可し、`NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` で再ビルドする。導入前は全体の新規登録を禁止したまま、[管理者発行](admin-managed-accounts.md) を利用する。
 - 公開用のSupabaseプロジェクトを用意する。ローカルDBのテストアカウントや記録は自動移行しない。
-- 対象プロジェクトと既存テーブルを確認したうえで、リポジトリのmigrationを適用する。既存データを消す `db reset` は本番へ実行しない。今回はリモートDB操作を行っていない。具体的な履歴確認・dry-run・適用は [共有DBへの適用手順](../supabase/README.md#共有dbへの適用担当者向け) を参照する。Vercelのbuildや現在のCIはクラウドDBへのmigrationを自動適用しない。
+- 対象プロジェクトと既存テーブルを確認したうえで、リポジトリのmigrationを適用する。既存データを消す `db reset` は本番へ実行しない。具体的な履歴確認・dry-run・適用は [共有DBへの適用手順](../supabase/README.md#共有dbへの適用担当者向け) を参照する。Vercelのbuildや現在のCIはクラウドDBへのmigrationを自動適用しない。
 - Connect画面でTransaction Poolerの接続先を取得し、`DATABASE_URL` に設定する。例のホスト名をそのまま使わない。パスワードの特殊文字はURLエンコードし、`sslmode=require` を指定する。
 - APIは直接SQL接続で認可を実施する。ローカル同様、migrationのテーブルを操作でき、RLSで一律拒否されない信頼済みサーバー用DBロールで接続する。ブラウザへ接続文字列を渡さない。
 - AuthのSite URLと許可するRedirect URLを公開URLに合わせる。登録確認メールを使う場合は送信元・SMTPも設定する。
@@ -70,12 +70,17 @@ Config／Secretと反映タイミングは [Vercel環境変数](https://vercel.c
 Services設定のテストは `frontend/tests/unit/deployment.test.mjs` にあり、`make check` と既存CIのfrontendテストに含まれる。
 Vercel向けのNext.js buildのみを確認する場合は `cd frontend && VERCEL=1 bun run build` とする。これだけではServices全体のデプロイ確認にはならない。
 
+公開前にDB反映を確認すること:
+
+- 追加migrationがあるリリースでは、公開アプリの接続先とリンク先を照合し、共有DBへの適用手順に従ってアプリの更新より先に適用する。適用後の `migration list --linked` に未適用がないことと、追加列・関数・必要な定期処理の存在を確認する。
+- 自動終了の `20260930010000_auto_finish_sessions.sql` は、`last_activity_at`・`auto_ended`、`gotore_expire_inactive_sessions(uuid)`、有効な毎分ジョブ `gotore-auto-finish-sessions` が揃っていることを確認する。Vercelのデプロイ成功だけでは確認完了にしない。
+
 公開後に確認すること:
 
 - `/` がE-GOTORE、`/manifest.webmanifest` とアイコンが正しく配信される。
 - `/api/health` がAPIのJSONを返す。未認証の `/api/groups` は401になる。
 - 管理者が発行した2ユーザーでログイン・グループ作成／参加・記録共有・再ログインができる。共有外のユーザーには見えない。メール自己登録はAuth hookで拒否され、Googleの新規登録・再ログインは別途確認する。
-- 通信失敗時に入力を保持し、保存の再送で重複しない。
+- 通信失敗時に入力を保持し、保存の再送で重複しない。トレーニング開始・終了・終了待ちの再送・次回STARTを実DBで確認し、関連APIが503になっていないことも確認する。
 - iPhone／Androidでホーム画面に追加・再起動して操作できる。
 
 FastAPIの `/docs`・`/redoc`・`/openapi.json` は今回の公開経路に含めない。必要な仕様確認はローカルの8000番で行う。

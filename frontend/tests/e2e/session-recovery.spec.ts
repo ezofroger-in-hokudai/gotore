@@ -18,7 +18,7 @@ test("画面を閉じている間の自動終了を復帰時に知らせる", as
   await expect(page.getByRole("button", { name: "トレーニングを開始", exact: true })).toBeEnabled();
 });
 
-test("自動終了の確認が失敗しても端末記録を保持して再確認できる", async ({ page }) => {
+test("自動終了の照合失敗は表示せず端末記録を保持して自動復帰する", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
   const active = state.session;
@@ -44,10 +44,11 @@ test("自動終了の確認が失敗しても端末記録を保持して再確�
   );
   await page.reload();
   await expect(page.getByTestId("floating-training")).toBeDisabled();
-  await expect(page.getByRole("button", { name: "終了状態を確認する" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "終了状態を確認する" })).toHaveCount(0);
+  await expect(page.getByText("前のトレーニングの終了状態を確認", { exact: false })).toHaveCount(0);
   expect(await page.evaluate((key) => localStorage.getItem(key), key)).not.toBeNull();
   fail = false;
-  await page.getByRole("button", { name: "終了状態を確認する" }).click();
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect(page.getByTestId("floating-training")).toBeEnabled();
   expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();
 });
