@@ -18,6 +18,24 @@ test("画面を閉じている間の自動終了を復帰時に知らせる", as
   await expect(page.getByRole("button", { name: "トレーニングを開始", exact: true })).toBeEnabled();
 });
 
+test("トレーニング終了の確定後は次のSTARTを押せる", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
+  await expect.poll(() => state.saves).toBe(1);
+  await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
+  await page.getByRole("button", { name: "終了する", exact: true }).click();
+  await expect(page.getByRole("region", { name: "トレーニング結果" })).toContainText("保存済み");
+  await page
+    .getByRole("region", { name: "トレーニング結果" })
+    .getByRole("button", { name: "ホーム" })
+    .click();
+  const start = page.getByRole("button", { name: "トレーニングを開始", exact: true });
+  await expect(start).toBeEnabled();
+  await start.click();
+  await expect(page.getByRole("button", { name: "トレーニング終了", exact: true })).toBeVisible();
+});
+
 for (const resume of [false, true]) {
   test(`初回復元失敗からオンラインで${resume ? "同じセッションを再開" : "開始可能に復帰"}し、多重取得しない`, async ({
     page,

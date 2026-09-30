@@ -185,6 +185,21 @@ test("終了は端末に先に記録し、未送信セットの後に送る", as
   expect(f.finishes).toBe(1);
   expect(f.stored).toBeNull();
 });
+test("同期の終了直前に終了操作が入っても送信を続ける", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  let requested = false;
+  let finish: Promise<unknown> | null = null;
+  f.queue.subscribe(() => {
+    if (requested || f.queue.state.status !== "idle") return;
+    requested = true;
+    finish = f.queue.requestFinish().then(() => f.queue.sync());
+  });
+  await f.queue.sync();
+  await finish;
+  expect(f.stored).toBeNull();
+  expect(f.finishes).toBe(1);
+});
 test("終了通信失敗と応答喪失の後も再起動して同じ終了を再送する", async () => {
   const f = fixture();
   await f.queue.restore();
