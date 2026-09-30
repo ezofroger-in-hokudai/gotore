@@ -125,6 +125,28 @@ test("終了通信失敗後の再起動でも終了意図を復元して自動�
   await expect(page.getByTestId("floating-training")).toBeEnabled();
 });
 
+test("終了待ちでSTARTが無効なら理由を表示し、再送して次を始められる", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  let fail = true;
+  await page.route("**/api/sessions/*/finish", (route) =>
+    fail ? route.fulfill({ status: 503, json: { detail: "一時的な失敗" } }) : route.fallback(),
+  );
+  await page.getByRole("button", { name: "トレーニング終了", exact: true }).tap();
+  await page.getByRole("button", { name: "終了する", exact: true }).tap();
+  await page.locator(".workout-result").getByRole("button", { name: "ホーム" }).click();
+  const start = page.getByTestId("floating-training");
+  await expect(start).toBeDisabled();
+  await page.reload();
+  await expect(page.getByRole("alert").filter({ hasText: "終了を確認できません" })).toBeVisible();
+  fail = false;
+  await page.getByRole("button", { name: "終了を再送する" }).click();
+  await expect.poll(() => state.finished.length).toBe(1);
+  await expect(start).toBeEnabled();
+  await start.tap();
+  await expect(page.getByRole("button", { name: "トレーニング終了", exact: true })).toBeVisible();
+});
+
 test("セット送信の応答待ち中も終了を受け付け、セットの後に終了する", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);

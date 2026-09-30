@@ -120,7 +120,15 @@ export function useSession(userId: string, onChanged: () => void, trainingVisibl
       const last = lastLocalActivity();
       if (last && Date.now() - Date.parse(last) >= 3_600_000) {
         setLocallyExpired(true);
-        void queue.sync().then(() => queue.refresh());
+        void queue
+          .sync()
+          .then(() => queue.refresh())
+          .then(() => setError(""))
+          .catch((reason) =>
+            setError(reason instanceof Error ? reason.message : "終了状態を確認できませんでした。"),
+          );
+      } else if (locallyExpired) {
+        setLocallyExpired(false);
       }
     };
     window.addEventListener("pointerdown", record);
@@ -199,6 +207,7 @@ export function useSession(userId: string, onChanged: () => void, trainingVisibl
       try {
         await queue.restore();
         await queue.sync();
+        if (locallyExpired) await queue.refresh();
         setError("");
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "復元できませんでした。");

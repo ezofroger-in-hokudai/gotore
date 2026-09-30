@@ -346,7 +346,30 @@ function WorkspaceContent({ session }: { session: Session }) {
             </button>
           </div>
         )}
-        {training.error && (
+        {training.finishPending && !training.locallyExpired && training.status !== "conflict" && (
+          <div
+            className={training.status === "offline" ? "error" : "notice"}
+            role={training.status === "offline" ? "alert" : "status"}
+          >
+            {training.status === "offline"
+              ? "前のトレーニングの終了を確認できません。記録は端末に保存しています。"
+              : "前のトレーニングの終了を確認しています。"}
+            <button className="text-button" type="button" onClick={() => void training.sync()}>
+              終了を再送する
+            </button>
+          </div>
+        )}
+        {training.locallyExpired && (
+          <output className={training.error ? "error" : "notice"}>
+            {training.error
+              ? "前のトレーニングの終了状態を確認できません。端末の記録は保持しています。"
+              : "前のトレーニングの終了状態を確認しています。"}
+            <button className="text-button" type="button" onClick={() => void training.reload()}>
+              終了状態を確認する
+            </button>
+          </output>
+        )}
+        {training.error && !training.locallyExpired && (
           <div className="error" role="alert">
             {training.error}
             <button
