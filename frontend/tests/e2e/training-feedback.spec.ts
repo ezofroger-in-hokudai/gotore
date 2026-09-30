@@ -125,7 +125,7 @@ test("終了通信失敗後の再起動でも終了意図を復元して自動�
   await expect(page.getByTestId("floating-training")).toBeEnabled();
 });
 
-test("終了待ちでSTARTが無効なら理由を表示し、再送して次を始められる", async ({ page }) => {
+test("終了待ちの確認や再送ボタンを表示せず自動再送して次を始められる", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
   let fail = true;
@@ -138,9 +138,9 @@ test("終了待ちでSTARTが無効なら理由を表示し、再送して次を
   const start = page.getByTestId("floating-training");
   await expect(start).toBeDisabled();
   await page.reload();
-  await expect(page.getByRole("alert").filter({ hasText: "終了を確認できません" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "終了を再送する" })).toHaveCount(0);
+  await expect(page.getByText("前のトレーニングの終了を確認", { exact: false })).toHaveCount(0);
   fail = false;
-  await page.getByRole("button", { name: "終了を再送する" }).click();
   await expect.poll(() => state.finished.length).toBe(1);
   await expect(start).toBeEnabled();
   await start.tap();
