@@ -53,6 +53,8 @@ type ActionSheet =
 export function CommunityScreen({
   guideTarget,
   groups,
+  today,
+  onActivityVisibleChange,
   selected,
   initialDetail,
   active,
@@ -64,6 +66,8 @@ export function CommunityScreen({
 }: {
   guideTarget?: { target: string } | null;
   groups: Group[];
+  today: ReturnType<typeof useResource<TodayActivity>>;
+  onActivityVisibleChange: (visible: boolean) => void;
   selected: string;
   initialDetail: boolean;
   active: boolean;
@@ -74,6 +78,9 @@ export function CommunityScreen({
   onOrder: (ids: string[]) => void;
 }) {
   const [mode, setMode] = useState<Mode>(initialDetail ? "detail" : "list");
+  useEffect(() => {
+    onActivityVisibleChange(active && (mode === "list" || mode === "detail"));
+  }, [active, mode, onActivityVisibleChange]);
   const modeRef = useRef(mode);
   const activeRef = useRef(active);
   activeRef.current = active;
@@ -100,16 +107,6 @@ export function CommunityScreen({
   const [inviteMembersExpanded, setInviteMembersExpanded] = useState(false);
   const [editingName, setEditingName] = useState(false);
 
-  const today = useResource<TodayActivity>(
-    "/groups/today-activity",
-    refreshKey,
-    GROUP_REFRESH_MS,
-    true,
-    {
-      enabled: active && (mode === "list" || mode === "detail") && groups.length > 0,
-      retainOnRefresh: true,
-    },
-  );
   const detail = useResource<GroupDetail>(
     selected ? `/groups/${selected}` : null,
     refreshKey,
