@@ -79,7 +79,7 @@ for (const change of ["編集中の回数", "選択種目"]) {
       await page.getByRole("button", { name: "変更を保存", exact: true }).click();
       await expect.poll(() => state.session?.exercises[0]?.sets).toEqual([{ weight: 60, reps: 9 }]);
     } else {
-      await expect(page.getByRole("heading", { name: "スクワット", exact: true })).toBeVisible();
+      await expect(page.locator(".recording-exercise-title")).toHaveText("スクワット");
       await page.getByRole("button", { name: "セットを追加", exact: true }).click();
       await expect.poll(() => state.session?.exercises[1]?.name).toBe("スクワット");
     }

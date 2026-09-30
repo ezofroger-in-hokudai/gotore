@@ -300,7 +300,12 @@ function ActiveTraining({
       const value = setValue(input.weight, input.reps);
       const nextExercises = updateSet(exercises, input.name, value, input.editing);
       const result = await controller.save(nextExercises, revision);
-      const nextInput = { ...input, revision: result.revision, editing: null, dirty: false };
+      // 保存待ち中に変更した次の入力・選択種目は、完了した保存で上書きしない。
+      const current = latestInput.current;
+      const nextInput =
+        current === input
+          ? { ...input, revision: result.revision, editing: null, dirty: false }
+          : { ...current, revision: result.revision };
       setInput(nextInput);
       try {
         localStorage.setItem(storageKey, JSON.stringify(nextInput));
