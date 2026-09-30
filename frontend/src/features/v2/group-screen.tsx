@@ -53,6 +53,8 @@ type ActionSheet =
 export function CommunityScreen({
   guideTarget,
   groups,
+  today,
+  onActivityVisibleChange,
   selected,
   initialDetail,
   active,
@@ -64,6 +66,8 @@ export function CommunityScreen({
 }: {
   guideTarget?: { target: string } | null;
   groups: Group[];
+  today: ReturnType<typeof useResource<TodayActivity>>;
+  onActivityVisibleChange: (visible: boolean) => void;
   selected: string;
   initialDetail: boolean;
   active: boolean;
@@ -74,6 +78,9 @@ export function CommunityScreen({
   onOrder: (ids: string[]) => void;
 }) {
   const [mode, setMode] = useState<Mode>(initialDetail ? "detail" : "list");
+  useEffect(() => {
+    onActivityVisibleChange(active && (mode === "list" || mode === "detail"));
+  }, [active, mode, onActivityVisibleChange]);
   const modeRef = useRef(mode);
   const activeRef = useRef(active);
   activeRef.current = active;
@@ -100,16 +107,6 @@ export function CommunityScreen({
   const [inviteMembersExpanded, setInviteMembersExpanded] = useState(false);
   const [editingName, setEditingName] = useState(false);
 
-  const today = useResource<TodayActivity>(
-    "/groups/today-activity",
-    refreshKey,
-    GROUP_REFRESH_MS,
-    true,
-    {
-      enabled: active && (mode === "list" || mode === "detail") && groups.length > 0,
-      retainOnRefresh: true,
-    },
-  );
   const detail = useResource<GroupDetail>(
     selected ? `/groups/${selected}` : null,
     refreshKey,
@@ -470,7 +467,7 @@ export function CommunityScreen({
     <section className="community-screen group-screen">
       {mode === "list" && (
         <>
-          <div className="section-heading group-screen-heading">
+          <div className="section-heading group-screen-heading" data-tour="groups">
             <h1>グループ</h1>
             <div className="group-management-actions">
               <button
@@ -536,14 +533,8 @@ export function CommunityScreen({
           <button type="button" className="text-button back-button" onClick={detailBack}>
             ‹ グループ一覧
           </button>
-          {detail.error && !group ? (
-            <p className="error" role="alert">
-              {detail.error}
-              <button type="button" className="text-button" onClick={detail.retry}>
-                再試行
-              </button>
-            </p>
-          ) : group ? (
+          <ResourceError resource={detail} />
+          {group ? (
             <>
               <GroupCard
                 group={group}
@@ -613,26 +604,26 @@ export function CommunityScreen({
                   )}
                 </>
               )}
-              {detailTab === "calendar" && (
+              <div key={`calendar:${userId}:${selected}`} hidden={detailTab !== "calendar"}>
                 <GroupHistoryCalendar
                   key={selected}
                   groupId={selected}
                   userId={userId}
-                  active={active}
+                  active={active && detailTab === "calendar"}
                   refreshKey={refreshKey}
                   part={historyPart}
                   onPartChange={setHistoryPart}
                 />
-              )}
-              {detailTab === "graph" && (
+              </div>
+              <div key={`graph:${userId}:${selected}`} hidden={detailTab !== "graph"}>
                 <GroupHistoryGraph
                   groupId={selected}
-                  active={active}
+                  active={active && detailTab === "graph"}
                   refreshKey={refreshKey}
                   part={historyPart}
                   onPartChange={setHistoryPart}
                 />
-              )}
+              </div>
               {detailTab === "settings" && (
                 <div className="group-settings">
                   <section>
@@ -741,9 +732,9 @@ export function CommunityScreen({
                 </div>
               )}
             </>
-          ) : (
+          ) : !detail.error ? (
             <LoadingState label="グループ情報を読み込み中" />
-          )}
+          ) : null}
         </>
       )}
 

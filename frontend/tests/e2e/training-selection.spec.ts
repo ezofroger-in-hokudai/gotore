@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, openTraining } from "./mock-training";
 
 test("種目候補は本人の最終実施日順で未記録を末尾に置く", async ({ page }) => {
@@ -136,8 +136,8 @@ test("種目選択は仲間のタイムラインを取得せず、部位で候�
         borderRadius: style.borderRadius,
       };
     });
-  const requestsBeforeTraining = todayActivityRequests;
   await openTraining(page);
+  const requestsBeforeTraining = todayActivityRequests;
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
 
   await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");

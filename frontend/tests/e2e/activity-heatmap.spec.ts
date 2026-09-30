@@ -1,11 +1,22 @@
-import { type Page, expect, test } from "@playwright/test";
-import { chooseHistoryMonth, moveHistoryMonth } from "./history-period-helper";
-import { mockTraining, navigate, openGroup, openRecord, startTraining } from "./mock-training";
+import { type Page, expect, test } from "./fixtures";
+import { chooseHistoryMonth, historyMonth, moveHistoryMonth } from "./history-period-helper";
+import { mockTraining } from "./mock-training";
 
 test.use({ locale: "ja-JP" });
 
 async function activityFixture(page: Page) {
-  const state = await mockTraining(page);
+  const state = await mockTraining(page, true, false, false);
+  await page.route("**/api/history/summary", (route) =>
+    route.fulfill({
+      json: {
+        first_performed_on: "2024-01-01",
+        total_volume: 16800,
+        total_sets: 56,
+        workout_count: 53,
+        exercises: [],
+      },
+    }),
+  );
   let failMonth = false;
   let failDay = false;
   let holdDay: Promise<void> | null = null;
@@ -69,6 +80,7 @@ async function activityFixture(page: Page) {
     });
   });
   await page.getByRole("navigation").getByRole("button", { name: "履歴", exact: true }).click();
+  await expect(page.locator(".personal-history-summary")).toContainText("16,800");
   await chooseHistoryMonth(page, "2024-02");
   return {
     failMonth: (value: boolean) => {
@@ -83,62 +95,55 @@ async function activityFixture(page: Page) {
   };
 }
 
-test("総負荷ヒートマップから日付を選び、日別記録を50件ずつ確認する", async ({ page }) => {
-  await activityFixture(page);
-  const day = page.getByRole("button", {
-    name: "2024年2月29日、総負荷15,300kg、51件",
-    exact: true,
-  });
-  await expect(day).toHaveAttribute("data-volume", "15300");
-  await expect(
-    page.getByRole("button", {
-      name: "2024年2月1日、総負荷1,500kg、2件",
-      exact: true,
-    }),
-  ).toHaveAttribute("data-volume", "1500");
-  await day.focus();
-  await page.keyboard.press("Enter");
-  await expect(day).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".history-row")).toHaveCount(50);
-  await page.getByRole("button", { name: "以前の記録", exact: true }).click();
-  await expect(page.locator(".history-row")).toHaveCount(1);
-  await expect(page.locator(".history-row")).toContainText("2024-02-29の種目51");
-  await page.getByRole("button", { name: "2024年2月2日、記録なし、0件", exact: true }).click();
-  await expect(page.locator(".history-row")).toHaveCount(0);
-  await expect(page.getByText("この期間は記録がありません", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "すべての記録", exact: true }).click();
-  await expect(day).toHaveAttribute("aria-pressed", "false");
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page
-    .getByRole("button", {
-      name: "2024年2月1日、総負荷1,500kg、2件",
-      exact: true,
-    })
-    .click();
-  await expect(page.locator(".history-row")).toHaveCount(2);
+const day = (page: Page, date: string) =>
+  page
+    .locator(".personal-history-calendar")
+    .getByRole("button", { name: new RegExp(`^${date}、`) });
+const closeDay = async (page: Page) => {
+  await page.getByRole("dialog").getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+};
 
-  await page.screenshot({
-    path: "test-results/activity-heatmap-mobile.png",
-    fullPage: true,
-  });
+test("総負荷カレンダーから日付を選び、50件を超える日別記録もすべて確認する", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2024-03-01T03:00:00Z"));
+  await activityFixture(page);
+  await expect(day(page, "2024年2月29日")).toHaveAccessibleName(
+    "2024年2月29日、15,300kg、51セット",
+  );
+  await day(page, "2024年2月29日").focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", { name: "2024年2月29日の全メニュー" });
+  await expect(dialog.locator(".record")).toHaveCount(51);
+  await expect(dialog).toContainText("2024-02-29の種目51");
+  await closeDay(page);
+  await day(page, "2024年2月2日").click();
+  await expect(page.getByRole("dialog")).toContainText("この日の記録はありません");
+  await closeDay(page);
+  await day(page, "2024年2月1日").click();
+  await expect(page.getByRole("dialog").locator(".record")).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("月と日付の取得失敗を再試行し、遅い前日の応答を表示しない", async ({ page }) => {
+test("月と日付の取得失敗を再試行し、閉じた日の遅い応答を表示しない", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2024-03-01T03:00:00Z"));
   const state = await activityFixture(page);
   state.failMonth(true);
   await moveHistoryMonth(page, -1);
-  await expect(page.getByRole("alert").filter({ hasText: "通信できません" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /2024年2月29日/ })).toHaveCount(0);
+  await expect(page.locator(".personal-history-calendar").getByRole("alert")).toContainText(
+    "通信できません",
+  );
+  await expect(day(page, "2024年2月29日")).toHaveCount(0);
   state.failMonth(false);
   await page.getByRole("button", { name: "再試行", exact: true }).click();
-  await expect(page.getByText("この月は記録なし", { exact: true })).toBeVisible();
+  await expect(page.locator(".personal-history-calendar-foot")).toContainText("0日");
   await chooseHistoryMonth(page, "2024-02");
   state.failDay(true);
-  await page.getByRole("button", { name: /2024年2月29日/ }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "更新できませんでした" })).toBeVisible();
+  await day(page, "2024年2月29日").click();
+  await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
   state.failDay(false);
-  await page.getByRole("button", { name: "再試行", exact: true }).click();
-  await expect(page.locator(".history-row")).toHaveCount(50);
+  await page.getByRole("dialog").getByRole("button", { name: "再試行", exact: true }).click();
+  await expect(page.getByRole("dialog").locator(".record")).toHaveCount(51);
+  await closeDay(page);
   let release = () => {};
   state.holdDay(
     new Promise<void>((resolve) => {
@@ -146,71 +151,42 @@ test("月と日付の取得失敗を再試行し、遅い前日の応答を表�
     }),
   );
   try {
-    await page.getByRole("button", { name: /2024年2月1日、/ }).click();
-    await expect(page.locator(".history-row")).toHaveCount(0);
-    await page.getByRole("button", { name: /2024年2月2日、/ }).click();
+    await day(page, "2024年2月1日").click();
+    await expect(page.getByRole("dialog").locator(".record")).toHaveCount(0);
+    await closeDay(page);
+    await day(page, "2024年2月2日").click();
     release();
-    await expect(page.getByText("この期間は記録がありません", { exact: true })).toBeVisible();
-    await expect(page.locator(".history-row")).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toContainText("この日の記録はありません");
+    await expect(page.getByRole("dialog").locator(".record")).toHaveCount(0);
   } finally {
     release();
   }
 });
 
-test("日本時間の今日を示し、未来の日付と範囲外の月への移動を許可しない", async ({ page }) => {
+test("日本時間の今日まで選べ、未来の日付と最初の記録より前の月へ移動できない", async ({ page }) => {
   await page.clock.setFixedTime(new Date("2024-02-10T15:00:00Z"));
   await activityFixture(page);
-  await expect(page.locator('.activity-calendar:visible input[type="month"]')).toHaveAttribute(
-    "max",
-    "2024-02",
-  );
-  await expect(
-    page.getByRole("button", {
-      name: "2024年2月11日、記録なし、0件",
-      exact: true,
-    }),
-  ).toHaveAttribute("aria-current", "date");
-  await expect(
-    page.getByRole("button", {
-      name: "2024年2月12日、未来の日付",
-      exact: true,
-    }),
-  ).toBeDisabled();
-  await chooseHistoryMonth(page, "2000-01");
-  await expect(page.locator('.activity-calendar:visible input[type="month"]')).toHaveAttribute(
-    "min",
-    "2000-01",
-  );
-  await expect(
-    page
-      .locator(".activity-calendar:visible")
-      .getByRole("button", { name: "現在に戻る", exact: true }),
-  ).toBeVisible();
+  await expect(day(page, "2024年2月11日")).toBeEnabled();
+  await expect(day(page, "2024年2月12日")).toBeDisabled();
+  const calendar = page.locator(".personal-history-calendar");
+  await calendar.dispatchEvent("keydown", { key: "ArrowRight" });
+  expect(await historyMonth(page)).toBe("2024-02");
+  await moveHistoryMonth(page, -1);
+  await calendar.dispatchEvent("keydown", { key: "ArrowLeft" });
+  expect(await historyMonth(page)).toBe("2024-01");
 });
 
-test("過去月の詳細から戻っても月・選択日・ページを保持し、月変更で絞り込みを解除する", async ({
-  page,
-}) => {
+test("日別シートを戻るで閉じても過去月を保持し、別の日へ記録を混ぜない", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2024-03-01T03:00:00Z"));
   await activityFixture(page);
-  const day = page.getByRole("button", {
-    name: "2024年2月29日、総負荷15,300kg、51件",
-    exact: true,
-  });
-  await day.click();
-  await page.getByRole("button", { name: "以前の記録", exact: true }).click();
-  await expect(page.locator(".history-row")).toHaveCount(1);
-  await page.locator(".history-row").click();
-  await expect(page.locator(".history-detail")).toContainText("2024-02-29の種目51");
-  await page.getByRole("button", { name: "‹ 履歴", exact: true }).click();
-  await expect(page.locator('.activity-calendar:visible input[type="month"]')).toHaveValue(
-    "2024-02",
-  );
-  await expect(day).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".history-row")).toContainText("2024-02-29の種目51");
-  await expect(page.getByText("2ページ", { exact: true })).toBeVisible();
+  await day(page, "2024年2月29日").click();
+  await expect(page.getByRole("dialog").locator(".record")).toHaveCount(51);
+  await page.goBack();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await historyMonth(page)).toBe("2024-02");
   await moveHistoryMonth(page, -1);
-  await expect(page.getByRole("heading", { name: "最近の記録", exact: true })).toBeVisible();
   await chooseHistoryMonth(page, "2024-02");
-  await day.click();
-  await expect(page.getByText("1ページ", { exact: true })).toBeVisible();
+  await day(page, "2024年2月1日").click();
+  await expect(page.getByRole("dialog").locator(".record")).toHaveCount(2);
+  await expect(page.getByRole("dialog")).not.toContainText("2024-02-29の種目51");
 });

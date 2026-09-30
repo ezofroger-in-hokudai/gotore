@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining } from "./mock-training";
 
 test("画面を切り替えた直後に元画面のスナップショットを重ねない", async ({ page }) => {

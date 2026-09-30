@@ -1,7 +1,7 @@
-import { type Page, expect, test } from "@playwright/test";
-import { createTestUser, localAuth, testPassword } from "./local-auth";
-import { navigate } from "./mock-training";
-import { backendUrl } from "./test-server";
+import { type Page, expect, test } from "../fixtures";
+import { createTestUser, localAuth, testPassword } from "../local-auth";
+import { navigate } from "../mock-training";
+import { backendUrl } from "../test-server";
 
 async function login(page: Page, name: string, email: string) {
   await createTestUser(name, email);

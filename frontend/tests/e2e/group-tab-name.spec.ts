@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, openTraining } from "./mock-training";
 
-test("長いグループ名は両方の選択列で一定幅に収まり、正式名で選べる", async ({ page }) => {
+test("長いグループ名はホームの選択列で一定幅に収まり、正式名で選べる", async ({ page }) => {
   const state = await mockTraining(page);
   const shortTab = page.locator(".home-feed-tabs .group-name-tab");
   await expect(shortTab).toBeVisible();
@@ -47,10 +47,7 @@ test("長いグループ名は両方の選択列で一定幅に収まり、正�
   await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
-  const peerTab = page.getByRole("tab", { name: names[2], exact: true });
-  await expect(peerTab).toBeVisible();
-  expect(await peerTab.evaluate((button) => button.getBoundingClientRect().width)).toBe(112);
-  await peerTab.click();
-  await expect(peerTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: names[2], exact: true })).toHaveCount(0);
+  await expect(page.locator(".exercise-picker-list")).toBeVisible();
   await page.screenshot({ path: "test-results/group-tab-training-390.png" });
 });

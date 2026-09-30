@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining } from "./mock-training";
 
 test("50件のフィード上限を超えても今日とグループの集計は全件を示す", async ({ page }) => {
@@ -39,7 +39,7 @@ test("50件のフィード上限を超えても今日とグループの集計は
   await page.reload();
   await expect(page.getByRole("region", { name: "今日の活動" })).toContainText("51セット");
   await expect(page.getByRole("region", { name: "今日の活動" })).toContainText("32,640kg");
-  const card = page.locator(`[data-group-id="${state.group.id}"]`);
+  const card = page.locator(`.group-carousel [data-group-id="${state.group.id}"]`);
   await expect(card).toContainText("51セット");
   await expect(card).toContainText("32,640kg");
   expect(feed).toHaveLength(50);

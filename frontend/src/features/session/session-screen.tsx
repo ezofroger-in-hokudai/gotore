@@ -1,9 +1,11 @@
 "use client";
 
-import type { BodyPart, ExerciseOption, SessionBests, TrainingSession } from "@/lib/api";
+import type { BodyPart, RecordBestSet, SessionBests, TrainingSession } from "@/lib/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BODY_PARTS, BODY_PART_LABELS, normalizeBodyPart } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
+import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
+import { BestFlame } from "../training/best-flame";
 import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
@@ -22,6 +24,7 @@ import {
   setValue,
   updateSet,
 } from "./session";
+import { sessionExerciseOptions } from "./session-exercise-options";
 import { TrainingOverview } from "./training-overview";
 import { useExerciseContext } from "./use-exercise-context";
 import { useFinishWeekRecords } from "./use-finish-week-records";
@@ -63,7 +66,7 @@ export function SessionScreen({
   onHistory: () => void;
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
-  catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  catalog: ReturnType<typeof useExerciseCatalog>;
   elapsed: string | null;
 }) {
   const { session } = controller;
@@ -122,7 +125,7 @@ function ActiveTraining({
   session: TrainingSession | null;
   initialInput: SessionInput;
   onPreparingInput: (input: SessionInput) => void;
-  catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  catalog: ReturnType<typeof useExerciseCatalog>;
   elapsed: string | null;
   controller: SessionController;
   userId: string;
@@ -170,12 +173,14 @@ function ActiveTraining({
     true,
     { enabled: active && selecting && exercises.length > 0 },
   );
-  const bestPositions = new Set(
+  const bestPositions = new Map(
     overviewBests.data && overviewBests.data.revision === revision && !controller.pending
-      ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
+      ? overviewBests.data.sets.map(
+          (set) => [`${set.exercise_index}:${set.set_index}`, set] as const,
+        )
       : [],
   );
-  const candidates = (catalog.data ?? [])
+  const candidates = sessionExerciseOptions(catalog.data ?? [], exercises)
     .filter(
       (option) =>
         selectedParts.length === 0 ||
@@ -197,6 +202,20 @@ function ActiveTraining({
     active,
   );
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
+  const confirmedBests = new Map(
+    context.data?.current_bests &&
+      context.data.current_bests.revision === revision &&
+      !controller.pending
+      ? context.data.current_bests.sets.map(
+          (set) => [`${set.exercise_index}:${set.set_index}`, set] as const,
+        )
+      : [],
+  );
+  const selectedBests = exercises.flatMap((exercise, exerciseIndex) =>
+    exercise.name === input.name
+      ? exercise.sets.map((_, setIndex) => confirmedBests.get(`${exerciseIndex}:${setIndex}`))
+      : [],
+  );
   const previous = context.data?.previous?.sets ?? [];
   const pendingExerciseMemo = useMemo(
     () =>
@@ -298,7 +317,12 @@ function ActiveTraining({
       const value = setValue(input.weight, input.reps);
       const nextExercises = updateSet(exercises, input.name, value, input.editing);
       const result = await controller.save(nextExercises, revision);
-      const nextInput = { ...input, revision: result.revision, editing: null, dirty: false };
+      // 保存待ち中に変更した次の入力・選択種目は、完了した保存で上書きしない。
+      const current = latestInput.current;
+      const nextInput =
+        current === input
+          ? { ...input, revision: result.revision, editing: null, dirty: false }
+          : { ...current, revision: result.revision };
       setInput(nextInput);
       try {
         localStorage.setItem(storageKey, JSON.stringify(nextInput));
@@ -427,7 +451,11 @@ function ActiveTraining({
                   {exercise.sets.map((value, setIndex) => (
                     <p key={`${exercise.name}-${setIndex}`}>
                       <span>SET {setIndex + 1}</span>
-                      <SetMeasurement weight={value.weight} reps={value.reps} />
+                      <SetMeasurement
+                        weight={value.weight}
+                        reps={value.reps}
+                        best={bestPositions.get(`${index}:${setIndex}`)}
+                      />
                     </p>
                   ))}
                 </section>
@@ -625,7 +653,11 @@ function ActiveTraining({
                             }}
                           >
                             <span className="current-set-selection">
-                              <SetMeasurement weight={current.weight} reps={current.reps} />
+                              <SetMeasurement
+                                weight={current.weight}
+                                reps={current.reps}
+                                best={selectedBests[index]}
+                              />
                             </span>
                           </button>
                         </>
@@ -841,7 +873,7 @@ function ActiveTraining({
             expanded
             startAdding
             disabled={controller.busy}
-            onChanged={catalog.retry}
+            onChanged={catalog.changed}
             onAdded={() => setCatalogOpen(false)}
             initialPrimary={selectedParts.length === 1 ? selectedParts[0] : undefined}
             showAddHeading={false}
@@ -935,13 +967,24 @@ function PendingMemo({ title, content }: { title: string; content?: string }) {
   );
 }
 
-function SetMeasurement({ weight, reps }: { weight: number; reps: number }) {
+function SetMeasurement({
+  weight,
+  reps,
+  best,
+}: { weight: number; reps: number; best?: RecordBestSet }) {
   return (
     <span className="set-measurement">
       <span>
-        {weight}kg × {reps}
+        <span className={best?.weight ? "personal-best-value" : undefined}>{weight}</span>kg ×{" "}
+        {reps}
+        {best && <BestFlame best={best} />}
       </span>
-      <small>RM {displayEstimatedRM(weight, reps) ?? "—"}</small>
+      <small>
+        RM{" "}
+        <span className={best?.rm ? "personal-best-value" : undefined}>
+          {displayEstimatedRM(weight, reps) ?? "—"}
+        </span>
+      </small>
     </span>
   );
 }

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, openTraining, startTraining } from "./mock-training";
 
 test("前回の最初の重量・回数を初期値にし、入力だけでは保存しない", async ({ page }) => {

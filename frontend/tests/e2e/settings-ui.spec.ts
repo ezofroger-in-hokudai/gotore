@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, openGroup } from "./mock-training";
 
 async function openName(page: import("@playwright/test").Page) {
@@ -76,17 +76,18 @@ test("外観と触覚を端末に保持し、未提供の通知項目を省く",
 test("オーナーは名前変更を再試行でき、メンバーには管理欄を出さない", async ({ page }) => {
   const state = await mockTraining(page);
   await openGroup(page, "manage");
-  const name = page.getByLabel("変更後の名前", { exact: true });
+  await page.getByRole("button", { name: "グループ名を編集", exact: true }).click();
+  const name = page.getByRole("textbox", { name: "グループ名", exact: true });
   await name.fill("新しいグループ");
   state.failRename = true;
-  await page.getByRole("button", { name: "変更する", exact: true }).click();
+  await page.getByRole("button", { name: "決定", exact: true }).click();
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("通信できません");
   state.failRename = false;
-  await page.getByRole("button", { name: "変更する", exact: true }).click();
+  await page.getByRole("button", { name: "決定", exact: true }).click();
   await expect(page.getByRole("heading", { name: "新しいグループ", exact: true })).toBeVisible();
   expect(state.group.invite_code).toBe("ABCDEF123456");
   state.group.owner_id = "other";
   await page.reload();
-  await openGroup(page);
-  await expect(page.getByLabel("変更後の名前", { exact: true })).toHaveCount(0);
+  await openGroup(page, "manage");
+  await expect(page.getByRole("button", { name: "グループ名を編集", exact: true })).toHaveCount(0);
 });

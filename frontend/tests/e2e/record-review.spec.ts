@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
-import { mockTraining, navigate } from "./mock-training";
+import { expect, test } from "./fixtures";
+import { mockTraining } from "./mock-training";
+import { mockHistoryCalendar, openHistoryDay } from "./personal-history-helper";
 
 test("A案の全セット表をすぐ表示し、幅・文字拡大・大量セットでも詳細を読み取れる", async ({
   page,
@@ -38,11 +39,12 @@ test("A案の全セット表をすぐ表示し、幅・文字拡大・大量セ�
       ],
     },
   ];
-  await navigate(page, "履歴");
-  await page.locator(".history-row").click();
-  const detail = page.locator(".history-detail");
+  await mockHistoryCalendar(page, () => state.finished);
+  await page.reload();
+  const detail = await openHistoryDay(page, state.finished[0].performed_on);
   await expect(detail.getByRole("table")).toHaveCount(3);
   await expect(detail.locator(".record-set")).toHaveCount(34);
+  await detail.getByRole("button", { name: "画面テストの全セットを表示", exact: true }).click();
   await expect(detail.locator("details")).toHaveCount(0);
   await expect(detail.locator("time")).toHaveCount(1);
   await expect(detail.locator(".record-author")).toHaveCount(0);
@@ -72,6 +74,6 @@ test("A案の全セット表をすぐ表示し、幅・文字拡大・大量セ�
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "";
   });
-  await page.getByRole("button", { name: "‹ 履歴", exact: true }).click();
-  await expect(page.locator(".history-row")).toBeVisible();
+  await detail.getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(page.locator(".personal-history-calendar")).toBeVisible();
 });

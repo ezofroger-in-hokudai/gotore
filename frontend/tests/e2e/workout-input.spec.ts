@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test("未保存入力と保存済みセットをタブ切替・再起動後も復元し、明示終了する", async ({ page }) => {

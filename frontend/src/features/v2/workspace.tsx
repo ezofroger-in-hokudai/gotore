@@ -53,6 +53,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   const historyPosition = useRef(0);
   const [groupId, setGroupId] = useState("");
   const [groupDetail, setGroupDetail] = useState(false);
+  const [groupActivityVisible, setGroupActivityVisible] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
     if (!refreshKey) return;
@@ -98,20 +99,22 @@ function WorkspaceContent({ session }: { session: Session }) {
   }, [groupList.data, sharedCache]);
   const groupOrder = useGroupOrder(session.user.id, groupList.data);
   const groups = groupOrder.groups;
-  const todayActivity = useResource<TodayActivity>(
-    "/groups/today-activity",
-    refreshKey,
-    todayActivityRefreshMs,
-    true,
-    {
-      enabled: groups.length > 0 && view === "home",
-      retainOnRefresh: true,
-    },
-  );
   const currentGroupIds = groups
     .map((group) => group.id)
     .toSorted()
     .join(",");
+  const todayActivity = useResource<TodayActivity>(
+    "/groups/today-activity",
+    refreshKey,
+    view === "groups" ? GROUP_REFRESH_MS : todayActivityRefreshMs,
+    true,
+    {
+      enabled:
+        groups.length > 0 && (view === "home" || (view === "groups" && groupActivityVisible)),
+      scopeKey: currentGroupIds,
+      retainOnRefresh: true,
+    },
+  );
   const activityGroupIds = todayActivity.data?.groups
     .map((group) => group.group_id)
     .toSorted()
@@ -307,29 +310,30 @@ function WorkspaceContent({ session }: { session: Session }) {
           E-GO<span>TORE</span>
         </button>
       </header>
+      {opened && !inviteLanding && (
+        <OnboardingGuide
+          userId={session.user.id}
+          replay={guideReplay}
+          paused={view === "record" || view === "edit" || view === "result"}
+          onVisit={(next, target) => {
+            setGuideTarget({ target });
+            setGroupDetail(false);
+            viewRef.current = next;
+            setView(next);
+            window.history.replaceState(
+              {
+                gotoreView: next,
+                groupId: selected,
+                communityMode: "list",
+                gotoreMotionIndex: historyPosition.current,
+              },
+              "",
+            );
+            window.scrollTo({ top: 0 });
+          }}
+        />
+      )}
       <main className="main-content">
-        {opened && !inviteLanding && (
-          <OnboardingGuide
-            userId={session.user.id}
-            replay={guideReplay}
-            onVisit={(next, target) => {
-              setGuideTarget({ target });
-              setGroupDetail(false);
-              viewRef.current = next;
-              setView(next);
-              window.history.replaceState(
-                {
-                  gotoreView: next,
-                  groupId: selected,
-                  communityMode: "list",
-                  gotoreMotionIndex: historyPosition.current,
-                },
-                "",
-              );
-              window.scrollTo({ top: 0 });
-            }}
-          />
-        )}
         {notice && <output className="notice">{notice}</output>}
         {recordCache?.storageError && (
           <output className="notice">端末への記録保存を利用できません。通信で読み込みます。</output>
@@ -482,6 +486,8 @@ function WorkspaceContent({ session }: { session: Session }) {
           <CommunityScreen
             guideTarget={guideTarget}
             groups={groups}
+            today={visibleTodayActivity}
+            onActivityVisibleChange={setGroupActivityVisible}
             selected={selected}
             initialDetail={groupDetail}
             active={opened && view === "groups"}

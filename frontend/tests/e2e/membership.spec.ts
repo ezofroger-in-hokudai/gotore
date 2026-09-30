@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 for (const owner of [true, false]) {

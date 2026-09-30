@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 async function googleUser(page: Page, savedName = "") {
@@ -176,10 +176,6 @@ test("Authに名前のない既存利用者はDBの名前を保持し、取得�
   await page.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(page.getByLabel("表示名", { exact: true })).toHaveValue("以前の名前");
   await page.getByRole("button", { name: "ログアウト", exact: true }).click();
-  await page
-    .getByRole("dialog", { name: "ログアウト", exact: true })
-    .getByRole("button", { name: "ログアウト", exact: true })
-    .click();
   await expect(page.getByRole("button", { name: "Googleで続ける" })).toBeVisible();
 });
 

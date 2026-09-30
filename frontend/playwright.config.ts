@@ -6,6 +6,10 @@ const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_SERVER === "1" && !proc
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  projects: [
+    { name: "ui", testIgnore: "**/integration/**" },
+    { name: "integration", testMatch: "**/integration/**/*.spec.ts" },
+  ],
   fullyParallel: false,
   workers: process.env.CI ? 2 : 1,
   timeout: 90_000,

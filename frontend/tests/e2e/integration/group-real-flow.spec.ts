@@ -1,8 +1,8 @@
-import { type Page, expect, test } from "@playwright/test";
 import jsQR from "jsqr";
 import { PNG } from "pngjs";
-import { createTestUser, testPassword } from "./local-auth";
-import { navigate } from "./mock-training";
+import { type Page, expect, test } from "../fixtures";
+import { createTestUser, testPassword } from "../local-auth";
+import { navigate } from "../mock-training";
 
 async function login(page: Page, name: string, email: string) {
   await createTestUser(name, email);

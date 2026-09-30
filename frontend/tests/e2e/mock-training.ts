@@ -1,9 +1,14 @@
 import { gunzipSync } from "node:zlib";
 import { type Page, expect } from "@playwright/test";
-import type { ExerciseOption, TrainingSession } from "../../src/lib/api";
+import type { ExerciseOption, TodayActivity, TrainingSession } from "../../src/lib/api";
 
 // UI単独の検証用。実際の認証・DB・共有検証はsharing.spec.tsで行う。
-export async function mockTraining(page: Page, owner = true, showGuide = false) {
+export async function mockTraining(
+  page: Page,
+  owner = true,
+  showGuide = false,
+  withSnapshot = true,
+) {
   const user = {
     id: "00000000-0000-0000-0000-000000000001",
     aud: "authenticated",
@@ -26,8 +31,8 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     failSync: false,
     failRename: false,
     options: [
-      { id: "option-bench", name: "ベンチプレス" },
-      { id: "option-squat", name: "スクワット" },
+      { id: "option-bench", name: "ベンチプレス", revision: 1 },
+      { id: "option-squat", name: "スクワット", revision: 1 },
     ] as ExerciseOption[],
     failOptions: false,
     failOptionWrite: false,
@@ -37,6 +42,8 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     finished: [] as TrainingSession[],
     failSave: false,
     saves: 0,
+    exerciseMemos: new Map<string, { content: string; revision: number }>(),
+    sessionMemos: new Map<string, { content: string; revision: number }>(),
   };
   await page.route("**/auth/v1/**", async (route) => {
     if (route.request().method() === "PUT") {
@@ -60,7 +67,13 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     });
   });
   await page.route("**/api/**", (route) => {
-    const path = new URL(route.request().url()).pathname;
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    if (!withSnapshot && path.startsWith("/api/me/record-snapshot"))
+      return route.fulfill({
+        status: 503,
+        json: { detail: "端末キャッシュを使わない通信経路の検証" },
+      });
     if (path === "/api/me/record-snapshot")
       return route.fulfill({
         json: {
@@ -78,9 +91,9 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
         json: {
           version: 1,
           user_id: user.id,
-          workouts: [],
+          workouts: [...(state.session ? [state.session] : []), ...state.finished],
           deleted_workout_ids: [],
-          options: [],
+          options: state.options,
           deleted_option_ids: [],
           contexts: {},
           deleted_context_names: [],
@@ -134,11 +147,15 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     if (path.endsWith("/bests"))
       return route.fulfill({ json: { revision: state.session?.revision, sets: [] } });
     if (path.endsWith("/exercise-memo")) {
-      if (route.request().method() === "GET")
-        return route.fulfill({ json: { content: "", revision: 0 } });
-      return route.fulfill({
-        json: { content: route.request().postDataJSON().content, revision: 1 },
-      });
+      const key = `${path}:${url.searchParams.get("name")}`;
+      const memo = state.sessionMemos.get(key) ?? { content: "", revision: 0 };
+      if (route.request().method() === "GET") return route.fulfill({ json: memo });
+      const saved = {
+        content: route.request().postDataJSON().content,
+        revision: memo.revision + 1,
+      };
+      state.sessionMemos.set(key, saved);
+      return route.fulfill({ json: saved });
     }
     if (path.startsWith("/api/sessions/")) {
       if (path.endsWith("/heartbeat")) return route.fulfill({ status: 204 });
@@ -209,13 +226,19 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
               { weight: 75, reps: 10 },
             ],
           },
-          memo: { content: "", revision: 0 },
+          memo: state.exerciseMemos.get(url.searchParams.get("name") ?? "") ?? {
+            content: "",
+            revision: 0,
+          },
         },
       });
-    if (path === "/api/exercises/memo")
-      return route.fulfill({
-        json: { content: route.request().postDataJSON().content, revision: 1 },
-      });
+    if (path === "/api/exercises/memo") {
+      const body = route.request().postDataJSON();
+      const current = state.exerciseMemos.get(body.name) ?? { content: "", revision: 0 };
+      const saved = { content: body.content, revision: current.revision + 1 };
+      state.exerciseMemos.set(body.name, saved);
+      return route.fulfill({ json: saved });
+    }
     if (path.endsWith("/memo")) return route.fulfill({ json: { content: "", revision: 0 } });
     if (path === `/api/groups/${group.id}/activity`) {
       const latest = state.session?.exercises.length ? state.session : state.finished.at(-1);
@@ -291,8 +314,18 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
               },
             ]
           : [];
+      const totals = {
+        set_count: latest?.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0) ?? 0,
+        total_volume:
+          latest?.exercises.reduce(
+            (sum, exercise) =>
+              sum + exercise.sets.reduce((subtotal, set) => subtotal + set.weight * set.reps, 0),
+            0,
+          ) ?? 0,
+      };
       return route.fulfill({
         json: {
+          totals,
           groups: [
             {
               group_id: group.id,
@@ -311,6 +344,7 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
                   ]
                 : [],
               feed,
+              totals,
             },
           ],
         },
@@ -444,7 +478,11 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
 }
 
 export async function navigate(page: Page, name: string) {
-  await page.getByRole("navigation").getByRole("button", { name, exact: true }).click();
+  const button = page
+    .getByRole("navigation", { name: "メインナビゲーション", exact: true })
+    .getByRole("button", { name, exact: true });
+  await button.click();
+  await expect(button).toHaveAttribute("aria-current", "page");
 }
 export async function openTraining(page: Page) {
   await navigate(page, "ホーム");
@@ -495,4 +533,20 @@ export async function openRecordingCatalog(page: Page) {
   if (!(await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).isVisible()))
     await page.locator(".exercise-information").click();
   await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).click();
+}
+
+export function emptyTodayActivity(groups: { id: string; name: string }[]): TodayActivity {
+  return {
+    groups: groups.map((group) => ({
+      group_id: group.id,
+      name: group.name,
+      member_count: 1,
+      live_count: 0,
+      today_count: 0,
+      members: [],
+      feed: [],
+      totals: { set_count: 0, total_volume: 0 },
+    })),
+    totals: { set_count: 0, total_volume: 0 },
+  };
 }

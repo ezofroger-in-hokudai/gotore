@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, startTraining } from "./mock-training";
 
 test("端末保存済みのセットは送信失敗中も次の種目へ進め、自動再送する", async ({ page }) => {

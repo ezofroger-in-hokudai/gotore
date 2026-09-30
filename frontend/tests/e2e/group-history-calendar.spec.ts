@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, openGroup } from "./mock-training";
 
 test("グループの月間カレンダーと日別記録は個人履歴と同じ表示・操作を使う", async ({ page }) => {

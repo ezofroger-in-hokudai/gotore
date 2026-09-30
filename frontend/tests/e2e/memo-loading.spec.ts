@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { mockTraining, openTraining } from "./mock-training";
+import { expect, test } from "./fixtures";
+import { mockTraining, openTraining, startTraining } from "./mock-training";
 
 test("種目メモの取得中は安定した入口を表示し、取得後だけ編集できる", async ({ page }) => {
   await mockTraining(page);
@@ -21,7 +21,8 @@ test("種目メモの取得中は安定した入口を表示し、取得後だ�
     await expect(pending).toBeDisabled();
     await expect(memo).not.toContainText("読み込み中");
     const height = (await memo.boundingBox())?.height;
-    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toHaveCount(0);
+    await expect(page.getByText("前回の記録を確認中…", { exact: true })).toBeVisible();
     release();
     await expect(memo.getByRole("button", { name: "種目メモを編集" })).toBeEnabled();
     expect((await memo.boundingBox())?.height).toBe(height);
@@ -101,8 +102,39 @@ test("種目メモの取得失敗時は編集させず、再試行後に開け�
   await page.getByRole("button", { name: /^ベンチプレス/ }).click();
   const memo = page.getByRole("region", { name: "種目メモ", exact: true });
   await expect(memo.getByRole("button", { name: "種目メモを準備中" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "再試行", exact: true })).toBeVisible();
+  await expect(
+    page.locator(".record-context-pending").getByRole("button", { name: "再試行", exact: true }),
+  ).toBeVisible();
   fail = false;
-  await page.getByRole("button", { name: "再試行", exact: true }).click();
+  await page
+    .locator(".record-context-pending")
+    .getByRole("button", { name: "再試行", exact: true })
+    .click();
   await expect(memo.getByRole("button", { name: "種目メモを編集" })).toBeEnabled();
+});
+
+test("保存後の比較再取得中も種目メモと入力位置を保持する", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  const memo = page.getByRole("button", { name: "種目メモを編集", exact: true });
+  await expect(memo).toBeEnabled();
+  await expect(page.getByRole("button", { name: "今日のメモを編集", exact: true })).toBeEnabled();
+  const before = await page.locator(".set-entry").boundingBox();
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/exercises/context?*", async (route) => {
+    await gate;
+    await route.fallback();
+  });
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
+  await expect.poll(() => state.session?.exercises[0]?.sets.length).toBe(1);
+  try {
+    await expect(memo).toBeVisible({ timeout: 1000 });
+    const after = await page.locator(".set-entry").boundingBox();
+    expect(Math.abs((after?.y ?? 0) - (before?.y ?? 0))).toBeLessThan(2);
+  } finally {
+    release();
+  }
 });

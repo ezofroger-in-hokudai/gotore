@@ -1,8 +1,8 @@
-import { expect, test } from "@playwright/test";
-import { mockTraining, navigate } from "./mock-training";
+import { expect, test } from "./fixtures";
+import { emptyTodayActivity, mockTraining, navigate } from "./mock-training";
 
 test("画面内は短い読み込み表示だけにし、再確認でカレンダーを隠さない", async ({ page }) => {
-  await mockTraining(page);
+  await mockTraining(page, true, false, false);
   let release = () => {};
   let gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -25,28 +25,21 @@ test("画面内は短い読み込み表示だけにし、再確認でカレン�
   });
   await page.reload();
   await navigate(page, "履歴");
-  const calendar = page.getByRole("region", {
-    name: "活動カレンダー",
-    exact: true,
-  });
+  const calendar = page.locator(".personal-history-calendar");
   const loading = calendar.getByRole("status", {
     name: "活動カレンダーを読み込み中",
   });
   try {
-    await expect(loading).toBeVisible();
-    await expect(loading.locator("svg")).toHaveCount(0);
-    await expect(loading).toHaveText("");
-    await expect
-      .poll(() => loading.evaluate((el) => el.getAnimations({ subtree: true }).length))
-      .toBeGreaterThan(0);
-    await expect(calendar.locator(".activity-totals")).toContainText("—");
+    await expect(calendar.locator(".personal-history-calendar-foot")).toContainText("—");
+    await expect(calendar.locator(".personal-history-days button:enabled")).toHaveCount(0);
+    await expect(loading).toHaveCount(0);
     for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     }
     release();
     await expect(loading).toHaveCount(0);
-    await expect(calendar.locator(".activity-totals")).toContainText("0");
+    await expect(calendar.locator(".personal-history-calendar-foot")).toContainText("0");
     await navigate(page, "ホーム");
     gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -56,14 +49,14 @@ test("画面内は短い読み込み表示だけにし、再確認でカレン�
     await expect.poll(() => reads).toBeGreaterThan(previous);
     await expect(calendar.getByText("更新中…", { exact: true })).toHaveCount(0);
     await expect(loading).toHaveCount(0);
-    await expect(calendar.locator(".activity-totals")).toContainText("0");
+    await expect(calendar.locator(".personal-history-calendar-foot")).toContainText("0");
   } finally {
     release();
   }
 });
 
 test("取得失敗と再試行を分け、画面内ではキャラクターを出さない", async ({ page }) => {
-  await mockTraining(page);
+  await mockTraining(page, true, false, false);
   let fail = true;
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
@@ -78,10 +71,7 @@ test("取得失敗と再試行を分け、画面内ではキャラクターを�
   });
   await page.reload();
   await navigate(page, "履歴");
-  const calendar = page.getByRole("region", {
-    name: "活動カレンダー",
-    exact: true,
-  });
+  const calendar = page.locator(".personal-history-calendar");
   const loading = calendar.getByRole("status", {
     name: "活動カレンダーを読み込み中",
   });
@@ -90,8 +80,8 @@ test("取得失敗と再試行を分け、画面内ではキャラクターを�
   fail = false;
   try {
     await calendar.getByRole("button", { name: "再試行", exact: true }).click();
-    await expect(loading).toBeVisible();
-    await expect(loading.locator("svg")).toHaveCount(0);
+    await expect(calendar.locator(".personal-history-calendar-foot")).toContainText("—");
+    await expect(calendar.locator(".personal-history-days button:enabled")).toHaveCount(0);
     await expect(calendar.getByRole("alert")).toHaveCount(0);
     release();
     await expect(calendar.getByRole("alert")).toBeVisible();
@@ -121,30 +111,24 @@ test("ホーム準備後は共有詳細の取得中も移動や閉じる操作�
     revision: 1,
     exercises: [{ name: "ベンチプレス", sets: [{ weight: 20, reps: 10 }] }],
   };
-  await page.route(`**/api/groups/${state.group.id}/activity`, async (route) => {
+  await page.route("**/api/groups/today-activity", async (route) => {
     await feedGate;
-    await route.fulfill({
-      json: {
-        group_id: state.group.id,
-        member_count: 1,
-        live_count: 0,
-        today_count: 0,
-        members: [],
-        feed: [
-          {
-            workout_id: record.id,
-            user_id: record.user_id,
-            display_name: record.display_name,
-            exercise: "ベンチプレス",
-            weight: 20,
-            reps: 10,
-            estimated_rm: null,
-            updated_at: record.created_at,
-            best: false,
-          },
-        ],
+    const activity = emptyTodayActivity([state.group]);
+    const feed = [
+      {
+        workout_id: record.id,
+        user_id: record.user_id,
+        display_name: record.display_name,
+        exercise: "ベンチプレス",
+        weight: 20,
+        reps: 10,
+        estimated_rm: null,
+        updated_at: record.created_at,
+        best: false,
+        summary: { exercise_count: 1, set_count: 1, total_volume: 200 },
       },
-    });
+    ];
+    return route.fulfill({ json: { ...activity, groups: [{ ...activity.groups[0], feed }] } });
   });
   await page.route(`**/api/groups/${state.group.id}/workouts/${record.id}`, async (route) => {
     await recordGate;
@@ -161,40 +145,34 @@ test("ホーム準備後は共有詳細の取得中も移動や閉じる操作�
     await navigate(page, "ホーム");
     showFeed();
     await expect(homeLoading).toHaveCount(0);
-    const open = page.getByRole("button", {
-      name: "友達Aの記録詳細を開く",
-      exact: true,
-    });
-    await open.click();
-    const dialog = page.getByRole("dialog");
-    const loading = dialog.getByRole("status", {
-      name: "記録を読み込み中",
-    });
-    await expect(loading).toBeVisible();
-    await expect(loading.locator("svg")).toHaveCount(0);
-    await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
-    await expect(dialog).toHaveCount(0);
+    const card = page.locator(`[data-workout-id="${record.id}"]`);
+    await expect(card.locator(".record-review.is-pending")).toBeVisible();
+    await expect(card.locator(".record-pending-set").first()).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await navigate(page, "設定");
+    await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
     showRecord();
-    await open.click();
-    await expect(dialog.locator(".record-set")).toHaveCount(1);
-    await expect(loading).toHaveCount(0);
+    await navigate(page, "ホーム");
+    await expect(card.locator(".record-set")).toHaveCount(1);
+    await expect(card.locator(".record-review.is-pending")).toHaveCount(0);
   } finally {
     showFeed();
     showRecord();
   }
 });
 
-test("アプリを開いた最初だけ筋トレ表示し、動き低減では静止する", async ({ page }) => {
+test("認証後の初回準備だけ筋トレ表示し、動き低減では静止する", async ({ page }) => {
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route("**/_next/static/chunks/*.js", async (route) => {
+  await mockTraining(page);
+  await page.route("**/api/groups/today-activity", async (route) => {
     await gate;
-    await route.continue();
+    return route.fallback();
   });
   try {
-    await page.goto("/", { waitUntil: "commit" });
+    await page.reload();
     const loading = page.getByRole("status", { name: "アプリを読み込み中" });
     await expect(loading.locator("svg")).toBeVisible();
     await expect
@@ -213,7 +191,9 @@ test("アプリを開いた最初だけ筋トレ表示し、動き低減では�
       fullPage: true,
     });
     release();
-    await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
+    await expect(page.getByRole("navigation")).toBeVisible();
+    await navigate(page, "設定");
+    await navigate(page, "ホーム");
     await expect(loading).toHaveCount(0);
   } finally {
     release();

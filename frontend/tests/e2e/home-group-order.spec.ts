@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { mockTraining } from "./mock-training";
+import { expect, test } from "./fixtures";
+import { emptyTodayActivity, mockTraining } from "./mock-training";
 
 async function setup(page: import("@playwright/test").Page) {
   const state = await mockTraining(page);
@@ -11,7 +11,8 @@ async function setup(page: import("@playwright/test").Page) {
   await page.route("**/api/groups**", (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/groups") return route.fulfill({ json: groups });
-    if (path === "/api/groups/activity/summary") return route.fulfill({ json: [] });
+    if (path === "/api/groups/today-activity")
+      return route.fulfill({ json: emptyTodayActivity(groups) });
     const group = groups.find(
       (item) => path === `/api/groups/${item.id}` || path === `/api/groups/${item.id}/activity`,
     );
