@@ -6,7 +6,13 @@ export function OnboardingGuide({
   userId,
   replay,
   onVisit,
-}: { userId: string; replay: number; onVisit: (view: TourView, target: string) => void }) {
+  paused = false,
+}: {
+  userId: string;
+  replay: number;
+  onVisit: (view: TourView, target: string) => void;
+  paused?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [visitVersion, setVisitVersion] = useState(0);
@@ -71,7 +77,7 @@ export function OnboardingGuide({
       <p className="muted">次回もガイドが表示される場合があります。</p>
     ) : null;
   return (
-    <div className="tour-layer" hidden={position?.suspended}>
+    <div className="tour-layer" hidden={paused || position?.suspended}>
       {position?.target && (
         <div className="tour-highlight" aria-hidden="true" style={position.target} />
       )}

@@ -57,11 +57,15 @@ test("他ユーザーの表示済み状態を使わず、スキップしても�
   const guide = page.getByRole("region", { name: "使い方ガイド" });
   await expect(guide).toBeVisible();
   await startTraining(page);
+  await expect(guide).toBeHidden();
+  await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("72.5");
   const key = `gotore:session-input:v2:${state.user.id}:${state.session?.id}`;
   await expect
-    .poll(() => page.evaluate((value) => localStorage.getItem(value), key))
-    .not.toBeNull();
+    .poll(() => page.evaluate((value) => JSON.parse(localStorage.getItem(value) ?? "null"), key))
+    .toMatchObject({ name: "ベンチプレス", weight: "72.5", dirty: true });
   const draft = await page.evaluate((value) => localStorage.getItem(value), key);
+  await navigate(page, "ホーム");
+  await expect(guide).toBeVisible();
   await guide.getByRole("button", { name: "スキップ", exact: true }).click();
   await expect(guide).toHaveCount(0);
   expect(await page.evaluate((value) => localStorage.getItem(value), key)).toBe(draft);

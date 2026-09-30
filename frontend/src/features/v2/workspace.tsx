@@ -314,6 +314,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         <OnboardingGuide
           userId={session.user.id}
           replay={guideReplay}
+          paused={view === "record" || view === "edit" || view === "result"}
           onVisit={(next, target) => {
             setGuideTarget({ target });
             setGroupDetail(false);
