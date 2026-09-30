@@ -15,7 +15,7 @@
 - P2: [#264 ホームからグループ一覧への活動データ未引き継ぎ](https://github.com/ezofroger-in-hokudai/gotore/issues/264)。
 - P3: [#265 終了確認を閉じた際の週間履歴再取得](https://github.com/ezofroger-in-hokudai/gotore/issues/265)。
 
-起票後に別途実装依頼を受け、P1〜P3の修正を独立ブランチで実装した。関連E2E17件とmake check成功。全E2E・独立レビュー・実機確認は別途progressに記録し、未検証を成功として扱わない。
+起票後に別途実装依頼を受け、P1〜P3の修正を独立ブランチで実装し、[Draft PR #266](https://github.com/ezofroger-in-hokudai/gotore/pull/266)を作成した。最終関連E2E50件とmake check成功。全E2E・独立レビュー・実機確認は別途progressに記録し、未検証を成功として扱わない。
 
 ## 表示速度を優先した追加調査
 
