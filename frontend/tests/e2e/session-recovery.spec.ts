@@ -18,6 +18,40 @@ test("画面を閉じている間の自動終了を復帰時に知らせる", as
   await expect(page.getByRole("button", { name: "トレーニングを開始", exact: true })).toBeEnabled();
 });
 
+test("自動終了の確認が失敗しても端末記録を保持して再確認できる", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  const active = state.session;
+  expect(active).not.toBeNull();
+  if (!active) return;
+  const last = new Date(Date.now() - 61 * 60_000).toISOString();
+  const key = `gotore:session-queue:v1:${state.user.id}`;
+  await page.evaluate(
+    ({ key, last }) => {
+      const record = JSON.parse(localStorage.getItem(key) || "null");
+      record.base.last_activity_at = last;
+      record.lastActivityAt = undefined;
+      record.activityTrail = undefined;
+      localStorage.setItem(key, JSON.stringify(record));
+    },
+    { key, last },
+  );
+  state.session = null;
+  state.finished.push({ ...active, last_activity_at: last, ended_at: last, auto_ended: true });
+  let fail = true;
+  await page.route("**/api/sessions/active", (route) =>
+    fail ? route.abort() : route.fulfill({ json: state.session }),
+  );
+  await page.reload();
+  await expect(page.getByTestId("floating-training")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "終了状態を確認する" })).toBeVisible();
+  expect(await page.evaluate((key) => localStorage.getItem(key), key)).not.toBeNull();
+  fail = false;
+  await page.getByRole("button", { name: "終了状態を確認する" }).click();
+  await expect(page.getByTestId("floating-training")).toBeEnabled();
+  expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();
+});
+
 test("トレーニング終了の確定後は次のSTARTを押せる", async ({ page }) => {
   const state = await mockTraining(page);
   await startTraining(page);
