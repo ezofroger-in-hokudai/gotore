@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate } from "./mock-training";
+import { emptyTodayActivity, mockTraining, navigate } from "./mock-training";
 
 async function setup(page: import("@playwright/test").Page) {
   const state = await mockTraining(page);
@@ -11,7 +11,8 @@ async function setup(page: import("@playwright/test").Page) {
   await page.route("**/api/groups**", (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/groups") return route.fulfill({ json: groups });
-    if (path === "/api/groups/today-activity") return route.fulfill({ json: { groups: [] } });
+    if (path === "/api/groups/today-activity")
+      return route.fulfill({ json: emptyTodayActivity(groups) });
     const group = groups.find((item) => path === `/api/groups/${item.id}`);
     if (group)
       return route.fulfill({
@@ -45,6 +46,8 @@ test("所属グループが1件の間は並べ替え案内を出さず、2件に
   const state = await mockTraining(page);
   const groups = [state.group];
   await page.route("**/api/groups**", (route) => {
+    if (new URL(route.request().url()).pathname === "/api/groups/today-activity")
+      return route.fulfill({ json: emptyTodayActivity(groups) });
     if (new URL(route.request().url()).pathname === "/api/groups")
       return route.fulfill({ json: groups });
     return route.fallback();
@@ -77,6 +80,7 @@ for (const width of [320, 390, 430]) {
     const { state, groups } = await setup(page);
     const key = `gotore:group-order:${state.user.id}`;
     const first = page.locator(".group-list-drag-wrap").nth(0);
+    await first.locator(".community-card").hover();
     const box = await first.locator(".community-card").boundingBox();
     if (!box) throw new Error("グループカードがありません");
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);

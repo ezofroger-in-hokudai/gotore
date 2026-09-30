@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mockTraining, navigate, openTraining } from "./mock-training";
 
 test("開始せず種目を整理し、検索・分類を保って成功結果をすぐ選べる", async ({ page }) => {
-  const state = await mockTraining(page);
+  const state = await mockTraining(page, true, false, false);
   state.options = [
     {
       id: "bench",
@@ -63,7 +63,7 @@ test("開始せず種目を整理し、検索・分類を保って成功結果�
 });
 
 test("管理の取得失敗を再試行でき、長い名前でも削除対象の近くで確認できる", async ({ page }) => {
-  const state = await mockTraining(page);
+  const state = await mockTraining(page, true, false, false);
   state.failOptions = true;
   await page.reload();
   await navigate(page, "設定");
@@ -109,7 +109,7 @@ test("管理の取得失敗を再試行でき、長い名前でも削除対象�
 });
 
 test("再取得中に保存した部位を遅い旧応答で戻さず、権限エラーでは一覧を消す", async ({ page }) => {
-  const state = await mockTraining(page);
+  const state = await mockTraining(page, true, false, false);
   state.options = [
     {
       id: "bench",

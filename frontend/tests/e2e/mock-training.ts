@@ -3,7 +3,12 @@ import { type Page, expect } from "@playwright/test";
 import type { ExerciseOption, TrainingSession } from "../../src/lib/api";
 
 // UI単独の検証用。実際の認証・DB・共有検証はsharing.spec.tsで行う。
-export async function mockTraining(page: Page, owner = true, showGuide = false) {
+export async function mockTraining(
+  page: Page,
+  owner = true,
+  showGuide = false,
+  withSnapshot = true,
+) {
   const user = {
     id: "00000000-0000-0000-0000-000000000001",
     aud: "authenticated",
@@ -26,8 +31,8 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     failSync: false,
     failRename: false,
     options: [
-      { id: "option-bench", name: "ベンチプレス" },
-      { id: "option-squat", name: "スクワット" },
+      { id: "option-bench", name: "ベンチプレス", revision: 1 },
+      { id: "option-squat", name: "スクワット", revision: 1 },
     ] as ExerciseOption[],
     failOptions: false,
     failOptionWrite: false,
@@ -61,6 +66,11 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
   });
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
+    if (!withSnapshot && path.startsWith("/api/me/record-snapshot"))
+      return route.fulfill({
+        status: 503,
+        json: { detail: "端末キャッシュを使わない通信経路の検証" },
+      });
     if (path === "/api/me/record-snapshot")
       return route.fulfill({
         json: {
@@ -78,9 +88,9 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
         json: {
           version: 1,
           user_id: user.id,
-          workouts: [],
+          workouts: [...(state.session ? [state.session] : []), ...state.finished],
           deleted_workout_ids: [],
-          options: [],
+          options: state.options,
           deleted_option_ids: [],
           contexts: {},
           deleted_context_names: [],
@@ -444,7 +454,11 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
 }
 
 export async function navigate(page: Page, name: string) {
-  await page.getByRole("navigation").getByRole("button", { name, exact: true }).click();
+  const button = page
+    .getByRole("navigation", { name: "メインナビゲーション", exact: true })
+    .getByRole("button", { name, exact: true });
+  await button.click();
+  await expect(button).toHaveAttribute("aria-current", "page");
 }
 export async function openTraining(page: Page) {
   await navigate(page, "ホーム");
@@ -495,4 +509,20 @@ export async function openRecordingCatalog(page: Page) {
   if (!(await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).isVisible()))
     await page.locator(".exercise-information").click();
   await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).click();
+}
+
+export function emptyTodayActivity(groups: { id: string; name: string }[]) {
+  return {
+    groups: groups.map((group) => ({
+      group_id: group.id,
+      name: group.name,
+      member_count: 1,
+      live_count: 0,
+      today_count: 0,
+      members: [],
+      feed: [],
+      totals: { set_count: 0, total_volume: 0 },
+    })),
+    totals: { set_count: 0, total_volume: 0 },
+  };
 }

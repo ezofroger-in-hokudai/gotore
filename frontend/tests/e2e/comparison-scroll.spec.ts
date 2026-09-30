@@ -26,6 +26,9 @@ for (const width of [320, 390, 430]) {
       element.scrollTop = 48;
     });
     await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-    await expect.poll(() => table.evaluate((element) => element.scrollTop)).toBe(48);
+    // ブラウザのスクロール位置はレイアウトの端数で1px丸められる。行を飛ばす移動は許容しない。
+    await expect
+      .poll(() => table.evaluate((element) => Math.abs(element.scrollTop - 48)))
+      .toBeLessThanOrEqual(1);
   });
 }
