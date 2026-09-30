@@ -4694,6 +4694,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 .recording-view .entering-sets .set-comparison {
   flex: 1 1 auto;
   min-height: 0;
+  contain: size;
 }
 .recording-view .unified-comparison-table {
   display: block;
