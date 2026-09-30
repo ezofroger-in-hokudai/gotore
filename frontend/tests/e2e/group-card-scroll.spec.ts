@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 test("グループカード上の短い縦スワイプでページをスクロールする", async ({ browser }) => {

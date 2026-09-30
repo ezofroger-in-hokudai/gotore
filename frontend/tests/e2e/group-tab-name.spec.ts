@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, openTraining } from "./mock-training";
 
 test("長いグループ名はホームの選択列で一定幅に収まり、正式名で選べる", async ({ page }) => {

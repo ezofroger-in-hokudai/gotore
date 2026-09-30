@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
-import { createTestUser, testPassword } from "./local-auth";
-import { navigate } from "./mock-training";
+import { expect, test } from "../fixtures";
+import { createTestUser, testPassword } from "../local-auth";
+import { navigate } from "../mock-training";
 
 test("実認証で設定から目安箱へ投稿でき、アプリから投稿を読み出せない", async ({ page }) => {
   const run = crypto.randomUUID();

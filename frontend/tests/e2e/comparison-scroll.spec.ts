@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, startTraining } from "./mock-training";
 
 for (const width of [320, 390, 430]) {
@@ -25,10 +25,13 @@ for (const width of [320, 390, 430]) {
     await table.evaluate((element) => {
       element.scrollTop = 48;
     });
+    const before = await table.evaluate((element) => element.scrollTop);
     await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     // ブラウザのスクロール位置はレイアウトの端数で1px丸められる。行を飛ばす移動は許容しない。
     await expect
-      .poll(() => table.evaluate((element) => Math.abs(element.scrollTop - 48)))
+      .poll(() =>
+        table.evaluate((element, baseline) => Math.abs(element.scrollTop - baseline), before),
+      )
       .toBeLessThanOrEqual(1);
   });
 }

@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 async function googleUser(page: Page, savedName = "") {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 test("画面を閉じている間の自動終了を復帰時に知らせる", async ({ page }) => {

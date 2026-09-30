@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining } from "./mock-training";
 
 test("50件のフィード上限を超えても今日とグループの集計は全件を示す", async ({ page }) => {

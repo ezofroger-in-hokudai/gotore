@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { PNG } from "pngjs";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, openGroup } from "./mock-training";
 
 test("採用した履歴の通算・部位・カレンダー・グラフ・人体図を切り替えられる", async ({ page }) => {
@@ -501,4 +501,47 @@ test("グループのグラフも連続して動き、部位だけで絞り込�
   await plot.hover();
   await page.mouse.wheel(-100, 0);
   await expect.poll(() => plot.evaluate((element) => element.scrollLeft)).toBeLessThan(initial);
+});
+
+test("履歴の読み込み前から日付グリッドを表示し、再訪で領域が消えない", async ({ page }) => {
+  await mockTraining(page, true, false, false);
+  let release = () => {};
+  let gate: Promise<void> | null = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/workouts/activity?*", async (route) => {
+    if (gate) await gate;
+    return route.fallback();
+  });
+  await navigate(page, "履歴");
+  try {
+    await expect(page.locator(".personal-history-days")).toBeVisible({ timeout: 2000 });
+    await expect(page.locator(".personal-history-calendar-foot")).toContainText("—");
+    await expect(page.locator(".personal-history-days button").first()).toBeDisabled();
+  } finally {
+    release();
+    gate = null;
+  }
+  await expect(page.locator(".personal-history-days button").first()).toBeEnabled();
+  const height = await page
+    .locator(".personal-history-days")
+    .evaluate((el) => el.getBoundingClientRect().height);
+  await navigate(page, "ホーム");
+  gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await navigate(page, "履歴");
+  try {
+    await expect(page.locator(".personal-history-days button").first()).toBeEnabled({
+      timeout: 1000,
+    });
+    expect(
+      await page
+        .locator(".personal-history-days")
+        .evaluate((el) => el.getBoundingClientRect().height),
+    ).toBe(height);
+  } finally {
+    release();
+    gate = null;
+  }
 });

@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import type { ExerciseOption } from "../../src/lib/api";
+import { expect, test } from "./fixtures";
 import { openRecordingCatalog } from "./mock-training";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 

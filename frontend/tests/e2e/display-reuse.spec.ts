@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import { dateLabel } from "../../src/features/activity/calendar";
 import { today } from "../../src/features/training/draft";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, startTraining } from "./mock-training";
 
 test("グループカレンダー再訪の更新待ちでも記録表示と日付操作を維持する", async ({ page }) => {
@@ -440,4 +440,30 @@ test("全グループから退出した後の再参加では以前の活動表�
   await expect(page.locator(".group-carousel .community-card")).toContainText(
     "0人がトレーニング中",
   );
+});
+
+test("ホームは再訪時に活動を保持し、権限エラー時は古い共有内容を隠す", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
+  await expect.poll(() => state.session?.exercises[0]?.sets.length).toBe(1);
+  await navigate(page, "ホーム");
+  await expect(page.locator(".community-feed")).toContainText("ベンチプレス");
+  await navigate(page, "設定");
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/groups/today-activity", async (route) => {
+    await gate;
+    return route.fulfill({ status: 403, json: { detail: "このグループを閲覧できません" } });
+  });
+  await navigate(page, "ホーム");
+  try {
+    await expect(page.locator(".community-feed")).toContainText("ベンチプレス", { timeout: 1000 });
+  } finally {
+    release();
+  }
+  await expect(page.locator(".v2-app [role=alert]:visible")).toContainText("閲覧できません");
+  await expect(page.locator(".community-feed")).toHaveCount(0);
 });

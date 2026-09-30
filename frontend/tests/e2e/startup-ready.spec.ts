@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { emptyTodayActivity, mockTraining, navigate } from "./mock-training";
 
 test("初回のグループと種目を準備してからホームを表示する", async ({ page }) => {

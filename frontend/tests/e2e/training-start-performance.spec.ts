@@ -1,4 +1,4 @@
-import { type ElementHandle, expect, test } from "@playwright/test";
+import { type ElementHandle, expect, test } from "./fixtures";
 import { showRecordingMemos } from "./mock-training";
 import { mockTraining, navigate, openTraining } from "./mock-training";
 
@@ -200,3 +200,41 @@ for (const savedInput of [true, false]) {
     expect(state.saves).toBe(0);
   });
 }
+
+test("開始応答を待ちながら入力でき、失敗後の再試行でも入力を保持する", async ({ page }) => {
+  await mockTraining(page);
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let fail = true;
+  const ids: string[] = [];
+  await page.route("**/api/sessions", async (route) => {
+    ids.push(route.request().postDataJSON().id);
+    if (fail) {
+      await gate;
+      return route.fulfill({ status: 503, json: { detail: "開始できません" } });
+    }
+    return route.fallback();
+  });
+  await openTraining(page);
+  await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
+  try {
+    await page.getByRole("button", { name: /^スクワット/ }).click({ timeout: 2000 });
+    await page
+      .getByRole("spinbutton", { name: "重量", exact: true })
+      .fill("42.5", { timeout: 2000 });
+    await page.getByRole("spinbutton", { name: "回数", exact: true }).fill("8");
+    await page.getByRole("spinbutton", { name: "回数", exact: true }).press("Enter");
+    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeDisabled();
+  } finally {
+    release();
+  }
+  await expect(page.locator(".v2-app [role=alert]:visible")).toContainText("開始できません");
+  fail = false;
+  await page.getByRole("button", { name: "保存済みを読み直す", exact: true }).click();
+  await expect(page.locator(".recording-exercise-title")).toContainText("スクワット");
+  await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue("42.5");
+  await expect(page.getByRole("spinbutton", { name: "回数", exact: true })).toHaveValue("8");
+  expect(new Set(ids).size).toBe(1);
+});

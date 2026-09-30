@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, openTraining } from "./mock-training";
 
 test("種目候補は本人の最終実施日順で未記録を末尾に置く", async ({ page }) => {

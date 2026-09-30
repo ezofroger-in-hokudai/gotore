@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, openGroup } from "./mock-training";
 
 async function openName(page: import("@playwright/test").Page) {

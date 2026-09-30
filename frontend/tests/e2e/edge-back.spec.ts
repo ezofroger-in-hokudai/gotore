@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 test("ホーム画面に追加したアプリでは左端スワイプで直前の画面へ戻る", async ({ browser }) => {

@@ -1,8 +1,8 @@
 import { gunzipSync } from "node:zlib";
-import { expect, test } from "@playwright/test";
-import type { TrainingSession } from "../../src/lib/api";
-import { createTestUser, testPassword } from "./local-auth";
-import { mockTraining, startTraining } from "./mock-training";
+import type { TrainingSession } from "../../../src/lib/api";
+import { expect, test } from "../fixtures";
+import { createTestUser, testPassword } from "../local-auth";
+import { mockTraining, startTraining } from "../mock-training";
 
 const exercises = [
   { name: "ベンチプレス", sets: Array.from({ length: 20 }, () => ({ weight: 82.5, reps: 8 })) },

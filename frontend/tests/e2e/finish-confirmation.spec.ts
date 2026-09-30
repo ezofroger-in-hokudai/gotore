@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { addDays } from "../../src/features/analytics/period";
+import { expect, test } from "./fixtures";
 import { mockTraining, startTraining } from "./mock-training";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());

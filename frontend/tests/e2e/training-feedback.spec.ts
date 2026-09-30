@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, startTraining } from "./mock-training";
 
 test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 720 } });

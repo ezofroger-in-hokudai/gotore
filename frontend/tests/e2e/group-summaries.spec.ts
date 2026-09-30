@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 test("複数グループの活動を一度に取得し、絞り込みは通信なし、非表示では更新を止める", async ({

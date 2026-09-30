@@ -1,6 +1,7 @@
-import { type Page, expect, test } from "@playwright/test";
-import { createTestUser, testPassword } from "./local-auth";
-import { navigate, openTraining, startTraining } from "./mock-training";
+import { type Page, expect, test } from "../fixtures";
+import { createTestUser, testPassword } from "../local-auth";
+import { navigate, openTraining, startTraining } from "../mock-training";
+import { openHistoryDay } from "../personal-history-helper";
 
 async function login(page: Page, name: string, email: string) {
   await createTestUser(name, email);
@@ -68,11 +69,18 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
       route.request().method() === "PATCH" && failSave ? route.abort() : route.continue(),
     );
     await pageA.getByRole("button", { name: "セットを追加", exact: true }).click();
-    await expect(pageA.locator(".sync-status")).toContainText("未送信");
+    await expect(pageA.getByRole("button", { name: "セット1を編集", exact: true })).toContainText(
+      "82.5",
+    );
     failSave = false;
-    // オフライン保存分を再送し、表示が消えてから永続化を確認する。
-    await pageA.getByRole("button", { name: "再送", exact: true }).click();
-    await expect(pageA.locator(".sync-status")).toHaveCount(0);
+    const savedResponse = pageA.waitForResponse(
+      (response) =>
+        response.url().includes("/sessions/") &&
+        response.request().method() === "PATCH" &&
+        response.ok(),
+    );
+    await pageA.evaluate(() => window.dispatchEvent(new Event("online")));
+    expect((await savedResponse).ok()).toBe(true);
     await pageA.reload();
     await openTraining(pageA);
     await expect(pageA.getByRole("button", { name: "セット1を編集", exact: true })).toContainText(
@@ -87,18 +95,31 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     }
     await pageA.bringToFront();
     await pageA.getByRole("button", { name: "トレーニング終了", exact: true }).click();
+    const finishedResponse = pageA.waitForResponse(
+      (response) =>
+        response.url().includes("/finish") &&
+        response.request().method() === "POST" &&
+        response.ok(),
+    );
     await pageA.getByRole("button", { name: "終了する", exact: true }).click();
-    await navigate(pageA, "履歴");
-    await expect(pageA.locator(".history-row")).toHaveCount(1);
-    await pageA.locator(".history-row").click();
+    const finished = await (await finishedResponse).json();
+    const day = await openHistoryDay(pageA, finished.performed_on);
+    await expect(day.getByRole("article")).toHaveCount(1);
     await pageA.getByRole("button", { name: "メモ", exact: true }).click();
     await pageA.getByLabel("メモ", { exact: true }).fill("本人だけの振り返り");
     await pageA.getByRole("button", { name: "保存", exact: true }).click();
     await expect(pageA.getByRole("status")).toContainText("保存しました");
-    await pageA.getByRole("button", { name: "閉じる", exact: true }).click();
-    await pageA.getByRole("button", { name: "編集", exact: true }).click();
+    await pageA.getByRole("article").getByRole("button", { name: "閉じる", exact: true }).click();
+    await day.getByRole("button", { name: "編集", exact: true }).click();
     await pageA.getByLabel("種目1 セット1 重量", { exact: true }).fill("85");
+    const updated = pageA.waitForResponse(
+      (response) =>
+        response.url().includes("/workouts/") &&
+        response.request().method() === "PATCH" &&
+        response.ok(),
+    );
     await pageA.getByRole("button", { name: "保存", exact: true }).click();
+    expect((await updated).ok()).toBe(true);
     await pageB.bringToFront();
     await expect(pageB.getByRole("article")).toContainText("85");
     await expect(pageB.getByText("本人だけの振り返り")).toHaveCount(0);

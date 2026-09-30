@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { emptyTodayActivity, mockTraining, navigate } from "./mock-training";
 import { mockHistoryCalendar, openHistoryDay } from "./personal-history-helper";
 
@@ -112,7 +112,7 @@ test("活動取得は遅い正常応答を待ち、期限切れ後も多重取�
     hold = false;
     await page.clock.runFor(15_000);
     await expect(page.locator(".group-carousel .community-card")).toContainText("1人");
-    expect(reads).toBe(first + 2);
+    await expect.poll(() => reads).toBe(first + 2);
     await navigate(page, "設定");
     await page.clock.runFor(20_000);
     expect(reads).toBe(first + 2);

@@ -42,6 +42,8 @@ export async function mockTraining(
     finished: [] as TrainingSession[],
     failSave: false,
     saves: 0,
+    exerciseMemos: new Map<string, { content: string; revision: number }>(),
+    sessionMemos: new Map<string, { content: string; revision: number }>(),
   };
   await page.route("**/auth/v1/**", async (route) => {
     if (route.request().method() === "PUT") {
@@ -65,7 +67,8 @@ export async function mockTraining(
     });
   });
   await page.route("**/api/**", (route) => {
-    const path = new URL(route.request().url()).pathname;
+    const url = new URL(route.request().url());
+    const path = url.pathname;
     if (!withSnapshot && path.startsWith("/api/me/record-snapshot"))
       return route.fulfill({
         status: 503,
@@ -144,11 +147,15 @@ export async function mockTraining(
     if (path.endsWith("/bests"))
       return route.fulfill({ json: { revision: state.session?.revision, sets: [] } });
     if (path.endsWith("/exercise-memo")) {
-      if (route.request().method() === "GET")
-        return route.fulfill({ json: { content: "", revision: 0 } });
-      return route.fulfill({
-        json: { content: route.request().postDataJSON().content, revision: 1 },
-      });
+      const key = `${path}:${url.searchParams.get("name")}`;
+      const memo = state.sessionMemos.get(key) ?? { content: "", revision: 0 };
+      if (route.request().method() === "GET") return route.fulfill({ json: memo });
+      const saved = {
+        content: route.request().postDataJSON().content,
+        revision: memo.revision + 1,
+      };
+      state.sessionMemos.set(key, saved);
+      return route.fulfill({ json: saved });
     }
     if (path.startsWith("/api/sessions/")) {
       if (path.endsWith("/heartbeat")) return route.fulfill({ status: 204 });
@@ -219,13 +226,19 @@ export async function mockTraining(
               { weight: 75, reps: 10 },
             ],
           },
-          memo: { content: "", revision: 0 },
+          memo: state.exerciseMemos.get(url.searchParams.get("name") ?? "") ?? {
+            content: "",
+            revision: 0,
+          },
         },
       });
-    if (path === "/api/exercises/memo")
-      return route.fulfill({
-        json: { content: route.request().postDataJSON().content, revision: 1 },
-      });
+    if (path === "/api/exercises/memo") {
+      const body = route.request().postDataJSON();
+      const current = state.exerciseMemos.get(body.name) ?? { content: "", revision: 0 };
+      const saved = { content: body.content, revision: current.revision + 1 };
+      state.exerciseMemos.set(body.name, saved);
+      return route.fulfill({ json: saved });
+    }
     if (path.endsWith("/memo")) return route.fulfill({ json: { content: "", revision: 0 } });
     if (path === `/api/groups/${group.id}/activity`) {
       const latest = state.session?.exercises.length ? state.session : state.finished.at(-1);

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { historyMonth } from "./history-period-helper";
 import { mockTraining, openTraining, startTraining } from "./mock-training";
 import { mockHistoryCalendar, openHistoryDay } from "./personal-history-helper";
@@ -86,7 +86,7 @@ test("編集の競合・キャンセル・保存で新規下書きを保持し�
   await page.getByLabel("種目1 セット1 重量", { exact: true }).fill("70");
   await page.screenshot({ path: "test-results/workout-edit-mobile.png" });
   await page.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "更新しました" })).toBeVisible();
+  await expect.poll(() => record.exercises[0].sets[0].weight).toBe(70);
   expect(await page.evaluate((key) => localStorage.getItem(key), draftKey)).toBe(draft);
   expect(await historyMonth(page)).toBe("2026-01");
   await expect(

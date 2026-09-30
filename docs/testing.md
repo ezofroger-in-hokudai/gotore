@@ -1,5 +1,14 @@
 # テストの使い分けと実行時間（#192）
 
+## 現行仕様の責務
+
+[テスト責務と移行先](testing-coverage.md)を参照する。UIと実Auth/DBをPlaywright projectで分けるが、CIは両方を必ず実行する。
+
+```sh
+make test-e2e E2E_ARGS='--project=ui --workers=2'
+make test-e2e E2E_ARGS='--project=integration --workers=2'
+```
+
 ## 開発中
 
 ```sh
@@ -33,14 +42,8 @@ CIは2 worker、ローカルは既定1 worker。メモリに余裕がある環�
 
 ## 時間待ちの検証
 
-stamp-receipt-inlineの3幅テストでは、ポーリング10秒・新着表示5秒の待ちをPlaywrightのClockで進める。本番の間隔を短くせず、DOM更新・取得失敗・再試行・入力位置保持のassertionは残す。実Auth/2人のスタンプ送受信は実時間のまま確認する。
+ポーリング・無操作の待ちはPlaywright Clockで進める。本番の間隔は変更しない。実Auth/複数人の送受信は実時間で確認する。終了結果のスタンプはポーリングしない現行仕様に合わせ、詳細を閉じる時の再取得・既読・再試行を確認する。
 
-[Playwrightの並列実行](https://playwright.dev/docs/test-parallel) / [Clock](https://playwright.dev/docs/clock)
+## 過去の計測
 
-## 計測
-
-元の参考値はPR #191の全E2E210件で約13分（API接続先による3件の失敗を含む）。本改善はmain起点の207件で検証するため、総時間の比較は厳密な同一条件ベンチマークではない。
-
-同じスタンプ受信3幅のテスト本体は、前回の実時間待ち約86秒に対して仮想時間版で約16秒（起動等込み22.3秒）。テスト件数と確認範囲は維持している。CI全体にはSupabase/Docker/ブラウザの準備時間も加わるため、ローカルの短縮率をそのままCIの短縮率とは扱わない。
-
-改善後のローカル全E2Eは207件すべて成功、2 workerで7.4分。基準とした前回13.1分より短いが、上記の条件差があるため約44%短縮は参考値。CI runnerでの時間はPRの実行結果を別途確認する。
+PR #192時点の207件はローカル2 workerで7.4分。ケースと仕様が変わるため、今回の時間と同一条件の速度比較には使わない。各PRでは件数・worker数・実Auth/DBの有無・失敗を含む時間を記録する。

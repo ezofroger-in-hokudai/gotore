@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { moveHistoryMonth } from "./history-period-helper";
 import { emptyTodayActivity, mockTraining, navigate, openGroup } from "./mock-training";
 import { mockHistoryCalendar, openHistoryDay } from "./personal-history-helper";

@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { localAuth, testPassword } from "./local-auth";
+import { expect, test } from "../fixtures";
+import { localAuth, testPassword } from "../local-auth";
 
 test("Googleでの登録と既存メールログインを案内する", async ({ page }) => {
   await page.goto("/");

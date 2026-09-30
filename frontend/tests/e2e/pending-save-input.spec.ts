@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 import { mockTraining, openTraining, startTraining } from "./mock-training";
 
 test("端末保存を待つ間に入力した次セットの値を保持する", async ({ page }) => {

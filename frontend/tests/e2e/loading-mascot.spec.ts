@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { emptyTodayActivity, mockTraining, navigate } from "./mock-training";
 
 test("画面内は短い読み込み表示だけにし、再確認でカレンダーを隠さない", async ({ page }) => {

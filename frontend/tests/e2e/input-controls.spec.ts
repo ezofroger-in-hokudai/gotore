@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, startTraining } from "./mock-training";
 
 test("矢印は重量5kg・回数5回ずつ調整し、保存せず上下限を守る", async ({ page }) => {

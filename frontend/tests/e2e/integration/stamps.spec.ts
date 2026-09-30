@@ -1,7 +1,7 @@
-import { type Page, expect, test } from "@playwright/test";
-import { createTestUser, localAuth, testPassword } from "./local-auth";
-import { startTraining } from "./mock-training";
-import { backendUrl } from "./test-server";
+import { type Page, expect, test } from "../fixtures";
+import { createTestUser, localAuth, testPassword } from "../local-auth";
+import { startTraining } from "../mock-training";
+import { backendUrl } from "../test-server";
 
 async function login(page: Page, name: string, email: string) {
   await createTestUser(name, email);
@@ -163,13 +163,9 @@ test("2人でスタンプを送信し、記録中の入力保持・未読・取�
         true,
       );
     }
-    await pageA.reload();
-    await expect(pageA.getByRole("button", { name: "届いたスタンプ", exact: true })).toHaveCount(0);
-    await pageA.locator(".community-card").first().click();
-    await pageA.getByRole("button", { name: "届いたスタンプ", exact: true }).click();
-    await expect(pageA.getByRole("dialog", { name: "届いたスタンプ", exact: true })).toContainText(
-      "3個",
-    );
+    await receipt.getByRole("button", { name: /届いたスタンプの詳細/ }).click();
+    await expect(inbox).toContainText("ミオ");
+    await expect(inbox).toContainText("3個");
   } finally {
     await a.close();
     await b.close();

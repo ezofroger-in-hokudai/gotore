@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 test("シート外をタップすると閉じ、内側の操作と履歴を保つ", async ({ page }) => {

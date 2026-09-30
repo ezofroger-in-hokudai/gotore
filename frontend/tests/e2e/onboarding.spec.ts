@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, startTraining } from "./mock-training";
 
 test("初回ガイドは完了・再ログイン後に再表示せず、設定から読み直せる", async ({

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 async function openBox(page: import("@playwright/test").Page) {
@@ -81,7 +81,7 @@ for (const width of [320, 390, 430]) {
       true,
     );
     await page.screenshot({
-      path: `../docs/images/suggestion-box/settings-${width}.png`,
+      path: `test-results/settings-${width}.png`,
       fullPage: true,
     });
   });

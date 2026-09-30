@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { showRecordingMemos } from "./mock-training";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 

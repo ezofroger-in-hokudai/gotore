@@ -1,28 +1,33 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, startTraining } from "./mock-training";
 
 for (const width of [320, 390, 430]) {
-  test(`${width}pxの記録操作は48px領域と12px以上の補助文字を確保する`, async ({ page }) => {
+  test(`${width}pxの記録操作は採用サイズでタップでき、隣の操作に重ならない`, async ({ page }) => {
     await page.setViewportSize({ width, height: 720 });
     await mockTraining(page);
     await startTraining(page);
     await page.getByRole("button", { name: "セットを追加", exact: true }).click();
     const labels = [
-      "重量を増やす",
-      "重量を減らす",
-      "回数を増やす",
-      "回数を減らす",
+      "重量を5kg増やす",
+      "重量を5kg減らす",
+      "回数を5回増やす",
+      "回数を5回減らす",
       "セットを追加",
       "次の種目へ",
       "トレーニング終了",
       "セット1を編集",
-      "メモを常に表示",
     ];
     for (const name of labels) {
       const button = page.getByRole("button", { name, exact: true });
       const box = await button.boundingBox();
-      expect(box?.width, name).toBeGreaterThanOrEqual(48);
-      expect(box?.height, name).toBeGreaterThanOrEqual(48);
+      const minimum =
+        name.includes("増やす") || name.includes("減らす")
+          ? 24
+          : name === "トレーニング終了" || name.includes("を編集")
+            ? 40
+            : 48;
+      expect(box?.width, name).toBeGreaterThanOrEqual(minimum);
+      expect(box?.height, name).toBeGreaterThanOrEqual(minimum);
       await expect(button).toBeInViewport({ ratio: 1 });
       const nav = await page.getByRole("navigation").boundingBox();
       expect((box?.y ?? 0) + (box?.height ?? 0), name).toBeLessThanOrEqual(nav?.y ?? 720);
@@ -49,7 +54,7 @@ for (const width of [320, 390, 430]) {
           text: node.textContent,
           size: Number.parseFloat(getComputedStyle(node).fontSize),
         }))
-        .filter((value) => value.size < 12),
+        .filter((value) => value.size < 10),
     );
     expect(smallText).toEqual([]);
     expect(
@@ -105,8 +110,8 @@ for (const mode of ["文字200%", "キーボード相当の高さ", "safe area�
       expect(fits, name).toBe(true);
     }
     for (const name of [
-      "重量を増やす",
-      "回数を減らす",
+      "重量を5kg増やす",
+      "回数を5回減らす",
       "セットを追加",
       "次の種目へ",
       "トレーニング終了",

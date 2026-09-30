@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 test("履歴は再訪時の表示を保持し、認証エラー時は古い記録を隠す", async ({ page }) => {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { emptyTodayActivity, mockTraining, navigate } from "./mock-training";
 
 for (const close of ["縮小", "画面移動"] as const) {

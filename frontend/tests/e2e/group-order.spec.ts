@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { emptyTodayActivity, mockTraining, navigate } from "./mock-training";
 
 async function setup(page: import("@playwright/test").Page) {
