@@ -1,9 +1,10 @@
 "use client";
 
-import type { BodyPart, ExerciseOption, SessionBests, TrainingSession } from "@/lib/api";
+import type { BodyPart, SessionBests, TrainingSession } from "@/lib/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BODY_PARTS, BODY_PART_LABELS, normalizeBodyPart } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
+import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
@@ -22,6 +23,7 @@ import {
   setValue,
   updateSet,
 } from "./session";
+import { sessionExerciseOptions } from "./session-exercise-options";
 import { TrainingOverview } from "./training-overview";
 import { useExerciseContext } from "./use-exercise-context";
 import { useFinishWeekRecords } from "./use-finish-week-records";
@@ -63,7 +65,7 @@ export function SessionScreen({
   onHistory: () => void;
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
-  catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  catalog: ReturnType<typeof useExerciseCatalog>;
   elapsed: string | null;
 }) {
   const { session } = controller;
@@ -122,7 +124,7 @@ function ActiveTraining({
   session: TrainingSession | null;
   initialInput: SessionInput;
   onPreparingInput: (input: SessionInput) => void;
-  catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  catalog: ReturnType<typeof useExerciseCatalog>;
   elapsed: string | null;
   controller: SessionController;
   userId: string;
@@ -175,7 +177,7 @@ function ActiveTraining({
       ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
       : [],
   );
-  const candidates = (catalog.data ?? [])
+  const candidates = sessionExerciseOptions(catalog.data ?? [], exercises)
     .filter(
       (option) =>
         selectedParts.length === 0 ||
@@ -841,7 +843,7 @@ function ActiveTraining({
             expanded
             startAdding
             disabled={controller.busy}
-            onChanged={catalog.retry}
+            onChanged={catalog.changed}
             onAdded={() => setCatalogOpen(false)}
             initialPrimary={selectedParts.length === 1 ? selectedParts[0] : undefined}
             showAddHeading={false}
