@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, navigate } from "./mock-training";
+import { emptyTodayActivity, mockTraining, navigate } from "./mock-training";
 
 test("初回のグループと種目を準備してからホームを表示する", async ({ page }) => {
-  const state = await mockTraining(page);
+  await mockTraining(page, true, false, false);
   let releaseFeed = () => {};
   let releaseOptions = () => {};
   const feed = new Promise<void>((resolve) => {
@@ -12,7 +12,7 @@ test("初回のグループと種目を準備してからホームを表示す�
     releaseOptions = resolve;
   });
   let requested = 0;
-  await page.route(`**/api/groups/${state.group.id}/activity`, async (route) => {
+  await page.route("**/api/groups/today-activity", async (route) => {
     requested++;
     await feed;
     await route.fallback();
@@ -34,7 +34,7 @@ test("初回のグループと種目を準備してからホームを表示す�
     releaseOptions();
     await expect(page.getByRole("navigation")).toBeVisible();
     await expect(startup).toHaveCount(0);
-    await expect(page.locator(".community-total")).toContainText("1人");
+    await expect(page.locator(".group-carousel .community-card")).toContainText("0人");
     await expect(
       page.getByRole("button", { name: "トレーニングを開始", exact: true }),
     ).toBeEnabled();
@@ -59,111 +59,93 @@ test("初回取得が失敗してもホームの再試行へ進める", async ({
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("グループ取得失敗");
   await page.unroute("**/api/groups");
   await page.getByRole("button", { name: "再試行", exact: true }).click();
-  await expect(page.locator(".community-total")).toContainText("1人");
+  await expect(page.locator(".group-carousel .community-card")).toContainText("0人");
 });
 
-test("隣を先読みし、切替先の確認が遅くても記録を即時表示する", async ({ page }) => {
+test("全所属の活動を一度で取得し、切替後も保持して503と403を区別する", async ({ page }) => {
   const state = await mockTraining(page);
   const groups = [
     state.group,
     ...["b", "c", "d"].map((id) => ({ ...state.group, id, name: `グループ${id}` })),
   ];
-  const counts = new Map<string, number>();
-  let held = false;
-  let denied = false;
+  let reads = 0;
+  let status = 200;
   let release = () => {};
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  let gate = Promise.resolve();
   await page.route("**/api/groups", (route) => route.fulfill({ json: groups }));
-  await page.route("**/api/groups/activity/summary", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/groups/*/activity", async (route) => {
-    const id = new URL(route.request().url()).pathname.split("/")[3];
-    counts.set(id, (counts.get(id) ?? 0) + 1);
-    if (held && id === "b") await gate;
-    if (denied && id === "b")
-      return route.fulfill({ status: 403, json: { detail: "共有を閲覧できません" } });
-    await route.fulfill({
-      json: {
-        group_id: id,
-        member_count: 1,
-        live_count: 0,
-        today_count: 0,
-        members: [],
-        feed: [
-          {
-            workout_id: id,
-            user_id: state.user.id,
-            display_name: "本人",
-            exercise: `記録${id}`,
-            weight: 20,
-            reps: 10,
-            estimated_rm: null,
-            updated_at: new Date().toISOString(),
-            best: false,
-          },
-        ],
-      },
+  await page.route("**/api/groups/today-activity", async (route) => {
+    reads++;
+    await gate;
+    const activity = emptyTodayActivity(groups);
+    activity.groups[1].member_count = 3;
+    activity.groups[1].today_count = 3;
+    return route.fulfill({
+      status,
+      json: status === 200 ? activity : { detail: "活動を取得できません" },
     });
   });
   try {
     await page.reload();
     await expect(page.getByRole("navigation")).toBeVisible();
-    await expect.poll(() => counts.get("b")).toBe(1);
-    // 先読みがブラウザへ届いたことを保証してから、確認要求を保留する。
-    await page.waitForTimeout(100);
-    expect(counts.get("c")).toBeUndefined();
-    expect(counts.get("d")).toBeUndefined();
-    held = true;
+    expect(reads).toBe(1);
     await page.getByRole("button", { name: "グループbを表示", exact: true }).click();
-    await expect.poll(() => counts.get("b")).toBe(2);
-    await expect(page.getByRole("article")).toContainText("記録b");
-    await expect(page.getByRole("status", { name: "グループの記録を読み込み中" })).toHaveCount(0);
-    denied = true;
+    const card = page.getByRole("button", { name: "グループbの詳細", exact: true });
+    await expect(card).toContainText("3人");
+    expect(reads).toBe(1);
+    gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    await expect.poll(() => reads).toBe(2);
+    await expect(card).toContainText("3人");
+    status = 503;
     release();
-    await expect(page.locator(".v2-app").getByRole("alert")).toContainText("共有を閲覧できません");
-    await expect(page.getByRole("article")).toHaveCount(0);
-    await page.getByRole("button", { name: `${state.group.name}を表示`, exact: true }).click();
-    await expect(page.getByRole("article")).toContainText(`記録${state.group.id}`);
+    await expect(page.locator(".v2-app").getByRole("alert")).toContainText(
+      "前回の内容を表示しています",
+    );
+    await expect(card).toContainText("3人");
+    status = 403;
+    await page.getByRole("button", { name: "今日の活動を再試行", exact: true }).click();
+    await expect(page.locator(".v2-app").getByRole("alert")).not.toContainText(
+      "前回の内容を表示しています",
+    );
+    await expect(card).not.toContainText("3人");
   } finally {
     release();
   }
 });
 
-test("先読み中の隣へ切り替えても同じ取得を引き継ぐ", async ({ page }) => {
+test("初回集約取得の期限切れ後は再試行でき、切替で多重取得しない", async ({ page }) => {
+  await page.clock.install();
   const state = await mockTraining(page);
+  const groups = [state.group, { ...state.group, id: "next", name: "隣" }];
   let reads = 0;
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route("**/api/groups", (route) =>
-    route.fulfill({ json: [state.group, { ...state.group, id: "next", name: "隣" }] }),
-  );
-  await page.route("**/api/groups/activity/summary", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/groups/next/activity", async (route) => {
+  await page.route("**/api/groups", (route) => route.fulfill({ json: groups }));
+  await page.route("**/api/groups/today-activity", async (route) => {
     reads++;
     await gate;
-    await route.fulfill({
-      json: {
-        group_id: "next",
-        member_count: 3,
-        live_count: 0,
-        today_count: 0,
-        members: [],
-        feed: [],
-      },
-    });
+    const activity = emptyTodayActivity(groups);
+    activity.groups[1].member_count = 3;
+    activity.groups[1].today_count = 3;
+    return route.fulfill({ json: activity });
   });
   try {
     await page.reload();
-    await expect(page.getByRole("navigation")).toBeVisible();
     await expect.poll(() => reads).toBe(1);
+    await expect(page.getByRole("status", { name: "アプリを読み込み中" })).toBeVisible();
+    await page.clock.runFor(15_100);
+    await expect(page.getByRole("navigation")).toBeVisible();
     await page.getByRole("button", { name: "隣を表示", exact: true }).click();
-    await expect(page.getByRole("status", { name: "グループの記録を読み込み中" })).toBeVisible();
+    expect(reads).toBe(1);
+    await page.getByRole("button", { name: "今日の活動を再試行", exact: true }).click();
+    await expect.poll(() => reads).toBe(2);
     release();
     await expect(page.getByRole("button", { name: "隣の詳細", exact: true })).toContainText("3人");
-    expect(reads).toBe(1);
+    expect(reads).toBe(2);
   } finally {
     release();
   }
@@ -192,7 +174,7 @@ test("初回通信が止まっても15秒で再試行でき、復帰後に起動
     release();
     await page.unroute("**/api/groups");
     await page.getByRole("button", { name: "再試行", exact: true }).click();
-    await expect(page.locator(".community-total")).toContainText("1人");
+    await expect(page.locator(".group-carousel .community-card")).toContainText("0人");
     await expect(page.getByRole("status", { name: "アプリを読み込み中" })).toHaveCount(0);
   } finally {
     release();

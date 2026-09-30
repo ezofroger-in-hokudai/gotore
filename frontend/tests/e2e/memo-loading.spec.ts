@@ -21,7 +21,8 @@ test("種目メモの取得中は安定した入口を表示し、取得後だ�
     await expect(pending).toBeDisabled();
     await expect(memo).not.toContainText("読み込み中");
     const height = (await memo.boundingBox())?.height;
-    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toHaveCount(0);
+    await expect(page.getByText("前回の記録を確認中…", { exact: true })).toBeVisible();
     release();
     await expect(memo.getByRole("button", { name: "種目メモを編集" })).toBeEnabled();
     expect((await memo.boundingBox())?.height).toBe(height);
@@ -101,8 +102,13 @@ test("種目メモの取得失敗時は編集させず、再試行後に開け�
   await page.getByRole("button", { name: /^ベンチプレス/ }).click();
   const memo = page.getByRole("region", { name: "種目メモ", exact: true });
   await expect(memo.getByRole("button", { name: "種目メモを準備中" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "再試行", exact: true })).toBeVisible();
+  await expect(
+    page.locator(".record-context-pending").getByRole("button", { name: "再試行", exact: true }),
+  ).toBeVisible();
   fail = false;
-  await page.getByRole("button", { name: "再試行", exact: true }).click();
+  await page
+    .locator(".record-context-pending")
+    .getByRole("button", { name: "再試行", exact: true })
+    .click();
   await expect(memo.getByRole("button", { name: "種目メモを編集" })).toBeEnabled();
 });

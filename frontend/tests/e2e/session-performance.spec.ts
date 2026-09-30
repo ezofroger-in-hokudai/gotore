@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectRecordingBest, showRecordingMemos } from "./mock-training";
+import { showRecordingMemos } from "./mock-training";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 for (const destination of ["ホーム", "設定"]) {
@@ -8,6 +8,15 @@ for (const destination of ["ホーム", "設定"]) {
     await startTraining(page);
     await showRecordingMemos(page);
     await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toBeEnabled();
+    // 現行メモはblurで保存する。応答を保留し、入力下書きの保持とセット保存だけを検証する。
+    let releaseMemo = () => {};
+    const memoGate = new Promise<void>((resolve) => {
+      releaseMemo = resolve;
+    });
+    await page.route(/\/api\/(?:exercises\/memo|sessions\/[^/]+\/exercise-memo)/, async (route) => {
+      if (route.request().method() === "PUT") await memoGate;
+      return route.fallback();
+    });
     const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
     await weight.fill("77.5");
     await page.getByRole("button", { name: "今日のメモを編集", exact: true }).click();
@@ -50,18 +59,18 @@ for (const destination of ["ホーム", "設定"]) {
       await navigate(page, destination);
       release();
       await expect.poll(() => state.saves).toBe(1);
-      await expect(page.locator(".sync-status")).toContainText("同期済み");
+      await expect.poll(() => state.session?.revision).toBe(2);
       await page.waitForTimeout(250);
       expect(allContexts).toBe(0);
       await openTraining(page);
       await showRecordingMemos(page);
       await expect.poll(() => contexts).toBe(1);
-      await expectRecordingBest(page, "80");
+      await expect(page.locator(".previous-set-cell").first()).toContainText("80");
       await expect(page.getByRole("textbox", { name: "種目メモ", exact: true })).toHaveValue(
         "種目の下書き",
       );
       releaseContext();
-      await expectRecordingBest(page, "99");
+      await expect(page.locator(".previous-set-cell .set-measurement")).toHaveCount(0);
       expect(contexts).toBe(1);
       await expect(weight).toHaveValue("77.5");
       await expect(page.getByRole("textbox", { name: "今日のメモ", exact: true })).toHaveValue(
@@ -73,6 +82,7 @@ for (const destination of ["ホーム", "設定"]) {
     } finally {
       releaseContext();
       release();
+      releaseMemo();
     }
   });
 }
@@ -108,7 +118,7 @@ test("保存待ちの全セット一覧を離れた後はBEST取得を延期し�
     await expect.poll(() => bests).toBe(1);
     await navigate(page, "ホーム");
     release();
-    await expect(page.locator(".sync-status")).toContainText("同期済み");
+    await expect.poll(() => state.session?.revision).toBe(2);
     await page.waitForTimeout(250);
     expect(bests).toBe(1);
     await openTraining(page);

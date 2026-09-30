@@ -1,5 +1,5 @@
 import { type ElementHandle, expect, test } from "@playwright/test";
-import { expectRecordingBest, showRecordingMemos } from "./mock-training";
+import { showRecordingMemos } from "./mock-training";
 import { mockTraining, navigate, openTraining } from "./mock-training";
 
 test("開始前は入力を出さず、開始待ちの種目選択と入力で保存要求を出さない", async ({ page }) => {
@@ -41,7 +41,7 @@ test("開始前は入力を出さず、開始待ちの種目選択と入力で�
       .elementHandle();
     await page.getByRole("spinbutton", { name: "回数", exact: true }).press("Enter");
     await expect.poll(() => comparisonStarted).toBe(true);
-    await expectRecordingBest(page, "80");
+    await expect(page.locator(".previous-set-cell").first()).toContainText("80");
     expect(state.session).toBeNull();
     expect(state.saves).toBe(0);
   } finally {
@@ -54,7 +54,7 @@ test("開始前は入力を出さず、開始待ちの種目選択と入力で�
   await expect(page.getByRole("spinbutton", { name: "回数", exact: true })).toHaveValue("6");
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect.poll(() => state.saves).toBe(1);
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await expect.poll(() => state.session?.exercises[0]?.sets).toEqual([{ weight: 82.5, reps: 6 }]);
   expect(state.session?.exercises[0]).toEqual({
     name: "スクワット",
     sets: [{ weight: 82.5, reps: 6 }],
@@ -119,7 +119,7 @@ test("非表示中の候補取得を止め、復帰後の失敗では古い比�
   await expect(page.locator(".session-screen").getByRole("alert")).toContainText(
     "比較を取得できません",
   );
-  await expectRecordingBest(page, "—");
+  await expect(page.locator(".previous-set-cell .set-measurement")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "種目メモを編集", exact: true })).toHaveCount(0);
   await page.unroute("**/api/exercises/context?*");
   await page
@@ -188,9 +188,9 @@ for (const savedInput of [true, false]) {
       release();
     }
     await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeEnabled();
-    await expect(
-      page.getByRole("heading", { name: savedInput ? "ベンチプレス" : "スクワット", exact: true }),
-    ).toBeVisible();
+    await expect(page.locator(".recording-exercise-title")).toHaveText(
+      savedInput ? "ベンチプレス" : "スクワット",
+    );
     await expect(page.getByRole("spinbutton", { name: "重量", exact: true })).toHaveValue(
       savedInput ? "62.5" : "82.5",
     );

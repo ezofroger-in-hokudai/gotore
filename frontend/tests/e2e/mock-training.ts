@@ -301,8 +301,18 @@ export async function mockTraining(
               },
             ]
           : [];
+      const totals = {
+        set_count: latest?.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0) ?? 0,
+        total_volume:
+          latest?.exercises.reduce(
+            (sum, exercise) =>
+              sum + exercise.sets.reduce((subtotal, set) => subtotal + set.weight * set.reps, 0),
+            0,
+          ) ?? 0,
+      };
       return route.fulfill({
         json: {
+          totals,
           groups: [
             {
               group_id: group.id,
@@ -321,6 +331,7 @@ export async function mockTraining(
                   ]
                 : [],
               feed,
+              totals,
             },
           ],
         },
