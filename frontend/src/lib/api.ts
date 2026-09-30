@@ -98,12 +98,14 @@ export type Workout = {
   revision: number;
   started_at?: string | null;
   ended_at?: string | null;
+  auto_ended?: boolean;
   shared_group_ids?: string[];
 };
 
 export type TrainingSession = Workout & {
   started_at: string;
   ended_at: string | null;
+  last_activity_at?: string;
   best_updated?: boolean;
 };
 export type ExerciseContext = {

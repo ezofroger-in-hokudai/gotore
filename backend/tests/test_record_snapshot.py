@@ -1,5 +1,6 @@
 import gzip
 import json
+from uuid import uuid4
 
 from tests.test_sharing import client as client_fixture
 from tests.test_sharing import connection as connection_fixture
@@ -96,6 +97,25 @@ def manifest(snapshot):
             None,
         ),
     }
+
+
+def test_changes_include_auto_finished_session_without_revision_change(client, connection):
+    started = client.post("/api/sessions", json={"id": str(uuid4())}).json()
+    before = client.get("/api/me/record-snapshot").json()
+    connection.execute(
+        """UPDATE public.gotore_workouts
+        SET started_at = clock_timestamp() - interval '2 hours',
+            last_activity_at = clock_timestamp() - interval '61 minutes'
+        WHERE id = %s""",
+        (started["id"],),
+    )
+    connection.execute("SELECT public.gotore_expire_inactive_sessions()")
+    response = client.post("/api/me/record-snapshot/changes", json=manifest(before))
+    assert response.status_code == 200, response.text
+    changed = next(item for item in response.json()["workouts"] if item["id"] == started["id"])
+    assert changed["revision"] == started["revision"]
+    assert changed["auto_ended"] is True
+    assert changed["ended_at"] is not None
 
 
 def test_saved_snapshot_sync_returns_no_record_bodies_when_unchanged(client):

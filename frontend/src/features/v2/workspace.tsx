@@ -68,7 +68,22 @@ function WorkspaceContent({ session }: { session: Session }) {
   const changed = () => setRefreshKey((key) => key + 1);
   const [finished, setFinished] = useState<Workout | null>(null);
   const [finishConflictOpen, setFinishConflictOpen] = useState(false);
-  const training = useSession(session.user.id, changed);
+  const training = useSession(session.user.id, changed, view === "record");
+  useEffect(() => {
+    if (training.saved?.auto_ended) {
+      setNotice(
+        "操作が1時間なかったため、トレーニングを自動終了しました。休止時間は記録に含めていません。",
+      );
+      if (viewRef.current === "record") navigate("home");
+    }
+  }, [training.saved]);
+  useEffect(() => {
+    if (!training.locallyExpired || training.saved?.auto_ended) return;
+    setNotice(
+      "操作が1時間なかったため、トレーニングを終了しています。通信でき次第、記録に反映します。",
+    );
+    if (viewRef.current === "record") navigate("home");
+  }, [training.locallyExpired, training.saved]);
   const resultConfirmed =
     !!finished && training.saved?.id === finished.id && !!training.saved.ended_at;
   const preferences = usePreferences(session.user.id);

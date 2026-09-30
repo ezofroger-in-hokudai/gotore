@@ -24,8 +24,13 @@ export function createSessionSender(request: Request) {
     revision: number,
     exercises: Exercise[],
     signal = AbortSignal.timeout(15_000),
+    activityAt?: string,
   ) => {
-    const json = JSON.stringify({ expected_revision: revision, exercises });
+    const json = JSON.stringify({
+      expected_revision: revision,
+      exercises,
+      activity_at: activityAt,
+    });
     const payload = compressionSupported ? await sessionBody(json, signal) : { body: json };
     signal.throwIfAborted();
     try {
