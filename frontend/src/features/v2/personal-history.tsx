@@ -182,8 +182,13 @@ export function PersonalHistory({
         ? savedDayRecords
         : [...dayRecords.data, ...extraDayRecords];
   const monthlyActivity = activity.data?.month === month ? activity.data : null;
+  const hasParts = !monthlyActivity?.days.some(
+    (day) =>
+      !day.body_parts ||
+      day.body_parts.some((entry) => !entry.body_part || entry.body_part === "full_body"),
+  );
   const filteredActivity =
-    monthlyActivity && scope.part !== "all" && !scope.exercise
+    monthlyActivity && scope.part !== "all" && !scope.exercise && hasParts
       ? activityForPart(monthlyActivity, scope.part)
       : monthlyActivity;
   const exercises = recentExercises(summary.data ?? undefined, scope.part);
@@ -244,6 +249,7 @@ export function PersonalHistory({
             key={item.value}
             type="button"
             aria-pressed={scope.part === item.value}
+            disabled={tab === "calendar" && item.value !== "all" && !hasParts}
             onClick={() => choosePart(item.value)}
           >
             {item.label}
@@ -306,7 +312,7 @@ export function PersonalHistory({
             activity={filteredActivity}
             current={current}
             oldestMonth={oldest?.slice(0, 7) ?? current.slice(0, 7)}
-            scopeLabel={scopeLabel}
+            scopeLabel={!hasParts && !scope.exercise ? "全種目" : scopeLabel}
             onMonthChange={setMonth}
             onSelectDay={setSelectedDay}
           >
