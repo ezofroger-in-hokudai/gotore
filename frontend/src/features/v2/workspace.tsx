@@ -310,29 +310,29 @@ function WorkspaceContent({ session }: { session: Session }) {
           E-GO<span>TORE</span>
         </button>
       </header>
+      {opened && !inviteLanding && (
+        <OnboardingGuide
+          userId={session.user.id}
+          replay={guideReplay}
+          onVisit={(next, target) => {
+            setGuideTarget({ target });
+            setGroupDetail(false);
+            viewRef.current = next;
+            setView(next);
+            window.history.replaceState(
+              {
+                gotoreView: next,
+                groupId: selected,
+                communityMode: "list",
+                gotoreMotionIndex: historyPosition.current,
+              },
+              "",
+            );
+            window.scrollTo({ top: 0 });
+          }}
+        />
+      )}
       <main className="main-content">
-        {opened && !inviteLanding && (
-          <OnboardingGuide
-            userId={session.user.id}
-            replay={guideReplay}
-            onVisit={(next, target) => {
-              setGuideTarget({ target });
-              setGroupDetail(false);
-              viewRef.current = next;
-              setView(next);
-              window.history.replaceState(
-                {
-                  gotoreView: next,
-                  groupId: selected,
-                  communityMode: "list",
-                  gotoreMotionIndex: historyPosition.current,
-                },
-                "",
-              );
-              window.scrollTo({ top: 0 });
-            }}
-          />
-        )}
         {notice && <output className="notice">{notice}</output>}
         {recordCache?.storageError && (
           <output className="notice">端末への記録保存を利用できません。通信で読み込みます。</output>

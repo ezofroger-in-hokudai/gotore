@@ -467,7 +467,7 @@ export function CommunityScreen({
     <section className="community-screen group-screen">
       {mode === "list" && (
         <>
-          <div className="section-heading group-screen-heading">
+          <div className="section-heading group-screen-heading" data-tour="groups">
             <h1>グループ</h1>
             <div className="group-management-actions">
               <button
