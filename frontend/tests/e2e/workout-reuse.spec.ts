@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { mockTraining, openRecord, startTraining } from "./mock-training";
+import { mockTraining, startTraining } from "./mock-training";
+import { mockHistoryCalendar, openHistoryDay } from "./personal-history-helper";
 
 for (const ongoing of [false, true]) {
   test(ongoing
     ? "記録済みの進行中トレーニングをコピーで上書きしない"
     : "コピーを確認し、元の実績を変えず今日の全所属グループへ保存する", async ({ page }) => {
-    const state = await mockTraining(page);
+    const state = await mockTraining(page, true, false, false);
     const original = {
       id: "old",
       user_id: state.user.id,
@@ -17,13 +18,14 @@ for (const ongoing of [false, true]) {
       exercises: [{ name: "スクワット", sets: [{ weight: 80.5, reps: 8 }] }],
     };
     const snapshot = JSON.stringify(original);
+    await mockHistoryCalendar(page, () => [original]);
     await page.route("**/api/workouts?**", (route) => route.fulfill({ json: [original] }));
     if (ongoing) {
       await startTraining(page);
       await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-      await expect(page.getByText("保存しました", { exact: true })).toBeVisible();
+      await expect.poll(() => state.saves).toBe(1);
     }
-    await openRecord(page);
+    await openHistoryDay(page, original.performed_on);
     await page.getByRole("button", { name: "コピー", exact: true }).click();
     await page.getByRole("button", { name: "キャンセル", exact: true }).click();
     expect(state.saves).toBe(ongoing ? 1 : 0);
@@ -36,12 +38,12 @@ for (const ongoing of [false, true]) {
       expect(state.session?.exercises[0].name).toBe("ベンチプレス");
     } else {
       await page
-        .getByRole("dialog")
+        .getByRole("dialog", { name: "記録をコピー", exact: true })
         .getByRole("button", { name: "トレーニングを開始", exact: true })
         .click();
       await page.getByRole("button", { name: "コピーしたセットを保存", exact: true }).click();
-      await expect(page.getByRole("dialog")).toHaveCount(0);
-      await expect(page.locator(".sync-status")).toContainText("同期済み");
+      await expect(page.getByRole("dialog", { name: "記録をコピー", exact: true })).toHaveCount(0);
+      await expect.poll(() => state.saves).toBe(1);
       expect(state.session?.exercises).toEqual(original.exercises);
       expect(state.session?.shared_group_ids).toEqual([state.group.id]);
       expect(state.session?.id).not.toBe(original.id);

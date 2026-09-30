@@ -1,15 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate, openGroup, startTraining } from "./mock-training";
+import { mockHistoryCalendar, openHistoryDay } from "./personal-history-helper";
 
 test("採点APIを使わず終了結果・履歴・ホーム・設定を表示する", async ({ page }) => {
-  await mockTraining(page);
+  const state = await mockTraining(page, true, false, false);
+  await mockHistoryCalendar(page, () => state.finished);
   const calls: string[] = [];
   page.on("request", (request) => {
     if (/\/api\/(me\/goal|.*score)/.test(request.url())) calls.push(request.url());
   });
   await startTraining(page);
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
-  await expect(page.locator(".sync-status")).toContainText("同期済み");
+  await expect.poll(() => state.session?.exercises[0]?.sets.length).toBe(1);
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
   await page.getByRole("button", { name: "終了する", exact: true }).click();
   const result = page.getByRole("region", { name: "トレーニング結果" });
@@ -30,15 +32,13 @@ test("採点APIを使わず終了結果・履歴・ホーム・設定を表示�
     fullPage: true,
   });
   await result.getByRole("button", { name: "履歴", exact: true }).click();
-  await expect(page.locator(".history-row")).toHaveCount(1);
-  await page.locator(".history-row").click();
-  await expect(page.locator(".history-detail")).toBeVisible();
-  const detail = page.locator(".history-detail");
+  const detail = await openHistoryDay(page, state.finished[0].performed_on);
+  await expect(detail.locator(".record")).toHaveCount(1);
   await expect(detail.locator(".exercise-summary")).toHaveCount(0);
-  await expect(detail.locator("summary").filter({ hasText: "セット詳細" })).toHaveCount(0);
   await expect(detail.getByRole("table")).toBeVisible();
   await page.screenshot({ path: "test-results/ui-copy-history-detail.png", fullPage: true });
-  await expect(page.locator(".history-detail")).not.toContainText(/SCORE|スコア/);
+  await expect(detail).not.toContainText(/SCORE|スコア/);
+  await detail.getByRole("button", { name: "閉じる", exact: true }).click();
   await navigate(page, "ホーム");
   await expect(page.locator(".feed-item")).toBeVisible();
   await expect(page.locator(".score-badge")).toHaveCount(0);

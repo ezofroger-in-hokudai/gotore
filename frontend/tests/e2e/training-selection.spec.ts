@@ -136,8 +136,8 @@ test("種目選択は仲間のタイムラインを取得せず、部位で候�
         borderRadius: style.borderRadius,
       };
     });
-  const requestsBeforeTraining = todayActivityRequests;
   await openTraining(page);
+  const requestsBeforeTraining = todayActivityRequests;
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
 
   await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");

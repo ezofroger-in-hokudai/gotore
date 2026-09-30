@@ -1,6 +1,6 @@
 import { gunzipSync } from "node:zlib";
 import { type Page, expect } from "@playwright/test";
-import type { ExerciseOption, TrainingSession } from "../../src/lib/api";
+import type { ExerciseOption, TodayActivity, TrainingSession } from "../../src/lib/api";
 
 // UI単独の検証用。実際の認証・DB・共有検証はsharing.spec.tsで行う。
 export async function mockTraining(
@@ -522,7 +522,7 @@ export async function openRecordingCatalog(page: Page) {
   await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).click();
 }
 
-export function emptyTodayActivity(groups: { id: string; name: string }[]) {
+export function emptyTodayActivity(groups: { id: string; name: string }[]): TodayActivity {
   return {
     groups: groups.map((group) => ({
       group_id: group.id,
