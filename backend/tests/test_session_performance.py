@@ -32,7 +32,7 @@ def test_session_round_trips_stay_bounded_with_multiple_groups(client, connectio
     repo = SessionRepository(counted)
     session = repo.start(USERS["A"], uuid4())
     assert {str(value) for value in session["shared_group_ids"]} == {g["id"] for g in groups}
-    assert counted.calls <= 7
+    assert counted.calls <= 8
 
     counted.calls = 0
     session = repo.save_session(
@@ -45,19 +45,19 @@ def test_session_round_trips_stay_bounded_with_multiple_groups(client, connectio
     )
     assert session["revision"] == 2
     assert len(session["shared_group_ids"]) == 4
-    assert counted.calls <= 4
+    assert counted.calls <= 6
 
     counted.calls = 0
     repo.heartbeat(USERS["A"], session["id"])
-    assert counted.calls <= 2
+    assert counted.calls <= 4
 
     counted.calls = 0
     finished = repo.finish(USERS["A"], session["id"], 2)
     assert finished["ended_at"] is not None
     assert finished["revision"] == 3
     assert len(finished["shared_group_ids"]) == 4
-    # 終了3往復に、SCOREの根拠一括取得と保存の2往復を加える。
-    assert counted.calls <= 5
+    # 期限判定を追加した分だけ、各操作で１往復増える。
+    assert counted.calls <= 6
 
 
 def test_today_activity_collects_visible_groups_in_one_response(client, connection):

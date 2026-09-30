@@ -1,6 +1,23 @@
 import { expect, test } from "@playwright/test";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
+test("画面を閉じている間の自動終了を復帰時に知らせる", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  const active = state.session;
+  expect(active).not.toBeNull();
+  if (!active) return;
+  const last = new Date(Date.now() - 61 * 60_000).toISOString();
+  state.finished.push({ ...active, last_activity_at: last, ended_at: last, auto_ended: true });
+  state.session = null;
+  await page.reload();
+  await expect(
+    page.getByText("操作が1時間なかったため、トレーニングを自動終了しました。", { exact: false }),
+  ).toBeVisible();
+  await openTraining(page);
+  await expect(page.getByRole("button", { name: "トレーニングを開始", exact: true })).toBeEnabled();
+});
+
 for (const resume of [false, true]) {
   test(`初回復元失敗からオンラインで${resume ? "同じセッションを再開" : "開始可能に復帰"}し、多重取得しない`, async ({
     page,

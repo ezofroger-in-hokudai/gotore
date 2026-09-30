@@ -94,6 +94,7 @@ class WorkoutResponse(BaseModel):
     score: ScoreSummary | None = None
     started_at: datetime | None = None
     ended_at: datetime | None = None
+    auto_ended: bool = False
     shared_group_ids: list[UUID] = Field(default_factory=list)
     revision: int
     id: UUID

@@ -9,6 +9,51 @@
 - 未解決事項: 実機PWAのスリープ復帰とレビュー担当の意見、全E2EおよびPRのCI確認は残る。旧UIテストの修復はIssue #218で追跡する。PRはレビュー中のためマージしない。
 - 次のアクション: PR #245へ画面画像と検証結果を反映し、メンバーの意見とCI結果を確認する。
 
+## 2026-09-30 02:14 PR #257のCI成功を確認（#183）
+- 変更内容: PR #257のCI run 36602880136で、changes・backend・frontend・databaseの4ジョブが全件成功したことを確認した。
+- 目的: 自動終了のDB migration、API、画面と選択対象E2EがGitHubの統合環境でも成立することを記録するため。
+- 影響範囲: PR #257の検証記録。今回の追記によるアプリの挙動変更はない。
+- 関連ファイル: `progress.md`、PR #257、Issue #183。
+- 検証: コミット `3453ace` に対する上記CIジョブ全件成功。ローカルの`make check`と復帰E2E 5件も成功。全E2Eには#218の既存失敗4件が残る。
+- 未解決事項: 実装者以外のレビュー、実機確認、他環境へのmigration適用、#218の全E2E修復。
+- 次のアクション: レビューを受け、必要な修正後にマージ可否を判断する。
+
+## 2026-09-30 02:08 自動終了PR #257を提出（#183）
+- 変更内容: 無活動１時間の自動終了、オフライン操作時刻の照合、仕様・テストをコミット `a0e7f01` にまとめ、ブランチ `feat/183-auto-finish` をプッシュしてPR #257を作成した。
+- 目的: Issue #183の実装・検証結果と既知のE2E課題をレビュー可能にするため。
+- 影響範囲: PR #257と進捗記録。ローカルSupabaseではmigration適用済み。他環境には未適用。
+- 関連ファイル: `progress.md`、PR #257、Issue #183。
+- 検証: PRは最新mainへ競合なく統合可能。CIは実行中。`make check`と関連復帰E2E 5件の成功、広げたE2E 4件の既存期待値失敗はPR本文に記載した。
+- 未解決事項: CI結果、第三者レビュー、#218のE2E期待値更新、実機確認。
+- 次のアクション: CIとレビューを確認し、必要ならPR上で修正する。マージと本番migration適用は別途判断する。
+
+## 2026-09-30 02:06 自動終了の検証とオフライン連続操作の補強（#183）
+- 変更内容: 通信断中の操作時刻を30分ごとに端末へ保存して順に送るようにした。前回操作から1時間以上空いた時刻では終了済みセッションを再開せず、終了時刻も延ばさない。自動終了の変更を本人記録の差分取得へ含めた。既存の性能テスト上限は追加した期限判定のSQL往復に合わせて更新した。
+- 目的: 長時間オフラインで操作を続けた場合は継続し、本当に1時間以上操作しなかった場合は休止時間を所要時間へ混ぜず、未送信セットも失わないため。
+- 影響範囲: セッションAPI、本人記録の差分取得、端末保存・再送、関連テスト・設計資料。
+- 関連ファイル: `backend/app/infrastructure/sessions.py`、`backend/app/infrastructure/record_snapshot.py`、`backend/tests/test_sessions.py`、`backend/tests/test_record_snapshot.py`、`backend/tests/test_session_performance.py`、`frontend/src/features/session/`、`frontend/tests/unit/session-queue.test.ts`、`frontend/tests/e2e/session-recovery.spec.ts`、`docs/current-state.md`。
+- 検証: 専用`gotore_test` DBを指定した`make check`成功（backend 300件、frontend単体134件、lint・型・build）。ローカルSupabaseにmigrationを適用し、`gotore-auto-finish-sessions`ジョブが1分周期で有効なことを確認。復帰の関連E2E 5件は再実行でも全件成功。関連12件を広げた実行では8件成功・4件失敗。4件は今回変更していない画面要素・320px横幅への古い期待値で失敗した（#218で追跡）。
+- テストを先に書けなかった理由: 画面側は旧端末キューの保存形式と別タブのロック・ACK順序を調べてから、操作時刻をどこに保存するか決める必要があった。時刻列と復帰通知の仕様を決めた後に単体・E2Eを追加した。バックエンドの期限判定は失敗テストを先に書いた。
+- 未解決事項: 現行のE2E 4件の古い期待値、実機での表示・端末時計が大きくずれた場合の確認、他環境へのmigration適用。全E2E成功とは扱わない。
+- 次のアクション: PRを提出してCIとレビューを確認し、#218で旧E2E期待値を更新する。
+
+## 2026-09-30 01:51 無活動１時間の自動終了を実装（#183）
+- 変更内容: 最終操作時刻と自動終了フラグをDBに追加し、1分周期のDBジョブで1時間無活動のセッションを最終操作時刻に終了する。APIで操作時刻の照合とオフラインセットの反映を行い、画面では操作時刻を端末へ保持して復帰時に送る。自動終了時はホームで通知し、記録の差分取得でも終了を反映する。仕様・画面設計を更新した。
+- 目的: アプリを閉じても1時間後に終了し、待機時間を所要時間に含めず、通信断中のセットを失わないため。
+- 影響範囲: セッションDB/API、端末送信キュー、記録画面、自動終了通知、本人記録の差分取得。LIVEの生存確認は活動時刻に含めない。
+- 関連ファイル: `supabase/migrations/20260930010000_auto_finish_sessions.sql`、`backend/app/infrastructure/sessions.py`、`backend/app/infrastructure/record_snapshot.py`、`backend/tests/test_sessions.py`、`backend/tests/test_session_performance.py`、`backend/tests/test_record_snapshot.py`、`frontend/src/features/session/`、`frontend/src/features/v2/workspace.tsx`、`frontend/tests/unit/session-queue.test.ts`、`frontend/tests/e2e/session-recovery.spec.ts`、`docs/gotore-v2-spec.md`、`docs/design/training-session.md`、`task.md`。
+- 検証: 先に期限判定・オフライン反映の失敗テストを追加。ローカルSupabaseへのmigration適用成功、cronジョブが`* * * * *`で有効なことを確認。専用`gotore_test` DBでは294件成功・性能テスト1件が新規の期限判定による往復数増加で失敗したため、上限を実測に合わせて更新し関連テストを再確認した。frontend関連単体33件成功。全チェックと関連E2Eは再実行中。
+- 未解決事項: 端末の時計が大きくずれている場合の操作時刻の精度、実機での通知とオフライン復帰は未確認。新しい自動終了ジョブはマイグレーションが適用されたDBで動く。
+- 次のアクション: 全チェックと関連E2Eを完了し、PRのCIとレビューを確認する。
+
+## 2026-09-30 01:23 無活動による自動終了の仕様と既存構造を確認（#183）
+- 変更内容: ユーザーと無活動１時間・トレーニング操作および記録保存/再送のみを活動に含める方針を確認し、作業単位を`task.md`へ追加した。最新mainのセッションAPI、端末送信キュー、LIVEハートビート、所要時間の算出を調査した。
+- 目的: 終了忘れを解消し、無活動の１時間を所要時間から除外しながら、既存の未送信記録保護を維持するため。
+- 影響範囲: 今回は計画と調査のみ。アプリ・API・DBの動作変更はまだない。
+- 関連ファイル: `task.md`、`frontend/src/features/session/use-session.ts`、`frontend/src/features/session/session-queue.ts`、`backend/app/infrastructure/sessions.py`、`docs/gotore-v2-spec.md`、Issue #183。
+- 検証: `git status`で元の作業ツリーに多数の別件未コミット変更を確認し、`/tmp/gotore-183`の独立ブランチで調査。基準状態の`make check-fast`はbackend 293件、frontend単体130件、lint・型が成功。
+- 未解決事項: アプリを閉じた間の確定タイミング、通信断中の端末保存を活動として扱うかについてユーザー回答待ち。LIVEハートビートが現在30秒ごとに`last_seen_at`を更新するため、無活動判定には別の時刻が必要。
+- 次のアクション: 回答を仕様資料・Issueに反映し、失敗するテストから実装する。
 
 ## 2026-09-30 01:02 不具合修正PRのCI確認と統合準備
 - 変更内容: 種目候補修正PR #256のchanges・frontend・backend・databaseの全ジョブ成功を確認してmainへマージした。グループメンバー修正PR #255も同じ4ジョブが成功し、最新mainを取り込んだ。競合した進捗記録は両Issueの経緯を保持して解消した。

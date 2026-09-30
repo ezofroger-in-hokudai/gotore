@@ -136,6 +136,10 @@ class RecordSnapshotRepository:
         )
         if active != manifest.active_workout_id:
             affected.update(all_names)
+            if manifest.active_workout_id in current:
+                changed_ids.add(manifest.active_workout_id)
+            if active in current:
+                changed_ids.add(active)
 
         # BEST表示は別の記録の追加・削除でも変わる。旧BESTと新しい上位候補を再取得する。
         if best_affected:

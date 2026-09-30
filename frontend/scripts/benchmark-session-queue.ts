@@ -58,6 +58,7 @@ async function sample(Queue: typeof SessionQueue, snapshots: Exercise[][], count
     },
     lock: async (_name, work) => work(),
     load: async () => server,
+    reconcile: async () => server,
     finish: async () => {
       throw new Error("終了はこの計測の対象外です");
     },

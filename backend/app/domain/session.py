@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from app.domain.personal_records import estimated_rm as estimated_rm
 from app.domain.personal_records import personal_bests as personal_bests
@@ -20,6 +20,12 @@ class SessionRevision(BaseModel):
 
 class SessionUpdate(SessionRevision):
     exercises: list[Exercise] = Field(max_length=20)
+    activity_at: AwareDatetime | None = None
+
+
+class SessionActivity(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    occurred_at: AwareDatetime
 
 
 class ExerciseMemoInput(BaseModel):

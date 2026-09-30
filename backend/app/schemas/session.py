@@ -10,6 +10,7 @@ from app.schemas.training import MemberResponse, RecordBestSet, WorkoutMemoRespo
 
 class SessionResponse(WorkoutResponse):
     started_at: datetime
+    last_activity_at: datetime
     best_updated: bool = Field(default=False, validation_alias="feed_best")
 
 
