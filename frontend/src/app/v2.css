@@ -4703,6 +4703,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   max-height: none;
   overflow-y: auto;
   overscroll-behavior-y: contain;
+  overflow-anchor: none;
 }
 .recording-view .unified-comparison-table .comparison-row {
   display: flex;
