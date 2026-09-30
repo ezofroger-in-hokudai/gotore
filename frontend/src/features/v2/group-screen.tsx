@@ -533,14 +533,8 @@ export function CommunityScreen({
           <button type="button" className="text-button back-button" onClick={detailBack}>
             ‹ グループ一覧
           </button>
-          {detail.error && !group ? (
-            <p className="error" role="alert">
-              {detail.error}
-              <button type="button" className="text-button" onClick={detail.retry}>
-                再試行
-              </button>
-            </p>
-          ) : group ? (
+          <ResourceError resource={detail} />
+          {group ? (
             <>
               <GroupCard
                 group={group}
@@ -738,9 +732,9 @@ export function CommunityScreen({
                 </div>
               )}
             </>
-          ) : (
+          ) : !detail.error ? (
             <LoadingState label="グループ情報を読み込み中" />
-          )}
+          ) : null}
         </>
       )}
 

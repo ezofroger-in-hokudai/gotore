@@ -548,11 +548,8 @@ export function HistoryGraph({
           ))}
         </div>
       </div>
-      {error && !data.length ? (
-        <button type="button" className="personal-history-retry" onClick={retry}>
-          グラフを取得できません。再試行
-        </button>
-      ) : loading ? (
+      <ResourceError resource={{ data: data.length ? data : undefined, error, retry }} />
+      {error && !data.length ? null : loading ? (
         <div className="personal-history-chart-empty" aria-hidden="true" />
       ) : !data.length ? (
         <p className="personal-history-chart-empty">まだ記録がありません</p>
