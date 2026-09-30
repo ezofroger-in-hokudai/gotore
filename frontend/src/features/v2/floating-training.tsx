@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { describeElapsedTime } from "../session/elapsed-time";
 
 type Position = { side: "left" | "right"; top: number };
 
@@ -8,11 +9,13 @@ export function FloatingTraining({
   userId,
   resumable,
   disabled,
+  elapsed,
   onActivate,
 }: {
   userId: string;
   resumable: boolean;
   disabled: boolean;
+  elapsed: string | null;
   onActivate: () => void;
 }) {
   const button = useRef<HTMLButtonElement>(null);
@@ -85,6 +88,7 @@ export function FloatingTraining({
       data-testid="floating-training"
       data-tour="start"
       aria-label={resumable ? "トレーニングを再開" : "トレーニングを開始"}
+      aria-describedby={resumable && elapsed ? "floating-training-elapsed" : undefined}
       disabled={disabled}
       style={style}
       onPointerDown={(event) => {
@@ -148,7 +152,17 @@ export function FloatingTraining({
         onActivate();
       }}
     >
-      {resumable ? "RESUME" : "START"}
+      <span className="floating-training-crown" aria-hidden="true" />
+      <span className="floating-training-pusher" aria-hidden="true" />
+      <span className="floating-training-dial" aria-hidden="true">
+        <span className="floating-training-elapsed">{resumable ? (elapsed ?? "…") : "▶"}</span>
+        <span className="floating-training-action">{resumable ? "RESUME" : "START"}</span>
+      </span>
+      {resumable && elapsed && (
+        <span className="sr-only" id="floating-training-elapsed">
+          経過時間 {describeElapsedTime(elapsed)}
+        </span>
+      )}
     </button>
   );
 }

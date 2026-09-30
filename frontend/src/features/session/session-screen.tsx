@@ -7,6 +7,7 @@ import { ExerciseCatalog } from "../exercises/exercise-catalog";
 import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
+import { describeElapsedTime } from "./elapsed-time";
 import { FinishConfirmDialog } from "./finish-confirm-dialog";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
@@ -26,6 +27,24 @@ import { useExerciseContext } from "./use-exercise-context";
 import { useFinishWeekRecords } from "./use-finish-week-records";
 import type { SessionController } from "./use-session";
 
+function ElapsedClock({ elapsed }: { elapsed: string | null }) {
+  if (!elapsed) return null;
+  return (
+    <span
+      className="session-elapsed"
+      role="timer"
+      aria-label={`経過時間 ${describeElapsedTime(elapsed)}`}
+    >
+      <svg viewBox="0 0 20 22" fill="none" aria-hidden="true">
+        <path d="M8 2h4M10 5v2M16 6l1-1" />
+        <circle cx="10" cy="14" r="6.5" />
+        <path d="M10 10v4l2.5 1.5" />
+      </svg>
+      {elapsed}
+    </span>
+  );
+}
+
 export function SessionScreen({
   active,
   controller,
@@ -35,6 +54,7 @@ export function SessionScreen({
   onFinished,
   haptic,
   catalog,
+  elapsed,
 }: {
   active: boolean;
   controller: SessionController;
@@ -44,6 +64,7 @@ export function SessionScreen({
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  elapsed: string | null;
 }) {
   const { session } = controller;
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
@@ -80,6 +101,7 @@ export function SessionScreen({
       initialInput={draft}
       onPreparingInput={setDraft}
       catalog={catalog}
+      elapsed={elapsed}
     />
   );
 }
@@ -94,12 +116,14 @@ function ActiveTraining({
   initialInput,
   onPreparingInput,
   catalog,
+  elapsed,
 }: {
   active: boolean;
   session: TrainingSession | null;
   initialInput: SessionInput;
   onPreparingInput: (input: SessionInput) => void;
   catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
+  elapsed: string | null;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
@@ -380,6 +404,7 @@ function ActiveTraining({
             <span className="session-wordmark">
               E-GO<span>TORE</span>
             </span>
+            <ElapsedClock elapsed={elapsed} />
             <button
               type="button"
               className="text-button finish-training"
@@ -486,6 +511,7 @@ function ActiveTraining({
               <span className="session-wordmark">
                 E-GO<span>TORE</span>
               </span>
+              <ElapsedClock elapsed={elapsed} />
               <button
                 type="button"
                 className="text-button finish-training"
