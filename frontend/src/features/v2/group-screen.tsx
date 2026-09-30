@@ -613,26 +613,26 @@ export function CommunityScreen({
                   )}
                 </>
               )}
-              {detailTab === "calendar" && (
+              <div key={`calendar:${userId}:${selected}`} hidden={detailTab !== "calendar"}>
                 <GroupHistoryCalendar
                   key={selected}
                   groupId={selected}
                   userId={userId}
-                  active={active}
+                  active={active && detailTab === "calendar"}
                   refreshKey={refreshKey}
                   part={historyPart}
                   onPartChange={setHistoryPart}
                 />
-              )}
-              {detailTab === "graph" && (
+              </div>
+              <div key={`graph:${userId}:${selected}`} hidden={detailTab !== "graph"}>
                 <GroupHistoryGraph
                   groupId={selected}
-                  active={active}
+                  active={active && detailTab === "graph"}
                   refreshKey={refreshKey}
                   part={historyPart}
                   onPartChange={setHistoryPart}
                 />
-              )}
+              </div>
               {detailTab === "settings" && (
                 <div className="group-settings">
                   <section>

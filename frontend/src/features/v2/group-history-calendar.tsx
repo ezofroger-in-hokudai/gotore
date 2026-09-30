@@ -75,6 +75,9 @@ export function GroupHistoryCalendar({
     void load();
     return () => controller.abort();
   }, [groupId, selectedDay, records.data, extraRetry]);
+  useEffect(() => {
+    if (!active) setSelectedDay("");
+  }, [active]);
   const monthlyActivity = activity.data?.month === month ? activity.data : null;
   const hasParts = !monthlyActivity?.days.some(
     (day) =>
@@ -104,7 +107,7 @@ export function GroupHistoryCalendar({
       >
         <ResourceError resource={activity} />
       </HistoryCalendar>
-      {selectedDay && (
+      {active && selectedDay && (
         <Sheet title={`${dateLabel(selectedDay)}の全メニュー`} onClose={() => setSelectedDay("")}>
           <ResourceError resource={records} />
           {extraError && (
