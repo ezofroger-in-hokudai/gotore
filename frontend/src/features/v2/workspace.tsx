@@ -360,8 +360,8 @@ function WorkspaceContent({ session }: { session: Session }) {
           </div>
         )}
         {training.locallyExpired && (
-          <output className={training.error ? "error" : "notice"}>
-            {training.error
+          <output className={training.error || training.status === "offline" ? "error" : "notice"}>
+            {training.error || training.status === "offline"
               ? "前のトレーニングの終了状態を確認できません。端末の記録は保持しています。"
               : "前のトレーニングの終了状態を確認しています。"}
             <button className="text-button" type="button" onClick={() => void training.reload()}>
