@@ -4703,3 +4703,11 @@
 - 関連ファイル: docs/design/README.md、progress.md、notification-current-home.html、notification-current-record.html、docs/design/activity-notifications.md、task.md。
 - 未解決事項: 新しい統合コミットのCI完了待ち。
 - 次のアクション: PR #283へpushし、GitHub上で競合解消を確認する。mainへのマージはこの作業では行わない。
+
+## 2026-10-01 ホームLIVE記録の再読み込みを修正中（#287）
+- 変更内容: 最新main154abc6から独立worktreeで着手。既存高速化Issue #11を確認し、報告の詳細をIssue #287へ起票。更新日時が変わると共有詳細Entryを削除し、60秒経過でも本文を隠すことを特定。採用設計とtask.mdを更新し、同じ記録・本人・共有先の再確認中は本文を保持、一時失敗は既存本文を維持、権限喪失時は消去する実装へ変更。
+- 目的/影響範囲: LIVEのセット追記時に読み込みカードへ戻らず、取得済み本文・展開・カード高さを維持する。共有先変更・フィード除外の消去を保持し、API/DB/永続保存は変更しない。
+- テスト: 先に390pxのE2Eを追加し、新セット更新待ちで待機カードが1件になり失敗することを確認。変更前画像を保存。320/390/430pxと共有権限・再取得の回帰を確認する。
+- 関連ファイル: use-shared-workout-details.ts、live-record-refresh.spec.ts、docs/design/home-screen.md、task.md、docs/images/live-refresh。
+- 検証結果: 新規4件成功（3幅の更新中/503後再試行/60秒期限/同一DOM/展開/高さ/スクロール保持/403、別共有先への切替時の旧本文非表示）。関連12件成功（共有詳細4・要約3・更新頻度5）。make check成功（backend310件/frontend146件・lint/型/build）。変更前後画像を目視、git diff --check成功。
+- 未解決事項/次のアクション: 全CI・独立レビュー・実機確認・main統合は未実施。PRへ仕様と検証・画像を記録する。

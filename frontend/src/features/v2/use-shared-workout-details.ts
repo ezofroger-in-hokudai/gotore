@@ -1,6 +1,7 @@
 import type { GroupActivity, Workout } from "@/lib/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { resourceRequest } from "../training/resource-request";
+import { canRetainResource } from "../training/retain-resource";
 import { memberIsLive } from "./live-presence";
 import type { SharedWorkoutCache } from "./shared-workout-cache";
 
@@ -10,6 +11,7 @@ function feedVersion(item?: GroupActivity["feed"][number]) {
 }
 
 type Entry = {
+  groupId: string;
   version: string;
   data: Workout | null;
   error: string;
@@ -108,7 +110,13 @@ export function useSharedWorkoutDetails(
         Number(live.has(feed.get(b)?.user_id || "")) - Number(live.has(feed.get(a)?.user_id || "")),
     );
     for (const [id, entry] of entries.current) {
-      if ((!feed.has(id) && id !== opened) || entry.version !== feedVersion(feed.get(id))) {
+      const item = feed.get(id);
+      const groupId = groupIds?.get(id) ?? activity.group_id;
+      if (
+        (!item && id !== opened) ||
+        entry.groupId !== groupId ||
+        (item && entry.data && entry.data.user_id !== item.user_id)
+      ) {
         entry.controller?.abort();
         entries.current.delete(id);
       }
@@ -134,8 +142,9 @@ export function useSharedWorkoutDetails(
         previous &&
         previous.version === version &&
         !recheck.current.has(id) &&
-        ((previous.data && Date.now() - previous.savedAt < 60000) ||
-          (previous.error && Date.now() - previous.savedAt < 5000))
+        (previous.error
+          ? Date.now() - previous.savedAt < 5000
+          : previous.data && Date.now() - previous.savedAt < 60000)
       )
         continue;
       if (!entries.current.has(id) && entries.current.size >= 20) {
@@ -147,12 +156,12 @@ export function useSharedWorkoutDetails(
       if ([...entries.current.values()].filter((entry) => entry.controller).length >= 2) break;
       previous?.controller?.abort();
       const controller = new AbortController();
+      const groupId = groupIds?.get(id) ?? activity.group_id;
+      // 更新日時と再確認期限は本文を捨てる条件にしない。同じ共有先の表示を維持する。
       const entry: Entry = {
+        groupId,
         version,
-        data:
-          previous?.version === version && Date.now() - previous.savedAt < 60000
-            ? previous.data
-            : null,
+        data: previous?.data ?? null,
         error: "",
         savedAt: previous?.savedAt || 0,
         controller,
@@ -160,7 +169,6 @@ export function useSharedWorkoutDetails(
       entries.current.delete(id);
       entries.current.set(id, entry);
       recheck.current.delete(id);
-      const groupId = groupIds?.get(id) ?? activity.group_id;
       void resourceRequest<Workout>(`/groups/${groupId}/workouts/${id}`, controller.signal)
         .then((data) => {
           if (!controller.signal.aborted && entries.current.get(id) === entry) {
@@ -172,10 +180,12 @@ export function useSharedWorkoutDetails(
         })
         .catch((reason) => {
           if (!controller.signal.aborted && entries.current.get(id) === entry) {
-            entry.data = null;
+            if (!canRetainResource(reason)) {
+              entry.data = null;
+              sharedCache?.delete(groupId, id);
+            }
             entry.error = reason instanceof Error ? reason.message : "取得できませんでした。";
             entry.savedAt = Date.now();
-            sharedCache?.delete(groupId, id);
           }
         })
         .finally(() => {
@@ -190,8 +200,11 @@ export function useSharedWorkoutDetails(
   const current = opened ? entries.current.get(opened) : undefined;
   function record(id: string) {
     const entry = entries.current.get(id);
-    const version = feedVersion(activity.feed.find((item) => item.workout_id === id));
-    return entry?.version === version && Date.now() - entry.savedAt < 60000
+    const item = activity.feed.find((item) => item.workout_id === id);
+    const groupId = groupIds?.get(id) ?? activity.group_id;
+    return item &&
+      entry?.groupId === groupId &&
+      (!entry.data || entry.data.user_id === item.user_id)
       ? { data: entry.data, error: entry.error }
       : { data: null, error: "" };
   }
@@ -199,8 +212,7 @@ export function useSharedWorkoutDetails(
     root,
     record,
     data:
-      current?.version === feedVersion(activity.feed.find((item) => item.workout_id === opened)) &&
-      Date.now() - current.savedAt < 60000
+      current?.groupId === (groupIds?.get(opened || "") ?? activity.group_id)
         ? current?.data || null
         : null,
     error: current?.error || "",
