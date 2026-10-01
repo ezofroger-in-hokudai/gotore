@@ -486,7 +486,7 @@ export async function navigate(page: Page, name: string) {
 }
 export async function openTraining(page: Page) {
   await navigate(page, "ホーム");
-  const resume = page.getByRole("button", { name: "トレーニングを再開", exact: true });
+  const resume = page.getByRole("button", { name: "記録画面へ戻る", exact: true });
   if (await resume.count()) await resume.click();
 }
 export async function startTraining(page: Page, name = "ベンチプレス") {
