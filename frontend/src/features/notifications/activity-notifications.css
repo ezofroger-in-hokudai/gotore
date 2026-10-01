@@ -25,6 +25,20 @@
   padding: 10px 14px;
   animation: notification-slide .36s cubic-bezier(0.18, 0.85, 0.22, 1) both;
 }
+.activity-stamp[data-leaving="true"] {
+  pointer-events: none;
+  animation: notification-stamp-exit .18s cubic-bezier(0.4, 0, 1, 1) both;
+}
+@keyframes notification-stamp-exit {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    translate: 0 calc(-100% - 8px);
+  }
+}
 .activity-stamp-heading {
   display: flex;
   justify-content: space-between;
@@ -253,6 +267,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .activity-stamp,
+  .activity-stamp[data-leaving="true"],
   .activity-start-enter,
   .activity-start-leave,
   .activity-start-enter .activity-start-shine {
