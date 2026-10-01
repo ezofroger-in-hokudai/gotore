@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { isDemoMode } from "../demo/mode";
 export async function notificationRegistration() {
   if (
     !window.isSecureContext ||
@@ -12,6 +13,7 @@ export async function notificationRegistration() {
   return navigator.serviceWorker.register("/notification-worker.js", { scope: "/" });
 }
 export async function enablePush() {
+  if (isDemoMode()) throw new Error("デモでは端末通知を利用しません。");
   if (!("Notification" in window))
     throw new Error(
       "iPhoneはホーム画面に追加して開いてください。このブラウザでは端末通知を利用できません。",
@@ -37,6 +39,7 @@ export async function enablePush() {
   });
 }
 export async function restorePush() {
+  if (isDemoMode()) return null;
   if (
     !("Notification" in window) ||
     Notification.permission !== "granted" ||
@@ -53,6 +56,7 @@ export async function restorePush() {
     : null;
 }
 export async function disablePush() {
+  if (isDemoMode()) return;
   if (!("serviceWorker" in navigator)) return;
   const registration = await navigator.serviceWorker.getRegistration("/");
   const subscription = await registration?.pushManager.getSubscription();

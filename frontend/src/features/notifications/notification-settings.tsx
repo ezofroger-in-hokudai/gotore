@@ -1,3 +1,4 @@
+import { isDemoMode } from "../demo/mode";
 import type { useNotifications } from "./use-notifications";
 export function NotificationSettingsPanel({
   notifications: n,
@@ -47,38 +48,42 @@ export function NotificationSettingsPanel({
           <p className="muted">
             振動は対応する端末で利用できます。iPhoneのアプリ内通知では振動しません。
           </p>
-          <h3>アプリを閉じているとき</h3>
-          {(
-            [
-              ["push_stamp", "スタンプの端末通知"],
-              ["push_start", "開始の端末通知"],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key} className="notification-setting-row">
-              <input
-                type="checkbox"
-                checked={s[key]}
+          {!isDemoMode() && (
+            <>
+              <h3>アプリを閉じているとき</h3>
+              {(
+                [
+                  ["push_stamp", "スタンプの端末通知"],
+                  ["push_start", "開始の端末通知"],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="notification-setting-row">
+                  <input
+                    type="checkbox"
+                    checked={s[key]}
+                    disabled={n.saving}
+                    onChange={(e) => void n.saveSettings({ ...s, [key]: e.target.checked })}
+                  />
+                  {label}
+                </label>
+              ))}
+              <p className="muted">
+                iPhoneはホーム画面に追加してから有効にしてください。端末通知の音・振動は端末の設定に従います。
+              </p>
+              <button
+                type="button"
+                className="primary"
                 disabled={n.saving}
-                onChange={(e) => void n.saveSettings({ ...s, [key]: e.target.checked })}
-              />
-              {label}
-            </label>
-          ))}
-          <p className="muted">
-            iPhoneはホーム画面に追加してから有効にしてください。端末通知の音・振動は端末の設定に従います。
-          </p>
-          <button
-            type="button"
-            className="primary"
-            disabled={n.saving}
-            onClick={() => void n.requestPush()}
-          >
-            {n.pushId ? "この端末の通知を確認" : "この端末の通知を有効にする"}
-          </button>
-          {n.pushId && (
-            <button type="button" disabled={n.saving} onClick={() => void n.revokePush()}>
-              この端末の通知を解除
-            </button>
+                onClick={() => void n.requestPush()}
+              >
+                {n.pushId ? "この端末の通知を確認" : "この端末の通知を有効にする"}
+              </button>
+              {n.pushId && (
+                <button type="button" disabled={n.saving} onClick={() => void n.revokePush()}>
+                  この端末の通知を解除
+                </button>
+              )}
+            </>
           )}
         </>
       )}
