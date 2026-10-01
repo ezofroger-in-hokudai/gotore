@@ -139,7 +139,8 @@ export function useSharedWorkoutDetails(
       }
     }
     for (const id of ids.slice(0, 20)) {
-      const version = feedVersion(feed.get(id));
+      const item = feed.get(id);
+      const version = feedVersion(item);
       const previous = entries.current.get(id);
       if (previous?.controller && previous.version === version) continue;
       if (
@@ -165,7 +166,7 @@ export function useSharedWorkoutDetails(
       const entry: Entry = {
         groupId,
         version,
-        data: previous?.data ?? null,
+        data: previous?.data ?? (item ? sharedCache?.get(groupId, item) : null) ?? null,
         error: "",
         savedAt: previous?.savedAt || 0,
         controller,
@@ -206,6 +207,7 @@ export function useSharedWorkoutDetails(
     const entry = entries.current.get(id);
     const item = activity.feed.find((item) => item.workout_id === id);
     const groupId = groupIds?.get(id) ?? activity.group_id;
+    if (!entry && item) return { data: sharedCache?.get(groupId, item) ?? null, error: "" };
     return item &&
       entry?.groupId === groupId &&
       (!entry.data || entry.data.user_id === item.user_id)

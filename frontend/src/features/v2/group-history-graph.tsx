@@ -3,6 +3,7 @@
 import type { BodyPart } from "@/lib/api";
 import { useState } from "react";
 import { useAnalytics } from "../analytics/use-analytics";
+import type { GroupHistoryCache } from "./group-history-cache";
 import { GroupHistoryPartTabs } from "./group-history-part-tabs";
 import { HistoryGraph } from "./personal-history";
 import { type HistoryGrain, graphPoints } from "./personal-history-model";
@@ -11,12 +12,14 @@ type GroupMetric = "volume" | "sets" | "people";
 
 export function GroupHistoryGraph({
   groupId,
+  cache,
   active,
   refreshKey,
   part,
   onPartChange,
 }: {
   groupId: string;
+  cache: GroupHistoryCache;
   active: boolean;
   refreshKey: number;
   part: BodyPart | "all";
@@ -35,6 +38,7 @@ export function GroupHistoryGraph({
     "",
     "",
     part === "all" ? "" : part,
+    cache.analytics,
   );
   return (
     <section className="group-history-graph" aria-label="グループの記録の推移">

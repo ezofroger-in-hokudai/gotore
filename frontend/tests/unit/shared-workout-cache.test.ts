@@ -49,3 +49,9 @@ test("別人の本文や期限切れの共有詳細を再利用しない", () =>
     Date.now = now;
   }
 });
+
+test("フィードの所有者が変わった本文は再利用しない", () => {
+  const cache = new SharedWorkoutCache();
+  cache.put("group-a", item, record);
+  expect(cache.get("group-a", { ...item, user_id: "another" })).toBeNull();
+});
