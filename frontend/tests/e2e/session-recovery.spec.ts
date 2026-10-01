@@ -112,7 +112,7 @@ for (const resume of [false, true]) {
       expect(loads).toBe(failedLoads + 1);
       release();
       if (resume) {
-        await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
+        await page.getByRole("button", { name: "記録画面へ戻る", exact: true }).click();
         await expect(
           page.getByRole("button", { name: "トレーニング終了", exact: true }),
         ).toBeVisible();

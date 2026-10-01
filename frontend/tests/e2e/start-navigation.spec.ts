@@ -2,13 +2,13 @@ import { expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 for (const width of [320, 390, 430]) {
-  test(`${width}pxでホームから開始し、グループナビとRESUMEから同じ記録へ戻る`, async ({ page }) => {
+  test(`${width}pxでホームから開始し、グループナビと記録へから同じ記録へ戻る`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const state = await mockTraining(page);
     const nav = page.getByRole("navigation", { name: "メインナビゲーション" });
     await expect(nav.getByRole("button")).toHaveText(["ホーム", "グループ", "履歴", "設定"]);
     const floating = page.getByTestId("floating-training");
-    await expect(floating.locator(".floating-training-action")).toHaveText("START");
+    await expect(floating.locator(".floating-training-elapsed")).toHaveText("START");
     const dot = await page.locator(".home-summary-live .status-dot").boundingBox();
     expect(dot?.width).toBe(dot?.height);
     await expect(page.locator(".community-card").first()).toHaveCSS(
@@ -39,7 +39,8 @@ for (const width of [320, 390, 430]) {
       await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
       await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
       expect((await page.locator(".session-header").boundingBox())?.y).toBe(0);
-      await expect(floating).toHaveCount(0);
+      await expect(floating).toBeVisible();
+      await expect(floating).toBeDisabled();
       await page.getByRole("button", { name: /^ベンチプレス/ }).click();
       await page.getByRole("spinbutton", { name: "重量", exact: true }).fill("60");
       await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeDisabled();
@@ -54,7 +55,7 @@ for (const width of [320, 390, 430]) {
     await expect(
       page.getByRole("heading", { name: state.group.name, level: 2, exact: true }),
     ).toBeVisible();
-    await expect(floating.locator(".floating-training-action")).toHaveText("RESUME");
+    await expect(floating.locator(".floating-training-action")).toHaveText("記録へ");
     await expect(floating.locator(".floating-training-elapsed")).toBeVisible();
     if (width === 390)
       await page.screenshot({ path: "test-results/start-groups.png", fullPage: true });
@@ -70,9 +71,9 @@ for (const width of [320, 390, 430]) {
     expect(starts).toBe(1);
     await navigate(page, "ホーム");
     await expect(page.locator(".home-training > button")).toHaveCount(0);
-    await expect(floating.locator(".floating-training-action")).toHaveText("RESUME");
+    await expect(floating.locator(".floating-training-action")).toHaveText("記録へ");
     await expect(floating.locator(".floating-training-elapsed")).toBeVisible();
-    await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
+    await page.getByRole("button", { name: "記録画面へ戻る", exact: true }).click();
     expect(starts).toBe(1);
   });
 }
@@ -114,7 +115,7 @@ test("未所属のグループタブと通常入力でも開始操作を使い�
   await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
 });
 
-test("STARTは長押しで端へ移動し、再読込後も利用者ごとの位置を保つ", async ({ page }) => {
+test("STARTはドラッグで端へ移動し、再読込後も利用者ごとの位置を保つ", async ({ page }) => {
   await mockTraining(page);
   const floating = page.getByTestId("floating-training");
   const before = await floating.boundingBox();

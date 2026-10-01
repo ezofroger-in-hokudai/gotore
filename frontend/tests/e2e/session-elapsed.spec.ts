@@ -31,25 +31,25 @@ for (const width of [320, 390, 430]) {
     }
     await floating.click();
     const header = page.locator(".session-header");
-    await expect(header.locator(".session-elapsed")).toHaveText("0:12");
-    const logoBox = await header.locator(".session-wordmark").boundingBox();
-    expect(logoBox?.width).toBeGreaterThan(100);
-    const elapsedBox = await header.locator(".session-elapsed").boundingBox();
-    const finishBox = await header.getByRole("button", { name: "トレーニング終了" }).boundingBox();
-    expect((logoBox?.x ?? 0) + (logoBox?.width ?? 0)).toBeLessThanOrEqual(elapsedBox?.x ?? 0);
-    expect((elapsedBox?.x ?? 0) + (elapsedBox?.width ?? 0)).toBeLessThanOrEqual(finishBox?.x ?? 0);
+    await expect(header.locator(".session-elapsed")).toHaveCount(0);
+    await expect(header.locator(".finish-training")).toHaveCount(0);
+    await expect(floating.locator(".floating-training-elapsed")).toHaveText("0:12");
+    await expect(floating.locator(".floating-training-action")).toContainText("終了");
     await page.getByRole("button", { name: /^ベンチプレス/ }).click();
-    await expect(header.locator(".session-elapsed")).toHaveText("0:12");
-    if (width === 320) {
-      await page.addStyleTag({ content: "html { font-size: 200%; }" });
-      const enlargedElapsed = await header.locator(".session-elapsed").boundingBox();
-      const enlargedFinish = await header
-        .getByRole("button", { name: "トレーニング終了" })
-        .boundingBox();
-      expect((enlargedElapsed?.x ?? 0) + (enlargedElapsed?.width ?? 0)).toBeLessThanOrEqual(
-        enlargedFinish?.x ?? 0,
-      );
-    }
+    if (width === 320) await page.addStyleTag({ content: "html { font-size: 200%; }" });
+    const center = await floating.locator(".floating-training-elapsed").evaluate((el) => {
+      const text = el.getBoundingClientRect();
+      const dial = el.closest(".floating-training-dial")?.getBoundingClientRect();
+      if (!dial) throw new Error("時計の文字盤がありません");
+      return {
+        offsetX: Math.abs(text.x + text.width / 2 - dial.x - dial.width / 2),
+        offsetY: Math.abs(text.y + text.height / 2 - dial.y - dial.height / 2),
+        inside: text.left >= dial.left && text.right <= dial.right,
+      };
+    });
+    expect(center.offsetX).toBeLessThan(1);
+    expect(center.offsetY).toBeLessThan(1);
+    expect(center.inside).toBe(true);
     if (width === 390) {
       await page.waitForTimeout(300);
       await page.screenshot({
@@ -68,8 +68,7 @@ for (const width of [320, 390, 430]) {
         .getByRole("region", { name: "トレーニング結果" })
         .getByRole("button", { name: "ホーム" })
         .click();
-      await expect(floating.locator(".floating-training-action")).toHaveText("START");
-      await expect(floating.locator(".floating-training-elapsed")).toHaveText("▶");
+      await expect(floating.locator(".floating-training-elapsed")).toHaveText("START");
     }
   });
 }
