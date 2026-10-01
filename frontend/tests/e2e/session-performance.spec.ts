@@ -66,6 +66,9 @@ for (const destination of ["ホーム", "設定"]) {
       await showRecordingMemos(page);
       await expect.poll(() => contexts).toBe(1);
       await expect(page.locator(".previous-set-cell").first()).toContainText("80");
+      const kindMemo = page.getByRole("button", { name: "種目メモを編集", exact: true });
+      await expect(kindMemo).toHaveText("種目の下書き");
+      await kindMemo.click();
       await expect(page.getByRole("textbox", { name: "種目メモ", exact: true })).toHaveValue(
         "種目の下書き",
       );

@@ -24,7 +24,7 @@ test("未保存入力と保存済みセットをタブ切替・再起動後も�
   await expect(weight).toHaveValue("60.5");
   state.failSave = false;
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
-  await expect.poll(() => state.session?.exercises[0].sets).toEqual([{ weight: 60.5, reps: 8 }]);
+  await expect.poll(() => state.session?.exercises[0]?.sets).toEqual([{ weight: 60.5, reps: 8 }]);
   await navigate(page, "ホーム");
   await expect(page.getByRole("article")).toContainText("60.5");
   await page.reload();
