@@ -8,6 +8,8 @@
   --cta: #ce282b;
   --accent-soft: #fff0f0;
   --track: #eceef1;
+  --set-selection-bg: #fff5f5;
+  --set-selection-line: #efcaca;
   --history-heat-1: #fde7e7;
   --history-heat-2: #f7b7b7;
   --history-heat-3: #eb8084;
@@ -33,6 +35,8 @@
   --cta: #e73a35;
   --accent-soft: #392327;
   --track: #282b31;
+  --set-selection-bg: #392327;
+  --set-selection-line: #75434a;
   --history-heat-1: #51272e;
   --history-heat-2: #743039;
   --history-heat-3: #9d3541;
@@ -57,6 +61,8 @@
     --cta: #e73a35;
     --accent-soft: #392327;
     --track: #282b31;
+    --set-selection-bg: #392327;
+    --set-selection-line: #75434a;
     --history-heat-1: #51272e;
     --history-heat-2: #743039;
     --history-heat-3: #9d3541;
@@ -4965,9 +4971,9 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   position: absolute;
   z-index: 0;
   inset: -10px -8px;
-  border: 1px solid #efcaca;
+  border: 1px solid var(--set-selection-line);
   border-radius: 6px;
-  background: #fff5f5;
+  background: var(--set-selection-bg);
 }
 .recording-view .unified-comparison-table .current-set-selection .set-measurement {
   position: relative;

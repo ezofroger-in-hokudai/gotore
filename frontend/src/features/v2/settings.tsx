@@ -1,11 +1,10 @@
-import type { AvatarImage } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { CatalogPanel } from "../exercises/catalog-panel";
 import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { AvatarPanel } from "../settings/avatar-panel";
 import { SettingsPanel } from "../settings/settings-panel";
 import { SuggestionBox, useSuggestionBox } from "../settings/suggestion-box";
-import { useResource } from "../training/use-resource";
+import type { SettingsProfile } from "../settings/use-settings-profile";
 import { Sheet } from "./sheet";
 
 type Theme = "system" | "light" | "dark";
@@ -41,6 +40,7 @@ export function usePreferences(userId: string) {
 }
 
 export function Preferences({
+  resources,
   catalog,
   preferences,
   onChanged,
@@ -48,6 +48,7 @@ export function Preferences({
   onLogout,
   signingOut,
 }: {
+  resources: SettingsProfile;
   catalog: ReturnType<typeof useExerciseCatalog>;
   preferences: ReturnType<typeof usePreferences>;
   onChanged: () => void;
@@ -59,8 +60,7 @@ export function Preferences({
     "name" | "avatar" | "theme" | "haptic" | "exercises" | "suggestion" | "logout" | null
   >(null);
   const suggestion = useSuggestionBox();
-  const profile = useResource<{ display_name: string }>("/me");
-  const avatar = useResource<AvatarImage>("/me/avatar");
+  const { profile, avatar } = resources;
   return (
     <section className="preferences">
       <h1>設定</h1>
@@ -164,17 +164,19 @@ export function Preferences({
             <CatalogPanel catalog={catalog} />
           ) : sheet === "avatar" ? (
             <AvatarPanel
+              current={avatar}
               name={profile.data?.display_name || ""}
-              onSaved={() => {
-                avatar.retry();
+              onSaved={(saved) => {
+                avatar.updateData(() => saved);
                 onChanged();
               }}
               onClose={() => setSheet(null)}
             />
           ) : sheet === "name" ? (
             <SettingsPanel
-              onSaved={() => {
-                profile.retry();
+              profile={profile}
+              onSaved={(displayName) => {
+                profile.updateData((current) => ({ ...current, display_name: displayName }));
                 onChanged();
               }}
             />

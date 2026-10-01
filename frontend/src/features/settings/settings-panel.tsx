@@ -2,11 +2,13 @@ import { api } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import { type FormEvent, useState } from "react";
 import { LoadingState } from "../loading/loading-state";
-import { useResource } from "../training/use-resource";
 import { saveDisplayName } from "./profile";
+import type { SettingsProfile } from "./use-settings-profile";
 
-export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
-  const profile = useResource<{ id: string; display_name: string }>("/me");
+export function SettingsPanel({
+  profile,
+  onSaved,
+}: { profile: SettingsProfile["profile"]; onSaved: (name: string) => void }) {
   if (profile.data) {
     return <DisplayNameForm displayName={profile.data.display_name} onSaved={onSaved} />;
   }
@@ -27,7 +29,10 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-function DisplayNameForm({ displayName, onSaved }: { displayName: string; onSaved: () => void }) {
+function DisplayNameForm({
+  displayName,
+  onSaved,
+}: { displayName: string; onSaved: (name: string) => void }) {
   const [name, setName] = useState(displayName);
   const [busy, setBusy] = useState(false);
   const [needsSync, setNeedsSync] = useState(false);
@@ -58,7 +63,7 @@ function DisplayNameForm({ displayName, onSaved }: { displayName: string; onSave
       setNeedsSync(!result.synced);
       if (result.synced) {
         setMessage("保存しました。");
-        onSaved();
+        onSaved(result.name);
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "変更できませんでした。");
@@ -110,7 +115,7 @@ function DisplayNameForm({ displayName, onSaved }: { displayName: string; onSave
                   await syncProfile();
                   setNeedsSync(false);
                   setMessage("反映しました。");
-                  onSaved();
+                  onSaved(name);
                 } catch {
                   setError("反映を確認できません。再試行してください。");
                 } finally {

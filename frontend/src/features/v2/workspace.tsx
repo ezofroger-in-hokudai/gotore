@@ -14,6 +14,7 @@ import { useElapsedTime } from "../session/elapsed-time";
 import { SessionScreen } from "../session/session-screen";
 import { useSession } from "../session/use-session";
 import { WorkoutResult } from "../session/workout-result";
+import { useSettingsProfile } from "../settings/use-settings-profile";
 import { StampProvider } from "../stamps/stamp-provider";
 import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
@@ -89,6 +90,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   const resultConfirmed =
     !!finished && training.saved?.id === finished.id && !!training.saved.ended_at;
   const preferences = usePreferences(session.user.id);
+  const settingsProfile = useSettingsProfile(view === "settings");
   const catalog = useExerciseCatalog(changed);
   const groupList = useResource<Group[]>("/groups", groupRefreshKey, GROUP_REFRESH_MS, true, {
     enabled: view === "home" || view === "groups",
@@ -506,6 +508,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         {view === "settings" && (
           <Preferences
+            resources={settingsProfile}
             catalog={catalog}
             preferences={preferences}
             onChanged={changed}

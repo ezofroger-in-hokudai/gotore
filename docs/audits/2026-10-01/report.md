@@ -77,6 +77,15 @@
 - #268: ダークの編集行をテーマ色へ合わせ、数値のコントラスト4.5以上。操作サイズは変更していない。
 - #270/#271: 移譲の対象と本人の権限変更を確認し、確定時だけ一度送信。危険操作送信中の取消/閉じる/背景/スワイプ/Escape/戻るを保護。15秒の通信期限と確認内の失敗表示を追加。
 
-[修正後の実画面3枚](https://github.com/ezofroger-in-hokudai/gotore/tree/fix/278-user-audit/docs/images/audit-fixes)は修正PR側に保存。専用gotore_test DBのmake checkはbackend300/frontend137/lint/型/build成功。6160063の全件CI run 36803351293は全ジョブ成功、E2E293件成功（9.2分）。最終c0b7e8fの[CI run 36804421469](https://github.com/ezofroger-in-hokudai/gotore/actions/runs/36804421469)も全ジョブ成功、backend300/frontend137/全E2E293件成功（2 worker、9.2分）。
+[修正後の実画面3枚](https://github.com/ezofroger-in-hokudai/gotore/tree/c0b7e8f/docs/images/audit-fixes)は修正PR側に保存。専用gotore_test DBのmake checkはbackend300/frontend137/lint/型/build成功。6160063の全件CI run 36803351293は全ジョブ成功、E2E293件成功（9.2分）。最終c0b7e8fの[CI run 36804421469](https://github.com/ezofroger-in-hokudai/gotore/actions/runs/36804421469)も全ジョブ成功、backend300/frontend137/全E2E293件成功（2 worker、9.2分）。
 
-今回は修正PRをレビューできる段階まで進める。mainへの統合・本番反映・独立レビュー・実機PWAは完了していない。#267と#272〜#276は後続の画面設計/実装の判断が必要。
+修正PR #280は2026-10-01 11:44にmain c5606f5へ統合されたことを確認した。本番反映・実機PWAはこの作業では確認していない。#267/#272/#275は後述のPR #282で採用・実装。#273/#274/#276は後続の画面設計/実装の判断が必要。
+
+
+## 前後比較と次の実装
+
+ユーザー指定により、PR #280へ[同条件の変更前・変更後12枚](comparison/README.md)を並べた。変更前main094f34a、変更後c0b7e8f。今後も画面を変更するPRには前後を載せる基準をCONTRIBUTINGとPRテンプレートへ記載。画像参照はコミットe547c9dに固定している。
+
+継続実装依頼を受け、#174のメモ保存待ちを[PR #282](https://github.com/ezofroger-in-hokudai/gotore/pull/282)で改善した。端末受付後に閉じる・再編集・別画面の失敗/再送・再起動照合・ログアウト/別ユーザー分離。最新main取り込み後のmake check（backend301/frontend142/lint/型/build）、関連E2E31件（実Auth/DB含む）が成功。[前後6画像](https://github.com/ezofroger-in-hokudai/gotore/blob/2633da5bcb61628b121aefef1ed108d0c8052f15/docs/images/memo-delivery/README.md)もPRへ掲載。初回2633da5の全件CI run 36809353220は293成功/3失敗。メモ受付後に閉じる期待値2件と、終了API確定を待つ判定1件を修正。最終1009ea1の[最終CI run 36814312977](https://github.com/ezofroger-in-hokudai/gotore/actions/runs/36814312977)は全ジョブ成功、backend301/frontend142/全E2E299件成功（2 worker、10.0分）。
+
+#267の本人履歴の各種目で閲覧・編集・再送、#272のキャンセル統一、#275の触覚設定の一覧スイッチは、継続依頼により提案した形で採用し、PR #282へIssue別コミットで実装。旧v1下書きの終了後復旧も確認。通常チェックはbackend301/frontend142/lint/型/build成功、関連23件/追加9件/最終7件成功（撮影4件・実Auth/DBを含む）。[追加の前後6画像](https://github.com/ezofroger-in-hokudai/gotore/blob/d221e49/docs/images/remaining-fixes/README.md)をPRへ掲載。未マージ、独立レビュー・実機未実施。
