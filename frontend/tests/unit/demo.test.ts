@@ -88,3 +88,23 @@ test("共通の記録キャッシュへ本人の記録だけを渡し、削除�
   expect(validChanges(changes, "demo-test")).toBe(true);
   expect(changes).toMatchObject({ deleted_workout_ids: ["demo-history-0"] });
 });
+
+test("終了済みの開始はデモでも保留カットインの対象から外す", async () => {
+  const store = new DemoStore("demo-test");
+  store.receive("start", 2);
+  const ended = store.state.records.find((x) => x.id === "demo-peer-0");
+  if (!ended) throw new Error("開始した記録がありません");
+  ended.ended_at = new Date().toISOString();
+  const inbox = (await store.request("/notifications/inbox")) as { live_start_ids: string[] };
+  expect(inbox.live_start_ids).toEqual([store.state.notices[1].id]);
+});
+
+test("グループカレンダーはLIVE一覧と分けて月別の負荷を返す", async () => {
+  const store = new DemoStore("demo-test");
+  const month = store.state.records[0].performed_on.slice(0, 7);
+  const activity = await store.request(`/groups/demo-ezofrogs/workouts/activity?month=${month}`);
+  expect(activity).toMatchObject({ month, metric: "volume" });
+  expect((activity as { days: unknown[] }).days.length).toBeGreaterThan(0);
+  const live = await store.request("/groups/demo-ezofrogs/activity");
+  expect(live).toHaveProperty("members");
+});

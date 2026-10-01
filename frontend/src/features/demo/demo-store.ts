@@ -372,7 +372,12 @@ export class DemoStore {
       return {
         items: s.notices.filter((x) => !s.seen.includes(x.id)),
         live_start_ids: s.notices
-          .filter((x) => x.kind === "start" && Date.parse(x.live_until || "") > Date.now())
+          .filter(
+            (x) =>
+              x.kind === "start" &&
+              Date.parse(x.live_until || "") > Date.now() &&
+              s.records.some((record) => record.id === x.workout_id && record.ended_at === null),
+          )
           .map((x) => x.id),
       };
     if (p === "/notifications/seen") {
@@ -587,7 +592,7 @@ export class DemoStore {
     }
     const g = p.startsWith("/groups/") ? s.groups.find((x) => x.id === p.split("/")[2]) : null;
     if (g) {
-      if (p.endsWith("/activity")) return this.activity(g);
+      if (p === `/groups/${g.id}/activity`) return this.activity(g);
       if (p.endsWith("/invites"))
         return { token: "demo-invite", expires_at: new Date(Date.now() + 86400000).toISOString() };
       if (p.endsWith("/owner")) {

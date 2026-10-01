@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>履歴カレンダー · 月送り採用A</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#e8e9ec;color:#17191d;font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif}button,select{font:inherit;cursor:pointer}button:focus-visible,select:focus-visible,.viewport:focus-visible{outline:2px solid #c52e3a;outline-offset:2px}.controls{max-width:660px;margin:auto;padding:14px 16px 10px}.controls h1{font-size:17px;margin:0 0 5px}.controls p{font-size:12px;color:#656a74;margin:6px 0;line-height:1.6}.variants{display:flex;gap:5px;margin-top:10px}.variants button{flex:1;border:1px solid #cdd0d7;background:white;border-radius:9px;padding:9px 3px;font-size:12px;font-weight:700}.variants button[aria-pressed=true]{background:#22252b;color:white;border-color:#22252b}.tools{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:9px 0}.tools button,.tools select{border:1px solid #cdd0d7;background:white;border-radius:6px;font-size:11px;padding:6px 8px}.tools label{font-size:11px;display:flex;align-items:center;gap:3px}.stage{display:flex;justify-content:center;padding:4px 10px 24px}.phone{--panel:#fff;--text:#17191d;--muted:#656a74;--line:#dedfe3;--track:#eceef1;--history-heat-1:#fde7e7;--history-heat-2:#f7b7b7;--history-heat-3:#eb8084;--history-heat-4:#c52e3a;width:390px;max-width:100%;height:760px;background:#f5f6f8;color:var(--text);border-radius:24px;overflow:hidden;position:relative;border:1px solid #c9ccd2;box-shadow:0 16px 48px #17191d15;display:flex;flex-direction:column}.phone.dark{--panel:#1b1d20;--text:#f5f5f7;--muted:#a1a6af;--line:#33363d;--track:#282b31;--history-heat-1:#51272e;--history-heat-2:#743039;--history-heat-3:#9d3541;--history-heat-4:#c43a45;background:#111316}.header{height:48px;flex:none;background:#17191d;color:white;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:15px;font-weight:800}.header small{font-size:10px;color:#b8bbc3}.screen{padding:12px;display:flex;flex-direction:column;gap:9px;flex:1;min-height:0;padding-bottom:88px}.lifetime{background:#22252b;color:white;border-radius:10px;display:grid;grid-template-columns:1.6fr 1fr 1fr;padding:11px}.lifetime div+div{border-left:1px solid #51545b;padding-left:9px}.lifetime small{display:block;font-size:9px;color:#c7cad0}.lifetime b{font-size:18px}.lifetime em{font-size:10px;font-style:normal}.parts,.tabs{display:flex;background:var(--track);padding:3px;gap:2px;border-radius:9px}.parts button,.tabs button{flex:1;min-width:0;background:none;border:0;color:var(--muted);border-radius:6px;font-size:10px;height:31px;padding:0}.parts button.selected,.tabs button.selected{background:var(--panel);color:var(--text);box-shadow:0 1px 3px #0001}.tabs button{height:35px;font-size:11px;font-weight:700}.section-head{display:flex;align-items:center;justify-content:space-between;flex:none;font-size:12px}.section-head small{font-size:10px;color:var(--muted)}.calendar{background:var(--panel);border:1px solid var(--line);border-radius:13px;flex:1;min-height:0;padding:8px;display:flex;flex-direction:column;gap:0}.viewport{position:relative;overflow:hidden;flex:1;min-height:0;touch-action:pan-y;user-select:none;outline:none}.track{display:flex;width:100%;height:100%;transform:translateX(-100%);will-change:transform}.page{flex:0 0 100%;min-width:0;display:flex;flex-direction:column;height:100%;padding:0 0}.page:not([data-active=true]){pointer-events:none}.calendar.grid-only>.fixed{flex:none}.grid-only .page .personal-history-month,.grid-only .page .personal-history-weekdays,.grid-only .page .personal-history-calendar-foot{display:none}.fixed[hidden]{display:none}.bottom{position:absolute;bottom:0;left:0;right:0;display:flex;height:57px;align-items:center;background:var(--panel);border-top:1px solid var(--line);color:var(--muted);font-size:10px}.bottom span{flex:1;text-align:center}.bottom .selected{color:#c52e3a;font-weight:700}.watch{position:absolute;right:16px;bottom:69px;width:72px;height:80px;display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--text);background:var(--panel);border-radius:50%;box-shadow:0 2px 12px #0002}.watch:before{content:"";position:absolute;inset:4px;border:1px solid #c52e3a;border-radius:50%}.sheet{position:absolute;inset:0;background:#0007;display:flex;align-items:flex-end;z-index:3}.sheet[hidden]{display:none}.sheet section{width:100%;background:var(--panel);color:var(--text);border-radius:18px 18px 0 0;padding:17px}.sheet h2{font-size:16px}.sheet p{font-size:12px}.sheet button{float:right;border:0;background:var(--track);color:var(--text);padding:8px;border-radius:6px}.record{padding:13px;border:1px solid var(--line);border-radius:10px;font-size:12px;line-height:1.8}.group .lifetime,.group .exercise{display:none}.group .calendar{max-height:420px}.group .screen{padding-bottom:12px}.group-info{display:none;font-size:12px;padding:12px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}.group .group-info{display:block}.hint{font-size:11px;color:#656a74;text-align:center;margin:0 10px 10px}@media(max-width:520px){.controls{padding:10px 12px}.stage{padding:0 0 16px}.phone{border-radius:0;border:0;height:calc(100dvh - 240px);min-height:540px}.controls h1{font-size:15px}.controls p{font-size:11px}}@media(prefers-reduced-motion:reduce){.track{will-change:auto}}
+.personal-history-month {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 3px;
+}
+.personal-history-month strong {
+  font-size: 14px;
+}
+.personal-history-month small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.personal-history-weekdays,
+.personal-history-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.personal-history-weekdays {
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
+}
+.personal-history-days {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+}
+.personal-history-days button,
+.personal-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: var(--track);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+}
+.personal-history-empty {
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.55;
+}
+.personal-history-days button:disabled {
+  opacity: 0.35;
+}
+.personal-history-days button[data-level="1"] {
+  background: var(--history-heat-1);
+}
+.personal-history-days button[data-level="2"] {
+  background: var(--history-heat-2);
+}
+.personal-history-days button[data-level="3"] {
+  background: var(--history-heat-3);
+}
+.personal-history-days button[data-level="4"] {
+  background: var(--history-heat-4);
+  color: #fff;
+}
+.personal-history-days button small {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 7px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.personal-history-calendar-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
+}
+.personal-history-calendar-foot strong {
+  color: var(--text);
+}
+
+</style>
+<div class="controls"><h1>履歴カレンダー · 採用A</h1><p>採用A：月名・日付・合計が一緒に滑ります。左右のスワイプと日付タップを試せます。架空のサンプルです。</p>
+<div class="variants"><button data-mode="A" aria-pressed="true">A 一枚ごと滑る</button></div>
+<p id="description"></p><div class="tools"><button id="prev">← 前月</button><button id="next">翌月 →</button><button id="replay">往復を再生</button><select id="size" aria-label="画面幅"><option>390</option><option>320</option><option>430</option></select><select id="scope" aria-label="画面"><option value="personal">個人履歴</option><option value="group">グループ</option></select><select id="scenario" aria-label="確認する月"><option value="2026-09">9月（初期）</option><option value="2026-10">今月の上限</option><option value="2026-01">年をまたぐ</option><option value="2025-11">最古の月</option></select><label><input id="dark" type="checkbox">暗い画面</label><label><input id="reduce" type="checkbox">動きを減らす</label></div></div>
+<div class="stage"><main class="phone"><header class="header"><span id="screen-title">履歴</span><small>E-GOTORE</small></header><div class="screen"><div class="lifetime"><div><small>総負荷</small><b>184,320<em>kg</em></b></div><div><small>回数</small><b>48<em>回</em></b></div><div><small>セット</small><b>392</b></div></div><div class="parts"><button class="selected">すべて</button><button>胸</button><button>背中</button><button>肩</button><button>腕</button><button>腹筋</button><button>おしり</button><button>脚</button><button>その他</button></div><div class="parts exercise"><button class="selected">全種目</button><button>ベンチプレス</button><button>スクワット</button></div><div class="tabs"><button class="selected">カレンダー</button><button>グラフ</button><button>使った部位</button></div><div class="section-head"><b>月間カレンダー</b><small>総負荷</small></div><div class="calendar"><div class="fixed" id="fixed-top" hidden></div><div class="viewport" tabindex="0" aria-label="月間カレンダー。左右矢印で月を変更"><div class="track"></div></div><div class="fixed" id="fixed-bottom" hidden></div></div><div class="group-info">合トレ仲間 · 13人<br><small>グループでも共通のカレンダーで確認</small></div></div><div class="watch">START</div><nav class="bottom"><span>ホーム</span><span class="selected">履歴</span><span>グループ</span><span>メニュー</span><span>設定</span></nav><div class="sheet" hidden><section><button id="close">閉じる</button><h2 id="day-title"></h2><div class="record"></div></section></div></main></div><p class="hint">前月／翌月・往復・幅・テーマの操作は比較用です。アプリの常設ボタンには追加しません。</p>
+<script>
+const $=s=>document.querySelector(s);let mode='A',month='2026-09',busy=false,gesture=null,blockedClick=false,queue=[],generation=0;const current='2026-10',oldest='2025-11',today='2026-10-01';const track=$('.track'),view=$('.viewport');const descriptions={A:'月名・日付・月の合計が一枚で移動。指についてきて、離すと約280msで着地。',B:'月名と曜日は固定。日付だけが横に移動して、約220msで素早く着地。',C:'一枚で移動し、最後に少しだけ行き過ぎて柔らかく止まる。約380ms。'};
+function shift(m,n){const d=new Date(m+'-01T00:00:00Z');d.setUTCMonth(d.getUTCMonth()+n);return d.toISOString().slice(0,7)}function label(m){return Number(m.slice(0,4))+'年'+Number(m.slice(5))+'月'}function valid(m){return m>=oldest&&m<=current}function reduced(){return $('#reduce').checked||matchMedia('(prefers-reduced-motion: reduce)').matches}function sample(m){const n=Number(m.slice(5));return [2,5,9,13,17,21,24,28].map((d,i)=>({day:d,volume:i===0?0:900+((i*671+n*239)%3800)})).filter(d=>m+'-'+String(d.day).padStart(2,'0')<=today)}function title(m){return '<div class="personal-history-month"><small>'+Number(shift(m,-1).slice(5))+'月</small><strong>'+label(m)+'</strong><small>'+(m<current?Number(shift(m,1).slice(5))+'月':'')+'</small></div>'}function weekdays(){return '<div class="personal-history-weekdays">'+[...'月火水木金土日'].map(d=>'<span>'+d+'</span>').join('')+'</div>'}function foot(m){const s=sample(m);return '<div class="personal-history-calendar-foot"><span>全種目 · '+s.length+'日</span><strong>'+s.reduce((a,b)=>a+b.volume,0).toLocaleString()+'kg</strong></div>'}function page(m,active){const start=new Date(m+'-01T00:00:00Z'),offset=(start.getUTCDay()+6)%7,data=sample(m),positive=data.map(d=>d.volume).filter(v=>v>0),min=Math.min(...positive),max=Math.max(...positive);let cells='';for(let i=0;i<42;i++){const dt=new Date(start);dt.setUTCDate(i-offset+1);const date=dt.toISOString().slice(0,10),d=dt.getUTCDate();if(date.slice(0,7)!==m){cells+='<span class="personal-history-empty">'+d+'</span>';continue}const item=data.find(s=>s.day===d),v=item?.volume,l=!item?0:v===0?1:max===min?4:Math.max(1,Math.min(4,Math.round((v-min)/(max-min)*3)+1));cells+='<button type="button" data-date="'+date+'" data-level="'+l+'" '+(date>today?'disabled':'')+' aria-label="'+label(m)+d+'日、'+(item?v+'kg':'記録なし')+'">'+d+'<small>'+(item?v>=1000?(v/1000).toFixed(1)+'k':v+'kg':'')+'</small></button>'}return '<div class="page" data-month="'+m+'" data-active="'+active+'" '+(!active?'inert aria-hidden="true"':'')+'>'+title(m)+weekdays()+'<div class="personal-history-days">'+cells+'</div>'+foot(m)+'</div>'}
+function render(){track.innerHTML=[-1,0,1].map(n=>page(shift(month,n),n===0)).join('');track.style.transform='translateX(-100%)';$('.calendar').classList.toggle('grid-only',mode==='B');$('#fixed-top').hidden=mode!=='B';$('#fixed-bottom').hidden=mode!=='B';$('#fixed-top').innerHTML=title(month)+weekdays();$('#fixed-bottom').innerHTML=foot(month);$('#description').textContent=descriptions[mode];$('#prev').disabled=month===oldest;$('#next').disabled=month===current;view.setAttribute('aria-label',label(month)+'のカレンダー。左右矢印で月を変更')}
+async function settle(direction,dx=0){if(busy){if(queue.length<3)queue.push(direction);return}if(!valid(shift(month,direction)))direction=0;const ticket=generation;busy=true;blockedClick=true;const w=view.clientWidth,from=-w+dx,to=-w-direction*w;track.style.transform='translateX('+from+'px)';const duration=reduced()?0:direction?(mode==='B'?220:mode==='C'?380:280):180;let animation;if(duration){const frames=mode==='C'&&direction?[{transform:'translateX('+from+'px)'},{transform:'translateX('+(to-direction*7)+'px)',offset:.8},{transform:'translateX('+to+'px)'}]:[{transform:'translateX('+from+'px)'},{transform:'translateX('+to+'px)'}];animation=track.animate(frames,{duration,easing:mode==='C'?'cubic-bezier(.2,.65,.3,1)':'cubic-bezier(.2,.75,.2,1)',fill:'forwards'});try{await animation.finished}catch{}}if(ticket!==generation){animation?.cancel();return}month=shift(month,direction);animation?.cancel();render();busy=false;setTimeout(()=>{if(ticket===generation)blockedClick=false},50);if(queue.length)settle(queue.shift())}
+function reset(m=month){generation++;track.getAnimations().forEach(a=>a.cancel());queue=[];busy=false;gesture=null;blockedClick=false;month=m;render()}
+view.addEventListener('pointerdown',e=>{if(e.button!==0||busy)return;gesture={id:e.pointerId,x:e.clientX,y:e.clientY,time:performance.now(),dx:0,axis:null};});view.addEventListener('pointermove',e=>{const g=gesture;if(!g||g.id!==e.pointerId)return;const dx=e.clientX-g.x,dy=e.clientY-g.y;if(!g.axis&&Math.max(Math.abs(dx),Math.abs(dy))>7){g.axis=Math.abs(dx)>Math.abs(dy)*1.4?'x':'y';if(g.axis==='x'){view.setPointerCapture(e.pointerId);blockedClick=true}}if(g.axis!=='x')return;g.dx=valid(shift(month,dx>0?-1:1))?Math.max(-view.clientWidth,Math.min(view.clientWidth,dx)):dx*.18;track.style.transform='translateX('+(-view.clientWidth+g.dx)+'px)'});
+function end(e,cancel=false){const g=gesture;if(!g||g.id!==e.pointerId)return;gesture=null;if(view.hasPointerCapture(e.pointerId))view.releasePointerCapture(e.pointerId);if(g.axis!=='x')return;const velocity=Math.abs(g.dx)/Math.max(1,performance.now()-g.time),commit=!cancel&&(Math.abs(g.dx)>view.clientWidth*.2||(Math.abs(g.dx)>35&&velocity>.45));settle(commit?(g.dx>0?-1:1):0,g.dx)}view.addEventListener('pointerup',e=>end(e));view.addEventListener('pointercancel',e=>end(e,true));view.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();settle(e.key==='ArrowLeft'?-1:1)}});view.addEventListener('click',e=>{if(blockedClick||busy)return;const b=e.target.closest('[data-date]');if(!b||b.disabled)return;const date=b.dataset.date,d=Number(date.slice(-2)),item=sample(month).find(s=>s.day===d);$('#day-title').textContent=label(month)+d+'日の全メニュー';$('.record').innerHTML=item?'09:30 · '+item.volume.toLocaleString()+'kg<br>'+(item.volume===0?'<b>腕立て伏せ</b><br>0kg × 10回　1セット':'<b>ベンチプレス</b><br>40kg × 10回　1セット<br><b>スクワット</b><br>'+((item.volume-400)/10).toFixed(1)+'kg × 10回　1セット'):'この日の記録はありません';$('.sheet').hidden=false});$('#close').onclick=()=>$('.sheet').hidden=true;$('.sheet').onclick=e=>{if(e.target===$('.sheet'))$('.sheet').hidden=true};document.addEventListener('keydown',e=>{if(e.key==='Escape')$('.sheet').hidden=true});
+for(const b of document.querySelectorAll('[data-mode]'))b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(btn=>btn.setAttribute('aria-pressed',btn===b));reset()};$('#prev').onclick=()=>settle(-1);$('#next').onclick=()=>settle(1);$('#scenario').onchange=e=>reset(e.target.value);$('#size').onchange=e=>{reset();$('.phone').style.width=e.target.value+'px'};$('#dark').onchange=e=>$('.phone').classList.toggle('dark',e.target.checked);$('#reduce').onchange=()=>reset();$('#scope').onchange=e=>{$('.phone').classList.toggle('group',e.target.value==='group');$('#screen-title').textContent=e.target.value==='group'?'合トレ仲間':'履歴';reset()};let replaying=false;$('#replay').onclick=async()=>{if(replaying)return;replaying=true;$('#replay').disabled=true;reset('2026-09');await settle(-1);const ticket=generation;await new Promise(r=>setTimeout(r,650));if(ticket===generation)await settle(1);replaying=false;$('#replay').disabled=false};new ResizeObserver(()=>{if(!busy&&!gesture)track.style.transform='translateX(-100%)'}).observe(view);render();
+</script></html>

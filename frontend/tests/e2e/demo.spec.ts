@@ -150,3 +150,74 @@ test("何も押さずに大量スタンプと開始通知が届き、非表示�
   await page.clock.runFor(60_000);
   expect(await sequence()).toBe(exitSequence);
 });
+
+test("デモの時計はホームと再読込で計時を引き継ぎ、開始通知をホームまで保留", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-10-02T03:00:00Z") });
+  await page.goto("/demo");
+  const clock = page.getByTestId("floating-training");
+  await expect(clock).toHaveText("START");
+  await clock.click();
+  await page.getByRole("button", { name: /^ベンチプレス/ }).click();
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
+  await expect(clock.locator(".floating-training-action")).toContainText("終了");
+  await expect(page.locator(".session-header .finish-training")).toHaveCount(0);
+  await page.getByRole("button", { name: "デモ", exact: true }).click();
+  await page.getByRole("button", { name: /仲間8人/ }).click();
+  await page.clock.runFor(1000);
+  await expect(page.locator(".activity-start")).toHaveCount(0);
+  await navigate(page, "ホーム");
+  await expect(page.locator(".activity-start")).toContainText("8人がトレーニング開始");
+  await expect(clock.locator(".floating-training-action")).toHaveText("記録へ");
+  await page.clock.fastForward(65 * 60_000);
+  await expect(clock.locator(".floating-training-elapsed")).toHaveText("1:05");
+  await page.reload();
+  await expect(page.locator(".community-card").first()).toContainText("ezofrogs");
+  await expect(clock.locator(".floating-training-action")).toHaveText("記録へ");
+  await expect(clock.locator(".floating-training-elapsed")).toHaveText("1:05");
+  await clock.click();
+  await expect(page.locator(".session-screen")).toContainText("kg");
+  await clock.click();
+  await expect(page.getByRole("dialog", { name: "トレーニング終了" })).toBeVisible();
+});
+
+for (const group of [false, true]) {
+  test(`デモの${group ? "グループ" : "個人"}カレンダーも隣月と並んで滑る`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-10-02T03:00:00Z"));
+    await page.goto("/demo");
+    await expect(page.getByTestId("floating-training")).toHaveText("START");
+    if (group) {
+      await page.locator(".community-card").first().click();
+      await page
+        .getByRole("navigation", { name: "グループの表示" })
+        .getByRole("button", { name: "カレンダー" })
+        .click();
+    } else await navigate(page, "履歴");
+    const calendar = page.locator(".personal-history-calendar:visible");
+    const viewport = calendar.locator(".history-calendar-viewport");
+    await expect(calendar.locator(".personal-history-month strong")).toHaveText("2026年10月");
+    await expect(calendar.locator(".personal-history-days button").first()).toBeEnabled();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.dataset.gotoreNavigationDirection))
+      .toBeUndefined();
+    const box = await viewport.boundingBox();
+    if (!box) throw new Error("デモのカレンダーがありません");
+    const x = box.x + box.width * 0.4;
+    const y = box.y + box.height * 0.4;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 90, y, { steps: 6 });
+    await expect(calendar.locator(".history-calendar-page")).toHaveCount(3);
+    const offset = await calendar
+      .locator(".history-calendar-track")
+      .evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41);
+    expect(offset).toBeGreaterThan(-box.width + 70);
+    if (!group) await page.screenshot({ path: "test-results/demo-calendar-drag.png" });
+    await page.mouse.up();
+    await expect(calendar).toHaveAttribute("data-moving", "false");
+    await expect(calendar.locator(".personal-history-month strong")).toHaveText("2026年9月");
+    await expect(calendar.locator(".personal-history-days > *")).toHaveCount(42);
+    if (!group) await page.screenshot({ path: "test-results/demo-calendar.png" });
+    await calendar.getByRole("button", { name: /^2026年9月29日、/ }).click();
+    await expect(page.getByRole("dialog")).toContainText("ベンチプレス");
+  });
+}
