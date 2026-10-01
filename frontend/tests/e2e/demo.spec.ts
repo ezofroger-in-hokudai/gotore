@@ -113,3 +113,40 @@ test("名前変更・再読込・ログアウトはデモだけに反映し、�
   await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("高木透");
   expect(errors).toEqual([]);
 });
+
+test("何も押さずに大量スタンプと開始通知が届き、非表示・退出中は停止する", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/demo");
+  await expect(page.getByRole("button", { name: "トレーニングを開始", exact: true })).toBeVisible();
+  await page.clock.runFor(4_100);
+  await expect(page.locator(".activity-stamp")).toBeVisible();
+  await page.clock.runFor(8_000);
+  await expect(page.locator(".activity-start")).toBeVisible();
+  const sequence = () =>
+    page.evaluate(
+      () => JSON.parse(sessionStorage.getItem("egotore:demo:v1") || "{}").sequence as number,
+    );
+  const firstSequence = await sequence();
+  await page.clock.runFor(40_000);
+  expect(await sequence()).toBeGreaterThan(firstSequence);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  const hiddenSequence = await sequence();
+  await page.clock.runFor(60_000);
+  expect(await sequence()).toBe(hiddenSequence);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await page.clock.runFor(4_100);
+  expect(await sequence()).toBeGreaterThan(hiddenSequence);
+  const exitSequence = await sequence();
+  await page.goto("/");
+  await page.clock.runFor(60_000);
+  expect(await sequence()).toBe(exitSequence);
+});

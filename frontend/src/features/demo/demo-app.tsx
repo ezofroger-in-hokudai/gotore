@@ -3,6 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import { Sheet } from "../v2/sheet";
 import { Workspace } from "../v2/workspace";
+import { startDemoAutoplay } from "./autoplay";
 import { prepareDemo, receiveDemo, resetDemo } from "./runtime";
 import "./demo.css";
 export function DemoApp() {
@@ -11,7 +12,9 @@ export function DemoApp() {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => {
     setSession(prepareDemo());
+    const stopAutoplay = startDemoAutoplay(receiveDemo);
     return () => {
+      stopAutoplay();
       for (const timer of timers.current) clearTimeout(timer);
     };
   }, []);
