@@ -95,6 +95,13 @@ for (const width of [320, 390, 430]) {
       await expect(card.locator(".record-details.is-expanded")).toBeVisible();
       expect(await card.evaluate((el) => el.getBoundingClientRect().height)).toBe(height);
       expect(await page.evaluate(() => window.scrollY)).toBe(scrollTop);
+      // 更新中に画面を離れて戻っても、古い本文のまま60秒待たない。
+      await navigate(page, "設定");
+      const beforeReturn = reads;
+      await navigate(page, "ホーム");
+      await expect.poll(() => reads).toBeGreaterThan(beforeReturn);
+      await expect(card.locator(".is-pending")).toHaveCount(0);
+      expect(await node?.evaluate((el) => el.isConnected)).toBe(true);
       release();
       hold = null;
       await expect(card.locator('[aria-label="セット数"] strong')).toHaveText("12");
