@@ -214,6 +214,18 @@ export function PersonalHistory({
     setPicker(false);
   }
 
+  const bodyResources =
+    Number(current.slice(-2)) <= 3 ? [currentActivity, previousActivity] : [currentActivity];
+  const bodyReady = bodyResources.every((resource) => resource.data !== null);
+  const bodyPending = bodyResources.some((resource) => !resource.data && !resource.error);
+  const bodyError = [
+    ...new Set(bodyResources.map((resource) => resource.error).filter(Boolean)),
+  ].join(" ");
+  const retryBody = () => {
+    for (const resource of bodyResources) {
+      if (resource.error || !resource.data) resource.retry();
+    }
+  };
   const bodyAges = recentPartAges(
     [...(previousActivity.data?.days ?? []), ...(currentActivity.data?.days ?? [])],
     current,
@@ -334,7 +346,13 @@ export function PersonalHistory({
           />
         )}
         {tab === "body" && (
-          <HistoryBody ages={bodyAges} loading={!currentActivity.data && currentActivity.loading} />
+          <HistoryBody
+            ages={bodyAges}
+            loading={bodyPending}
+            ready={bodyReady}
+            error={bodyError}
+            retry={retryBody}
+          />
         )}
       </div>
       {picker && (
@@ -711,9 +729,15 @@ const bodyRegions: { part: BodyPart; mask: string }[] = [
 function HistoryBody({
   ages,
   loading,
+  ready,
+  error,
+  retry,
 }: {
   ages: Partial<Record<BodyPart, number>>;
   loading: boolean;
+  ready: boolean;
+  error: string;
+  retry: () => void;
 }) {
   const source = "/previews/history-body-realistic-heatmap.png";
   const used = PART_FILTERS.slice(1)
@@ -721,6 +745,7 @@ function HistoryBody({
     .filter((part) => ages[part] !== undefined);
   return (
     <div className="personal-history-card personal-history-body">
+      <ResourceError resource={{ data: ready ? ages : null, error, retry }} />
       <span className="personal-history-body-period">直近3日</span>
       <div className="personal-history-body-art">
         <div className="personal-history-body-image">
@@ -757,7 +782,7 @@ function HistoryBody({
             <small>{ages[part] === 0 ? "今日" : `${ages[part]}日前`}</small>
           </span>
         ))}
-        {!used.length && !loading && <span>最近の記録はありません</span>}
+        {!used.length && !loading && ready && <span>最近の記録はありません</span>}
       </div>
     </div>
   );
