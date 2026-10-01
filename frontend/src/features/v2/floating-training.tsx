@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { describeElapsedTime } from "../session/elapsed-time";
 
 type Position = { side: "left" | "right"; top: number };
+const EDGE_INSET = "max(16px, calc((100vw - 480px) / 2 + 16px))";
 
 export function FloatingTraining({
   userId,
@@ -88,6 +89,8 @@ export function FloatingTraining({
         side,
         top: Math.max(bounds.minTop, Math.min(bounds.maxTop, rect.top)),
       } satisfies Position;
+      button.current.style.left = side === "left" ? EDGE_INSET : "";
+      button.current.style.right = side === "right" ? EDGE_INSET : "";
       setPosition(next);
       try {
         window.localStorage.setItem(storageKey, JSON.stringify(next));
@@ -101,9 +104,8 @@ export function FloatingTraining({
 
   const style = position
     ? {
-        left: position.side === "left" ? "max(16px, calc((100vw - 480px) / 2 + 16px))" : undefined,
-        right:
-          position.side === "right" ? "max(16px, calc((100vw - 480px) / 2 + 16px))" : undefined,
+        left: position.side === "left" ? EDGE_INSET : undefined,
+        right: position.side === "right" ? EDGE_INSET : undefined,
         top: position.top,
         bottom: "auto",
       }

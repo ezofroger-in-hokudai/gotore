@@ -5998,7 +5998,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .session-body-parts button[aria-pressed="true"] {
   border-color: #efcaca;
-  background: var(--set-selection-bg);
+  background: #fff5f5;
   color: var(--accent);
   font-weight: 700;
 }

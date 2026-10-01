@@ -149,6 +149,9 @@ test("STARTは回転後と短い画面の復元時にも画面内に収まる", 
   await expect.poll(async () => (await floating.boundingBox())?.y ?? 0).toBeGreaterThan(450);
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(floating).toBeInViewport({ ratio: 1 });
+  await expect
+    .poll(async () => (await floating.boundingBox())?.x)
+    .toBeCloseTo(844 / 2 + 240 - 16 - initial.width, 1);
   await page.reload();
   await expect(floating).toBeInViewport({ ratio: 1 });
   await floating.click();
