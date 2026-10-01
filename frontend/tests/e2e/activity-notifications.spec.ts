@@ -283,3 +283,65 @@ test("記録中は入力ドックより上の中央、動き低減に従う", as
   await page.clock.runFor(210);
   await expect(card).toHaveCount(0);
 });
+
+for (const swipe of [false, true]) {
+  test(`スタンプは${swipe ? "上スワイプ" : "自動終了"}で上へ退場し、次の通知を欠落させない`, async ({
+    page,
+  }) => {
+    const f = await fixture(page);
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+    f.receive([event(1), event(2)]);
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    await expect(page.locator(".activity-stamp")).toBeVisible();
+    await page.clock.runFor(400);
+    const stamp = page.locator(".activity-stamp");
+    await expect(stamp).toHaveAttribute("data-leaving", "false");
+    await stamp.evaluate((el) => {
+      for (const animation of el.getAnimations()) animation.finish();
+    });
+    if (swipe) {
+      const box = await stamp.boundingBox();
+      if (!box) throw new Error("スタンプ通知がありません");
+      await page.mouse.move(box.x + 40, box.y + 40);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 40, box.y - 20, { steps: 5 });
+      await page.mouse.up();
+    } else await page.clock.runFor(250);
+    await expect(stamp).toHaveAttribute("data-leaving", "true");
+    await expect(stamp).toContainText("柳町和音からスタンプ");
+    const animation = await stamp.evaluate((el) => {
+      const exit = el.getAnimations()[0] as CSSAnimation;
+      exit.pause();
+      exit.currentTime = 0;
+      const before = el.getBoundingClientRect().top;
+      exit.currentTime = 90;
+      return { name: exit.animationName, offset: el.getBoundingClientRect().top - before };
+    });
+    expect(animation.name).toBe("notification-stamp-exit");
+    expect(animation.offset).toBeLessThan(-10);
+    await navigate(page, "グループ");
+    await expect(stamp).toHaveAttribute("data-leaving", "true");
+    await page.clock.runFor(180);
+    await expect(stamp).toHaveAttribute("data-leaving", "false");
+    await expect.poll(() => [...f.seen]).toContain("notice-2");
+    await page.clock.runFor(650);
+    await expect(stamp).toHaveAttribute("data-leaving", "true");
+    await page.clock.runFor(180);
+    await expect(stamp).toHaveCount(0);
+  });
+}
+
+test("動き低減ではスタンプの退場待ちを設けず次の通知へ進む", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const f = await fixture(page);
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  f.receive([event(1), event(2)]);
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect(page.locator(".activity-stamp")).toBeVisible();
+  const stamp = page.locator(".activity-stamp");
+  await stamp.getByRole("button", { name: "スタンプ通知を閉じる" }).focus();
+  await page.keyboard.press("Escape");
+  await expect.poll(() => [...f.seen]).toContain("notice-2");
+  await expect(stamp).toHaveAttribute("data-leaving", "false");
+  expect(await stamp.evaluate((el) => el.getAnimations().length)).toBe(0);
+});

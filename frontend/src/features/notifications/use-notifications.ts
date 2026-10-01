@@ -28,6 +28,7 @@ export function useNotifications(
   const [pushId, setPushId] = useState<string | null>(null);
   const [stamp, setStamp] = useState<ActivityNotification[] | null>(null);
   const [stampPaused, setStampPaused] = useState(false);
+  const [stampLeaving, setStampLeaving] = useState(false);
   const stampLifetime = useRef({ id: "", remaining: 0, started: 0 });
   const [starts, setStarts] = useState<ActivityNotification[]>([]);
   const [batch, setBatch] = useState(0);
@@ -163,21 +164,34 @@ export function useNotifications(
     setStamp(next);
     displayed(next);
   }, [enabled, ready, stamp, settings.stamp_enabled, queue, displayed, tick]);
+  const dismissStamp = useCallback(() => {
+    if (!stamp) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setStamp(null);
+      setStampLeaving(false);
+    } else setStampLeaving(true);
+    setStampPaused(false);
+  }, [stamp]);
   useEffect(() => {
-    if (!stamp || stampPaused) return;
+    if (!stampLeaving) return;
+    // 退場が終わるまで表示中の通知を保持し、次の通知の登場と重ねない。
+    const timer = window.setTimeout(() => {
+      setStamp(null);
+      setStampLeaving(false);
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [stampLeaving]);
+  useEffect(() => {
+    if (!stamp || stampPaused || stampLeaving) return;
     const clock = stampLifetime.current;
     if (clock.id !== stamp[0].id) {
       clock.id = stamp[0].id;
       clock.remaining = stamp.length > 1 ? 2500 : 650;
     }
     clock.started = Date.now();
-    const timer = window.setTimeout(() => setStamp(null), clock.remaining);
+    const timer = window.setTimeout(dismissStamp, clock.remaining);
     return () => window.clearTimeout(timer);
-  }, [stamp, stampPaused]);
-  const dismissStamp = useCallback(() => {
-    setStamp(null);
-    setStampPaused(false);
-  }, []);
+  }, [stamp, stampPaused, stampLeaving, dismissStamp]);
   function pauseStamp() {
     const clock = stampLifetime.current;
     clock.remaining = Math.max(0, clock.remaining - (Date.now() - clock.started));
@@ -331,6 +345,7 @@ export function useNotifications(
     saving,
     pushId,
     stamp,
+    stampLeaving,
     starts,
     batch,
     saveSettings,
