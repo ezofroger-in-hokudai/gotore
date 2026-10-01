@@ -13,3 +13,5 @@
 新しい画面を検討するときは、該当資料を作成または更新してからプレビュー・実装へ進む。採用済み・却下済みの判断を、ユーザーの再指定なしに戻さない。
 
 - [スタンプ・トレーニング開始通知](activity-notifications.md): 共通スタンプカードとCグラデーションの実線参戦チケット。
+
+- [採用Aの中央カットイン](../../frontend/public/previews/activity-notification-center-adopted.html): 左から中央へ240ms、右へ200msで退場。

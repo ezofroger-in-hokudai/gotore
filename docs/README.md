@@ -99,3 +99,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [2026-09-30 公開版の操作・不具合・デザイン調査](audits/2026-09-30/report.md): 最新mainでの再現結果と問題候補。Issue化・仕様変更はユーザー判断待ち。
 
 - [現行仕様のテスト責務と移行先](testing-coverage.md)
+
+- [採用Aの中央カットイン](../frontend/public/previews/activity-notification-center-adopted.html): 本体へ反映する動きの固定参照。

@@ -232,9 +232,33 @@ export function useNotifications(
   ]);
   useEffect(() => {
     if (!starts.length) return;
-    const tap = () => dismissStart();
+    let watchGesture: { x: number; y: number; moved: boolean } | null = null;
+    const down = (e: PointerEvent) => {
+      watchGesture =
+        e.target instanceof Element && e.target.closest(".floating-training")
+          ? { x: e.clientX, y: e.clientY, moved: false }
+          : null;
+    };
+    const move = (e: PointerEvent) => {
+      if (watchGesture && Math.hypot(e.clientX - watchGesture.x, e.clientY - watchGesture.y) >= 8)
+        watchGesture.moved = true;
+    };
+    const tap = (e: MouseEvent) => {
+      // 時計の移動後に発生するclickは、画面タップで閉じる操作と区別する。
+      if (e.detail !== 0 && watchGesture?.moved) {
+        watchGesture = null;
+        return;
+      }
+      dismissStart();
+    };
+    document.addEventListener("pointerdown", down, true);
+    document.addEventListener("pointermove", move, true);
     document.addEventListener("click", tap, true);
-    return () => document.removeEventListener("click", tap, true);
+    return () => {
+      document.removeEventListener("pointerdown", down, true);
+      document.removeEventListener("pointermove", move, true);
+      document.removeEventListener("click", tap, true);
+    };
   }, [starts.length, dismissStart]);
   useEffect(() => {
     if (view === "record" && settings.start_timing === "home") dismissStart();
