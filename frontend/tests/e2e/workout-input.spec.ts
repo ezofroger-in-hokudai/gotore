@@ -37,7 +37,7 @@ test("未保存入力と保存済みセットをタブ切替・再起動後も�
   await expect(
     page.getByRole("heading", { name: "おつかれさまでした。", exact: true }),
   ).toBeVisible();
-  expect(state.session).toBeNull();
+  await expect.poll(() => state.session).toBeNull();
   expect(state.finished).toHaveLength(1);
 });
 

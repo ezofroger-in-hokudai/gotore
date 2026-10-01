@@ -73,6 +73,9 @@ for (const destination of ["ホーム", "設定"]) {
       await expect(page.locator(".previous-set-cell .set-measurement")).toHaveCount(0);
       expect(contexts).toBe(1);
       await expect(weight).toHaveValue("77.5");
+      const todayMemo = page.getByRole("button", { name: "今日のメモを編集", exact: true });
+      await expect(todayMemo).toHaveText("入力途中のメモ");
+      await todayMemo.click();
       await expect(page.getByRole("textbox", { name: "今日のメモ", exact: true })).toHaveValue(
         "入力途中のメモ",
       );
