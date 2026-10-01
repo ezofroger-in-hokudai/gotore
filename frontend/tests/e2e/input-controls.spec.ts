@@ -187,3 +187,35 @@ test("ホイールは下に引くと増え、上に引くと減り、指を離�
   }
   expect(state.saves).toBe(0);
 });
+
+test("ダークの編集行の文字は選択背景に対して読めるコントラストを保つ", async ({ page }) => {
+  await mockTraining(page);
+  await startTraining(page);
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
+  const set = page.getByRole("button", { name: "セット1を編集", exact: true });
+  await set.click();
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "dark";
+  });
+  const colors = await set.locator(".current-set-selection").evaluate((element) => ({
+    background: getComputedStyle(element, "::before").backgroundColor,
+    foreground: getComputedStyle(element.querySelector(".set-measurement") ?? element).color,
+  }));
+  const luminance = (color: string) => {
+    const values =
+      color
+        .match(/[\d.]+/g)
+        ?.slice(0, 3)
+        .map(Number) ?? [];
+    const linear = values.map((n) => {
+      const value = n / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  };
+  const light = luminance(colors.foreground);
+  const dark = luminance(colors.background);
+  expect((Math.max(light, dark) + 0.05) / (Math.min(light, dark) + 0.05)).toBeGreaterThanOrEqual(
+    4.5,
+  );
+});
