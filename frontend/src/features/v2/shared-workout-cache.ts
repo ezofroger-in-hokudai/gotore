@@ -18,7 +18,11 @@ export class SharedWorkoutCache {
     const key = this.key(groupId, item.workout_id);
     const entry = this.entries.get(key);
     if (!entry) return null;
-    if (entry.version !== sharedWorkoutVersion(item) || Date.now() - entry.savedAt >= 60_000) {
+    if (
+      entry.record.user_id !== item.user_id ||
+      entry.version !== sharedWorkoutVersion(item) ||
+      Date.now() - entry.savedAt >= 60_000
+    ) {
       this.entries.delete(key);
       return null;
     }

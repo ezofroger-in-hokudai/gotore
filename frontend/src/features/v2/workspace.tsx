@@ -30,6 +30,7 @@ import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
 import { CommunityHome } from "./community";
 import { FloatingTraining } from "./floating-training";
+import { GroupHistoryCache } from "./group-history-cache";
 import { CommunityScreen } from "./group-screen";
 import { History } from "./history";
 import { runNavigationMotion } from "./navigation-motion";
@@ -59,6 +60,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   const recordCache = useRecordSnapshot();
   const memoDelivery = useMemoDelivery().store;
   useEdgeBack();
+  const [historyCache] = useState(() => new GroupHistoryCache());
   const [sharedCache] = useState(() => new SharedWorkoutCache());
   const [view, setView] = useState<View>("home");
   const [finishRequest, setFinishRequest] = useState(0);
@@ -109,8 +111,12 @@ function WorkspaceContent({ session }: { session: Session }) {
     retainOnRefresh: true,
   });
   useEffect(() => {
-    if (groupList.data) sharedCache.retainGroups(new Set(groupList.data.map((group) => group.id)));
-  }, [groupList.data, sharedCache]);
+    if (groupList.data) {
+      const ids = new Set(groupList.data.map((group) => group.id));
+      sharedCache.retainGroups(ids);
+      historyCache.retainGroups(ids);
+    }
+  }, [groupList.data, sharedCache, historyCache]);
   const groupOrder = useGroupOrder(session.user.id, groupList.data);
   const groups = groupOrder.groups;
   const currentGroupIds = groups
@@ -312,6 +318,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   async function logout() {
     setSigningOut(true);
     sharedCache.clear();
+    historyCache.clear();
     try {
       await disablePush();
       memoDelivery.stop();
@@ -515,6 +522,8 @@ function WorkspaceContent({ session }: { session: Session }) {
         )}
         <div hidden={view !== "groups"}>
           <CommunityScreen
+            sharedCache={sharedCache}
+            historyCache={historyCache}
             guideTarget={guideTarget}
             groups={groups}
             today={visibleTodayActivity}

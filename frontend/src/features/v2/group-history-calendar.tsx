@@ -1,6 +1,6 @@
 "use client";
 
-import { type BodyPart, type MonthlyActivity, type Workout, api } from "@/lib/api";
+import type { BodyPart } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { activityForPart } from "../activity/body-parts";
 import { dateLabel } from "../activity/calendar";
@@ -10,13 +10,15 @@ import { StampControl } from "../stamps/stamp-control";
 import { today } from "../training/draft";
 import { RecordList } from "../training/record-list";
 import { ResourceError } from "../training/resource-error";
-import { useResource } from "../training/use-resource";
+import type { GroupHistoryCache } from "./group-history-cache";
 import { GroupHistoryPartTabs } from "./group-history-part-tabs";
 import { HistoryCalendar } from "./history-calendar";
 import { Sheet } from "./sheet";
+import { useGroupHistoryResource } from "./use-group-history-resource";
 
 export function GroupHistoryCalendar({
   groupId,
+  cache,
   userId,
   active,
   refreshKey,
@@ -24,6 +26,7 @@ export function GroupHistoryCalendar({
   onPartChange,
 }: {
   groupId: string;
+  cache: GroupHistoryCache;
   userId: string;
   active: boolean;
   refreshKey: number;
@@ -32,49 +35,18 @@ export function GroupHistoryCalendar({
 }) {
   const [month, setMonth] = useState(() => today().slice(0, 7));
   const [selectedDay, setSelectedDay] = useState("");
-  const [extraRecords, setExtraRecords] = useState<Workout[]>([]);
-  const [extraError, setExtraError] = useState("");
-  const [extraRetry, setExtraRetry] = useState(0);
-  const activity = useResource<MonthlyActivity>(
+  const activity = useGroupHistoryResource(
+    cache.activity,
     `/groups/${groupId}/workouts/activity?month=${month}`,
+    active,
     refreshKey,
-    false,
-    true,
-    { enabled: active, retainOnRefresh: true },
   );
-  const records = useResource<Workout[]>(
+  const records = useGroupHistoryResource(
+    cache.days,
     selectedDay ? `/groups/${groupId}/workouts?performed_on=${selectedDay}&limit=50` : null,
+    active && !!selectedDay,
     refreshKey,
-    false,
-    true,
-    { enabled: active && !!selectedDay, retainOnRefresh: true },
   );
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 追加ページの再試行でも同じ日付から取得し直す。
-  useEffect(() => {
-    setExtraRecords([]);
-    setExtraError("");
-    if (!selectedDay || records.data?.length !== 50) return;
-    const controller = new AbortController();
-    const load = async () => {
-      try {
-        let offset = 50;
-        while (!controller.signal.aborted) {
-          const page = await api<Workout[]>(
-            `/groups/${groupId}/workouts?performed_on=${selectedDay}&limit=50&offset=${offset}`,
-            { signal: controller.signal },
-          );
-          if (controller.signal.aborted) return;
-          setExtraRecords((current) => [...current, ...page]);
-          if (page.length < 50) return;
-          offset += 50;
-        }
-      } catch {
-        if (!controller.signal.aborted) setExtraError("残りの記録を取得できません。再試行");
-      }
-    };
-    void load();
-    return () => controller.abort();
-  }, [groupId, selectedDay, records.data, extraRetry]);
   useEffect(() => {
     if (!active) setSelectedDay("");
   }, [active]);
@@ -110,16 +82,11 @@ export function GroupHistoryCalendar({
       {active && selectedDay && (
         <Sheet title={`${dateLabel(selectedDay)}の全メニュー`} onClose={() => setSelectedDay("")}>
           <ResourceError resource={records} />
-          {extraError && (
-            <button type="button" onClick={() => setExtraRetry((value) => value + 1)}>
-              {extraError}
-            </button>
-          )}
           {records.loading && !records.data && <LoadingState label="記録を読み込み中" compact />}
           {records.data?.length === 0 && <p className="muted">この日の記録はありません</p>}
           {records.data && (
             <RecordList
-              records={[...records.data, ...extraRecords]}
+              records={records.data}
               userId={userId}
               empty=""
               compact
