@@ -114,10 +114,11 @@ export function ActivityNotifications({
         {n.stamp && (
           <section
             className="activity-stamp"
+            data-leaving={n.stampLeaving}
             key={n.stamp[0].id}
             aria-label="スタンプ通知"
             onPointerDown={(e) => {
-              if (!e.isPrimary) return;
+              if (!e.isPrimary || n.stampLeaving) return;
               n.pauseStamp();
               gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
               e.currentTarget.setPointerCapture(e.pointerId);

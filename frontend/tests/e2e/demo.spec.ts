@@ -221,3 +221,23 @@ for (const group of [false, true]) {
     await expect(page.getByRole("dialog")).toContainText("ベンチプレス");
   });
 }
+
+test("デモのスタンプも上へスライドして閉じる", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/demo");
+  await expect(page.getByTestId("floating-training")).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  await page.getByRole("button", { name: "デモ", exact: true }).click();
+  await page.getByRole("button", { name: /スタンプを20件/ }).click();
+  await page.clock.runFor(350);
+  const stamp = page.locator(".activity-stamp");
+  await expect(stamp).toContainText("20件のスタンプ");
+  await stamp.getByRole("button", { name: "スタンプ通知を閉じる" }).focus();
+  await page.keyboard.press("Escape");
+  await expect(stamp).toHaveAttribute("data-leaving", "true");
+  expect(await stamp.evaluate((el) => getComputedStyle(el).animationName)).toBe(
+    "notification-stamp-exit",
+  );
+  await page.clock.runFor(180);
+  await expect(stamp).toHaveCount(0);
+});
