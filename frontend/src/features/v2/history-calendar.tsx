@@ -140,6 +140,7 @@ export function HistoryCalendar({
     const velocity = Math.abs(offset) / Math.max(1, performance.now() - start.started);
     const commit =
       !cancelled && (Math.abs(offset) > width * 0.2 || (Math.abs(offset) > 35 && velocity > 0.45));
+    setDragging(false);
     request.current(commit ? (offset > 0 ? -1 : 1) : 0, offset);
   };
   const center = motion?.from ?? month;

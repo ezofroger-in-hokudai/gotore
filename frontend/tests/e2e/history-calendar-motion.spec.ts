@@ -73,6 +73,14 @@ for (const group of [false, true]) {
     await expect(calendar.locator(".personal-history-month strong")).toHaveText("2026年8月");
     await page.mouse.move(x, y);
     await page.mouse.down();
+    await page.mouse.move(x + 65, y, { steps: 5 });
+    await page.mouse.move(x, y, { steps: 5 });
+    await page.mouse.up();
+    await expect(calendar).toHaveAttribute("data-moving", "false");
+    await expect(calendar.locator(".personal-history-month strong")).toHaveText("2026年8月");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.mouse.move(x, y);
+    await page.mouse.down();
     await page.mouse.move(x + 85, y, { steps: 5 });
     await calendar.dispatchEvent("pointercancel", { pointerId: 1, clientX: x + 85, clientY: y });
     await page.mouse.up();
