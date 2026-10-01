@@ -9,7 +9,6 @@ import { BestFlame } from "../training/best-flame";
 import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
 import { useResource } from "../training/use-resource";
 import { Sheet } from "../v2/sheet";
-import { describeElapsedTime } from "./elapsed-time";
 import { FinishConfirmDialog } from "./finish-confirm-dialog";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
@@ -30,24 +29,6 @@ import { useExerciseContext } from "./use-exercise-context";
 import { useFinishWeekRecords } from "./use-finish-week-records";
 import type { SessionController } from "./use-session";
 
-function ElapsedClock({ elapsed }: { elapsed: string | null }) {
-  if (!elapsed) return null;
-  return (
-    <span
-      className="session-elapsed"
-      role="timer"
-      aria-label={`経過時間 ${describeElapsedTime(elapsed)}`}
-    >
-      <svg viewBox="0 0 20 22" fill="none" aria-hidden="true">
-        <path d="M8 2h4M10 5v2M16 6l1-1" />
-        <circle cx="10" cy="14" r="6.5" />
-        <path d="M10 10v4l2.5 1.5" />
-      </svg>
-      {elapsed}
-    </span>
-  );
-}
-
 export function SessionScreen({
   active,
   controller,
@@ -57,7 +38,7 @@ export function SessionScreen({
   onFinished,
   haptic,
   catalog,
-  elapsed,
+  finishRequest,
 }: {
   active: boolean;
   controller: SessionController;
@@ -67,7 +48,7 @@ export function SessionScreen({
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
   catalog: ReturnType<typeof useExerciseCatalog>;
-  elapsed: string | null;
+  finishRequest: number;
 }) {
   const { session } = controller;
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
@@ -104,7 +85,7 @@ export function SessionScreen({
       initialInput={draft}
       onPreparingInput={setDraft}
       catalog={catalog}
-      elapsed={elapsed}
+      finishRequest={finishRequest}
     />
   );
 }
@@ -119,14 +100,14 @@ function ActiveTraining({
   initialInput,
   onPreparingInput,
   catalog,
-  elapsed,
+  finishRequest,
 }: {
   active: boolean;
   session: TrainingSession | null;
   initialInput: SessionInput;
   onPreparingInput: (input: SessionInput) => void;
   catalog: ReturnType<typeof useExerciseCatalog>;
-  elapsed: string | null;
+  finishRequest: number;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
@@ -157,6 +138,12 @@ function ActiveTraining({
   const [conflictOpen, setConflictOpen] = useState(false);
   const adding = useRef(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const previousFinishRequest = useRef(finishRequest);
+  useEffect(() => {
+    if (previousFinishRequest.current === finishRequest) return;
+    previousFinishRequest.current = finishRequest;
+    if (active && session && !controller.busy) setFinishOpen(true);
+  }, [finishRequest, active, session, controller.busy]);
   const finishRecords = useFinishWeekRecords(
     active,
     sessionId,
@@ -428,15 +415,6 @@ function ActiveTraining({
             <span className="session-wordmark">
               E-GO<span>TORE</span>
             </span>
-            <ElapsedClock elapsed={elapsed} />
-            <button
-              type="button"
-              className="text-button finish-training"
-              disabled={!session || controller.busy}
-              onClick={() => setFinishOpen(true)}
-            >
-              トレーニング終了
-            </button>
           </div>
           {hasRecordedSets ? (
             <details className="today-training" aria-label="今日のトレーニング">
@@ -539,15 +517,6 @@ function ActiveTraining({
               <span className="session-wordmark">
                 E-GO<span>TORE</span>
               </span>
-              <ElapsedClock elapsed={elapsed} />
-              <button
-                type="button"
-                className="text-button finish-training"
-                disabled={!session || controller.busy}
-                onClick={() => setFinishOpen(true)}
-              >
-                トレーニング終了
-              </button>
             </header>
             <button
               className="exercise-information recording-exercise-title"
