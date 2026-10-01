@@ -101,3 +101,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [現行仕様のテスト責務と移行先](testing-coverage.md)
 
 - [採用Aの中央カットイン](../frontend/public/previews/activity-notification-center-adopted.html): 本体へ反映する動きの固定参照。
+
+- [履歴カレンダーの月送り採用A](design/history-screen.md#月送りの採用a2026-10-01): [固定プレビュー](../frontend/public/previews/history-calendar-motion-adopted.html)。月名・日付・月の合計を一緒に滑らかに移動する。

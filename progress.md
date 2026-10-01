@@ -4703,3 +4703,31 @@
 - 関連ファイル: docs/design/README.md、progress.md、notification-current-home.html、notification-current-record.html、docs/design/activity-notifications.md、task.md。
 - 未解決事項: 新しい統合コミットのCI完了待ち。
 - 次のアクション: PR #283へpushし、GitHub上で競合解消を確認する。mainへのマージはこの作業では行わない。
+
+## 2026-10-01 23:59
+- 変更内容: ユーザーがおすすめに一任したため、月名・曜日・日付・月の合計を一緒に移動するAを採用。固定プレビューを保存し、個人/グループの共通HistoryCalendarへ指の追従と280msの着地、180msの戻り、連続矢印の最大3件処理、月境界、動きを減らす設定を実装した。退出面に前月の値を限定し、隣月の未取得値は空白/—で示す。既存の保存済み記録による即時表示・再試行は維持。
+- 目的: 月が瞬間的に入れ替わる挙動を改善し、実データの取得と日付の閲覧を妨げない自然な月送りにする。
+- 影響範囲: frontend共通カレンダー・そのCSS・関連E2E・設計記録。main 154abc6を起点とするfeat/history-calendar-motionの専用worktreeで検証し、元作業場所には今回の対象部分だけ反映。他の未コミット変更・API・DB・公開環境は変更しない。
+- 関連ファイル: frontend/src/features/v2/history-calendar.tsx、frontend/src/app/v2.css、frontend/tests/e2e/history-calendar-motion.spec.ts、frontend/public/previews/history-calendar-motion-adopted.html、docs/design/history-screen.md、docs/design/README.md、docs/README.md、docs/images/history-calendar-motion/、task.md。
+- 検証: 実装前に追加E2E3件の失敗を確認。実装後、隣月/追従/短い操作/中断/未来日/最古月/連続矢印/320・390・430px/動きを減らす設定/API待ち・失敗・再試行を検証。既存の記録/カレンダー回帰49件で47件が通過した後、残る往復後のヒット判定とローカル記録キャッシュを考慮した検証を修正し、関係する7件すべて成功。着地後は基準月に合わせて面を再生成し、往復後のタップ判定を揃える。make check成功（backend310・frontend146、lint・型・本番build）。DBテストは127.0.0.1:55440/gotore_notifications_test専用。E2EのアプリはローカルSupabase59321/59322と照合した。全E2Eを2workerで実行中。実画面の停止状態とドラッグ中の画像を保存して目視照合。
+- 全体検証の結果: 全320件を2workerで実行し319件成功（9.4分）。残る1件はマージ済み時計が起動待ちに非表示なのに無効ボタンを要求する旧テストで、カレンダー以外の差異。時計の本体は変更していない。旧テストは時間切れ近くで単独成功するため、期待を整える別コミットで扱う。
+- 未解決事項: 実機の指操作は未検証。旧時計テストの整合を別作業として記録する。
+- 次のアクション: カレンダーの変更だけをコミットし、時計の旧テスト整合を別コミットにする。本番の公開・マージは今回行わない。
+
+## 2026-10-02 00:10
+- 変更内容: 全E2Eで検出した起動復元待ちの旧テストを、時計の非表示を確認する期待へ修正。カレンダー実装 b64d7bb とは分けてテストだけの目的で記録・コミットする。
+- 目的: mainでマージ済みのopened条件による時計の非表示と検証を揃え、15秒の取得期限付近で無効ボタンが現れることに依存した不安定な待ちを除く。時計・起動復元の本体は変更しない。
+- 影響範囲: frontend/tests/e2e/shared-detail-performance.spec.ts の1つの期待と本記録のみ。他の未コミット変更は保持。
+- 関連ファイル: frontend/tests/e2e/shared-detail-performance.spec.ts、progress.md。
+- 検証: 修正前の全E2Eは319成功/1失敗、単独再検証は16.7秒で成功し時間への依存を確認。修正後は起動待ちの時計非表示と復元後の操作可能を1.7秒で検証。共有詳細6件と採用Aのカレンダー3件、合計9件すべて成功。lintとgit diff --check成功。アプリコードはmake check成功時から変更していない。全320件を再度一括実行はせず、失敗対象を含む関連ファイルで修正を再検証した。
+- 未解決事項: 実機の指操作、本番への公開は未実施。カレンダー関連の未解決テスト失敗はない。
+- 次のアクション: カレンダー採用Aと関連テストの変更を専用ブランチfeat/history-calendar-motionからレビューできる状態で保存する。
+
+## 2026-10-02 00:20
+- 変更内容: ユーザーの「問題なかったらマージ」依頼に基づき、採用Aの最終レビューを実施。指を横へ動かしてから元の座標へ戻して離す場合のドラッグ状態解除を補い、個人/グループ両方のE2Eに操作を追加。
+- 目的: 移動量0で着地アニメーションを省略する場合も、内部の移動中状態を残さず次の操作へ進めるようにする。
+- 影響範囲: 共通HistoryCalendarのドラッグ終了時の状態解除1行、月送りE2E、本記録。既存の配色・配置・文言・API・DBは維持。
+- 関連ファイル: frontend/src/features/v2/history-calendar.tsx、frontend/tests/e2e/history-calendar-motion.spec.ts、progress.md。
+- 検証: origin/mainは引き続き154abc6。追加操作で修正前の失敗を確認し、修正後は個人/グループの月送り、グループ日別閲覧、共有詳細の計10件がすべて成功。lintとgit diff --check成功。
+- 未解決事項: PRを作成して全CIの成功を確認後にマージする。実機での指操作は未検証。
+- 次のアクション: ユーザーからマージ許可済み。専用ブランチをpushし、画像付きPRの全CI成功後に通常のmergeを行う。
