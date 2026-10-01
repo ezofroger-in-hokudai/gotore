@@ -179,6 +179,7 @@ test("オーナー移譲は確認と取消を挟み、確定時だけ一度送�
   await page.getByRole("button", { name: "ミオの設定", exact: true }).click();
   await page.getByRole("button", { name: "オーナーにする", exact: true }).click();
   await confirm.getByRole("button", { name: "変更する", exact: true }).evaluate((button) => {
+    if (!(button instanceof HTMLButtonElement)) throw new Error("確認ボタンがありません");
     button.click();
     button.click();
   });
