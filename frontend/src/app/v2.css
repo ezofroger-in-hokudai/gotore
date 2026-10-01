@@ -2652,7 +2652,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   z-index: 20;
   view-transition-name: gotore-training-shortcut;
   right: max(16px, calc((100vw - 480px) / 2 + 16px));
-  bottom: calc(82px + env(safe-area-inset-bottom));
+  bottom: calc(326px + env(safe-area-inset-bottom));
   width: 72px;
   height: 80px;
   min-height: 80px;
@@ -2665,10 +2665,9 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   line-height: 1;
   touch-action: none;
   user-select: none;
-  transition: opacity 120ms ease;
+  filter: drop-shadow(0 4px 7px #0002);
 }
 .floating-training-crown,
-.floating-training-pusher,
 .floating-training-dial {
   position: absolute;
   display: block;
@@ -2676,48 +2675,73 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .floating-training-crown {
   top: 0;
-  left: 24px;
-  width: 24px;
-  height: 11px;
-  border-radius: 5px 5px 1px 1px;
+  left: 30px;
+  width: 12px;
+  height: 9px;
+  border-radius: 3px 3px 0 0;
   background: #b72028;
-}
-.floating-training-pusher {
-  top: 17px;
-  right: 0;
-  width: 11px;
-  height: 7px;
-  border-radius: 2px;
-  background: #aa1c24;
-  transform: rotate(36deg);
 }
 .floating-training-dial {
   inset: 8px 0 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
   border-radius: 50%;
   background: #d9292d;
-  box-shadow: inset 0 0 0 3px #f25b5e, 0 4px 8px #0003;
+}
+.floating-training-dial::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid #ffffff60;
+  border-radius: 50%;
 }
 .floating-training-elapsed {
-  font-size: 18px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 19px;
+  line-height: 22px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -.04em;
+  white-space: nowrap;
+  z-index: 2;
+}
+.floating-training[data-mode="start"] .floating-training-elapsed {
+  font-size: 15px;
+  letter-spacing: 0;
 }
 .floating-training-action {
-  font-size: 11px;
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 11px;
+  white-space: nowrap;
+}
+.floating-training-orbit {
+  position: absolute;
+  inset: 3.5px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+.floating-training-orbit i {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #fff;
 }
 .floating-training.is-dragging {
   cursor: grabbing;
-  opacity: 0.96;
+  filter: drop-shadow(0 6px 12px #0004);
 }
-.floating-training.is-dragging .floating-training-dial {
-  box-shadow: inset 0 0 0 3px #f25b5e, 0 8px 24px #0005;
-}
-.v2-app:has(dialog[open], input:focus, textarea:focus, [contenteditable="true"]:focus)
+.v2-app:has(dialog[open]) .floating-training,
+.v2-app:has(.group-setting-row.is-editing) .floating-training,
+.v2-app:not(.recording-view):has(input:focus, textarea:focus, [contenteditable="true"]:focus)
   .floating-training {
   display: none;
 }

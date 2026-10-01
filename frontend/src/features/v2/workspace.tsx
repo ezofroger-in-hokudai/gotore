@@ -61,6 +61,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   useEdgeBack();
   const [sharedCache] = useState(() => new SharedWorkoutCache());
   const [view, setView] = useState<View>("home");
+  const [finishRequest, setFinishRequest] = useState(0);
   const viewRef = useRef(view);
   const historyPosition = useRef(0);
   const [groupId, setGroupId] = useState("");
@@ -421,7 +422,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
-            elapsed={elapsed}
+            finishRequest={finishRequest}
             active={view === "record"}
             controller={training}
             userId={session.user.id}
@@ -626,13 +627,17 @@ function WorkspaceContent({ session }: { session: Session }) {
           </Sheet>
         )}
       </main>
-      {primaryView && (
+      {opened && (primaryView || (view === "record" && resumable && !training.finishPending)) && (
         <FloatingTraining
           elapsed={elapsed}
+          startedAt={training.session?.started_at}
+          recording={view === "record"}
           userId={session.user.id}
           resumable={resumable}
-          disabled={!canStart}
-          onActivate={startOrResume}
+          disabled={view === "record" ? !training.session || training.busy : !canStart}
+          onActivate={
+            view === "record" ? () => setFinishRequest((value) => value + 1) : startOrResume
+          }
         />
       )}
       {opened && (

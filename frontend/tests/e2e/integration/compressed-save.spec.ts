@@ -30,7 +30,7 @@ test("圧縮保存が実APIへ届き、応答を失っても再送で二重追�
   expect(seeded.status()).toBe(200);
   const saved: TrainingSession = await seeded.json();
   await page.reload();
-  await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
+  await page.getByRole("button", { name: "記録画面へ戻る", exact: true }).click();
   await expect(page.getByRole("button", { name: "セット20を編集", exact: true })).toContainText(
     "82.5",
   );
@@ -67,7 +67,7 @@ test("圧縮保存が実APIへ届き、応答を失っても再送で二重追�
     exercises[1],
   ]);
   await page.reload();
-  await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
+  await page.getByRole("button", { name: "記録画面へ戻る", exact: true }).click();
   await expect(page.getByRole("button", { name: "セット21を編集", exact: true })).toContainText(
     "87.5",
   );
@@ -85,7 +85,7 @@ for (const unsupported of ["browser", "api"] as const) {
     state.session.exercises = structuredClone(exercises);
     state.session.revision++;
     await page.reload();
-    await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
+    await page.getByRole("button", { name: "記録画面へ戻る", exact: true }).click();
     await expect(page.getByRole("button", { name: "セット20を編集", exact: true })).toContainText(
       "82.5",
     );

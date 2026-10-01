@@ -128,7 +128,7 @@ test("LIVEは5秒で更新し、画面非表示と記録画面ではホームの
     document.dispatchEvent(new Event("visibilitychange"));
   });
   await expect.poll(() => requests).toBe(2);
-  await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
+  await page.getByRole("button", { name: "記録画面へ戻る", exact: true }).click();
   const stopped = requests;
   await page.clock.runFor(60_000);
   expect(requests).toBe(stopped);
