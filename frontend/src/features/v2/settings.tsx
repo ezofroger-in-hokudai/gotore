@@ -57,7 +57,7 @@ export function Preferences({
   signingOut: boolean;
 }) {
   const [sheet, setSheet] = useState<
-    "name" | "avatar" | "theme" | "haptic" | "exercises" | "suggestion" | "logout" | null
+    "name" | "avatar" | "theme" | "exercises" | "suggestion" | "logout" | null
   >(null);
   const suggestion = useSuggestionBox();
   const { profile, avatar } = resources;
@@ -107,10 +107,24 @@ export function Preferences({
             {{ system: "端末に合わせる", light: "ライト", dark: "ダーク" }[preferences.theme]} ›
           </span>
         </button>
-        <button className="v2-row" type="button" onClick={() => setSheet("haptic")}>
+        <label className="v2-row haptic-setting">
           <span>触覚フィードバック</span>
-          <span>{preferences.haptic ? "オン" : "オフ"} ›</span>
-        </button>
+          <span className="haptic-value">
+            <span aria-hidden="true">{preferences.haptic ? "オン" : "オフ"}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              aria-checked={preferences.haptic}
+              aria-label="触覚フィードバック"
+              aria-describedby="haptic-description"
+              checked={preferences.haptic}
+              onChange={(event) => preferences.setHaptic(event.target.checked)}
+            />
+          </span>
+        </label>
+        <p className="muted haptic-description" id="haptic-description">
+          セット保存時に軽く振動します。対応する端末・ブラウザで利用できます。
+        </p>
       </div>
       <h2>サポート</h2>
       <div className="v2-rows">
@@ -203,21 +217,7 @@ export function Preferences({
                 </button>
               ))}
             </div>
-          ) : (
-            <>
-              <p className="muted">
-                セットを保存したときに軽く振動します。対応する端末・ブラウザで利用できます。
-              </p>
-              <label className="haptic-toggle">
-                <input
-                  type="checkbox"
-                  checked={preferences.haptic}
-                  onChange={(e) => preferences.setHaptic(e.target.checked)}
-                />
-                触覚フィードバックを使う
-              </label>
-            </>
-          )}
+          ) : null}
         </Sheet>
       )}
       {sheet === "logout" && (

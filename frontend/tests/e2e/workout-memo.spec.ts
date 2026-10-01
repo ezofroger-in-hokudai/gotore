@@ -49,7 +49,7 @@ test("本人メモの取得・失敗・競合・読み直し・消去を確認�
   const detail = await openHistoryDay(page, record.performed_on);
   expect(memoReads).toBe(0);
   await page.getByRole("button", { name: "メモ", exact: true }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("通信できません");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("メモを開けません");
   await expect(page.getByRole("button", { name: "保存", exact: true })).toHaveCount(0);
   failLoad = false;
   await page.getByRole("button", { name: "再試行", exact: true }).click();
@@ -58,18 +58,25 @@ test("本人メモの取得・失敗・競合・読み直し・消去を確認�
   await expect(input).toHaveAttribute("maxlength", "1000");
   await input.fill("フォームを意識できた。次回も丁寧に。\n<script>alert(1)</script>");
   await page.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("通信できません");
+  await expect(page.locator(".workout-memo").getByRole("status")).toContainText("未送信");
+  await expect(page.locator(".workout-memo").getByRole("alert")).toHaveCount(0);
+  await expect(input).toHaveCount(0);
+  await page.locator(".workout-memo").getByRole("button", { name: "メモ", exact: true }).click();
   await expect(input).toHaveValue(
     "フォームを意識できた。次回も丁寧に。\n<script>alert(1)</script>",
   );
   failSave = false;
   await page.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "保存しました" })).toBeVisible();
+  await expect(
+    page.locator(".workout-memo").getByRole("button", { name: "メモ", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".workout-memo")).not.toContainText("保存しました");
+  await page.locator(".workout-memo").getByRole("button", { name: "メモ", exact: true }).click();
   await input.fill("次回の自分へのメモ");
   conflict = true;
   memo = { content: "別端末で保存した内容", revision: 2 };
   await page.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("別の操作");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("別の変更");
   await expect(input).toHaveValue("次回の自分へのメモ");
   await page.getByRole("button", { name: "読み直す", exact: true }).click();
   await page.getByRole("button", { name: "キャンセル", exact: true }).click();
@@ -80,13 +87,21 @@ test("本人メモの取得・失敗・競合・読み直し・消去を確認�
   conflict = false;
   await input.fill("フォームを意識できた。次回も丁寧に。");
   await page.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "保存しました" })).toBeVisible();
+  await expect(
+    page.locator(".workout-memo").getByRole("button", { name: "メモ", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".workout-memo")).not.toContainText("保存しました");
+  await page.locator(".workout-memo").getByRole("button", { name: "メモ", exact: true }).click();
   await input.scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/workout-memo-mobile.png" });
   await input.fill("");
   await page.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "保存しました" })).toBeVisible();
-  expect(memo.content).toBe("");
+  await expect(
+    page.locator(".workout-memo").getByRole("button", { name: "メモ", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".workout-memo")).not.toContainText("保存しました");
+  await page.locator(".workout-memo").getByRole("button", { name: "メモ", exact: true }).click();
+  await expect.poll(() => memo.content).toBe("");
   expect(dialogs).toBe(0);
   await page.locator(".workout-memo").getByRole("button", { name: "閉じる", exact: true }).click();
   await detail.getByRole("button", { name: "閉じる", exact: true }).click();

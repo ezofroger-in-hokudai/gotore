@@ -153,7 +153,11 @@ test("常時表示の種目メモは再起動しても下書きと競合元revis
   await showRecordingMemos(page);
   await expect(field).toHaveValue("足の位置を確認する");
   await field.press("Enter");
-  await expect(page.locator(".inline-memo").getByRole("alert")).toContainText("変更済み");
+  await expect(page.locator(".inline-memo").getByRole("alert")).toContainText("別の変更");
+  await expect(page.locator(".inline-memo").getByRole("alert")).not.toContainText("変更済み");
+  await expect(
+    page.locator(".inline-memo").getByRole("button", { name: "再送", exact: true }),
+  ).toHaveCount(0);
   expect(memo.content).toBe("別端末で修正");
   page.once("dialog", (dialog) => dialog.accept());
   await page.locator(".inline-memo").getByRole("button", { name: "読み直す", exact: true }).click();

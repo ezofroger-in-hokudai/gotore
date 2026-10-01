@@ -195,11 +195,17 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function api<T>(
+  path: string,
+  options: RequestInit = {},
+  expectedUserId?: string,
+): Promise<T> {
   const client = getSupabase();
   if (!client) throw new Error("ログインを利用できません。");
   const { data, error } = await client.auth.getSession();
   if (error || !data.session) throw new Error("ログインし直してください。");
+  if (expectedUserId && data.session.user.id !== expectedUserId)
+    throw new Error("ログイン中のユーザーが変わりました。");
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {

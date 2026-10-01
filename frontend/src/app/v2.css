@@ -1080,16 +1080,6 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   gap: 8px;
   margin-top: 14px;
 }
-.haptic-toggle {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-}
-.haptic-toggle input {
-  width: 20px;
-  height: 20px;
-}
 .v2-sheet {
   color: var(--text);
   background: var(--panel);
@@ -6087,4 +6077,83 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   text-align: left;
   font-size: 14px;
   font-weight: 700;
+}
+
+/* 送信状態を一行メモ内に収め、入力欄の位置を押し下げない。 */
+.inline-memo.single-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 6px;
+}
+.inline-memo.single-line > .error,
+.inline-memo.single-line > .memo-pending {
+  grid-column: 1 / -1;
+}
+.memo-pending {
+  color: var(--muted);
+  margin: 4px 0;
+}
+.memo-delivery-notice {
+  margin-bottom: 12px;
+}
+
+.haptic-setting {
+  cursor: pointer;
+  flex-direction: row;
+  font-weight: 400;
+}
+.haptic-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.haptic-value input {
+  appearance: none;
+  width: 42px;
+  height: 26px;
+  min-height: 0;
+  padding: 3px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--muted);
+  cursor: pointer;
+}
+.haptic-value input::before {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--panel);
+}
+.haptic-value input:checked {
+  background: var(--cta);
+  border-color: var(--cta);
+}
+.haptic-value input:checked::before {
+  transform: translateX(16px);
+  background: #fff;
+}
+.haptic-description {
+  padding: 0 16px 12px;
+  font-size: 11px;
+  margin: 0;
+}
+.record-exercise-memo {
+  margin-top: 8px;
+}
+.record-exercise-memo > small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+.record-exercise-memo > .memo-text {
+  padding: 4px 0;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  text-align: left;
+  white-space: pre-wrap;
 }

@@ -65,13 +65,14 @@ test("外観と触覚を端末に保持し、未提供の通知項目を省く",
   await page.getByRole("button", { name: "ダーク", exact: true }).click();
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.getByRole("button", { name: /^触覚フィードバック/ }).click();
-  await page.getByRole("checkbox").uncheck();
-  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await page.getByRole("switch", { name: "触覚フィードバック", exact: true }).uncheck();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.reload();
   await navigate(page, "設定");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByRole("button", { name: /^触覚フィードバック/ })).toContainText("オフ");
+  await expect(
+    page.getByRole("switch", { name: "触覚フィードバック", exact: true }),
+  ).not.toBeChecked();
   await page.screenshot({ path: "test-results/v2-settings-dark.png", fullPage: true });
 });
 

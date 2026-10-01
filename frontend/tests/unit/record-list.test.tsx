@@ -1,7 +1,12 @@
 import { expect, test } from "bun:test";
-import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactNode } from "react";
+import { renderToStaticMarkup as renderMarkup } from "react-dom/server";
+import { MemoDeliveryProvider } from "../../src/features/training/memo-delivery-provider";
 import { RecordList } from "../../src/features/training/record-list";
 import type { Workout } from "../../src/lib/api";
+
+const renderToStaticMarkup = (node: ReactNode) =>
+  renderMarkup(<MemoDeliveryProvider userId="me">{node}</MemoDeliveryProvider>);
 
 const record: Workout = {
   id: "record",

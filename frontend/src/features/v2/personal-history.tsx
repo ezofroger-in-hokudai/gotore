@@ -416,6 +416,7 @@ export function PersonalHistory({
           {displayedDayRecords?.length === 0 && <p className="muted">この日の記録はありません</p>}
           {displayedDayRecords && (
             <RecordList
+              active={active}
               records={displayedDayRecords}
               userId={userId}
               personal

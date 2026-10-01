@@ -23,8 +23,8 @@ test("今日の種目メモは通信失敗と再起動でも元のrevisionと下
   await field.fill("消したくないメモ");
   await field.press("Enter");
   await expect(
-    page.getByRole("region", { name: "今日のメモ", exact: true }).getByRole("alert"),
-  ).toContainText("メモを保存できません");
+    page.getByRole("region", { name: "今日のメモ", exact: true }).getByRole("status"),
+  ).toContainText("未送信");
   const key = `gotore:memo-input:v1:${state.user.id}:/sessions/${state.session?.id}/exercise-memo?name=${encodeURIComponent("ベンチプレス")}`;
   const otherKey = key.replace(state.user.id, "another-user");
   await page.evaluate(
@@ -42,8 +42,8 @@ test("今日の種目メモは通信失敗と再起動でも元のrevisionと下
   await field.press("Enter");
   await expect(
     page.getByRole("region", { name: "今日のメモ", exact: true }).getByRole("alert"),
-  ).toContainText("別の操作");
-  expect(revisions).toEqual([0, 0]);
+  ).toContainText("別の変更");
+  expect(revisions).toEqual([0, 0, 0]);
   expect(memo.content).toBe("別端末で保存");
   page.once("dialog", (dialog) => dialog.accept());
   await page
@@ -54,7 +54,7 @@ test("今日の種目メモは通信失敗と再起動でも元のrevisionと下
   await field.fill("確認して更新したメモ");
   await field.press("Enter");
   await expect.poll(() => memo.content).toBe("確認して更新したメモ");
-  expect(revisions).toEqual([0, 0, 1]);
+  expect(revisions).toEqual([0, 0, 0, 1]);
   expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();
   expect(
     await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), otherKey),
@@ -84,7 +84,7 @@ test("メモの端末保存失敗を知らせ、通信失敗と終了確認か�
   await field.fill("端末保存できないメモ");
   await expect(
     page.getByRole("region", { name: "今日のメモ", exact: true }).getByRole("alert"),
-  ).toContainText("端末へ保持できません");
+  ).toContainText("メモを保持できません");
   await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "トレーニング終了", exact: true });
   await expect(confirmation).not.toContainText("履歴から保存できます");
