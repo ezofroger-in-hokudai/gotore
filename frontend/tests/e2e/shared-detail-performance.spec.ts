@@ -136,7 +136,7 @@ test("復元確認中は起動表示で待ち、確認後にSTARTを有効にす
     await expect(
       page.getByRole("navigation", { name: "メインナビゲーション", exact: true }),
     ).toBeHidden();
-    await expect(page.getByTestId("floating-training")).toBeDisabled();
+    await expect(page.getByTestId("floating-training")).toHaveCount(0);
     release();
     await expect(
       page.getByRole("navigation", { name: "メインナビゲーション", exact: true }),
