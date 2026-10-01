@@ -4703,3 +4703,13 @@
 - 関連ファイル: docs/design/README.md、progress.md、notification-current-home.html、notification-current-record.html、docs/design/activity-notifications.md、task.md。
 - 未解決事項: 新しい統合コミットのCI完了待ち。
 - 次のアクション: PR #283へpushし、GitHub上で競合解消を確認する。mainへのマージはこの作業では行わない。
+
+## 2026-10-01 23:59
+- 変更内容: ユーザーがおすすめに一任したため、月名・曜日・日付・月の合計を一緒に移動するAを採用。固定プレビューを保存し、個人/グループの共通HistoryCalendarへ指の追従と280msの着地、180msの戻り、連続矢印の最大3件処理、月境界、動きを減らす設定を実装した。退出面に前月の値を限定し、隣月の未取得値は空白/—で示す。既存の保存済み記録による即時表示・再試行は維持。
+- 目的: 月が瞬間的に入れ替わる挙動を改善し、実データの取得と日付の閲覧を妨げない自然な月送りにする。
+- 影響範囲: frontend共通カレンダー・そのCSS・関連E2E・設計記録。main 154abc6を起点とするfeat/history-calendar-motionの専用worktreeで検証し、元作業場所には今回の対象部分だけ反映。他の未コミット変更・API・DB・公開環境は変更しない。
+- 関連ファイル: frontend/src/features/v2/history-calendar.tsx、frontend/src/app/v2.css、frontend/tests/e2e/history-calendar-motion.spec.ts、frontend/public/previews/history-calendar-motion-adopted.html、docs/design/history-screen.md、docs/design/README.md、docs/README.md、docs/images/history-calendar-motion/、task.md。
+- 検証: 実装前に追加E2E3件の失敗を確認。実装後、隣月/追従/短い操作/中断/未来日/最古月/連続矢印/320・390・430px/動きを減らす設定/API待ち・失敗・再試行を検証。既存の記録/カレンダー回帰49件で47件が通過した後、残る往復後のヒット判定とローカル記録キャッシュを考慮した検証を修正し、関係する7件すべて成功。着地後は基準月に合わせて面を再生成し、往復後のタップ判定を揃える。make check成功（backend310・frontend146、lint・型・本番build）。DBテストは127.0.0.1:55440/gotore_notifications_test専用。E2EのアプリはローカルSupabase59321/59322と照合した。全E2Eを2workerで実行中。実画面の停止状態とドラッグ中の画像を保存して目視照合。
+- 全体検証の結果: 全320件を2workerで実行し319件成功（9.4分）。残る1件はマージ済み時計が起動待ちに非表示なのに無効ボタンを要求する旧テストで、カレンダー以外の差異。時計の本体は変更していない。旧テストは時間切れ近くで単独成功するため、期待を整える別コミットで扱う。
+- 未解決事項: 実機の指操作は未検証。旧時計テストの整合を別作業として記録する。
+- 次のアクション: カレンダーの変更だけをコミットし、時計の旧テスト整合を別コミットにする。本番の公開・マージは今回行わない。
