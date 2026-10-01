@@ -74,3 +74,29 @@ test("秒の点は進み、動き低減と画面復帰で開始時刻へ合わ�
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await expect.poll(() => point.evaluate((el) => el.getAnimations()[0]?.playState)).toBe("running");
 });
+
+test("時計をフォーム内へ動かしても終了せず、画面往復と再起動で位置を保つ", async ({ page }) => {
+  await mockTraining(page);
+  const watch = page.getByTestId("floating-training");
+  await watch.click();
+  await page.getByRole("button", { name: /^ベンチプレス/ }).click();
+  const initial = await watch.boundingBox();
+  const dock = await page.locator(".recording-entry-dock").boundingBox();
+  if (!initial || !dock) throw new Error("時計か入力フォームがありません");
+  const target = dock.y + 28;
+  await page.mouse.move(initial.x + 36, initial.y + 40);
+  await page.mouse.down();
+  await page.mouse.move(initial.x + 36, target + 40, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect((await watch.boundingBox())?.y).toBeCloseTo(target, 0);
+  await navigate(page, "ホーム");
+  expect((await watch.boundingBox())?.y).toBeCloseTo(target, 0);
+  await page.reload();
+  await watch.click();
+  await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeVisible();
+  expect((await watch.boundingBox())?.y).toBeCloseTo(target, 0);
+  await watch.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "トレーニング終了", exact: true })).toBeVisible();
+});
