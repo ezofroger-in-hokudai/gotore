@@ -89,3 +89,9 @@
 継続実装依頼を受け、#174のメモ保存待ちを[PR #282](https://github.com/ezofroger-in-hokudai/gotore/pull/282)で改善した。端末受付後に閉じる・再編集・別画面の失敗/再送・再起動照合・ログアウト/別ユーザー分離。最新main取り込み後のmake check（backend301/frontend142/lint/型/build）、関連E2E31件（実Auth/DB含む）が成功。[前後6画像](https://github.com/ezofroger-in-hokudai/gotore/blob/2633da5bcb61628b121aefef1ed108d0c8052f15/docs/images/memo-delivery/README.md)もPRへ掲載。初回2633da5の全件CI run 36809353220は293成功/3失敗。メモ受付後に閉じる期待値2件と、終了API確定を待つ判定1件を修正。最終1009ea1の[最終CI run 36814312977](https://github.com/ezofroger-in-hokudai/gotore/actions/runs/36814312977)は全ジョブ成功、backend301/frontend142/全E2E299件成功（2 worker、10.0分）。
 
 #267の本人履歴の各種目で閲覧・編集・再送、#272のキャンセル統一、#275の触覚設定の一覧スイッチは、継続依頼により提案した形で採用し、PR #282へIssue別コミットで実装。旧v1下書きの終了後復旧も確認。通常チェックはbackend301/frontend142/lint/型/build成功、関連23件/追加9件/最終7件成功（撮影4件・実Auth/DBを含む）。[追加の前後6画像](https://github.com/ezofroger-in-hokudai/gotore/blob/d221e49/docs/images/remaining-fixes/README.md)をPRへ掲載。未マージ、独立レビュー・実機未実施。
+
+## メモ表示の削減（ユーザー修正依頼）
+
+PR #282の正常な受付済み/保存/下書き復元の説明と、他画面の通常送信通知が過剰との指摘を受けて修正。送信中は入力対象の小さいリングだけにし、通信失敗は赤いAPIエラー文から短い未送信/再送へ変更した。編集欄を勝手に開かず、競合・権限・入力保持不能は必要な短い案内を残す。入力・元revision・送信要求・既存自動再送は維持する。
+
+[今回の前後6画像](https://github.com/ezofroger-in-hokudai/gotore/blob/1a81a2684b3191a40dc2713fe01d7490176e273d/docs/images/memo-feedback/README.md)を同じ合成API/操作/390×844/ライトで撮影し、全枚目視。保存・復元・内部エラーの文章は出さない。履歴を閉じて再訪するケースも入力・revisionと再送を確認。make checkはbackend301/frontend142/lint/型/build成功、実Auth/DB共有を含む関連E2Eも成功。表示整理後1a81a26の[初回CI](https://github.com/ezofroger-in-hokudai/gotore/actions/runs/36818840520)は296成功/3失敗。種目メモの自動展開期待値2件と、poll内の未取得配列参照1件を修正し、対象8件成功。アプリの追加変更なしで、f171f55の[最終CI](https://github.com/ezofroger-in-hokudai/gotore/actions/runs/36821128003)は全ジョブ成功、backend301/frontend142/全E2E299件成功（2 worker、9.4分）。直前1009ea1の合格結果とは区別する。実機・独立レビュー未実施、未マージ。
