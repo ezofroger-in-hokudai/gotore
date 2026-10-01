@@ -1080,16 +1080,6 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   gap: 8px;
   margin-top: 14px;
 }
-.haptic-toggle {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-}
-.haptic-toggle input {
-  width: 20px;
-  height: 20px;
-}
 .v2-sheet {
   color: var(--text);
   background: var(--panel);
@@ -6106,4 +6096,48 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .memo-delivery-notice {
   margin-bottom: 12px;
+}
+
+.haptic-setting {
+  cursor: pointer;
+  flex-direction: row;
+  font-weight: 400;
+}
+.haptic-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.haptic-value input {
+  appearance: none;
+  width: 42px;
+  height: 26px;
+  min-height: 0;
+  padding: 3px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--muted);
+  cursor: pointer;
+}
+.haptic-value input::before {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--panel);
+}
+.haptic-value input:checked {
+  background: var(--cta);
+  border-color: var(--cta);
+}
+.haptic-value input:checked::before {
+  transform: translateX(16px);
+  background: #fff;
+}
+.haptic-description {
+  padding: 0 16px 12px;
+  font-size: 11px;
+  margin: 0;
 }
