@@ -86,6 +86,7 @@ test("スタンプは全画面継続・5送り主/10件で集約・届いた種�
   await page.clock.runFor(1400);
   await expect(page.locator(".activity-stamp")).toContainText("5件のスタンプが届いた");
   await expect(page.locator(".activity-stamp-kind")).toHaveCount(5);
+  await page.clock.runFor(400);
   const r = await page.locator(".activity-stamp").boundingBox();
   if (!r) throw Error("card missing");
   await page.mouse.move(r.x + r.width / 2, r.y + r.height / 2);
@@ -151,9 +152,11 @@ test("スワイプ中はタイマーを止め、操作取消後は残り時間�
   const f = await fixture(page);
   f.receive([2, 3, 4, 5, 6].map((i) => event(i)));
   await page.clock.runFor(2100);
+  await expect(page.locator(".activity-stamp")).toBeVisible();
+  await page.clock.runFor(400);
   const box = await page.locator(".activity-stamp").boundingBox();
   if (!box) throw Error("card missing");
-  await page.mouse.move(box.x + 20, box.y + 20);
+  await page.locator(".activity-stamp").hover({ position: { x: 20, y: 20 } });
   await page.mouse.down();
   await page.clock.runFor(4000);
   await expect(page.locator(".activity-stamp")).toBeVisible();
@@ -197,4 +200,86 @@ test("通知設定の保存失敗では元の設定へ戻し、再試行でき�
   fail = false;
   await page.getByLabel("スタンプ通知", { exact: true }).click();
   await expect(page.getByLabel("スタンプ通知", { exact: true })).not.toBeChecked();
+});
+
+for (const width of [320, 390, 430])
+  test(`${width}px: 採用Aは中央に登場し右へ退場、時計を隠さない`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const f = await fixture(page);
+    f.receive(Array.from({ length: 13 }, (_, i) => event(i + 30, "start")));
+    await page.clock.runFor(2400);
+    const card = page.locator(".activity-start");
+    const box = await card.boundingBox();
+    if (!box) throw Error("開始通知がありません");
+    expect(box.y + box.height / 2).toBeCloseTo(422, 0);
+    const entry = await card.evaluate((el) => {
+      const animation = el.getAnimations()[0];
+      return {
+        duration: animation.effect?.getTiming().duration,
+        frames: (animation.effect as KeyframeEffect)?.getKeyframes(),
+      };
+    });
+    expect(entry.duration).toBe(240);
+    expect(entry.frames?.[0].transform).toContain("-115%");
+    const faces = await page
+      .locator(".activity-start-faces")
+      .evaluate((el) => ({ width: el.clientWidth, total: el.scrollWidth }));
+    expect(faces.total).toBeLessThanOrEqual(faces.width);
+    const watch = page.getByTestId("floating-training");
+    const point = await watch.boundingBox();
+    if (!point) throw Error("時計がありません");
+    expect(
+      await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.closest(".floating-training") !== null,
+        { x: point.x + point.width / 2, y: point.y + point.height / 2 },
+      ),
+    ).toBe(true);
+    await page.mouse.move(point.x + point.width / 2, point.y + point.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(point.x + point.width / 2 - 40, box.y + box.height - 12, { steps: 8 });
+    await page.mouse.up();
+    await expect(card).not.toHaveClass(/activity-start-leave/);
+    await page.clock.runFor(100);
+    const movedFaces = await page
+      .locator(".activity-start-faces")
+      .evaluate((el) => ({ width: el.clientWidth, total: el.scrollWidth }));
+    expect(movedFaces.total).toBeLessThanOrEqual(movedFaces.width);
+    await page.getByRole("banner").click({ position: { x: 10, y: 10 } });
+    await expect(card).toHaveClass(/activity-start-leave/);
+    const exit = await card.evaluate((el) => {
+      const animation = el.getAnimations()[0];
+      return {
+        duration: animation.effect?.getTiming().duration,
+        frames: (animation.effect as KeyframeEffect)?.getKeyframes(),
+      };
+    });
+    expect(exit.duration).toBe(200);
+    expect(exit.frames?.at(-1)?.transform).toContain("115%");
+    await page.clock.runFor(210);
+    await expect(card).toHaveCount(0);
+  });
+
+test("記録中は入力ドックより上の中央、動き低減に従う", async ({ page }) => {
+  const f = await fixture(page);
+  await navigate(page, "設定");
+  await page.getByRole("button", { name: "通知", exact: true }).click();
+  await page.getByLabel("開始通知を出すタイミング").selectOption("now");
+  await page
+    .getByRole("dialog", { name: "通知", exact: true })
+    .getByRole("button", { name: "閉じる", exact: true })
+    .click();
+  await startTraining(page);
+  f.receive(Array.from({ length: 13 }, (_, i) => event(i + 50, "start")));
+  await page.clock.runFor(2400);
+  const card = page.locator(".activity-start");
+  const box = await card.boundingBox();
+  const dock = await page.locator(".recording-entry-dock").boundingBox();
+  if (!box || !dock) throw Error("通知か入力ドックがありません");
+  expect(box.y + box.height / 2).toBeCloseTo(Math.max(150, (48 + dock.y) / 2), 0);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(await card.evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
+  await page.locator(".session-header").click({ position: { x: 10, y: 10 } });
+  expect(await card.evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
+  await page.clock.runFor(210);
+  await expect(card).toHaveCount(0);
 });

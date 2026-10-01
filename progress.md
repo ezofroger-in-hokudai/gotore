@@ -4709,3 +4709,13 @@
 - 検証: 先に自動受信E2Eを追加し、スタンプが表示されず失敗することを確認。実装後make check成功（backend310件・frontend151件・lint/型/build）。本番ビルドのデモE2E5件成功（320/390/430px、記録操作・保存分離・Push未登録、自動受信の繰り返し・非表示停止・再開・退出停止）。時間待ちはPlaywright Clockで検証。
 - 関連ファイル: frontend/src/features/demo/autoplay.ts、demo-app.tsx、frontend/tests/e2e/demo.spec.ts、docs/design/demo.md、task.md。
 - 未解決事項/次のアクション: PR #285のプレビューを更新し、全CI・公開プレビューでの自動受信を確認。mainへの統合・独立レビュー・実機確認は未実施。
+
+
+## 2026-10-01 17:42 採用Aの中央カットインを実装
+- 変更内容: 左から240msで中央へ着地し、光が通る採用Aを本体へ反映。画面タップ・5秒経過の退場は右へ200ms。退場中の表示だけ保持し、受信キュー/既読・設定・振動/音の規則は維持。ホームは可視画面中央、記録中はヘッダーと入力ドック間の中央。時計を前面にし、顔列は時計の占める幅を避け、最大限並べて残りを+人数表示する。時計ドラッグ後のclickは閉じるタップと区別した。
+- 目的: ユーザーが完了した固定プレビューを承認し、本体への実装を依頼したため。
+- 影響範囲: アプリ内開始演出、表示位置/監視、通知のタップ判定、関連E2Eと採用設計。API/DB/Push配信仕様は変更しない。
+- 関連ファイル: activity-notifications.tsx/css、use-notifications.ts、activity-notifications.spec.ts、activity-notification-center-adopted.html、docs/design/activity-notifications.md、docs/images/activity-notifications/central-*.png。
+- 検証: 先に中央位置テストが旧実装で失敗することを確認。最終make check成功（backend310件、frontend146件、lint/typecheck/build）。通知PR単体の13件成功。時計との組合せ25件中24件成功後、スタンプの登場中に座標を取得する不安定さを修正し、関連5件成功（唯一の失敗ケースを含む）。時計関連12件も成功。320/390/430pxの中央配置・左右の動き・顔列と時計の前面・画面移動・再登場/延長なし・記録中中央・動き低減・フォーム内移動/保存を確認。撮影画像を目視。テストを複数同一作業コピーで同時実行した際のtrace出力競合は、逐次実行で解消した。
+- 未解決事項: Android/iOS実機キーボードと公開Pushの確認、独立レビュー。全E2Eの更新CIを確認する。
+- 次のアクション: 通知PR #283を更新。時計はPR #286に分離し、組み合わせた確認アプリ3154を案内する。

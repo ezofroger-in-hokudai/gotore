@@ -101,3 +101,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [現行仕様のテスト責務と移行先](testing-coverage.md)
 
 - [ログイン不要の操作デモ](design/demo.md)
+
+- [採用Aの中央カットイン](../frontend/public/previews/activity-notification-center-adopted.html): 本体へ反映する動きの固定参照。
