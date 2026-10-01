@@ -154,3 +154,84 @@ test("オーナーは設定行でグループ名を直接編集して決定で�
   await expect(page.locator(".group-setting-row")).toContainText("更新したグループ名");
   await expect(page.locator(".group-setting-row.is-editing")).toHaveCount(0);
 });
+
+test("オーナー移譲は確認と取消を挟み、確定時だけ一度送信する", async ({ page }) => {
+  const { state } = await setup(page);
+  let writes = 0;
+  await page.route(`**/api/groups/${state.group.id}/owner`, async (route) => {
+    writes++;
+    await route.fulfill({ status: 503, json: { detail: "変更できません" } });
+  });
+  await page.locator(".group-card-list .community-card").first().click();
+  await page
+    .getByRole("navigation", { name: "グループの表示" })
+    .getByRole("button", { name: "設定", exact: true })
+    .click();
+  await page.getByRole("button", { name: "ミオの設定", exact: true }).click();
+  await page.getByRole("button", { name: "オーナーにする", exact: true }).click();
+  const confirm = page.getByRole("dialog", { name: "オーナーを変更", exact: true });
+  await expect(confirm).toContainText("ミオ");
+  await expect(confirm).toContainText(state.group.name);
+  await expect(confirm).toContainText("メンバー");
+  expect(writes).toBe(0);
+  await confirm.getByRole("button", { name: "キャンセル", exact: true }).click();
+  expect(writes).toBe(0);
+  await page.getByRole("button", { name: "ミオの設定", exact: true }).click();
+  await page.getByRole("button", { name: "オーナーにする", exact: true }).click();
+  await confirm.getByRole("button", { name: "変更する", exact: true }).evaluate((button) => {
+    button.click();
+    button.click();
+  });
+  await expect(confirm.getByRole("alert")).toContainText("変更できません");
+  expect(writes).toBe(1);
+  await expect(confirm.getByRole("button", { name: "キャンセル", exact: true })).toBeEnabled();
+});
+
+test("グループ削除の送信中は取消・閉じる・Escapeで処理を取り消したように見せない", async ({
+  page,
+}) => {
+  const { state } = await setup(page);
+  let writes = 0;
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(`**/api/groups/${state.group.id}`, async (route) => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    writes++;
+    await gate;
+    await route.fulfill({ status: 503, json: { detail: "削除できません" } });
+  });
+  await page.locator(".group-card-list .community-card").first().click();
+  await page
+    .getByRole("navigation", { name: "グループの表示" })
+    .getByRole("button", { name: "設定", exact: true })
+    .click();
+  await page.getByRole("button", { name: "グループを削除", exact: true }).click();
+  const confirm = page.getByRole("dialog", { name: "グループを削除", exact: true });
+  await confirm.getByRole("button", { name: "削除する", exact: true }).click();
+  await expect.poll(() => writes).toBe(1);
+  await expect(confirm.getByRole("button", { name: "キャンセル", exact: true })).toBeDisabled();
+  await expect(confirm.getByRole("button", { name: "閉じる", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(confirm).toBeVisible();
+  await page.mouse.click(5, 5);
+  await expect(confirm).toBeVisible();
+  const handle = await confirm.locator(".sheet-handle").boundingBox();
+  if (!handle) throw new Error("シートのハンドルがありません");
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + 130, { steps: 3 });
+  await page.mouse.up();
+  await expect(confirm).toBeVisible();
+  const sheetKey = await page.evaluate(() => history.state.gotoreSheet);
+  await page.goBack();
+  await expect.poll(() => page.evaluate(() => history.state.gotoreSheet)).toBe(sheetKey);
+  await expect(confirm).toBeVisible();
+  expect(writes).toBe(1);
+  release();
+  await expect(confirm.getByRole("alert")).toContainText("削除できません");
+  await expect(confirm.getByRole("button", { name: "キャンセル", exact: true })).toBeEnabled();
+  await confirm.getByRole("button", { name: "キャンセル", exact: true }).click();
+  expect(writes).toBe(1);
+});

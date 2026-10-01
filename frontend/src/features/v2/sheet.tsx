@@ -6,6 +6,7 @@ export function Sheet({
   children,
   showCloseButton = true,
   dismissOnBackdrop = true,
+  closeDisabled = false,
   variant = "bottom",
 }: {
   title: string;
@@ -13,6 +14,7 @@ export function Sheet({
   children: ReactNode;
   showCloseButton?: boolean;
   dismissOnBackdrop?: boolean;
+  closeDisabled?: boolean;
   variant?: "bottom" | "center";
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -21,7 +23,11 @@ export function Sheet({
   const key = useId();
   const mounted = useRef(false);
   const close = useRef(onClose);
-  close.current = onClose;
+  const locked = useRef(closeDisabled);
+  locked.current = closeDisabled;
+  close.current = () => {
+    if (!locked.current) onClose();
+  };
   const outside = (event: PointerEvent<HTMLDialogElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     return (
@@ -44,13 +50,19 @@ export function Sheet({
     document.body.style.overflow = "hidden";
     if (window.history.state?.gotoreSheet !== key)
       window.history.pushState({ ...window.history.state, gotoreSheet: key, gotoreBack: true }, "");
-    const back = () => {
+    const back = (event: PopStateEvent) => {
+      if (locked.current) {
+        // 送信中に戻っても、外側の画面が先に確認を破棄しない。
+        event.stopImmediatePropagation();
+        if (window.history.state?.gotoreSheet !== key) window.history.forward();
+        return;
+      }
       if (window.history.state?.gotoreSheet !== key) close.current();
     };
-    window.addEventListener("popstate", back);
+    window.addEventListener("popstate", back, true);
     return () => {
       mounted.current = false;
-      window.removeEventListener("popstate", back);
+      window.removeEventListener("popstate", back, true);
       // StrictModeの再接続では履歴を戻さず、実際に閉じた場合だけ戻す。
       queueMicrotask(() => {
         if (!mounted.current && window.history.state?.gotoreSheet === key) window.history.back();
@@ -66,7 +78,11 @@ export function Sheet({
       aria-label={title}
       onPointerDown={(event) => {
         backdropPointer.current =
-          dismissOnBackdrop && event.isPrimary && event.button === 0 && outside(event)
+          !closeDisabled &&
+          dismissOnBackdrop &&
+          event.isPrimary &&
+          event.button === 0 &&
+          outside(event)
             ? event.pointerId
             : null;
       }}
@@ -80,7 +96,7 @@ export function Sheet({
       }}
       onCancel={(e) => {
         e.preventDefault();
-        onClose();
+        close.current();
       }}
     >
       {variant === "bottom" && (
@@ -88,7 +104,8 @@ export function Sheet({
           className="sheet-handle"
           aria-hidden="true"
           onPointerDown={(event) => {
-            if (!dismissOnBackdrop || !event.isPrimary || event.button !== 0) return;
+            if (closeDisabled || !dismissOnBackdrop || !event.isPrimary || event.button !== 0)
+              return;
             swipe.current = {
               pointerId: event.pointerId,
               x: event.clientX,
@@ -121,7 +138,12 @@ export function Sheet({
         <div className="section-heading">
           <h2>{title}</h2>
           {showCloseButton && (
-            <button className="text-button" type="button" onClick={onClose}>
+            <button
+              className="text-button"
+              type="button"
+              disabled={closeDisabled}
+              onClick={() => close.current()}
+            >
               閉じる
             </button>
           )}
