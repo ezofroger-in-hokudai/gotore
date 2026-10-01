@@ -487,3 +487,28 @@ def test_group_workout_does_not_expose_other_group_ids(client):
     ]
     assert result["shared_group_ids"] == [first["id"]]
     assert second["id"] not in str(result)
+
+
+def test_finished_exercise_memo_replay_keeps_revision_and_is_owner_only(client):
+    session = start(client)
+    session = save(client, session).json()
+    finished = client.post(
+        f"/api/sessions/{session['id']}/finish",
+        json={"expected_revision": session["revision"]},
+    )
+    assert finished.status_code == 200, finished.text
+    path = f"/api/sessions/{session['id']}/exercise-memo"
+    params = {"name": "ベンチプレス"}
+    data = {"content": "終了後に再送するメモ", "expected_revision": 0}
+    first = client.put(path, params=params, json=data)
+    assert first.status_code == 200, first.text
+    assert first.json() == {"content": data["content"], "revision": 1}
+    replay = client.put(path, params=params, json=data)
+    assert replay.status_code == 200, replay.text
+    assert replay.json() == first.json()
+    assert client.get(path, params=params).json() == first.json()
+    assert client.get(path, params=params, headers={"X-Test-User": "B"}).status_code == 404
+    assert (
+        client.put(path, params=params, json=data, headers={"X-Test-User": "B"}).status_code
+        == 404
+    )

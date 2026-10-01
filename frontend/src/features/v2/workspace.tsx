@@ -15,6 +15,11 @@ import { SessionScreen } from "../session/session-screen";
 import { useSession } from "../session/use-session";
 import { WorkoutResult } from "../session/workout-result";
 import { StampProvider } from "../stamps/stamp-provider";
+import {
+  MemoDeliveryNotice,
+  MemoDeliveryProvider,
+  useMemoDelivery,
+} from "../training/memo-delivery-provider";
 import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
@@ -37,7 +42,9 @@ export function Workspace({ session }: { session: Session }) {
     <AvatarProvider key={session.user.id}>
       <StampProvider userId={session.user.id}>
         <RecordSnapshotProvider userId={session.user.id}>
-          <WorkspaceContent session={session} />
+          <MemoDeliveryProvider userId={session.user.id}>
+            <WorkspaceContent session={session} />
+          </MemoDeliveryProvider>
         </RecordSnapshotProvider>
       </StampProvider>
     </AvatarProvider>
@@ -46,6 +53,7 @@ export function Workspace({ session }: { session: Session }) {
 
 function WorkspaceContent({ session }: { session: Session }) {
   const recordCache = useRecordSnapshot();
+  const memoDelivery = useMemoDelivery().store;
   useEdgeBack();
   const [sharedCache] = useState(() => new SharedWorkoutCache());
   const [view, setView] = useState<View>("home");
@@ -286,11 +294,13 @@ function WorkspaceContent({ session }: { session: Session }) {
     setSigningOut(true);
     sharedCache.clear();
     try {
+      memoDelivery.stop();
       await recordCache?.clear();
       const result = await getSupabase()?.auth.signOut({ scope: "local" });
       if (result?.error) throw result.error;
     } catch {
       recordCache?.resume();
+      memoDelivery.start();
       setNotice("ログアウトできません。再試行してください。");
     } finally {
       setSigningOut(false);
@@ -334,6 +344,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         />
       )}
       <main className="main-content">
+        <MemoDeliveryNotice />
         {notice && <output className="notice">{notice}</output>}
         {recordCache?.storageError && (
           <output className="notice">端末への記録保存を利用できません。通信で読み込みます。</output>

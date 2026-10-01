@@ -1,67 +1,45 @@
 "use client";
-
 import { api } from "@/lib/api";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
-
-import { type Memo, memoDraftKey, readMemoDraft, removeMemoDraft } from "./memo-draft";
-export function WorkoutMemo({ workoutId, userId }: { workoutId: string; userId: string }) {
-  const recordCache = useRecordSnapshot();
+import { useMemoDelivery, useVisibleMemo } from "./memo-delivery-provider";
+import type { Memo } from "./memo-draft";
+export function WorkoutMemo({
+  workoutId,
+  active = true,
+  userId,
+  label = "全体メモ",
+}: { workoutId: string; userId: string; label?: string; active?: boolean }) {
+  const cache = useRecordSnapshot();
+  const target = { path: `/workouts/${workoutId}/memo`, label };
+  const { store } = useMemoDelivery();
+  const entry = useVisibleMemo(target, active);
   const [open, setOpen] = useState(false);
-  const [memo, setMemo] = useState<Memo | null>(null);
-  const [content, setContent] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [reload, setReload] = useState(false);
-  const path = `/workouts/${workoutId}/memo`;
-  const key = memoDraftKey(userId, path);
-  async function load(discardDraft = false) {
-    const cached = recordCache?.snapshot?.workout_memos[workoutId];
-    if (cached && !discardDraft) {
-      const draft = readMemoDraft(key);
-      setMemo(draft ?? cached);
-      setContent(draft?.content ?? cached.content);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (entry.phase === "error") setOpen(true);
+  }, [entry.phase]);
+  async function load(discard = false) {
+    if (discard && entry.phase === "sending") return;
+    if (!discard) {
+      const cached = cache?.snapshot?.workout_memos[workoutId];
+      if (cached) store.prime(target, cached);
     }
-    setBusy(true);
+    setLoading(true);
     setError("");
-    setNotice("");
+    setSaved(false);
     try {
-      const value = await api<Memo>(path);
-      // 復元時にサーバーの新版へ差し替えると競合を見逃すため、元の版も復元する。
-      const draft = discardDraft ? null : readMemoDraft(key);
-      setMemo(draft ?? value);
-      setContent(draft?.content ?? value.content);
-      if (draft) setNotice("この端末の未保存メモを復元しました。");
-      if (discardDraft && !removeMemoDraft(key))
-        setNotice("読み直しましたが、端末の下書きを消去できません。");
+      const value = await api<Memo>(target.path, {}, userId);
+      if (discard) store.discard(target, value);
+      else store.prime(target, value);
       setReload(false);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "メモを取得できませんでした。");
     } finally {
-      setBusy(false);
-    }
-  }
-  async function save() {
-    if (!memo || busy) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      const value = await api<Memo>(path, {
-        method: "PUT",
-        body: JSON.stringify({ content, expected_revision: memo.revision }),
-      });
-      setMemo(value);
-      setContent(value.content);
-      setNotice(
-        removeMemoDraft(key) ? "保存しました。" : "保存しましたが、端末の下書きを消去できません。",
-      );
-      void recordCache?.refresh();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "保存できませんでした。");
-    } finally {
-      setBusy(false);
+      setLoading(false);
     }
   }
   return (
@@ -72,8 +50,6 @@ export function WorkoutMemo({ workoutId, userId }: { workoutId: string; userId: 
           className="secondary"
           onClick={() => {
             setOpen(true);
-            setMemo(null);
-            setContent("");
             setReload(false);
             void load();
           }}
@@ -82,47 +58,46 @@ export function WorkoutMemo({ workoutId, userId }: { workoutId: string; userId: 
         </button>
       ) : (
         <>
-          {memo && (
+          {entry.memo && (
             <div>
               <label htmlFor={`memo-${workoutId}`}>メモ</label>
               <textarea
                 id={`memo-${workoutId}`}
                 maxLength={1000}
                 rows={5}
-                value={content}
-                disabled={busy}
+                value={entry.content}
+                disabled={loading}
                 onChange={(event) => {
-                  setContent(event.target.value);
-                  setNotice("");
-                  try {
-                    localStorage.setItem(
-                      key,
-                      JSON.stringify({ content: event.target.value, revision: memo.revision }),
-                    );
-                  } catch {
-                    setError("端末へ保持できません。閉じる前にメモを保存してください。");
-                  }
+                  store.edit(target, event.target.value);
+                  setSaved(false);
                 }}
               />
             </div>
           )}
-          {busy && <output>処理中…</output>}
+          {loading && <output>処理中…</output>}
           <div className="memo-buttons">
-            {memo && (
-              <button type="button" className="primary" disabled={busy} onClick={save}>
+            {entry.memo && (
+              <button
+                type="button"
+                className="primary"
+                disabled={loading}
+                onClick={() => {
+                  if (store.enqueue(target)) {
+                    setOpen(false);
+                    setSaved(true);
+                  }
+                }}
+              >
                 保存
               </button>
             )}
             <button
               type="button"
               className="secondary"
-              disabled={busy}
               onClick={() => {
                 setOpen(false);
-                setMemo(null);
-                setContent("");
+                setReload(false);
                 setError("");
-                setNotice("");
               }}
             >
               閉じる
@@ -130,13 +105,13 @@ export function WorkoutMemo({ workoutId, userId }: { workoutId: string; userId: 
             <button
               type="button"
               className="text-button"
-              disabled={busy}
+              disabled={loading || entry.phase === "sending"}
               onClick={() => {
-                if (memo) setReload(true);
+                if (entry.memo) setReload(true);
                 else void load();
               }}
             >
-              {memo ? "読み直す" : "再試行"}
+              {entry.memo ? "読み直す" : "再試行"}
             </button>
           </div>
           {reload && (
@@ -145,7 +120,7 @@ export function WorkoutMemo({ workoutId, userId }: { workoutId: string; userId: 
               <button
                 type="button"
                 className="secondary"
-                disabled={busy}
+                disabled={loading}
                 onClick={() => setReload(false)}
               >
                 キャンセル
@@ -153,7 +128,7 @@ export function WorkoutMemo({ workoutId, userId }: { workoutId: string; userId: 
               <button
                 type="button"
                 className="secondary"
-                disabled={busy}
+                disabled={loading}
                 onClick={() => void load(true)}
               >
                 破棄して読み直す
@@ -162,12 +137,30 @@ export function WorkoutMemo({ workoutId, userId }: { workoutId: string; userId: 
           )}
         </>
       )}
-      {error && (
+      {entry.phase === "sending" && (
+        <output className="memo-send-status">端末で受付済み・送信中…</output>
+      )}
+      {entry.storageError && (
         <p className="error" role="alert">
-          {error}
+          端末へ保持できません。閉じる前にメモを保存してください。
         </p>
       )}
-      {notice && <output className="notice">{notice}</output>}
+      {(error || entry.error) && (
+        <p className="error" role="alert">
+          {error || entry.error}
+          {entry.phase === "error" && (
+            <button type="button" className="text-button" onClick={() => store.retry(target)}>
+              再送
+            </button>
+          )}
+        </p>
+      )}
+      {saved && entry.phase === "idle" && !entry.dirty && (
+        <output className="notice">保存しました。</output>
+      )}
+      {open && entry.dirty && (
+        <output className="notice">この端末の未保存メモを復元しました。</output>
+      )}
     </div>
   );
 }

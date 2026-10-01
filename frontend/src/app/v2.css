@@ -6082,3 +6082,22 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   font-size: 14px;
   font-weight: 700;
 }
+
+/* 送信状態を一行メモ内に収め、入力欄の位置を押し下げない。 */
+.inline-memo.single-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 6px;
+}
+.inline-memo.single-line > .error {
+  grid-column: 1 / -1;
+}
+.memo-send-status {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.memo-delivery-notice {
+  margin-bottom: 12px;
+}

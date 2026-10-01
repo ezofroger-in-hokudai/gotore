@@ -43,7 +43,7 @@ test("今日の種目メモは通信失敗と再起動でも元のrevisionと下
   await expect(
     page.getByRole("region", { name: "今日のメモ", exact: true }).getByRole("alert"),
   ).toContainText("別の操作");
-  expect(revisions).toEqual([0, 0]);
+  expect(revisions).toEqual([0, 0, 0]);
   expect(memo.content).toBe("別端末で保存");
   page.once("dialog", (dialog) => dialog.accept());
   await page
@@ -54,7 +54,7 @@ test("今日の種目メモは通信失敗と再起動でも元のrevisionと下
   await field.fill("確認して更新したメモ");
   await field.press("Enter");
   await expect.poll(() => memo.content).toBe("確認して更新したメモ");
-  expect(revisions).toEqual([0, 0, 1]);
+  expect(revisions).toEqual([0, 0, 0, 1]);
   expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();
   expect(
     await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), otherKey),

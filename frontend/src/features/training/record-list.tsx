@@ -15,6 +15,7 @@ export function RecordList({
   userId,
   empty,
   personal = false,
+  active = true,
   onReuse,
   onEdit,
   onDeleted,
@@ -25,6 +26,7 @@ export function RecordList({
   compact = false,
 }: {
   personal?: boolean;
+  active?: boolean;
   records: Workout[];
   userId?: string;
   empty: string;
@@ -136,7 +138,12 @@ export function RecordList({
             )}
 
             {personal && record.user_id === userId && (
-              <WorkoutMemo workoutId={record.id} userId={userId} />
+              <WorkoutMemo
+                active={active}
+                workoutId={record.id}
+                userId={userId}
+                label={`${record.performed_on}の全体メモ`}
+              />
             )}
           </article>
         );

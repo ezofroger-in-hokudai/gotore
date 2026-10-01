@@ -65,6 +65,7 @@ test("本人メモの取得・失敗・競合・読み直し・消去を確認�
   failSave = false;
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "保存しました" })).toBeVisible();
+  await page.locator(".workout-memo").getByRole("button", { name: "メモ", exact: true }).click();
   await input.fill("次回の自分へのメモ");
   conflict = true;
   memo = { content: "別端末で保存した内容", revision: 2 };
@@ -81,11 +82,13 @@ test("本人メモの取得・失敗・競合・読み直し・消去を確認�
   await input.fill("フォームを意識できた。次回も丁寧に。");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "保存しました" })).toBeVisible();
+  await page.locator(".workout-memo").getByRole("button", { name: "メモ", exact: true }).click();
   await input.scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/workout-memo-mobile.png" });
   await input.fill("");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "保存しました" })).toBeVisible();
+  await page.locator(".workout-memo").getByRole("button", { name: "メモ", exact: true }).click();
   expect(memo.content).toBe("");
   expect(dialogs).toBe(0);
   await page.locator(".workout-memo").getByRole("button", { name: "閉じる", exact: true }).click();

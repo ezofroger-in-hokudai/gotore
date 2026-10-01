@@ -2,6 +2,7 @@
 import { type Workout, api } from "@/lib/api";
 import { useState } from "react";
 import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
+import { useMemoDelivery } from "./memo-delivery-provider";
 import { memoDraftKey, removeMemoDraft } from "./memo-draft";
 export function WorkoutActions({
   record,
@@ -13,6 +14,7 @@ export function WorkoutActions({
   onDeleted: () => void;
 }) {
   const recordCache = useRecordSnapshot();
+  const memoDelivery = useMemoDelivery().store;
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -24,6 +26,7 @@ export function WorkoutActions({
         method: "DELETE",
       });
       removeMemoDraft(memoDraftKey(record.user_id, `/workouts/${record.id}/memo`));
+      memoDelivery.removeWorkout(record.id);
       recordCache?.removeWorkout(record.id);
       onDeleted();
     } catch (reason) {

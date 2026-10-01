@@ -561,6 +561,7 @@ function ActiveTraining({
               <span className="memo-caption">種目メモ：</span>
               {context.data ? (
                 <InlineMemo
+                  active={active}
                   key={input.name}
                   title="種目メモ"
                   path="/exercises/memo"
@@ -713,6 +714,7 @@ function ActiveTraining({
               <span className="memo-caption">今日のメモ：</span>
               {sessionId ? (
                 <InlineMemo
+                  active={active}
                   title="今日のメモ"
                   path={`/sessions/${sessionId}/exercise-memo?name=${encodeURIComponent(input.name)}`}
                   userId={userId}
