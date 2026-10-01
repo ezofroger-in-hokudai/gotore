@@ -4,6 +4,7 @@ import { dateLabel } from "../activity/calendar";
 import { estimatedRM } from "../session/session";
 import { Avatar } from "../v2/avatar";
 import { BestFlame } from "./best-flame";
+import { RecordExerciseMemo } from "./record-exercise-memo";
 import { recordSummary } from "./record-summary";
 import { ReuseWorkout } from "./reuse-workout";
 import { WorkoutActions } from "./workout-actions";
@@ -124,7 +125,13 @@ export function RecordList({
               </dl>
               {headerControl?.(record)}
             </header>
-            <RecordDetails record={record} bests={bests} compact={compact} />
+            <RecordDetails
+              record={record}
+              bests={bests}
+              compact={compact}
+              memoUserId={own ? userId : undefined}
+              active={active}
+            />
             {own && (
               <p className="record-sharing">
                 {record.group_id || record.shared_group_ids?.length ? "共有済み" : "自分だけ"}
@@ -156,7 +163,11 @@ function RecordDetails({
   record,
   bests,
   compact,
+  memoUserId,
+  active,
 }: {
+  memoUserId?: string;
+  active: boolean;
   record: Workout;
   bests: Map<string, NonNullable<Workout["best_sets"]>[number]>;
   compact: boolean;
@@ -259,6 +270,14 @@ function RecordDetails({
                 </tbody>
               </table>
             </section>
+            {memoUserId && (
+              <RecordExerciseMemo
+                workoutId={record.id}
+                name={exercise.name}
+                userId={memoUserId}
+                active={active}
+              />
+            )}
           </section>
         ))}
       </div>

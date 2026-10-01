@@ -6141,3 +6141,19 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   font-size: 11px;
   margin: 0;
 }
+.record-exercise-memo {
+  margin-top: 8px;
+}
+.record-exercise-memo > small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+.record-exercise-memo > .memo-text {
+  padding: 4px 0;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  text-align: left;
+  white-space: pre-wrap;
+}
