@@ -36,7 +36,11 @@ export function useSharedWorkoutDetails(
   const notify = useCallback(() => setTick((value) => value + 1), []);
   const stop = useCallback(() => {
     for (const entry of entries.current.values()) {
-      entry.controller?.abort();
+      if (entry.controller) {
+        entry.controller.abort();
+        // 再確認を中断した本文は保持するが、復帰時には直ちに読み直す。
+        entry.savedAt = 0;
+      }
       entry.controller = undefined;
     }
   }, []);
