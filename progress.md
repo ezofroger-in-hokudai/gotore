@@ -1,5 +1,53 @@
 # progress.md
 
+## 2026-10-01 11:08 最終差分と実画面を確認
+- 変更内容・目的: STARTのドラッグ中のleft/rightインライン値が回転後に残る経路を同じ#269として修正し、回転後も右端に吸着する座標を追加検証。配色の差分で部位選択にも変更が混ざっていたため、今回の編集行だけへ限定した。
+- 検証: START関連7件成功（3幅・保存位置・回転・短い画面復元・左右位置・開始）。最終6160063の専用gotore_test DBのmake checkはbackend300/frontend137/lint/型/build成功。追加の位置修正後も同じチェックと全件CIを確認する。CIの正本はPR #280のChecksと本文へ記録する。
+- 実画面: 実Auth/DBの調査用ユーザーでダークの編集行、移譲確認のPATCH0件、人体図の503時の失敗/再試行と空文言0件を確認。修正画像3枚をdocs/images/audit-fixesへ保存し、設計資料から参照。pageerrorなし。終了操作の旧ボタン名による調査スクリプト停止は修正し、不具合とは分類しない。
+- 記録・影響範囲: 週次計画#281とPR #280、6件のIssueへ実装状態/確認結果/未実施を記載。アプリの通常操作サイズ・API/DB契約は維持。
+- 未解決事項・次のアクション: 全件CI成功とレビュー可能なPRへ更新。実機・独立レビュー・統合は未実施。
+
+## 2026-10-01 10:54 最終型チェックで重複操作テストの型を修正
+- 変更内容・目的: make checkのTypeScriptで、Locator.evaluateの要素型がSVGElementも含みclickを直接呼べない失敗を確認。HTMLButtonElementを確認してから二重クリックするよう修正。アプリの挙動変更なし。
+- 検証・関連ファイル: 二重確定の実操作テストは成功済みだが、型ゲートは未成功だった。group-order.spec.tsを修正し、通常checkと最終HEADのCIを再実行する。Draft PR #280を作成済み。
+- 未解決事項・次のアクション: make checkと全件CIの成功、実機/独立レビュー。失敗を成功と記録しない。
+
+## 2026-10-01 10:52 オーナー移譲と危険操作の送信を保護（#270・#271）
+- 変更内容・目的: 移譲の対象/権限変更確認を追加。確定時だけ送信し、重複を同期ガードで防止。送信中の取消/閉じる/背景/スワイプ/Escape/戻るを保護、15秒の通信期限と確認内の失敗表示を追加。同じ危険操作である退出/除外にも適用。
+- 検証: 関連E2E初回64件は63成功/1失敗。戻る時のグループ側の確認破棄を修正し、シート/グループ18件が成功。二重確定のPATCH1件、取消PATCH0件、503後の再操作、実Auth/DBのオーナー移譲/退出/削除フローも成功。
+- 影響範囲・関連ファイル: frontend/src/features/v2/group-screen.tsx, frontend/src/features/v2/sheet.tsx, frontend/tests/e2e/group-order.spec.ts, frontend/tests/e2e/integration/group-real-flow.spec.ts, docs/design/group-screen.md。API/DB契約・migration変更なし。
+- 未解決事項・次のアクション: 最終make checkとCI全件。実機・独立レビュー未取得。
+
+## 2026-10-01 10:52 編集中セットをテーマ色へ整合（#268）
+- 変更内容・目的: 背景/枠をテーマ変数へ切替。ライトの既存色と数値の通常文字・操作サイズを維持し、明示ダークと端末外観のダークで暗い選択面を使う。
+- 検証: 変更前の数値コントラスト1.018で失敗する先行テストを確認。変更後4.5以上の回帰と既存入力制御が成功。
+- 影響範囲・関連ファイル: frontend/src/app/v2.css, frontend/tests/e2e/input-controls.spec.ts, docs/design-system.md。API/DB契約・migration変更なし。
+- 未解決事項・次のアクション: 最終make checkとCI全件。実機・独立レビュー未取得。
+
+## 2026-10-01 10:52 STARTの保存位置を現在の表示範囲へ補正（#269）
+- 変更内容・目的: 保存位置復元、resize、visual viewportのresize/scrollで上下の範囲を補正。左右端への吸着と長押し位置保存を維持。
+- 検証: 実長押しで450pxより下へ移動→844×390へ回転→同じ短い画面で再読込→開始が成功。既存の320/390/430pxと位置保存のテストも成功。
+- 影響範囲・関連ファイル: frontend/src/features/v2/floating-training.tsx, frontend/tests/e2e/start-navigation.spec.ts, docs/design/training-session.md。API/DB契約・migration変更なし。
+- 未解決事項・次のアクション: 最終make checkとCI全件。実機・独立レビュー未取得。
+
+## 2026-10-01 10:52 人体図の取得状態と月境界を修正（#279）
+- 変更内容・目的: 当月と月初の前月を必要な取得範囲として扱い、未取得/保留/失敗を正常な空応答と区別。同じタブの再試行は失敗した月だけを取得し、更新失敗では表示済みの部位を保持。
+- 検証: 初回503→再試行、前月の保留/503→前月だけの再試行、更新503で胸を保持→正常空応答の3件が成功。
+- 影響範囲・関連ファイル: frontend/src/features/v2/personal-history.tsx, frontend/tests/e2e/personal-history.spec.ts, docs/design/history-screen.md。API/DB契約・migration変更なし。
+- 未解決事項・次のアクション: 最終make checkとCI全件。実機・独立レビュー未取得。
+
+## 2026-10-01 10:51 設定プロフィールの取得結果を共有（#278）
+- 変更内容・目的: Workspaceにユーザー単位のprofile/avatar取得を保持し、一覧・名前・画像編集で共有。直後の往復と編集の追加GETをなくし、60秒後の再訪は表示を保持して背景更新。保存・削除結果を即反映し、遅い旧応答は既存writesの制御で採用しない。
+- 検証: 6件の先行テストはすべて旧実装で失敗し、一次修正後6件成功。プロフィール追加検証5件成功（画像の保存/再表示/削除、3往復でGET各1件、古い応答と背景503、別アカウントの名前/画像分離、移譲の重複確定）。通常check-fastは専用DBのbackend300・frontend137・lint/型成功。
+- 影響範囲・関連ファイル: settings/use-settings-profile.ts、settings/avatar/name、v2/workspace/settings、settings-ui/live-avatars、docs/design/settings-screen.md、docs/loading-performance.md。画像はメモリのみで永続化しない。
+- 未解決事項・次のアクション: make checkと最終ソースのCI全件検証。実機・独立レビューは未取得。
+
+## 2026-10-01 10:37 操作調査の6件の実装に着手
+- 変更内容・目的: ユーザーが直前に挙げた6件の修正を承認。#278/#279/#269/#268/#270/#271の仕様、コード、関連テストを確認し、main 094f34aからfix/278-user-auditを作成。調査資料PR #277の変更は混ぜない。
+- 方針・影響範囲: プロフィールはユーザー単位で受信内容を共有し、保存結果を反映。人体図は失敗と空を区別。STARTは復元/resizeで画面内補正。編集行の色は既存テーマ変数を使用。移譲は対象と権限変更を確認し、削除等は送信中に取消できるように見せない。API/DB契約・操作サイズは維持。
+- 関連ファイル: settings/profile、v2/workspace/settings/personal-history/floating-training/group-screen、v2.css、機能別E2E、docs/design。
+- 検証・次のアクション: 先に不具合を再現するE2Eを既存ファイルに追加し、失敗を確認して実装。通常チェック、関連E2E、全件CIとレビュー可能なPRを用意する。実機検証・独立レビューは未取得。
+
 ## 2026-10-01 03:45 テスト責務・共通基盤と現行操作を整理（#218）
 - 変更内容・目的: 全E2Eを共通fixtureへ統一し、通常pageの未処理例外と失敗時のAPIパス/method/statusを診断する。UIと実Auth/DBをprojectで分け、CIは両方の全件実行を維持。ローカルAuth設定をworker内で保持し、CIでは導入済みCLIを使う。メモfixtureは保存内容・revisionを保持する。
 - 整理: training-experienceの5ケースを担当機能へ移動。終了主導線をtraining-lifecycleへ改名。旧招待コード・統一週画面・旧記録配置・記録中常時スタンプの期待値を現行画面へ移行し、移行先をdocs/testing-coverage.mdへ記録。記録操作の3回繰り返しを1回へ統合し、3幅/2テーマの配置確認を維持。通常screenshotの出力先をtest-resultsへ変更し、採用画像を上書きしない。

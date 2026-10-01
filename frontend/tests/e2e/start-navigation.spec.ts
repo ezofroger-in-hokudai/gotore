@@ -135,3 +135,25 @@ test("STARTは長押しで端へ移動し、再読込後も利用者ごとの位
   expect(restored?.x).toBeLessThan(30);
   expect(Math.abs((restored?.y ?? 0) - (moved?.y ?? 0))).toBeLessThan(2);
 });
+
+test("STARTは回転後と短い画面の復元時にも画面内に収まる", async ({ page }) => {
+  await mockTraining(page);
+  const floating = page.getByTestId("floating-training");
+  const initial = await floating.boundingBox();
+  if (!initial) throw new Error("STARTの位置がありません");
+  await page.mouse.move(initial.x + initial.width / 2, initial.y + initial.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(170);
+  await page.mouse.move(350, 550, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(async () => (await floating.boundingBox())?.y ?? 0).toBeGreaterThan(450);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(floating).toBeInViewport({ ratio: 1 });
+  await expect
+    .poll(async () => (await floating.boundingBox())?.x)
+    .toBeCloseTo(844 / 2 + 240 - 16 - initial.width, 1);
+  await page.reload();
+  await expect(floating).toBeInViewport({ ratio: 1 });
+  await floating.click();
+  await expect(page.getByRole("button", { name: /^ベンチプレス/ })).toBeVisible();
+});

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { describeElapsedTime } from "../session/elapsed-time";
 
 type Position = { side: "left" | "right"; top: number };
+const EDGE_INSET = "max(16px, calc((100vw - 480px) / 2 + 16px))";
 
 export function FloatingTraining({
   userId,
@@ -33,18 +34,47 @@ export function FloatingTraining({
   const storageKey = `gotore:floating-training-position:${userId}`;
 
   useEffect(() => {
+    const fit = (value: Position) => {
+      const rect = button.current?.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      const minTop = (viewport?.offsetTop ?? 0) + 56;
+      const maxTop = Math.max(
+        minTop,
+        (viewport?.offsetTop ?? 0) +
+          (viewport?.height ?? window.innerHeight) -
+          (rect?.height ?? 80) -
+          82,
+      );
+      return { ...value, top: Math.max(minTop, Math.min(maxTop, value.top)) };
+    };
+    setPosition(null);
     try {
       const saved = JSON.parse(window.localStorage.getItem(storageKey) || "null");
       if ((saved?.side === "left" || saved?.side === "right") && Number.isFinite(saved.top))
-        setPosition(saved);
+        setPosition(fit(saved));
     } catch {}
+    const resize = () => setPosition((current) => (current ? fit(current) : null));
+    window.addEventListener("resize", resize);
+    window.visualViewport?.addEventListener("resize", resize);
+    window.visualViewport?.addEventListener("scroll", resize);
+    return () => {
+      window.removeEventListener("resize", resize);
+      window.visualViewport?.removeEventListener("resize", resize);
+      window.visualViewport?.removeEventListener("scroll", resize);
+    };
   }, [storageKey]);
 
   function limits(width: number, height: number) {
     const shell = button.current?.closest(".v2-app")?.getBoundingClientRect();
     const left = (shell?.left ?? 0) + 16;
     const right = (shell?.right ?? window.innerWidth) - width - 16;
-    return { left, right, minTop: 56, maxTop: window.innerHeight - height - 82 };
+    const viewport = window.visualViewport;
+    const minTop = (viewport?.offsetTop ?? 0) + 56;
+    const maxTop = Math.max(
+      minTop,
+      (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - height - 82,
+    );
+    return { left, right, minTop, maxTop };
   }
 
   function finish(pointerId: number) {
@@ -59,6 +89,8 @@ export function FloatingTraining({
         side,
         top: Math.max(bounds.minTop, Math.min(bounds.maxTop, rect.top)),
       } satisfies Position;
+      button.current.style.left = side === "left" ? EDGE_INSET : "";
+      button.current.style.right = side === "right" ? EDGE_INSET : "";
       setPosition(next);
       try {
         window.localStorage.setItem(storageKey, JSON.stringify(next));
@@ -72,9 +104,8 @@ export function FloatingTraining({
 
   const style = position
     ? {
-        left: position.side === "left" ? "max(16px, calc((100vw - 480px) / 2 + 16px))" : undefined,
-        right:
-          position.side === "right" ? "max(16px, calc((100vw - 480px) / 2 + 16px))" : undefined,
+        left: position.side === "left" ? EDGE_INSET : undefined,
+        right: position.side === "right" ? EDGE_INSET : undefined,
         top: position.top,
         bottom: "auto",
       }

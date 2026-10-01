@@ -545,3 +545,157 @@ test("履歴の読み込み前から日付グリッドを表示し、再訪で�
     gate = null;
   }
 });
+
+test("人体図は取得失敗を記録なしと表示せず同じタブで再試行できる", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-01T03:00:00Z"));
+  await mockTraining(page, true, false, false);
+  let fail = true;
+  await page.route("**/api/workouts/activity?*", (route) => {
+    const month = new URL(route.request().url()).searchParams.get("month");
+    return route.fulfill(
+      fail
+        ? { status: 503, json: { detail: "活動を取得できません" } }
+        : {
+            json: {
+              month,
+              metric: "volume",
+              total_volume: 100,
+              total_sets: 1,
+              workout_count: 1,
+              active_days: 1,
+              days:
+                month === "2026-10"
+                  ? [
+                      {
+                        date: "2026-10-01",
+                        volume: 100,
+                        set_count: 1,
+                        workout_count: 1,
+                        body_parts: [
+                          { body_part: "chest", volume: 100, set_count: 1, workout_count: 1 },
+                        ],
+                      },
+                    ]
+                  : [],
+            },
+          },
+    );
+  });
+  await navigate(page, "履歴");
+  await page.getByRole("tab", { name: "使った部位", exact: true }).click();
+  const panel = page.getByRole("tabpanel");
+  await expect(panel.getByRole("alert")).toContainText("活動を取得できません");
+  await expect(panel.getByText("最近の記録はありません", { exact: true })).toHaveCount(0);
+  fail = false;
+  await panel.getByRole("button", { name: "再試行", exact: true }).click();
+  await expect(page.locator(".personal-history-body-tags")).toContainText("胸");
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+});
+
+test("月初の人体図は前月の保留・失敗を空と区別し、前月だけ再試行する", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-01T03:00:00Z"));
+  await mockTraining(page, true, false, false);
+  let previousReads = 0;
+  let currentReads = 0;
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/workouts/activity?*", async (route) => {
+    const month = new URL(route.request().url()).searchParams.get("month");
+    if (month === "2026-09") {
+      previousReads++;
+      if (previousReads === 1) {
+        await gate;
+        return route.fulfill({ status: 503, json: { detail: "前月を取得できません" } });
+      }
+    } else currentReads++;
+    await route.fulfill({
+      json: {
+        month,
+        metric: "volume",
+        total_volume: 100,
+        total_sets: 1,
+        workout_count: 1,
+        active_days: 1,
+        days:
+          month === "2026-09"
+            ? [
+                {
+                  date: "2026-09-30",
+                  volume: 100,
+                  set_count: 1,
+                  workout_count: 1,
+                  body_parts: [{ body_part: "back", volume: 100, set_count: 1, workout_count: 1 }],
+                },
+              ]
+            : [],
+      },
+    });
+  });
+  await navigate(page, "履歴");
+  await page.getByRole("tab", { name: "使った部位", exact: true }).click();
+  await expect.poll(() => previousReads).toBe(1);
+  const panel = page.getByRole("tabpanel");
+  await expect(panel.getByText("最近の記録はありません", { exact: true })).toHaveCount(0);
+  release();
+  await expect(panel.getByRole("alert")).toContainText("前月を取得できません");
+  await expect(panel.getByText("最近の記録はありません", { exact: true })).toHaveCount(0);
+  const before = currentReads;
+  await panel.getByRole("button", { name: "再試行", exact: true }).click();
+  await expect(page.locator(".personal-history-body-tags")).toContainText("背中");
+  expect(currentReads).toBe(before);
+  expect(previousReads).toBe(2);
+});
+
+test("人体図は更新失敗でも表示済み部位を保持し、正常な空応答だけ記録なしを示す", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-09-28T03:00:00Z"));
+  await mockTraining(page, true, false, false);
+  let fail = false;
+  let empty = false;
+  await page.route("**/api/workouts/activity?*", (route) =>
+    route.fulfill(
+      fail
+        ? { status: 503, json: { detail: "活動を取得できません" } }
+        : {
+            json: {
+              month: "2026-09",
+              metric: "volume",
+              total_volume: empty ? 0 : 100,
+              total_sets: empty ? 0 : 1,
+              workout_count: empty ? 0 : 1,
+              active_days: empty ? 0 : 1,
+              days: empty
+                ? []
+                : [
+                    {
+                      date: "2026-09-28",
+                      volume: 100,
+                      set_count: 1,
+                      workout_count: 1,
+                      body_parts: [
+                        { body_part: "chest", volume: 100, set_count: 1, workout_count: 1 },
+                      ],
+                    },
+                  ],
+            },
+          },
+    ),
+  );
+  await navigate(page, "履歴");
+  await page.getByRole("tab", { name: "使った部位", exact: true }).click();
+  await expect(page.locator(".personal-history-body-tags")).toContainText("胸");
+  fail = true;
+  await navigate(page, "ホーム");
+  await navigate(page, "履歴");
+  const panel = page.getByRole("tabpanel");
+  await expect(panel.getByRole("alert")).toContainText("前回の内容を表示しています");
+  await expect(page.locator(".personal-history-body-tags")).toContainText("胸");
+  fail = false;
+  empty = true;
+  await panel.getByRole("button", { name: "再試行", exact: true }).click();
+  await expect(panel.getByText("最近の記録はありません", { exact: true })).toBeVisible();
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+});

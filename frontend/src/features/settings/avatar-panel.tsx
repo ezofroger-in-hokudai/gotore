@@ -1,20 +1,21 @@
 import { type AvatarImage, api } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
 import { LoadingState } from "../loading/loading-state";
-import { useResource } from "../training/use-resource";
 import { prepareAvatar } from "./avatar-image";
+import type { SettingsProfile } from "./use-settings-profile";
 
 export function AvatarPanel({
+  current,
   name,
   onSaved,
   onClose,
 }: {
+  current: SettingsProfile["avatar"];
   name: string;
-  onSaved: () => void;
+  onSaved: (image: AvatarImage) => void;
   onClose: () => void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
-  const current = useResource<AvatarImage>("/me/avatar");
   const [selected, setSelected] = useState<{ blob: Blob; url: string } | null>(null);
   const [saved, setSaved] = useState<AvatarImage | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,7 +56,7 @@ export function AvatarPanel({
         setSelected(null);
         setMessage(remove ? "画像を削除しました。" : "保存しました。");
       }
-      onSaved();
+      onSaved(remove ? { version: null, data_url: null } : result);
     } catch (reason) {
       if (mounted.current) setError(reason instanceof Error ? reason.message : "保存できません。");
     } finally {

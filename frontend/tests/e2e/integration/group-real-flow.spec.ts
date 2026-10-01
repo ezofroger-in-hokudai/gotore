@@ -105,6 +105,10 @@ test("QRを復号して複数人が参加し、名前変更・オーナー移譲
     );
     await owner.getByRole("button", { name: "QR参加者の設定" }).click();
     await owner.getByRole("button", { name: "オーナーにする" }).click();
+    await owner
+      .getByRole("dialog", { name: "オーナーを変更" })
+      .getByRole("button", { name: "変更する", exact: true })
+      .click();
     await expect(owner.locator(".group-settings")).toContainText("QR参加者");
     await owner.getByRole("button", { name: "グループから抜ける" }).click();
     await owner.getByRole("button", { name: "抜ける", exact: true }).click();
