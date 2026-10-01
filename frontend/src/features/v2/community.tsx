@@ -512,6 +512,7 @@ export function Feed({
                   liveStatus={() => live}
                   headerControl={() => (
                     <StampControl
+                      disabled={!trusted}
                       active={active}
                       groupId={groupIds?.get(item.workout_id) ?? data.group_id}
                       workoutId={item.workout_id}

@@ -27,10 +27,12 @@ import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { Feed, GroupCard } from "./community";
+import type { GroupHistoryCache } from "./group-history-cache";
 import { GroupHistoryCalendar } from "./group-history-calendar";
 import { GroupHistoryGraph } from "./group-history-graph";
 import { runNavigationMotion } from "./navigation-motion";
 import { GROUP_REFRESH_MS, activityRefreshMs } from "./refresh-interval";
+import type { SharedWorkoutCache } from "./shared-workout-cache";
 import { Sheet } from "./sheet";
 
 type Mode = "list" | "detail" | "create" | "join" | "invite" | "members";
@@ -53,6 +55,8 @@ type ActionSheet =
 
 export function CommunityScreen({
   guideTarget,
+  sharedCache,
+  historyCache,
   groups,
   today,
   onActivityVisibleChange,
@@ -65,6 +69,8 @@ export function CommunityScreen({
   onChanged,
   onOrder,
 }: {
+  sharedCache: SharedWorkoutCache;
+  historyCache: GroupHistoryCache;
   guideTarget?: { target: string } | null;
   groups: Group[];
   today: ReturnType<typeof useResource<TodayActivity>>;
@@ -588,38 +594,42 @@ export function CommunityScreen({
                   </button>
                 ))}
               </nav>
-              {detailTab === "latest" && (
-                <>
-                  <div className="group-detail-members-summary">
-                    <button
-                      type="button"
-                      className="member-avatars-strip"
-                      onClick={() => setDetailTab("settings")}
-                      aria-label="メンバー管理を開く"
-                    >
-                      {group.members.slice(0, 5).map((member) => (
-                        <Avatar
-                          key={member.id}
-                          userId={member.id}
-                          name={member.display_name}
-                          version={member.avatar_version}
-                          small
-                        />
-                      ))}
-                      <span>{group.members.length}人</span>
-                    </button>
-                  </div>
-                  <ResourceError resource={activity} />
-                  {activity.data && (
-                    <Feed data={activity.data} active={active} trusted={!activity.refreshing} />
-                  )}
-                  {!activity.data && !activity.error && (
-                    <LoadingState label="グループの記録を読み込み中" />
-                  )}
-                </>
-              )}
+              <div hidden={detailTab !== "latest"}>
+                <div className="group-detail-members-summary">
+                  <button
+                    type="button"
+                    className="member-avatars-strip"
+                    onClick={() => setDetailTab("settings")}
+                    aria-label="メンバー管理を開く"
+                  >
+                    {group.members.slice(0, 5).map((member) => (
+                      <Avatar
+                        key={member.id}
+                        userId={member.id}
+                        name={member.display_name}
+                        version={member.avatar_version}
+                        small
+                      />
+                    ))}
+                    <span>{group.members.length}人</span>
+                  </button>
+                </div>
+                <ResourceError resource={activity} />
+                {activity.data && (
+                  <Feed
+                    data={activity.data}
+                    active={active && detailTab === "latest"}
+                    trusted={!activity.refreshing}
+                    sharedCache={sharedCache}
+                  />
+                )}
+                {!activity.data && !activity.error && (
+                  <LoadingState label="グループの記録を読み込み中" />
+                )}
+              </div>
               <div key={`calendar:${userId}:${selected}`} hidden={detailTab !== "calendar"}>
                 <GroupHistoryCalendar
+                  cache={historyCache}
                   key={selected}
                   groupId={selected}
                   userId={userId}
@@ -631,6 +641,7 @@ export function CommunityScreen({
               </div>
               <div key={`graph:${userId}:${selected}`} hidden={detailTab !== "graph"}>
                 <GroupHistoryGraph
+                  cache={historyCache}
                   groupId={selected}
                   active={active && detailTab === "graph"}
                   refreshKey={refreshKey}

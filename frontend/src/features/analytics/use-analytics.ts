@@ -14,16 +14,24 @@ export function useAnalytics(
   anchor = "",
   member = "",
   bodyPart = "",
+  sharedCache?: AnalyticsCache<Analytics>,
 ) {
-  const [cache] = useState(() => new AnalyticsCache<Analytics>(resourceRequest));
+  const [localCache] = useState(() => new AnalyticsCache<Analytics>(resourceRequest));
+  const cache = sharedCache ?? localCache;
   const wasActive = useRef(false);
   const path = analyticsPath(scope, period, offset, exercise, anchor, member, bodyPart);
   useSyncExternalStore(cache.subscribe, cache.snapshot, cache.snapshot);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 保存や共有変更で全期間の集計を無効化する。
   useEffect(() => {
-    cache.clear();
-  }, [cache, refreshKey]);
-  useEffect(() => () => cache.clear(), [cache]);
+    if (sharedCache) cache.setVersion(refreshKey);
+    else cache.clear();
+  }, [cache, refreshKey, sharedCache]);
+  useEffect(
+    () => () => {
+      if (sharedCache) cache.stop();
+      else cache.clear();
+    },
+    [cache, sharedCache],
+  );
   // biome-ignore lint/correctness/useExhaustiveDependencies: 無効化した直後にも選択中の集計を取得する。
   useEffect(() => {
     const resumed = active && !wasActive.current;
