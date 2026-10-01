@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     database_pool_max_size: int = Field(default=4, ge=0, le=10)
     supabase_url: str = ""
     supabase_anon_key: str = ""
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:admin@egotore.com"
     openai_api_key: str = ""
     score_model: str = "gpt-5-nano"
     score_daily_limit: int = Field(default=30, ge=1, le=1000)

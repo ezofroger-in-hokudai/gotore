@@ -4,6 +4,7 @@ from app.api.routes import (
     analytics,
     avatars,
     exercise_catalog,
+    notifications,
     record_snapshot,
     sessions,
     stamps,
@@ -26,3 +27,5 @@ api_router.include_router(analytics.router)
 api_router.include_router(stamps.router)
 
 api_router.include_router(suggestions.router)
+
+api_router.include_router(notifications.router)

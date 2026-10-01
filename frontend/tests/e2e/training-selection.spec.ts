@@ -114,9 +114,7 @@ test("種目選択は仲間のタイムラインを取得せず、部位で候�
   let todayActivityRequests = 0;
   await page.route("**/api/groups/today-activity", async (route) => {
     todayActivityRequests++;
-    await route.fulfill({
-      json: { totals: { set_count: 0, total_volume: 0 }, groups: [] },
-    });
+    await route.fallback();
   });
 
   // mockTrainingの初期表示後に候補を差し替えるため、選択画面を開く前に再取得する。

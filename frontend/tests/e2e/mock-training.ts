@@ -69,6 +69,25 @@ export async function mockTraining(
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
+    if (path === "/api/notifications/settings")
+      return route.fulfill({
+        json:
+          route.request().method() === "PUT"
+            ? route.request().postDataJSON()
+            : {
+                stamp_enabled: true,
+                start_enabled: true,
+                start_timing: "home",
+                vibration: true,
+                sound: false,
+                push_stamp: true,
+                push_start: true,
+              },
+      });
+    if (path === "/api/notifications/inbox")
+      return route.fulfill({ json: { items: [], live_start_ids: [] } });
+    if (path === "/api/notifications/seen") return route.fulfill({ status: 204 });
+
     if (!withSnapshot && path.startsWith("/api/me/record-snapshot"))
       return route.fulfill({
         status: 503,

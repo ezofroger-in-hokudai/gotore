@@ -196,6 +196,10 @@ chmod 600 backend/.env frontend/.env.local
 - Vercel: Production／Previewなど対象環境へ登録し、変更後に再デプロイする。[公開準備ガイド](docs/vercel-supabase.md)を参照する。
 - 新しい変数を実装で使う場合: 対象のサンプルとこの表を同じPRで更新し、必須／任意・既定値・公開してよい値かを記載する。自動生成に必要なら `scripts/configure_local.py` も更新する。
 
+## スタンプ・トレーニング開始通知
+
+アプリ内通知とWeb Pushを追加しました。設定で種類、開始通知のタイミング、アプリ内の音/振動を変更できます。OS配信には追加migration、VAPID鍵、APIとは別の永続ワーカーが必要です。[通知仕様・起動手順](docs/activity-notifications.md)を参照してください。
+
 ## DBとmigration
 
 DBの構造は [supabase/migrations/](supabase/migrations/) のSQLで管理します。API起動・`make install`・Vercelのbuildはmigrationを適用しません。

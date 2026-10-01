@@ -12,6 +12,8 @@ v2の画面・共有・セッションの規則は [gotore-v2-spec.md](gotore-v2
 
 ## 実装した機能
 
+通知実装ブランチでは全画面のスタンプ/LIVE開始通知とWeb Pushを追加。[通知仕様](activity-notifications.md)のmigration・VAPID鍵・永続ワーカーが必要。公開環境と実機の確認は未実施。
+
 Googleログイン追加ブランチでは、[Google認証仕様と設定手順](google-signin.md)を適用する。公開側のGoogle設定と登録前hook、ボタン表示フラグの反映が必要であり、実装だけでは本番の自己登録は有効にならない。
 
 追加実装ブランチでは、LIVEの右下の赤丸・ラベル、新着の強調、設定からのプロフィール画像変更を追加。[仕様と反映条件](live-presence-avatars.md)を参照。画像用migration `20260909120000_profile_avatars.sql` をAPIより先に適用する。画像は本人と現在同じグループのメンバーだけが取得できる。

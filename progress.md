@@ -4625,6 +4625,37 @@
 - 競合対応: `docs/design/training-session.md`、`frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/workspace.tsx`、`task.md` の4件を解消。記録画面への仲間引き継ぎ専用E2E `peer-handoff.spec.ts` は確定仕様と矛盾するため統合対象から除外した。
 - 検証: `make check` 成功（backend 104件成功/180件DBなしskip、frontend単体116件成功、lint・型・production build成功）。競合マーカーと未解消ファイルがないことを確認する。
 
+
+## 2026-10-01 15:56 スタンプ・開始通知を最新mainへ分離してPR準備（#21）
+
+- 変更内容: ユーザー依頼で、ローカルの通知実装だけを最新main aa3df73からの専用ブランチへ移した。全画面キュー、650ms/2.5秒/5秒、5送り主/10件集約、開始人数更新/非延長、スタンプ上スワイプ、開始画面タップ/背景操作継続、アカウント別設定、匿名Web Push・永続配信/再試行/購読解除を追加。
+- 変更内容: 認証通知API、イベント/購読/配信待ちmigration、VAPID鍵生成、永続ワーカーの起動手順と環境サンプルを追加。通知設定のチェック欄を44pxの行へ統一し、全項目が確認しやすい表示に調整。既存の記録キャッシュ、プロフィール共通取得、触覚設定、メモ保存の最新main動作を保持。
+- 目的: 採用した共通スタンプカードとCグラデーションの実線参戦チケットを、他作業の未コミット変更を混ぜずレビュー可能にする。
+- 影響範囲: 通知UI/API/DB/ワーカー、Workspaceと設定、関連テスト、設計/運用資料。紹介動画とストップウォッチは含めない。
+- 関連ファイル: `frontend/src/features/notifications/`、`frontend/public/notification-worker.js`、`backend/app/{api/routes,infrastructure,schemas}/notifications.py`、`backend/app/services/notification_{dispatch,keys}.py`、`supabase/migrations/20261001030000_activity_notifications.sql`、`docs/activity-notifications.md`、`docs/design/activity-notifications.md`、`docs/images/activity-notifications/`。
+- 検証: 専用DB gotore_notifications_test（隔離PostgreSQL 55440）でmake check成功（backend310/frontend146/lint/型/build）。通知E2E9件成功。撮影fixture2件も成功し、320/430pxの開始・12件集約・設定を撮影して目視。撮影専用の一時テストはPRに含めない。設定表示調整後の最終make checkもbackend310/frontend146/lint/型/buildすべて成功。
+- 途中失敗: 最初の分離で既存record_snapshotルーター登録が漏れ、backend9件が404等で失敗。既存登録を戻して310件成功。撮影fixtureで開始とスタンプの仮IDを再利用し2件失敗、種類別IDへ修正して再撮影成功。アプリの重複排除は変更していない。
+- テスト順序: 先行ローカル実装ではキュー/DB/受信のテストを先に用意。今回のPR分離は既存の通知テストを再利用し、可逆な設定表示調整は既存E2Eと画像で直接確認。
+- 未解決事項: 公開環境のVAPID鍵/永続ワーカー/migration反映、Android/iOS実機の閉じた状態の配信。先行ローカル全E2Eの160成功/97失敗を今回の成功とは扱わず、最新main上の全件をCIで確認する。独立レビュー未実施。既存ローカルDBはreset・履歴修復しない。
+- 次のアクション: 画像付き通知PRをmain宛てに作成し、全件CIを確認。その後、リング付きストップウォッチを別ブランチで実装する。
+
+## 2026-10-01 16:27
+- 変更内容: PR #283の全E2E初回は305成功/3失敗。通知設定の旧非表示期待を新仕様へ更新し、種目選択の取得回数テストは不完全なホームレスポンスを作らず既存fixtureへfallbackする。連続画面切替でskipTransitionがreadyを拒否する例外を処理し、開始カットインの入口テストは時計の安定したtestidを使う。
+- 目的: 通知追加後の設定と既存導線を全件CIで確認する。
+- 影響範囲: 通知設定テスト、画面遷移の中断時、種目選択テスト。
+- 検証: 関連25件成功、fixture修正後の種目選択3件成功。frontend lint/typecheck成功、unit146件成功。誤ってbun test全探索した実行はE2Eを単体runnerで読んで失敗したため検証成功に含めず、正規のbun run testで再実施。
+- 未解決事項: 修正後の全件CI待ち。
+- 次のアクション: CI確認後レビュー。時計は独立ブランチで実装。
+
+## 2026-10-01 17:42 採用Aの中央カットインを実装
+- 変更内容: 左から240msで中央へ着地し、光が通る採用Aを本体へ反映。画面タップ・5秒経過の退場は右へ200ms。退場中の表示だけ保持し、受信キュー/既読・設定・振動/音の規則は維持。ホームは可視画面中央、記録中はヘッダーと入力ドック間の中央。時計を前面にし、顔列は時計の占める幅を避け、最大限並べて残りを+人数表示する。時計ドラッグ後のclickは閉じるタップと区別した。
+- 目的: ユーザーが完了した固定プレビューを承認し、本体への実装を依頼したため。
+- 影響範囲: アプリ内開始演出、表示位置/監視、通知のタップ判定、関連E2Eと採用設計。API/DB/Push配信仕様は変更しない。
+- 関連ファイル: activity-notifications.tsx/css、use-notifications.ts、activity-notifications.spec.ts、activity-notification-center-adopted.html、docs/design/activity-notifications.md、docs/images/activity-notifications/central-*.png。
+- 検証: 先に中央位置テストが旧実装で失敗することを確認。最終make check成功（backend310件、frontend146件、lint/typecheck/build）。通知PR単体の13件成功。時計との組合せ25件中24件成功後、スタンプの登場中に座標を取得する不安定さを修正し、関連5件成功（唯一の失敗ケースを含む）。時計関連12件も成功。320/390/430pxの中央配置・左右の動き・顔列と時計の前面・画面移動・再登場/延長なし・記録中中央・動き低減・フォーム内移動/保存を確認。撮影画像を目視。テストを複数同一作業コピーで同時実行した際のtrace出力競合は、逐次実行で解消した。
+- 未解決事項: Android/iOS実機キーボードと公開Pushの確認、独立レビュー。全E2Eの更新CIを確認する。
+- 次のアクション: 通知PR #283を更新。時計はPR #286に分離し、組み合わせた確認アプリ3154を案内する。
+
 ## 2026-10-01 16:30
 - 変更内容: 通知PR #283作成後、独立worktree /tmp/gotore-ring-stopwatch と feat/202-ring-stopwatchで合意したA一体型ストップウォッチを実装。全状態に細いリング、▶なしSTART、中央の時:分、60秒で回る点、ホームの記録へ、記録中の終了確認を統合。右上の時間/終了操作を時計へ移し、入力ドックを避けて位置を保つ。採用プレビューと設計資料を更新し、320/390/430pxの実画面を保存。
 - 目的: 記録開始・進行中・終了を同じ時計で操作し、長時間でも時:分を中央に保つ。
@@ -4663,3 +4694,12 @@
 - 関連ファイル: floating-training.tsx、ring-stopwatch.spec.ts、session-stopwatch-ring-adopted.html、activity-notification-center-adopted.html、docs/design/training-session.md、docs/design/home-screen.md、docs/design/activity-notifications.md。
 - 未解決事項: 中央カットインの本体反映は次の作業。別作業の未コミット変更を含むルートツリーは一括コミットしない。
 - 次のアクション: 採用Aの更新プレビューを案内する。
+
+## 2026-10-01 18:02 時計統合後の通知PR #283の競合を解消
+- 変更内容: ユーザーが時計PR #286をmainへマージしたため、通知PRへorigin/main 3e3dd7eをmerge。docs/design/README.mdとprogress.mdは双方の設計リンク・経緯を保持し、共通背景HTML2件は内容が一致することを確認して改行差分を解消。通知と時計のソースの自動統合結果は、検証済みの組合せアプリと一致することを確認した。
+- 目的: 「feat: スタンプとトレーニング開始の通知を追加」のPR #283をmainへ統合可能に戻す。
+- 影響範囲: mainの時計変更の取り込みと4ファイルの競合解消、設計・task・進捗。採用済みの演出・位置・操作は維持。
+- 検証: 未解消ファイル/競合マーカーなし、git diff --check成功。統合後の通知・時計・開始操作25件が1実行で全成功。make check成功（backend310件、frontend146件、lint/typecheck/build）。更新前の通知CIは312件/10.2分、時計CIは304件/10.4分、全必須チェック成功。統合コミットで全CIを再実行する。
+- 関連ファイル: docs/design/README.md、progress.md、notification-current-home.html、notification-current-record.html、docs/design/activity-notifications.md、task.md。
+- 未解決事項: 新しい統合コミットのCI完了待ち。
+- 次のアクション: PR #283へpushし、GitHub上で競合解消を確認する。mainへのマージはこの作業では行わない。

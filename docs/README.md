@@ -14,6 +14,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 ## 開発用の文書
 
+- [スタンプ・トレーニング開始通知](activity-notifications.md): 全画面通知、設定、Web Pushの配信条件と運用。[採用デザイン](design/activity-notifications.md)。
+
 - [スタンプ](stamps.md): グループ内の送信・取消、記録中の受信表示、未読・受信一覧。
 
 - [Googleで登録・ログイン](google-signin.md): 基本権限のみの認証、初回表示名、登録制限、egotore.com向け設定手順。管理者発行限定の初版仕様から変更する。
@@ -97,3 +99,5 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 - [2026-09-30 公開版の操作・不具合・デザイン調査](audits/2026-09-30/report.md): 最新mainでの再現結果と問題候補。Issue化・仕様変更はユーザー判断待ち。
 
 - [現行仕様のテスト責務と移行先](testing-coverage.md)
+
+- [採用Aの中央カットイン](../frontend/public/previews/activity-notification-center-adopted.html): 本体へ反映する動きの固定参照。
