@@ -114,16 +114,18 @@ for (const width of [320, 390, 430]) {
         release = resolve;
       });
       const beforeExpiry = reads;
-      await page.clock.runFor(60_000);
+      // 60秒の期限と次の5秒ポーリングの境界を越える。
+      await page.clock.runFor(65_000);
       await expect.poll(() => reads).toBeGreaterThan(beforeExpiry);
       await expect(card.locator('[aria-label="セット数"] strong')).toHaveText("13");
       await expect(card.locator(".is-pending")).toHaveCount(0);
       expect(await node?.evaluate((el) => el.isConnected)).toBe(true);
-      release();
-      hold = null;
-      await page.waitForResponse(
+      const refreshed = page.waitForResponse(
         (r) => r.url().endsWith("/workouts/live-record") && r.status() === 200,
       );
+      release();
+      hold = null;
+      await refreshed;
       status = 403;
       version = 4;
       await page.clock.runFor(5000);
