@@ -194,3 +194,24 @@ test("種目一覧の再取得に失敗しても、読み込んだ候補で部�
     .click();
   await expect(page.locator(".exercise-picker-list")).toContainText("追加種目");
 });
+
+test("種目追加と部位編集のキャンセルを同じ補助ボタンで一覧へ戻す", async ({ page }) => {
+  await mockTraining(page);
+  await page.getByRole("navigation").getByRole("button", { name: "設定", exact: true }).click();
+  await page.getByRole("button", { name: "種目を管理", exact: true }).click();
+  await page.getByRole("button", { name: "種目を追加", exact: true }).click();
+  const cancel = page.getByRole("button", { name: "キャンセル", exact: true });
+  const addStyle = await cancel.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return [s.borderRadius, s.borderWidth, s.fontSize, el.getBoundingClientRect().height];
+  });
+  await cancel.click();
+  await page.getByRole("button", { name: "ベンチプレスの部位を編集", exact: true }).click();
+  const editStyle = await cancel.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return [s.borderRadius, s.borderWidth, s.fontSize, el.getBoundingClientRect().height];
+  });
+  expect(editStyle).toEqual(addStyle);
+  await cancel.click();
+  await expect(page.getByRole("button", { name: "種目を追加", exact: true })).toBeVisible();
+});
