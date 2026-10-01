@@ -84,11 +84,11 @@ export function FloatingTraining({
       const minTop = offset + 56;
       const dockTop =
         recording && dock ? dock.getBoundingClientRect().top : Number.POSITIVE_INFINITY;
-      const maxTop = Math.max(minTop, Math.min(offset + height - 162, dockTop - 94));
+      const maxTop = Math.max(minTop, offset + height - 162);
       setBounds({
         minTop,
         maxTop,
-        defaultTop: Math.max(minTop, Math.min(maxTop, offset + height - 406)),
+        defaultTop: Math.max(minTop, Math.min(maxTop, dockTop - 94, offset + height - 406)),
       });
     };
     const observer = new ResizeObserver(measure);
@@ -129,15 +129,9 @@ export function FloatingTraining({
     const right = (shell?.right ?? window.innerWidth) - width - 16;
     const viewport = window.visualViewport;
     const minTop = (viewport?.offsetTop ?? 0) + 56;
-    const dock = recording
-      ? document.querySelector(".recording-view .recording-entry-dock")?.getBoundingClientRect()
-      : null;
     const maxTop = Math.max(
       minTop,
-      Math.min(
-        (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - height - 82,
-        dock ? dock.top - height - 14 : Number.POSITIVE_INFINITY,
-      ),
+      (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - height - 82,
     );
     return { left, right, minTop, maxTop };
   }

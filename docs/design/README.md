@@ -19,3 +19,5 @@
 
 
 - [採用Aの中央カットイン](../../frontend/public/previews/activity-notification-center-adopted.html): 左から中央へ240ms、右へ200msで退場。
+
+- #202追加合意: [トレーニング設計](training-session.md)のリング付き時計へ、START・中央の時:分・回る点・終了確認を統合。
