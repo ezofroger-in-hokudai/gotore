@@ -69,7 +69,7 @@ for (const width of [320, 390, 430])
     await page.clock.runFor(2100);
     await navigate(page, "ホーム");
     await expect(page.locator(".activity-start")).toContainText("1人がトレーニング開始");
-    await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
+    await page.getByTestId("floating-training").click();
     await expect(page.getByRole("button", { name: "セットを追加", exact: true })).toBeVisible();
     await expect(page.locator(".activity-start")).toHaveCount(0);
   });
