@@ -6086,13 +6086,13 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   align-items: center;
   column-gap: 6px;
 }
-.inline-memo.single-line > .error {
+.inline-memo.single-line > .error,
+.inline-memo.single-line > .memo-pending {
   grid-column: 1 / -1;
 }
-.memo-send-status {
+.memo-pending {
   color: var(--muted);
-  font-size: 11px;
-  white-space: nowrap;
+  margin: 4px 0;
 }
 .memo-delivery-notice {
   margin-bottom: 12px;

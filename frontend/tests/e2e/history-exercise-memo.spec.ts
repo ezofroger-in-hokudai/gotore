@@ -32,7 +32,7 @@ test("終了した種目メモを必要時だけ取得し、編集失敗後も�
     memo = { content: body.content, revision: 3 };
     return r.fulfill({ json: memo });
   });
-  await openHistoryDay(page, record.performed_on);
+  const detail = await openHistoryDay(page, record.performed_on);
   expect(reads).toBe(0);
   await page.getByRole("button", { name: "ベンチプレスの記録メモを開く", exact: true }).click();
   const edit = page.getByRole("button", { name: "ベンチプレスの記録メモを編集", exact: true });
@@ -41,8 +41,14 @@ test("終了した種目メモを必要時だけ取得し、編集失敗後も�
   const input = page.getByRole("textbox", { name: "ベンチプレスの記録メモ", exact: true });
   await input.fill("次回は軽くする");
   await input.press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "未送信" })).toBeVisible();
+  await expect(input).toHaveCount(0);
+  await detail.getByRole("button", { name: "閉じる", exact: true }).click();
+  await openHistoryDay(page, record.performed_on);
+  await expect(page.getByRole("status").filter({ hasText: "未送信" })).toBeVisible();
+  await expect(input).toHaveCount(0);
+  await page.getByRole("button", { name: "ベンチプレスの記録メモを開く", exact: true }).click();
   await expect(input).toHaveValue("次回は軽くする");
-  await expect(page.getByRole("alert").filter({ hasText: "メモを保存できません" })).toBeVisible();
   fail = false;
   await page.getByRole("button", { name: "再送", exact: true }).click();
   await expect(edit).toHaveText("次回は軽くする");

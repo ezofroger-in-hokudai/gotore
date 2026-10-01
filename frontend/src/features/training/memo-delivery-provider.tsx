@@ -4,6 +4,7 @@ import { type ReactNode, createContext, useContext, useEffect, useState } from "
 import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 import { MemoDeliveryStore, type MemoTarget } from "./memo-delivery";
 import type { Memo } from "./memo-draft";
+import { MemoFeedback } from "./memo-feedback";
 
 type Delivery = { store: MemoDeliveryStore; version: number; visible: Map<string, number> };
 const Context = createContext<Delivery | null>(null);
@@ -82,31 +83,21 @@ export function MemoDeliveryNotice() {
   const { store, visible } = useMemoDelivery();
   const entries = store
     .pending()
-    .filter((entry) => !(visible.get(entry.target.name ?? entry.target.path) ?? 0));
+    .filter(
+      (entry) =>
+        (entry.phase === "error" || entry.storageError) &&
+        !(visible.get(entry.target.name ?? entry.target.path) ?? 0),
+    );
   if (!entries.length) return null;
   return (
     <section className="memo-delivery-notice" aria-label="メモの送信状態">
       {entries.map((entry) => (
         <div key={entry.target.name ?? entry.target.path}>
-          {entry.phase === "error" ? (
-            <p className="error" role="alert">
-              {entry.target.label}：{entry.error}
-              <button
-                type="button"
-                className="text-button"
-                onClick={() => store.retry(entry.target)}
-              >
-                再送
-              </button>
-            </p>
-          ) : (
-            <output>
-              {entry.target.label}：
-              {entry.storageError
-                ? "端末へ保持できません。入力を保存してください。"
-                : "端末で受付済み・送信中…"}
-            </output>
-          )}
+          <MemoFeedback
+            entry={entry}
+            label={entry.target.label}
+            onRetry={() => store.retry(entry.target)}
+          />
         </div>
       ))}
     </section>

@@ -34,9 +34,13 @@ test("今日のメモは端末受付後すぐ閉じ、別画面の失敗を再�
   await field.fill("新しいメモ");
   await field.press("Enter");
   await navigate(page, "ホーム");
-  release();
   const notice = page.getByRole("region", { name: "メモの送信状態", exact: true });
-  await expect(notice.getByRole("alert")).toContainText("ベンチプレス");
+  await expect(notice).toHaveCount(0);
+  release();
+  await expect(notice.getByRole("status")).toContainText("ベンチプレス");
+  await expect(notice).toContainText("未送信");
+  await expect(notice.getByRole("alert")).toHaveCount(0);
+  await expect(notice).not.toContainText("メモ送信失敗");
   await notice.getByRole("button", { name: "再送", exact: true }).click();
   await expect.poll(() => memo.content).toBe("新しいメモ");
   expect(writes.map((value) => value.expected_revision)).toEqual([0, 0, 1]);
@@ -72,7 +76,9 @@ test("メモの応答を失っても再起動の再送で同じ内容を二重�
   const field = region.getByRole("textbox", { name: "今日のメモ", exact: true });
   await field.fill("応答を失っても残る");
   await field.press("Enter");
-  await expect(region.getByRole("alert")).toContainText("通信できません");
+  await expect(region.getByRole("status")).toContainText("未送信");
+  await expect(region.getByRole("alert")).toHaveCount(0);
+  await expect(field).toHaveCount(0);
   await page.reload();
   await openTraining(page);
   await expect.poll(() => revisions).toEqual([0, 0]);

@@ -1,8 +1,10 @@
 import { api } from "@/lib/api";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LoadingState } from "../loading/loading-state";
 import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 import { useMemoDelivery, useVisibleMemo } from "../training/memo-delivery-provider";
 import type { Memo, MemoDraftState } from "../training/memo-draft";
+import { MemoFeedback, memoNeedsReview } from "../training/memo-feedback";
 
 export function InlineMemo({
   title,
@@ -40,6 +42,7 @@ export function InlineMemo({
   );
   const { store } = useMemoDelivery();
   const entry = useVisibleMemo(target, active);
+  const needsReview = memoNeedsReview(entry);
   const sessionMemo = path.match(/^\/sessions\/([^/]+)\/exercise-memo\?name=(.+)$/);
   const cached = sessionMemo
     ? cache?.snapshot?.session_exercise_memos[sessionMemo[1]]?.[decodeURIComponent(sessionMemo[2])]
@@ -53,13 +56,13 @@ export function InlineMemo({
     if (editing) field.current?.focus();
   }, [editing]);
   useEffect(() => {
-    if (entry.phase === "error") setEditing(true);
+    if (entry.phase === "error" && needsReview) setEditing(true);
     if (previousPhase.current === "sending" && entry.phase === "idle" && !entry.queue.length) {
       if (!entry.dirty) setEditing(false);
       onSaved?.();
     }
     previousPhase.current = entry.phase;
-  }, [entry.phase, entry.queue.length, entry.dirty, onSaved]);
+  }, [entry.phase, needsReview, entry.queue.length, entry.dirty, onSaved]);
   const draftState: MemoDraftState = entry.dirty
     ? entry.storageError
       ? "memory"
@@ -155,31 +158,23 @@ export function InlineMemo({
           onChange={(event) => store.edit(target, event.target.value)}
         />
       )}
-      {entry.phase === "sending" && (
-        <output className="memo-send-status" aria-label="端末で受付済み・送信中">
-          送信中…
-        </output>
-      )}
-      {entry.storageError && (
+      {entry.phase === "sending" && <LoadingState label="メモを送信中" compact />}
+      <MemoFeedback
+        entry={entry}
+        onRetry={() => store.retry(target)}
+        onReload={() => void reload()}
+        disabled={loading}
+      />
+      {loadError && !entry.error && !entry.storageError && (
         <p className="error" role="alert">
-          端末へ保持できません。メモを保存してください。
-        </p>
-      )}
-      {error && (
-        <p className="error" role="alert">
-          {error}
-          {entry.phase === "error" && (
-            <button type="button" className="text-button" onClick={() => store.retry(target)}>
-              再送
-            </button>
-          )}
+          メモを開けません。
           <button
             type="button"
             className="text-button"
             disabled={loading || entry.phase === "sending"}
             onClick={() => void reload()}
           >
-            読み直す
+            再試行
           </button>
         </p>
       )}

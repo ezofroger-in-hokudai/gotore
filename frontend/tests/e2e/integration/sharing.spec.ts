@@ -107,8 +107,14 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await expect(day.getByRole("article")).toHaveCount(1);
     await pageA.getByRole("button", { name: "メモ", exact: true }).click();
     await pageA.getByLabel("メモ", { exact: true }).fill("本人だけの振り返り");
+    const memoSaved = pageA.waitForResponse(
+      (response) =>
+        /^\/api\/workouts\/[^/]+\/memo$/.test(new URL(response.url()).pathname) &&
+        response.request().method() === "PUT" &&
+        response.ok(),
+    );
     await pageA.getByRole("button", { name: "保存", exact: true }).click();
-    await expect(pageA.getByRole("status")).toContainText("保存しました");
+    expect((await (await memoSaved).json()).content).toBe("本人だけの振り返り");
     await expect(
       pageA.getByRole("article").getByRole("button", { name: "メモ", exact: true }),
     ).toBeVisible();

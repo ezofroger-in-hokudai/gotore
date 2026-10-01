@@ -1,9 +1,11 @@
 "use client";
 import { api } from "@/lib/api";
 import { useEffect, useState } from "react";
+import { LoadingState } from "../loading/loading-state";
 import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 import { useMemoDelivery, useVisibleMemo } from "./memo-delivery-provider";
 import type { Memo } from "./memo-draft";
+import { MemoFeedback, memoNeedsReview } from "./memo-feedback";
 export function WorkoutMemo({
   workoutId,
   active = true,
@@ -14,14 +16,14 @@ export function WorkoutMemo({
   const target = { path: `/workouts/${workoutId}/memo`, label };
   const { store } = useMemoDelivery();
   const entry = useVisibleMemo(target, active);
+  const needsReview = memoNeedsReview(entry);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [reload, setReload] = useState(false);
-  const [saved, setSaved] = useState(false);
   useEffect(() => {
-    if (entry.phase === "error") setOpen(true);
-  }, [entry.phase]);
+    if (entry.phase === "error" && needsReview) setOpen(true);
+  }, [entry.phase, needsReview]);
   async function load(discard = false) {
     if (discard && entry.phase === "sending") return;
     if (!discard) {
@@ -30,14 +32,13 @@ export function WorkoutMemo({
     }
     setLoading(true);
     setError("");
-    setSaved(false);
     try {
       const value = await api<Memo>(target.path, {}, userId);
       if (discard) store.discard(target, value);
       else store.prime(target, value);
       setReload(false);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "メモを取得できませんでした。");
+    } catch {
+      setError("メモを開けません。");
     } finally {
       setLoading(false);
     }
@@ -69,12 +70,11 @@ export function WorkoutMemo({
                 disabled={loading}
                 onChange={(event) => {
                   store.edit(target, event.target.value);
-                  setSaved(false);
                 }}
               />
             </div>
           )}
-          {loading && <output>処理中…</output>}
+          {loading && <LoadingState label="メモを読み込み中" compact />}
           <div className="memo-buttons">
             {entry.memo && (
               <button
@@ -84,7 +84,6 @@ export function WorkoutMemo({
                 onClick={() => {
                   if (store.enqueue(target)) {
                     setOpen(false);
-                    setSaved(true);
                   }
                 }}
               >
@@ -137,29 +136,12 @@ export function WorkoutMemo({
           )}
         </>
       )}
-      {entry.phase === "sending" && (
-        <output className="memo-send-status">端末で受付済み・送信中…</output>
-      )}
-      {entry.storageError && (
+      {entry.phase === "sending" && <LoadingState label="メモを送信中" compact />}
+      <MemoFeedback entry={entry} onRetry={() => store.retry(target)} disabled={loading} />
+      {error && !entry.error && !entry.storageError && (
         <p className="error" role="alert">
-          端末へ保持できません。閉じる前にメモを保存してください。
+          {error}
         </p>
-      )}
-      {(error || entry.error) && (
-        <p className="error" role="alert">
-          {error || entry.error}
-          {entry.phase === "error" && (
-            <button type="button" className="text-button" onClick={() => store.retry(target)}>
-              再送
-            </button>
-          )}
-        </p>
-      )}
-      {saved && entry.phase === "idle" && !entry.dirty && (
-        <output className="notice">保存しました。</output>
-      )}
-      {open && entry.dirty && (
-        <output className="notice">この端末の未保存メモを復元しました。</output>
       )}
     </div>
   );
