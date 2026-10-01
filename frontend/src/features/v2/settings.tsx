@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { CatalogPanel } from "../exercises/catalog-panel";
 import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
+import { NotificationSettingsPanel } from "../notifications/notification-settings";
+import type { useNotifications } from "../notifications/use-notifications";
 import { AvatarPanel } from "../settings/avatar-panel";
 import { SettingsPanel } from "../settings/settings-panel";
 import { SuggestionBox, useSuggestionBox } from "../settings/suggestion-box";
@@ -40,6 +42,7 @@ export function usePreferences(userId: string) {
 }
 
 export function Preferences({
+  notifications,
   resources,
   catalog,
   preferences,
@@ -48,6 +51,7 @@ export function Preferences({
   onLogout,
   signingOut,
 }: {
+  notifications: ReturnType<typeof useNotifications>;
   resources: SettingsProfile;
   catalog: ReturnType<typeof useExerciseCatalog>;
   preferences: ReturnType<typeof usePreferences>;
@@ -57,7 +61,7 @@ export function Preferences({
   signingOut: boolean;
 }) {
   const [sheet, setSheet] = useState<
-    "name" | "avatar" | "theme" | "exercises" | "suggestion" | "logout" | null
+    "name" | "avatar" | "theme" | "exercises" | "suggestion" | "notifications" | "logout" | null
   >(null);
   const suggestion = useSuggestionBox();
   const { profile, avatar } = resources;
@@ -126,6 +130,12 @@ export function Preferences({
           セット保存時に軽く振動します。対応する端末・ブラウザで利用できます。
         </p>
       </div>
+      <div className="v2-rows">
+        <button className="v2-row" type="button" onClick={() => setSheet("notifications")}>
+          <span>通知</span>
+          <span aria-hidden="true">›</span>
+        </button>
+      </div>
       <h2>サポート</h2>
       <div className="v2-rows">
         <button
@@ -157,22 +167,26 @@ export function Preferences({
       {sheet && sheet !== "logout" && (
         <Sheet
           title={
-            sheet === "suggestion"
-              ? "目安箱"
-              : sheet === "exercises"
-                ? "種目一覧"
-                : sheet === "avatar"
-                  ? "プロフィール画像"
-                  : sheet === "name"
-                    ? "表示名"
-                    : sheet === "theme"
-                      ? "外観"
-                      : "触覚フィードバック"
+            sheet === "notifications"
+              ? "通知"
+              : sheet === "suggestion"
+                ? "目安箱"
+                : sheet === "exercises"
+                  ? "種目一覧"
+                  : sheet === "avatar"
+                    ? "プロフィール画像"
+                    : sheet === "name"
+                      ? "表示名"
+                      : sheet === "theme"
+                        ? "外観"
+                        : "触覚フィードバック"
           }
           onClose={() => setSheet(null)}
           dismissOnBackdrop={sheet !== "exercises" && sheet !== "avatar" && sheet !== "name"}
         >
-          {sheet === "suggestion" ? (
+          {sheet === "notifications" ? (
+            <NotificationSettingsPanel notifications={notifications} />
+          ) : sheet === "suggestion" ? (
             <SuggestionBox state={suggestion} />
           ) : sheet === "exercises" ? (
             <CatalogPanel catalog={catalog} />

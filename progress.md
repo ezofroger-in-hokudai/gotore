@@ -4624,3 +4624,17 @@
 - 影響範囲: mainから追加された履歴・分析・画面遷移関連一式と、競合した記録画面・ワークスペース・資料。記録画面では当日仲間APIを取得せず、ホームでは従来どおり取得する。
 - 競合対応: `docs/design/training-session.md`、`frontend/src/features/session/session-screen.tsx`、`frontend/src/features/v2/workspace.tsx`、`task.md` の4件を解消。記録画面への仲間引き継ぎ専用E2E `peer-handoff.spec.ts` は確定仕様と矛盾するため統合対象から除外した。
 - 検証: `make check` 成功（backend 104件成功/180件DBなしskip、frontend単体116件成功、lint・型・production build成功）。競合マーカーと未解消ファイルがないことを確認する。
+
+
+## 2026-10-01 15:56 スタンプ・開始通知を最新mainへ分離してPR準備（#21）
+
+- 変更内容: ユーザー依頼で、ローカルの通知実装だけを最新main aa3df73からの専用ブランチへ移した。全画面キュー、650ms/2.5秒/5秒、5送り主/10件集約、開始人数更新/非延長、スタンプ上スワイプ、開始画面タップ/背景操作継続、アカウント別設定、匿名Web Push・永続配信/再試行/購読解除を追加。
+- 変更内容: 認証通知API、イベント/購読/配信待ちmigration、VAPID鍵生成、永続ワーカーの起動手順と環境サンプルを追加。通知設定のチェック欄を44pxの行へ統一し、全項目が確認しやすい表示に調整。既存の記録キャッシュ、プロフィール共通取得、触覚設定、メモ保存の最新main動作を保持。
+- 目的: 採用した共通スタンプカードとCグラデーションの実線参戦チケットを、他作業の未コミット変更を混ぜずレビュー可能にする。
+- 影響範囲: 通知UI/API/DB/ワーカー、Workspaceと設定、関連テスト、設計/運用資料。紹介動画とストップウォッチは含めない。
+- 関連ファイル: `frontend/src/features/notifications/`、`frontend/public/notification-worker.js`、`backend/app/{api/routes,infrastructure,schemas}/notifications.py`、`backend/app/services/notification_{dispatch,keys}.py`、`supabase/migrations/20261001030000_activity_notifications.sql`、`docs/activity-notifications.md`、`docs/design/activity-notifications.md`、`docs/images/activity-notifications/`。
+- 検証: 専用DB gotore_notifications_test（隔離PostgreSQL 55440）でmake check成功（backend310/frontend146/lint/型/build）。通知E2E9件成功。撮影fixture2件も成功し、320/430pxの開始・12件集約・設定を撮影して目視。撮影専用の一時テストはPRに含めない。設定表示調整後の最終make checkもbackend310/frontend146/lint/型/buildすべて成功。
+- 途中失敗: 最初の分離で既存record_snapshotルーター登録が漏れ、backend9件が404等で失敗。既存登録を戻して310件成功。撮影fixtureで開始とスタンプの仮IDを再利用し2件失敗、種類別IDへ修正して再撮影成功。アプリの重複排除は変更していない。
+- テスト順序: 先行ローカル実装ではキュー/DB/受信のテストを先に用意。今回のPR分離は既存の通知テストを再利用し、可逆な設定表示調整は既存E2Eと画像で直接確認。
+- 未解決事項: 公開環境のVAPID鍵/永続ワーカー/migration反映、Android/iOS実機の閉じた状態の配信。先行ローカル全E2Eの160成功/97失敗を今回の成功とは扱わず、最新main上の全件をCIで確認する。独立レビュー未実施。既存ローカルDBはreset・履歴修復しない。
+- 次のアクション: 画像付き通知PRをmain宛てに作成し、全件CIを確認。その後、リング付きストップウォッチを別ブランチで実装する。

@@ -5,6 +5,9 @@ import type { Session } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { LoadingState } from "../loading/loading-state";
+import { ActivityNotifications } from "../notifications/activity-notifications";
+import { disablePush } from "../notifications/browser-notifications";
+import { useNotifications } from "../notifications/use-notifications";
 import { OnboardingGuide } from "../onboarding/onboarding-guide";
 import {
   RecordSnapshotProvider,
@@ -183,6 +186,19 @@ function WorkspaceContent({ session }: { session: Session }) {
     const timer = window.setTimeout(() => setOpened(true), 15_000);
     return () => window.clearTimeout(timer);
   }, []);
+  const notifications = useNotifications(
+    session.user.id,
+    view,
+    opened,
+    training.session?.revision || 0,
+  );
+  useEffect(() => {
+    const home = (event: MessageEvent) => {
+      if (event.data?.type === "notification-home") navigate("home");
+    };
+    navigator.serviceWorker?.addEventListener("message", home);
+    return () => navigator.serviceWorker?.removeEventListener("message", home);
+  });
   const previousView = useRef(view);
   // biome-ignore lint/correctness/useExhaustiveDependencies: ホームと履歴は同じ取得を有効にするため、履歴への再訪時だけ明示的に再確認する。
   useEffect(() => {
@@ -296,6 +312,7 @@ function WorkspaceContent({ session }: { session: Session }) {
     setSigningOut(true);
     sharedCache.clear();
     try {
+      await disablePush();
       memoDelivery.stop();
       await recordCache?.clear();
       const result = await getSupabase()?.auth.signOut({ scope: "local" });
@@ -519,6 +536,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         {view === "settings" && (
           <Preferences
+            notifications={notifications}
             resources={settingsProfile}
             catalog={catalog}
             preferences={preferences}
@@ -616,6 +634,9 @@ function WorkspaceContent({ session }: { session: Session }) {
           disabled={!canStart}
           onActivate={startOrResume}
         />
+      )}
+      {opened && (
+        <ActivityNotifications notifications={notifications} recording={view === "record"} />
       )}
       <nav className="bottom-nav" aria-label="メインナビゲーション">
         {(
