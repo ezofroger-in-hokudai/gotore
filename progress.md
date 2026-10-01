@@ -1,5 +1,17 @@
 # progress.md
 
+## 2026-10-01 10:51 設定プロフィールの取得結果を共有（#278）
+- 変更内容・目的: Workspaceにユーザー単位のprofile/avatar取得を保持し、一覧・名前・画像編集で共有。直後の往復と編集の追加GETをなくし、60秒後の再訪は表示を保持して背景更新。保存・削除結果を即反映し、遅い旧応答は既存writesの制御で採用しない。
+- 検証: 6件の先行テストはすべて旧実装で失敗し、一次修正後6件成功。プロフィール追加検証5件成功（画像の保存/再表示/削除、3往復でGET各1件、古い応答と背景503、別アカウントの名前/画像分離、移譲の重複確定）。通常check-fastは専用DBのbackend300・frontend137・lint/型成功。
+- 影響範囲・関連ファイル: settings/use-settings-profile.ts、settings/avatar/name、v2/workspace/settings、settings-ui/live-avatars、docs/design/settings-screen.md、docs/loading-performance.md。画像はメモリのみで永続化しない。
+- 未解決事項・次のアクション: make checkと最終ソースのCI全件検証。実機・独立レビューは未取得。
+
+## 2026-10-01 10:37 操作調査の6件の実装に着手
+- 変更内容・目的: ユーザーが直前に挙げた6件の修正を承認。#278/#279/#269/#268/#270/#271の仕様、コード、関連テストを確認し、main 094f34aからfix/278-user-auditを作成。調査資料PR #277の変更は混ぜない。
+- 方針・影響範囲: プロフィールはユーザー単位で受信内容を共有し、保存結果を反映。人体図は失敗と空を区別。STARTは復元/resizeで画面内補正。編集行の色は既存テーマ変数を使用。移譲は対象と権限変更を確認し、削除等は送信中に取消できるように見せない。API/DB契約・操作サイズは維持。
+- 関連ファイル: settings/profile、v2/workspace/settings/personal-history/floating-training/group-screen、v2.css、機能別E2E、docs/design。
+- 検証・次のアクション: 先に不具合を再現するE2Eを既存ファイルに追加し、失敗を確認して実装。通常チェック、関連E2E、全件CIとレビュー可能なPRを用意する。実機検証・独立レビューは未取得。
+
 ## 2026-10-01 03:45 テスト責務・共通基盤と現行操作を整理（#218）
 - 変更内容・目的: 全E2Eを共通fixtureへ統一し、通常pageの未処理例外と失敗時のAPIパス/method/statusを診断する。UIと実Auth/DBをprojectで分け、CIは両方の全件実行を維持。ローカルAuth設定をworker内で保持し、CIでは導入済みCLIを使う。メモfixtureは保存内容・revisionを保持する。
 - 整理: training-experienceの5ケースを担当機能へ移動。終了主導線をtraining-lifecycleへ改名。旧招待コード・統一週画面・旧記録配置・記録中常時スタンプの期待値を現行画面へ移行し、移行先をdocs/testing-coverage.mdへ記録。記録操作の3回繰り返しを1回へ統合し、3幅/2テーマの配置確認を維持。通常screenshotの出力先をtest-resultsへ変更し、採用画像を上書きしない。
