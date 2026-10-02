@@ -55,6 +55,7 @@ export function PersonalHistory({
   active,
   prefetch,
   refreshKey,
+  resetKey,
   onEdit,
   onReuse,
   onDeleted,
@@ -64,6 +65,7 @@ export function PersonalHistory({
   active: boolean;
   prefetch: boolean;
   refreshKey: number;
+  resetKey: number;
   onEdit: (record: Workout) => void;
   onReuse: (record: Workout) => void;
   onDeleted: () => void;
@@ -71,6 +73,7 @@ export function PersonalHistory({
   const current = today();
   const [tab, setTab] = useState<Tab>(guideTarget?.target === "graph" ? "graph" : "calendar");
   const [scope, setScope] = useState<HistoryScope>({ part: "all", exercise: "" });
+  const previousResetKey = useRef(resetKey);
   const [month, setMonth] = useState(current.slice(0, 7));
   const [grain, setGrain] = useState<HistoryGrain>("month");
   const [metric, setMetric] = useState<HistoryMetric>("volume");
@@ -85,6 +88,12 @@ export function PersonalHistory({
     if (guideTarget?.target === "graph") setTab("graph");
     if (guideTarget?.target === "calendar") setTab("calendar");
   }, [guideTarget?.target]);
+  useEffect(() => {
+    if (previousResetKey.current === resetKey) return;
+    previousResetKey.current = resetKey;
+    setScope({ part: "all", exercise: "" });
+    setTab("calendar");
+  }, [resetKey]);
   const summary = useResource<HistorySummary>("/history/summary", refreshKey, false, true, {
     enabled: active,
     prefetch,

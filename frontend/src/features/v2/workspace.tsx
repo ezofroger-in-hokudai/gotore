@@ -51,6 +51,7 @@ function WorkspaceContent({ session }: { session: Session }) {
   const [groupId, setGroupId] = useState("");
   const [groupMode, setGroupMode] = useState<CommunityMode>("list");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [historyResetKey, setHistoryResetKey] = useState(0);
   const [groupRefreshKey, setGroupRefreshKey] = useState(0);
   const [editing, setEditing] = useState<Workout | null>(null);
   const [copy, setCopy] = useState<Workout | null>(null);
@@ -411,6 +412,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             prefetch={prepareHistory && historyReady}
             userId={session.user.id}
             refreshKey={refreshKey}
+            resetKey={historyResetKey}
             onEdit={(record) => {
               if (record.started_at && !record.ended_at) navigate("record");
               else {
@@ -613,7 +615,12 @@ function WorkspaceContent({ session }: { session: Session }) {
                   if (destination !== groupMode) setGroupMode(destination);
                   navigate(next, destination);
                 }
-              } else navigate(next);
+              } else {
+                if (next === "history" && (view === "history" || view === "edit")) {
+                  setHistoryResetKey((key) => key + 1);
+                }
+                navigate(next);
+              }
             }}
           >
             {label}

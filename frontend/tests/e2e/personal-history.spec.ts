@@ -261,6 +261,25 @@ test("採用した履歴の通算・部位・カレンダー・グラフ・人�
     "1",
   );
   await page.screenshot({ path: "test-results/personal-history-body.png" });
+
+  await page.getByRole("button", { name: "胸", exact: true }).first().click();
+  await page.getByRole("button", { name: "ベンチプレス", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "メインナビゲーション" })
+    .getByRole("button", { name: "履歴", exact: true })
+    .click();
+  await expect(page.getByRole("button", { name: "すべて", exact: true }).first()).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByRole("button", { name: "全種目", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByRole("tab", { name: "カレンダー" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
 });
 
 test("履歴のカード・タブ・グラフはダークテーマの共通色を使う", async ({ page }) => {
