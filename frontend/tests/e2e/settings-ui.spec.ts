@@ -105,8 +105,10 @@ test("狭い画面でも設定とインライン編集を横にはみ出さず�
       .toBe(true);
     for (const label of ["ライト", "ダーク", "自動"]) {
       const size = await page.getByRole("button", { name: label, exact: true }).boundingBox();
-      expect(size?.height).toBeGreaterThanOrEqual(44);
+      expect(size?.height).toBe(40);
     }
+    await expect(page.locator(".appearance-setting")).toHaveCSS("border-bottom-width", "1px");
+    await expect(page.locator(".haptic-setting")).toHaveCSS("border-bottom-width", "0px");
     const displayName = page.getByRole("button", { name: "表示名を編集", exact: true });
     await expect(displayName).not.toContainText("›");
     await displayName.click();

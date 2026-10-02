@@ -1142,7 +1142,8 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   white-space: nowrap;
 }
 .appearance-setting {
-  padding: 14px 16px 16px;
+  padding: 12px 16px 13px;
+  border-bottom: 1px solid var(--line);
 }
 .settings-item-label {
   display: block;
@@ -1161,7 +1162,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .appearance-options button {
   min-width: 0;
-  min-height: 44px;
+  min-height: 40px;
   border: 1px solid transparent;
   border-radius: 9px;
   padding: 8px 4px;
@@ -6243,6 +6244,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 .haptic-setting {
   cursor: pointer;
   flex-direction: row;
+  border-bottom: 0;
 }
 .haptic-value {
   display: flex;
