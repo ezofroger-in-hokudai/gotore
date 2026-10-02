@@ -1133,13 +1133,31 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .settings-name-edit-trigger {
   max-width: min(220px, 62vw);
-  overflow: hidden;
-  color: var(--text) !important;
   font-size: 14px !important;
   font-weight: 400;
+}
+.inline-edit-trigger {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  color: var(--accent) !important;
   text-align: right;
+}
+.inline-edit-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.inline-edit-pencil {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  fill: currentColor;
 }
 .record-step-setting {
   display: grid;
@@ -5647,6 +5665,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   align-items: center;
 }
 .group-name-edit-trigger {
+  max-width: min(240px, 64vw);
   text-align: right;
 }
 .group-name-inline-form,

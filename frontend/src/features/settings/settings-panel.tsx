@@ -1,8 +1,9 @@
 import { api } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { LoadingState } from "../loading/loading-state";
 import { saveDisplayName } from "./profile";
+import { useInlineInputFocus } from "./use-inline-input-focus";
 import type { SettingsProfile } from "./use-settings-profile";
 
 export function SettingsPanel({
@@ -51,9 +52,7 @@ function DisplayNameForm({
   const [message, setMessage] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+  useInlineInputFocus(inputRef);
 
   async function syncProfile() {
     await api("/me/profile", { method: "POST" });

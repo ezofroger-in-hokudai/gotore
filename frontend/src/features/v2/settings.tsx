@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NotificationSettingsPanel } from "../notifications/notification-settings";
 import type { useNotifications } from "../notifications/use-notifications";
 import { AvatarPanel } from "../settings/avatar-panel";
+import { InlineEditTrigger } from "../settings/inline-edit-trigger";
 import { SettingsPanel } from "../settings/settings-panel";
 import { SuggestionBox, useSuggestionBox } from "../settings/suggestion-box";
 import type { SettingsProfile } from "../settings/use-settings-profile";
@@ -105,14 +106,12 @@ export function Preferences({
               }}
             />
           ) : (
-            <button
-              className="text-button settings-name-edit-trigger"
-              type="button"
-              aria-label="表示名を編集"
+            <InlineEditTrigger
+              className="settings-name-edit-trigger"
+              label="表示名を編集"
+              value={profile.data?.display_name}
               onClick={() => setEditingName(true)}
-            >
-              {profile.data?.display_name}
-            </button>
+            />
           )}
         </div>
       </div>

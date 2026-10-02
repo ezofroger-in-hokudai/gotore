@@ -9,11 +9,11 @@ async function openName(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "表示名を編集", exact: true }).click();
 }
 
-async function textDocumentY(locator: Locator) {
+async function textViewportY(locator: Locator) {
   return locator.evaluate((element) => {
     const range = document.createRange();
     range.selectNodeContents(element);
-    return range.getBoundingClientRect().top + window.scrollY;
+    return range.getBoundingClientRect().top;
   });
 }
 test("表示名はAPIの値を使い、失敗・部分成功・同期再試行を区別する", async ({ page }) => {
@@ -47,9 +47,12 @@ test("表示名はカード内で編集し、キャンセルすると元の値�
   await mockTraining(page);
   await navigate(page, "設定");
   const label = page.locator(".settings-name-row > span");
-  const labelBefore = await textDocumentY(label);
+  const edit = page.getByRole("button", { name: "表示名を編集", exact: true });
+  await expect(edit.locator(".inline-edit-pencil")).toBeVisible();
+  expect((await edit.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  const labelBefore = await textViewportY(label);
   await openName(page);
-  const labelAfter = await textDocumentY(label);
+  const labelAfter = await textViewportY(label);
   expect(Math.abs(labelAfter - labelBefore)).toBeLessThanOrEqual(1);
   await expect(page.getByRole("dialog", { name: "表示名" })).toHaveCount(0);
   await expect(page.locator(".settings-name-row .group-name-inline-form")).toBeVisible();
@@ -192,9 +195,12 @@ test("オーナーは名前変更を再試行でき、メンバーには管理�
   const state = await mockTraining(page);
   await openGroup(page, "manage");
   const label = page.locator(".group-setting-row > b");
-  const labelBefore = await textDocumentY(label);
-  await page.getByRole("button", { name: "グループ名を編集", exact: true }).click();
-  const labelAfter = await textDocumentY(label);
+  const edit = page.getByRole("button", { name: "グループ名を編集", exact: true });
+  await expect(edit.locator(".inline-edit-pencil")).toBeVisible();
+  expect((await edit.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  const labelBefore = await textViewportY(label);
+  await edit.click();
+  const labelAfter = await textViewportY(label);
   expect(Math.abs(labelAfter - labelBefore)).toBeLessThanOrEqual(1);
   const name = page.getByRole("textbox", { name: "グループ名", exact: true });
   await name.fill("新しいグループ");
