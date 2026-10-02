@@ -9,6 +9,7 @@ export function History({
   active,
   prefetch = false,
   refreshKey,
+  resetKey,
   onEdit,
   onReuse,
   onDeleted,
@@ -19,6 +20,7 @@ export function History({
   active: boolean;
   prefetch?: boolean;
   refreshKey: number;
+  resetKey: number;
   onEdit: (record: Workout) => void;
   onReuse: (record: Workout) => void;
   onDeleted: () => void;
@@ -31,6 +33,7 @@ export function History({
         active={active}
         prefetch={prefetch}
         refreshKey={refreshKey}
+        resetKey={resetKey}
         onEdit={onEdit}
         onReuse={onReuse}
         onDeleted={onDeleted}

@@ -36,7 +36,8 @@ import { GROUP_REFRESH_MS, activityRefreshMs } from "./refresh-interval";
 import type { SharedWorkoutCache } from "./shared-workout-cache";
 import { Sheet } from "./sheet";
 
-type Mode = "list" | "detail" | "create" | "join" | "invite" | "members";
+export type CommunityMode = "list" | "detail" | "create" | "join" | "invite" | "members";
+type Mode = CommunityMode;
 type DetailTab = "latest" | "calendar" | "graph" | "settings";
 type InvitePreview = {
   id: string;
@@ -67,6 +68,7 @@ export function CommunityScreen({
   userId,
   refreshKey,
   onSelect,
+  onModeChange,
   onChanged,
   onOrder,
 }: {
@@ -82,6 +84,7 @@ export function CommunityScreen({
   userId: string;
   refreshKey: number;
   onSelect: (id: string) => void;
+  onModeChange: (mode: CommunityMode) => void;
   onChanged: () => void;
   onOrder: (ids: string[]) => void;
 }) {
@@ -115,6 +118,10 @@ export function CommunityScreen({
   const [memberExpanded, setMemberExpanded] = useState(false);
   const [inviteMembersExpanded, setInviteMembersExpanded] = useState(false);
   const [editingName, setEditingName] = useState(false);
+
+  useEffect(() => {
+    onModeChange(mode);
+  }, [mode, onModeChange]);
 
   const detail = useResource<GroupDetail>(
     selected ? `/groups/${selected}` : null,

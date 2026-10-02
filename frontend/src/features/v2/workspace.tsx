@@ -32,7 +32,7 @@ import { AvatarProvider } from "./avatar";
 import { CommunityHome } from "./community";
 import { FloatingTraining } from "./floating-training";
 import { GroupHistoryCache } from "./group-history-cache";
-import { CommunityScreen } from "./group-screen";
+import { type CommunityMode, CommunityScreen } from "./group-screen";
 import { History } from "./history";
 import { runNavigationMotion } from "./navigation-motion";
 import { GROUP_REFRESH_MS, todayActivityRefreshMs } from "./refresh-interval";
@@ -51,6 +51,10 @@ type View =
   | "groups"
   | "edit"
   | "result";
+function scrollPageToTop() {
+  window.scrollTo({ top: 0 });
+  document.querySelector<HTMLElement>(".main-content")?.scrollTo({ top: 0 });
+}
 export function Workspace({ session }: { session: Session }) {
   return (
     <AvatarProvider key={session.user.id}>
@@ -76,9 +80,10 @@ function WorkspaceContent({ session }: { session: Session }) {
   const viewRef = useRef(view);
   const historyPosition = useRef(0);
   const [groupId, setGroupId] = useState("");
-  const [groupDetail, setGroupDetail] = useState(false);
+  const [groupMode, setGroupMode] = useState<CommunityMode>("list");
   const [groupActivityVisible, setGroupActivityVisible] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [historyResetKey, setHistoryResetKey] = useState(0);
   useEffect(() => {
     if (!refreshKey) return;
     const timer = window.setTimeout(() => void recordCache?.refresh(), 1000);
@@ -279,7 +284,7 @@ function WorkspaceContent({ session }: { session: Session }) {
     // カード切替は履歴を増やさず、シートから戻る先の選択も更新する。
     window.history.replaceState({ ...window.history.state, groupId: selected }, "");
   }, [view, selected]);
-  function navigate(next: View, communityMode?: "detail" | "list") {
+  function navigate(next: View, communityMode?: CommunityMode) {
     const current = viewRef.current;
     if (next !== current) {
       historyPosition.current = (Number(window.history.state?.gotoreMotionIndex) || 0) + 1;
@@ -374,7 +379,7 @@ function WorkspaceContent({ session }: { session: Session }) {
           }
           onVisit={(next, target) => {
             setGuideTarget({ target });
-            setGroupDetail(false);
+            setGroupMode("list");
             viewRef.current = next;
             setView(next);
             window.history.replaceState(
@@ -437,11 +442,11 @@ function WorkspaceContent({ session }: { session: Session }) {
               setGroupId(selected);
             }}
             onGroups={() => {
-              setGroupDetail(false);
+              setGroupMode("list");
               navigate("groups", "list");
             }}
             onDetail={() => {
-              setGroupDetail(true);
+              setGroupMode("detail");
               navigate("groups", "detail");
             }}
             active={view === "home"}
@@ -495,6 +500,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             prefetch={prepareHistory && historyReady}
             userId={session.user.id}
             refreshKey={refreshKey}
+            resetKey={historyResetKey}
             onEdit={(record) => {
               if (record.started_at && !record.ended_at) navigate("record");
               else {
@@ -550,11 +556,12 @@ function WorkspaceContent({ session }: { session: Session }) {
             today={visibleTodayActivity}
             onActivityVisibleChange={setGroupActivityVisible}
             selected={selected}
-            initialDetail={groupDetail}
+            initialDetail={groupMode === "detail"}
             active={opened && view === "groups"}
             userId={session.user.id}
             refreshKey={refreshKey}
             onSelect={setGroupId}
+            onModeChange={setGroupMode}
             onOrder={(ids) => {
               groupOrder.save(ids);
               setGroupId(selected);
@@ -703,8 +710,8 @@ function WorkspaceContent({ session }: { session: Session }) {
             }
             onClick={() => {
               if (next === "groups") {
-                setGroupDetail(false);
                 if (view === "groups") {
+                  setGroupMode("list");
                   const state = {
                     ...window.history.state,
                     gotoreView: "groups",
@@ -713,8 +720,23 @@ function WorkspaceContent({ session }: { session: Session }) {
                   };
                   window.history.replaceState(state, "");
                   window.dispatchEvent(new PopStateEvent("popstate", { state }));
-                } else navigate(next, "list");
-              } else navigate(next);
+                  scrollPageToTop();
+                } else {
+                  const requiresGroup = ["detail", "invite", "members"].includes(groupMode);
+                  const destination =
+                    requiresGroup && !groups.some((group) => group.id === groupId)
+                      ? "list"
+                      : groupMode;
+                  if (destination !== groupMode) setGroupMode(destination);
+                  navigate(next, destination);
+                }
+              } else {
+                if (next === "history" && (view === "history" || view === "edit")) {
+                  setHistoryResetKey((key) => key + 1);
+                }
+                navigate(next);
+                if (view === next || (next === "history" && view === "edit")) scrollPageToTop();
+              }
             }}
           >
             {label}
