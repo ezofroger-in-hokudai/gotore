@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { LoadingState } from "../loading/loading-state";
 import { saveDisplayName } from "./profile";
 import type { SettingsProfile } from "./use-settings-profile";
@@ -49,6 +49,11 @@ function DisplayNameForm({
   const [needsSync, setNeedsSync] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   async function syncProfile() {
     await api("/me/profile", { method: "POST" });
@@ -90,6 +95,7 @@ function DisplayNameForm({
           <label>
             <span className="sr-only">表示名</span>
             <input
+              ref={inputRef}
               required
               maxLength={20}
               value={name}

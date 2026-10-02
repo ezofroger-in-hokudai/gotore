@@ -40,6 +40,7 @@ test("表示名はカード内で編集し、キャンセルすると元の値�
   await expect(page.getByRole("dialog", { name: "表示名" })).toHaveCount(0);
   await expect(page.locator(".settings-name-row .group-name-inline-form")).toBeVisible();
   const name = page.getByRole("textbox", { name: "表示名", exact: true });
+  await expect(name).toBeFocused();
   await name.fill("保存しない名前");
   await page.getByRole("button", { name: "キャンセル", exact: true }).click();
   await expect(name).toHaveCount(0);
