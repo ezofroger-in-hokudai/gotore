@@ -151,12 +151,13 @@ export function Sheet({
           <h2>{title}</h2>
           {showCloseButton && (
             <button
-              className="text-button"
+              className="sheet-close-button"
               type="button"
               disabled={closeDisabled}
+              aria-label="閉じる"
               onClick={() => close.current()}
             >
-              閉じる
+              <span aria-hidden="true">×</span>
             </button>
           )}
         </div>

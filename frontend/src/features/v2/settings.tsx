@@ -86,26 +86,29 @@ export function Preferences({
             ›
           </span>
         </button>
-        <button
-          className="v2-row settings-inline-trigger"
-          type="button"
-          aria-expanded={editingName}
-          onClick={() => setEditingName(true)}
-        >
+        <div className={`group-setting-row settings-name-row${editingName ? " is-editing" : ""}`}>
           <span>表示名</span>
-          <span>{profile.data?.display_name}</span>
-        </button>
-        {editingName && (
-          <SettingsPanel
-            profile={profile}
-            onCancel={() => setEditingName(false)}
-            onSaved={(displayName) => {
-              profile.updateData((current) => ({ ...current, display_name: displayName }));
-              onChanged();
-              setEditingName(false);
-            }}
-          />
-        )}
+          {editingName ? (
+            <SettingsPanel
+              profile={profile}
+              onCancel={() => setEditingName(false)}
+              onSaved={(displayName) => {
+                profile.updateData((current) => ({ ...current, display_name: displayName }));
+                onChanged();
+                setEditingName(false);
+              }}
+            />
+          ) : (
+            <button
+              className="text-button settings-name-edit-trigger"
+              type="button"
+              aria-label="表示名を編集"
+              onClick={() => setEditingName(true)}
+            >
+              {profile.data?.display_name}
+            </button>
+          )}
+        </div>
       </div>
       <h2>トレーニング</h2>
       <div className="v2-rows">

@@ -7,6 +7,8 @@ test("プロフィール画像シートは外側をタップすると閉じ、�
   await page.getByRole("button", { name: /^プロフィール画像/ }).click();
   const sheet = page.getByRole("dialog", { name: "プロフィール画像" });
   await expect(sheet).toBeVisible();
+  await expect(sheet.getByText("閉じる", { exact: true })).toHaveCount(0);
+  await expect(sheet.getByRole("button", { name: "閉じる", exact: true })).toContainText("×");
   await sheet.getByRole("heading", { name: "プロフィール画像" }).click();
   await expect(sheet).toBeVisible();
   const inside = await sheet.boundingBox();

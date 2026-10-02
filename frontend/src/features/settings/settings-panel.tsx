@@ -24,7 +24,7 @@ export function SettingsPanel({
     );
   }
   return (
-    <section className="display-name-editor">
+    <section className="group-name-inline-form">
       {profile.error ? (
         <div className="error" role="alert">
           {profile.error}
@@ -84,8 +84,8 @@ function DisplayNameForm({
   }
 
   return (
-    <section className="display-name-editor">
-      <form onSubmit={submit}>
+    <section>
+      <form className="group-name-inline-form" onSubmit={submit}>
         <fieldset disabled={busy}>
           <label>
             <span className="sr-only">表示名</span>
@@ -101,12 +101,12 @@ function DisplayNameForm({
             />
           </label>
 
-          <div className="display-name-actions">
-            <button className="secondary" type="button" onClick={onCancel}>
+          <div className="group-name-inline-actions">
+            <button className="text-button" type="button" onClick={onCancel}>
               キャンセル
             </button>
-            <button className="primary" type="submit">
-              {busy ? "変更中…" : "保存"}
+            <button className="group-name-commit" type="submit">
+              {busy ? "変更中…" : "決定"}
             </button>
           </div>
         </fieldset>

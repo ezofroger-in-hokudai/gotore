@@ -5,7 +5,7 @@ import { mockTraining, navigate, openGroup } from "./mock-training";
 
 async function openName(page: import("@playwright/test").Page) {
   await navigate(page, "設定");
-  await page.getByRole("button", { name: /^表示名/ }).click();
+  await page.getByRole("button", { name: "表示名を編集", exact: true }).click();
 }
 test("表示名はAPIの値を使い、失敗・部分成功・同期再試行を区別する", async ({ page }) => {
   const state = await mockTraining(page);
@@ -13,16 +13,16 @@ test("表示名はAPIの値を使い、失敗・部分成功・同期再試行�
   const name = page.getByRole("textbox", { name: "表示名", exact: true });
   await expect(name).toHaveValue("画面テスト");
   await name.fill("   ");
-  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await page.getByRole("button", { name: "決定", exact: true }).click();
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("1〜20文字");
   expect(state.authUpdates).toBe(0);
   state.failAuth = true;
   await name.fill("変更した名前");
-  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await page.getByRole("button", { name: "決定", exact: true }).click();
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("変更できません");
   state.failAuth = false;
   state.failSync = true;
-  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await page.getByRole("button", { name: "決定", exact: true }).click();
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("表示名は更新済み");
   const updates = state.authUpdates;
   state.failSync = false;
@@ -38,6 +38,7 @@ test("表示名はカード内で編集し、キャンセルすると元の値�
   await mockTraining(page);
   await openName(page);
   await expect(page.getByRole("dialog", { name: "表示名" })).toHaveCount(0);
+  await expect(page.locator(".settings-name-row .group-name-inline-form")).toBeVisible();
   const name = page.getByRole("textbox", { name: "表示名", exact: true });
   await name.fill("保存しない名前");
   await page.getByRole("button", { name: "キャンセル", exact: true }).click();
@@ -63,7 +64,7 @@ test("プロフィール取得失敗から再試行できる", async ({ page }) 
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText(
     "プロフィールを取得できません",
   );
-  await expect(page.getByRole("button", { name: "保存", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "決定", exact: true })).toHaveCount(0);
   fail = false;
   await page.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "表示名", exact: true })).toHaveValue(
@@ -105,10 +106,10 @@ test("狭い画面でも設定とインライン編集を横にはみ出さず�
       const size = await page.getByRole("button", { name: label, exact: true }).boundingBox();
       expect(size?.height).toBeGreaterThanOrEqual(44);
     }
-    const displayName = page.getByRole("button", { name: /^表示名/ });
+    const displayName = page.getByRole("button", { name: "表示名を編集", exact: true });
     await expect(displayName).not.toContainText("›");
     await displayName.click();
-    await expect(page.getByRole("button", { name: "保存", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "決定", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "キャンセル", exact: true })).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
@@ -200,7 +201,7 @@ test("設定の背景更新が失敗・遅延しても既知の名前と新し�
   await expect.poll(() => reads).toBe(3);
   await page.getByRole("button", { name: /^表示名/ }).click();
   await page.getByRole("textbox", { name: "表示名", exact: true }).fill("保存した新しい名前");
-  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await page.getByRole("button", { name: "決定", exact: true }).click();
   await expect.poll(() => state.syncs).toBe(1);
   await expect(page.getByRole("textbox", { name: "表示名", exact: true })).toHaveCount(0);
   release();

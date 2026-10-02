@@ -1097,13 +1097,13 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .preferences h2 {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   margin: 28px 0 10px;
 }
 .preferences > h1 {
   color: var(--text);
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
 }
 .preferences .v2-rows {
@@ -1111,39 +1111,35 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .preferences .v2-row {
   min-height: 56px;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 400;
 }
 .preferences .v2-row > span:last-child {
   color: var(--text);
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 400;
 }
 .preferences .logout-row {
   color: #bd3038;
 }
-.settings-inline-trigger[aria-expanded="true"] {
-  border-bottom-color: var(--line);
+.settings-name-row {
+  min-height: 56px;
+  padding: 7px 16px;
+  font-size: 14px;
+  font-weight: 400;
 }
-.display-name-editor {
-  padding: 14px 16px 16px;
+.settings-name-row > span {
+  font-size: 15px;
 }
-.display-name-editor fieldset {
-  display: grid;
-  gap: 12px;
-}
-.display-name-editor input {
-  width: 100%;
-  min-height: 46px;
-  padding: 10px 12px;
-}
-.display-name-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.display-name-actions button {
-  width: 100%;
+.settings-name-edit-trigger {
+  max-width: min(220px, 62vw);
+  overflow: hidden;
+  color: var(--text) !important;
+  font-size: 14px !important;
+  font-weight: 400;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .appearance-setting {
   padding: 14px 16px 16px;
@@ -1152,8 +1148,8 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   display: block;
   margin-bottom: 10px;
   color: var(--text);
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 400;
 }
 .appearance-options {
   display: grid;
@@ -1171,8 +1167,8 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   padding: 8px 4px;
   background: transparent;
   color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
 }
 .appearance-options button[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
@@ -1221,6 +1217,19 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 .v2-sheet .sheet-drag-region {
   touch-action: none;
   cursor: grab;
+}
+.sheet-close-button {
+  display: grid;
+  flex: 0 0 44px;
+  width: 44px;
+  min-height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 24px;
+  line-height: 1;
 }
 .v2-sheet .section-heading h2 {
   font-size: 18px;
