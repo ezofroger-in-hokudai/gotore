@@ -1,24 +1,15 @@
 "use client";
 
-import type {
-  BodyPart,
-  ExerciseOption,
-  SessionBests,
-  TodayActivity,
-  TrainingSession,
-  Workout,
-} from "@/lib/api";
+import type { BodyPart, RecordBestSet, SessionBests, TrainingSession } from "@/lib/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { dateLabel } from "../activity/calendar";
 import { BODY_PARTS, BODY_PART_LABELS, normalizeBodyPart } from "../exercises/body-parts";
 import { ExerciseCatalog } from "../exercises/exercise-catalog";
-import { StampControl } from "../stamps/stamp-control";
+import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
+import { BestFlame } from "../training/best-flame";
 import { memoDraftKey, readMemoDraft } from "../training/memo-draft";
-import { RecordList } from "../training/record-list";
 import { useResource } from "../training/use-resource";
-import { Avatar } from "../v2/avatar";
-import { type SharedWorkoutCache, sharedWorkoutVersion } from "../v2/shared-workout-cache";
 import { Sheet } from "../v2/sheet";
+import { FinishConfirmDialog } from "./finish-confirm-dialog";
 import { InlineMemo } from "./inline-memo";
 import { NumberWheel } from "./number-wheel";
 import {
@@ -32,8 +23,10 @@ import {
   setValue,
   updateSet,
 } from "./session";
+import { sessionExerciseOptions } from "./session-exercise-options";
 import { TrainingOverview } from "./training-overview";
 import { useExerciseContext } from "./use-exercise-context";
+import { useFinishWeekRecords } from "./use-finish-week-records";
 import type { SessionController } from "./use-session";
 
 export function SessionScreen({
@@ -45,9 +38,7 @@ export function SessionScreen({
   onFinished,
   haptic,
   catalog,
-  sharedCache,
-  todayActivity,
-  onSelectingChange,
+  finishRequest,
 }: {
   active: boolean;
   controller: SessionController;
@@ -56,10 +47,8 @@ export function SessionScreen({
   onHistory: () => void;
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
-  catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
-  sharedCache: SharedWorkoutCache;
-  todayActivity: ReturnType<typeof useResource<TodayActivity>>;
-  onSelectingChange: (selecting: boolean) => void;
+  catalog: ReturnType<typeof useExerciseCatalog>;
+  finishRequest: number;
 }) {
   const { session } = controller;
   const [draft, setDraft] = useState<SessionInput>({ ...emptyInput });
@@ -96,9 +85,7 @@ export function SessionScreen({
       initialInput={draft}
       onPreparingInput={setDraft}
       catalog={catalog}
-      sharedCache={sharedCache}
-      todayActivity={todayActivity}
-      onSelectingChange={onSelectingChange}
+      finishRequest={finishRequest}
     />
   );
 }
@@ -113,18 +100,14 @@ function ActiveTraining({
   initialInput,
   onPreparingInput,
   catalog,
-  sharedCache,
-  todayActivity,
-  onSelectingChange,
+  finishRequest,
 }: {
   active: boolean;
   session: TrainingSession | null;
   initialInput: SessionInput;
   onPreparingInput: (input: SessionInput) => void;
-  catalog: ReturnType<typeof useResource<ExerciseOption[]>>;
-  sharedCache: SharedWorkoutCache;
-  todayActivity: ReturnType<typeof useResource<TodayActivity>>;
-  onSelectingChange: (selecting: boolean) => void;
+  catalog: ReturnType<typeof useExerciseCatalog>;
+  finishRequest: number;
   controller: SessionController;
   userId: string;
   onFinished: (record: TrainingSession) => void;
@@ -149,23 +132,27 @@ function ActiveTraining({
     if (!sessionId) onPreparingInput(input);
   }, [input, sessionId, onPreparingInput]);
   const [selecting, setSelecting] = useState(!input.name);
-  useEffect(() => onSelectingChange(selecting), [selecting, onSelectingChange]);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [inputOpen, setInputOpen] = useState(true);
   const repsField = useRef<HTMLInputElement>(null);
   const [conflictOpen, setConflictOpen] = useState(false);
   const adding = useRef(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const previousFinishRequest = useRef(finishRequest);
+  useEffect(() => {
+    if (previousFinishRequest.current === finishRequest) return;
+    previousFinishRequest.current = finishRequest;
+    if (active && session && !controller.busy) setFinishOpen(true);
+  }, [finishRequest, active, session, controller.busy]);
+  const finishRecords = useFinishWeekRecords(
+    active,
+    sessionId,
+    session?.performed_on ?? null,
+    finishOpen,
+  );
   const [error, setError] = useState("");
   const [storageWarning, setStorageWarning] = useState(false);
   const [selectedParts, setSelectedParts] = useState<BodyPart[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string>("all");
-  const [openedPeer, setOpenedPeer] = useState<{
-    groupId: string;
-    workoutId: string;
-    name: string;
-    version: string;
-  } | null>(null);
   const overviewBests = useResource<SessionBests>(
     sessionId ? `/sessions/${sessionId}/bests` : null,
     controller.confirmedRevision,
@@ -173,12 +160,14 @@ function ActiveTraining({
     true,
     { enabled: active && selecting && exercises.length > 0 },
   );
-  const bestPositions = new Set(
+  const bestPositions = new Map(
     overviewBests.data && overviewBests.data.revision === revision && !controller.pending
-      ? overviewBests.data.sets.map((set) => `${set.exercise_index}:${set.set_index}`)
+      ? overviewBests.data.sets.map(
+          (set) => [`${set.exercise_index}:${set.set_index}`, set] as const,
+        )
       : [],
   );
-  const candidates = (catalog.data ?? [])
+  const candidates = sessionExerciseOptions(catalog.data ?? [], exercises)
     .filter(
       (option) =>
         selectedParts.length === 0 ||
@@ -187,7 +176,10 @@ function ActiveTraining({
     .toSorted((left, right) => {
       const leftUsed = exercises.some((exercise) => exercise.name === left.name);
       const rightUsed = exercises.some((exercise) => exercise.name === right.name);
-      return Number(rightUsed) - Number(leftUsed) || left.name.localeCompare(right.name, "ja");
+      return (
+        Number(rightUsed) - Number(leftUsed) ||
+        (right.last_performed_on ?? "").localeCompare(left.last_performed_on ?? "")
+      );
     });
   const context = useExerciseContext(
     sessionId,
@@ -196,40 +188,21 @@ function ActiveTraining({
     controller.confirmedRevision,
     active,
   );
-  const peerRecord = useResource<Workout>(
-    openedPeer ? `/groups/${openedPeer.groupId}/workouts/${openedPeer.workoutId}` : null,
-    0,
-    false,
-    false,
-    { enabled: active && !!openedPeer },
-  );
-  const peerFeed = openedPeer
-    ? todayActivity.data?.groups
-        .find((group) => group.group_id === openedPeer.groupId)
-        ?.feed.find((item) => item.workout_id === openedPeer.workoutId)
-    : undefined;
-  const peerVersionMatches =
-    !!openedPeer && !!peerFeed && openedPeer.version === sharedWorkoutVersion(peerFeed);
-  const cachedPeer =
-    openedPeer && peerFeed && peerVersionMatches
-      ? sharedCache.get(openedPeer.groupId, peerFeed)
-      : null;
-  const visiblePeer = peerFeed && !peerRecord.error ? (peerRecord.data ?? cachedPeer) : null;
-  useEffect(() => {
-    if (openedPeer && todayActivity.data && !peerFeed) {
-      sharedCache.delete(openedPeer.groupId, openedPeer.workoutId);
-      setOpenedPeer(null);
-    }
-  }, [openedPeer, peerFeed, todayActivity.data, sharedCache]);
-  useEffect(() => {
-    if (openedPeer && peerRecord.error)
-      sharedCache.delete(openedPeer.groupId, openedPeer.workoutId);
-  }, [openedPeer, peerRecord.error, sharedCache]);
-  useEffect(() => {
-    if (openedPeer && peerFeed && peerVersionMatches && peerRecord.data && !peerRecord.error)
-      sharedCache.put(openedPeer.groupId, peerFeed, peerRecord.data);
-  }, [openedPeer, peerFeed, peerVersionMatches, peerRecord.data, peerRecord.error, sharedCache]);
   const sets = exercises.filter((e) => e.name === input.name).flatMap((e) => e.sets);
+  const confirmedBests = new Map(
+    context.data?.current_bests &&
+      context.data.current_bests.revision === revision &&
+      !controller.pending
+      ? context.data.current_bests.sets.map(
+          (set) => [`${set.exercise_index}:${set.set_index}`, set] as const,
+        )
+      : [],
+  );
+  const selectedBests = exercises.flatMap((exercise, exerciseIndex) =>
+    exercise.name === input.name
+      ? exercise.sets.map((_, setIndex) => confirmedBests.get(`${exerciseIndex}:${setIndex}`))
+      : [],
+  );
   const previous = context.data?.previous?.sets ?? [];
   const pendingExerciseMemo = useMemo(
     () =>
@@ -316,14 +289,27 @@ function ActiveTraining({
     (input.dirty || input.editing !== null);
 
   async function save() {
-    if (!session || !storageKey || controller.busy || stale || adding.current) return;
+    if (
+      !session ||
+      !storageKey ||
+      controller.busy ||
+      stale ||
+      adding.current ||
+      input.awaitingPrevious
+    )
+      return;
     adding.current = true;
     setError("");
     try {
       const value = setValue(input.weight, input.reps);
       const nextExercises = updateSet(exercises, input.name, value, input.editing);
       const result = await controller.save(nextExercises, revision);
-      const nextInput = { ...input, revision: result.revision, editing: null, dirty: false };
+      // 保存待ち中に変更した次の入力・選択種目は、完了した保存で上書きしない。
+      const current = latestInput.current;
+      const nextInput =
+        current === input
+          ? { ...input, revision: result.revision, editing: null, dirty: false }
+          : { ...current, revision: result.revision };
       setInput(nextInput);
       try {
         localStorage.setItem(storageKey, JSON.stringify(nextInput));
@@ -429,83 +415,13 @@ function ActiveTraining({
             <span className="session-wordmark">
               E-GO<span>TORE</span>
             </span>
-            <button
-              type="button"
-              className="text-button finish-training"
-              disabled={!session || controller.busy}
-              onClick={() => setFinishOpen(true)}
-            >
-              トレーニング終了
-            </button>
           </div>
-          <section className="training-peers" aria-label="今日の仲間">
-            <div className="peer-groups" role="tablist" aria-label="仲間のグループ">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={selectedGroup === "all"}
-                onClick={() => setSelectedGroup("all")}
-              >
-                すべて
-              </button>
-              {(todayActivity.data?.groups ?? []).map((group) => (
-                <button
-                  type="button"
-                  role="tab"
-                  key={group.group_id}
-                  className="group-name-tab"
-                  aria-label={group.name}
-                  aria-selected={selectedGroup === group.group_id}
-                  title={group.name}
-                  onClick={() => setSelectedGroup(group.group_id)}
-                >
-                  <span aria-hidden="true">{group.name}</span>
-                </button>
-              ))}
-            </div>
-            <div className="peer-avatars">
-              {todayActivity.data
-                ? peerItems(todayActivity.data, selectedGroup).map((peer) => (
-                    <button
-                      className="peer-avatar-button"
-                      type="button"
-                      key={`${peer.groupId}:${peer.workoutId}`}
-                      aria-label={`${peer.name}の今日の記録を開く`}
-                      onClick={() =>
-                        setOpenedPeer({
-                          groupId: peer.groupId,
-                          workoutId: peer.workoutId,
-                          name: peer.name,
-                          version: peer.version,
-                        })
-                      }
-                    >
-                      <span className="peer-avatar-wrap">
-                        <Avatar
-                          userId={peer.userId}
-                          name={peer.name}
-                          version={peer.avatarVersion}
-                          live={peer.live}
-                        />
-                        {peer.best && (
-                          <span className="peer-best" aria-label="最高記録を更新">
-                            🔥
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  ))
-                : ["first", "second", "third"].map((key) => (
-                    <span className="peer-avatar-placeholder" key={key} />
-                  ))}
-            </div>
-          </section>
           {hasRecordedSets ? (
             <details className="today-training" aria-label="今日のトレーニング">
               <summary>
-                <span>今日のトレーニング</span>
-                <span>{sessionSummary(exercises)}</span>
-                <span aria-hidden="true">…</span>
+                <span className="today-training-marker" aria-hidden="true" />
+                <span className="today-training-title">今日のトレーニング</span>
+                <span className="today-training-summary">{sessionSummary(exercises)}</span>
               </summary>
               {exercises.map((exercise, index) => (
                 <section key={`${exercise.name}-${index}`}>
@@ -513,7 +429,11 @@ function ActiveTraining({
                   {exercise.sets.map((value, setIndex) => (
                     <p key={`${exercise.name}-${setIndex}`}>
                       <span>SET {setIndex + 1}</span>
-                      <SetMeasurement weight={value.weight} reps={value.reps} />
+                      <SetMeasurement
+                        weight={value.weight}
+                        reps={value.reps}
+                        best={bestPositions.get(`${index}:${setIndex}`)}
+                      />
                     </p>
                   ))}
                 </section>
@@ -522,7 +442,7 @@ function ActiveTraining({
           ) : (
             <section className="today-training" aria-label="今日のトレーニング">
               <div className="today-training-empty">
-                <span>今日のトレーニング</span>
+                <span className="today-training-title">今日のトレーニング</span>
                 <span>0セット</span>
               </div>
             </section>
@@ -597,14 +517,6 @@ function ActiveTraining({
               <span className="session-wordmark">
                 E-GO<span>TORE</span>
               </span>
-              <button
-                type="button"
-                className="text-button finish-training"
-                disabled={!session || controller.busy}
-                onClick={() => setFinishOpen(true)}
-              >
-                トレーニング終了
-              </button>
             </header>
             <button
               className="exercise-information recording-exercise-title"
@@ -618,6 +530,7 @@ function ActiveTraining({
               <span className="memo-caption">種目メモ：</span>
               {context.data ? (
                 <InlineMemo
+                  active={active}
                   key={input.name}
                   title="種目メモ"
                   path="/exercises/memo"
@@ -710,7 +623,11 @@ function ActiveTraining({
                             }}
                           >
                             <span className="current-set-selection">
-                              <SetMeasurement weight={current.weight} reps={current.reps} />
+                              <SetMeasurement
+                                weight={current.weight}
+                                reps={current.reps}
+                                best={selectedBests[index]}
+                              />
                             </span>
                           </button>
                         </>
@@ -766,6 +683,7 @@ function ActiveTraining({
               <span className="memo-caption">今日のメモ：</span>
               {sessionId ? (
                 <InlineMemo
+                  active={active}
                   title="今日のメモ"
                   path={`/sessions/${sessionId}/exercise-memo?name=${encodeURIComponent(input.name)}`}
                   userId={userId}
@@ -775,7 +693,30 @@ function ActiveTraining({
                 <PendingMemo title="今日のメモ" content={pendingTodayMemo} />
               )}
             </section>
+            {input.awaitingPrevious && (
+              <output className="record-context-pending">
+                <span>前回の記録を確認中…</span>
+                {context.error && (
+                  <span>
+                    前回の記録を取得できませんでした。
+                    <button type="button" className="text-button" onClick={context.retry}>
+                      再試行
+                    </button>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() =>
+                        setInput((current) => ({ ...current, awaitingPrevious: false }))
+                      }
+                    >
+                      前回値なしで入力
+                    </button>
+                  </span>
+                )}
+              </output>
+            )}
             <form
+              hidden={input.awaitingPrevious}
               className={`set-entry${input.editing === null ? "" : " editing-input"}`}
               onSubmit={(e) => {
                 e.preventDefault();
@@ -903,50 +844,11 @@ function ActiveTraining({
             expanded
             startAdding
             disabled={controller.busy}
-            onChanged={catalog.retry}
+            onChanged={catalog.changed}
             onAdded={() => setCatalogOpen(false)}
             initialPrimary={selectedParts.length === 1 ? selectedParts[0] : undefined}
             showAddHeading={false}
           />
-        </Sheet>
-      )}
-      {openedPeer && (
-        <Sheet
-          title={visiblePeer ? dateLabel(visiblePeer.performed_on) : `${openedPeer.name}の記録`}
-          onClose={() => setOpenedPeer(null)}
-        >
-          {peerRecord.error ? (
-            <p className="error" role="alert">
-              {peerRecord.error}
-              <button type="button" className="text-button" onClick={peerRecord.retry}>
-                再試行
-              </button>
-            </p>
-          ) : visiblePeer ? (
-            <RecordList
-              records={[visiblePeer]}
-              empty=""
-              showDate={false}
-              headerControl={(workout) => (
-                <StampControl
-                  groupId={openedPeer.groupId}
-                  workoutId={workout.id}
-                  name={workout.display_name}
-                  direct
-                  disabled={!peerRecord.data || !!peerRecord.error}
-                />
-              )}
-            />
-          ) : (
-            <div className="peer-record-placeholder" aria-label="記録を読み込み中">
-              {peerFeed && (
-                <p>
-                  {peerFeed.display_name} · {peerFeed.exercise}
-                  {peerFeed.summary ? ` · ${peerFeed.summary.set_count}セット` : ""}
-                </p>
-              )}
-            </div>
-          )}
         </Sheet>
       )}
       {controller.status === "conflict" && (
@@ -994,30 +896,16 @@ function ActiveTraining({
         </Sheet>
       )}
       {finishOpen && session && (
-        <Sheet
-          title="トレーニング終了"
+        <FinishConfirmDialog
+          session={session}
+          records={finishRecords}
+          dirty={input.dirty}
+          busy={controller.busy}
           onClose={() => {
             if (!controller.busy) setFinishOpen(false);
           }}
-        >
-          {input.dirty && (
-            <p>
-              入力中の数値はセットに追加されていません。追加済みのセットだけを残して終了しますか？
-            </p>
-          )}
-          <button
-            className="secondary full"
-            type="button"
-            disabled={controller.busy}
-            onClick={() => setFinishOpen(false)}
-          >
-            トレーニングに戻る
-          </button>
-          <button
-            className="primary full finish-confirm"
-            type="button"
-            disabled={controller.busy}
-            onClick={async () => {
+          onFinish={() => {
+            void (async () => {
               try {
                 const finished = await controller.finish(() => {
                   // 終了で入力画面が消える前に、確認シートの自動「戻る」を解除する。
@@ -1032,11 +920,9 @@ function ActiveTraining({
               } catch {
                 setFinishOpen(false);
               }
-            }}
-          >
-            {controller.busy ? "終了中…" : "終了する"}
-          </button>
-        </Sheet>
+            })();
+          }}
+        />
       )}
     </section>
   );
@@ -1052,13 +938,24 @@ function PendingMemo({ title, content }: { title: string; content?: string }) {
   );
 }
 
-function SetMeasurement({ weight, reps }: { weight: number; reps: number }) {
+function SetMeasurement({
+  weight,
+  reps,
+  best,
+}: { weight: number; reps: number; best?: RecordBestSet }) {
   return (
     <span className="set-measurement">
       <span>
-        {weight}kg × {reps}
+        <span className={best?.weight ? "personal-best-value" : undefined}>{weight}</span>kg ×{" "}
+        {reps}
+        {best && <BestFlame best={best} />}
       </span>
-      <small>RM {displayEstimatedRM(weight, reps) ?? "—"}</small>
+      <small>
+        RM{" "}
+        <span className={best?.rm ? "personal-best-value" : undefined}>
+          {displayEstimatedRM(weight, reps) ?? "—"}
+        </span>
+      </small>
     </span>
   );
 }
@@ -1083,44 +980,4 @@ function previousDays(performedOn: string | undefined) {
     ),
   );
   return days >= 10 ? "10日以上前" : `${days}日前`;
-}
-
-function peerItems(data: TodayActivity, selectedGroup: string) {
-  const peers = new Map<
-    string,
-    {
-      groupId: string;
-      workoutId: string;
-      userId: string;
-      name: string;
-      avatarVersion?: string | null;
-      live: boolean;
-      best: boolean;
-      updatedAt: string;
-      version: string;
-    }
-  >();
-  for (const group of data.groups) {
-    if (selectedGroup !== "all" && selectedGroup !== group.group_id) continue;
-    for (const feed of group.feed) {
-      const current = peers.get(feed.user_id);
-      if (current && current.updatedAt >= feed.updated_at) continue;
-      const member = group.members.find((item) => item.id === feed.user_id);
-      peers.set(feed.user_id, {
-        groupId: group.group_id,
-        workoutId: feed.workout_id,
-        userId: feed.user_id,
-        name: feed.display_name,
-        avatarVersion: member?.avatar_version,
-        live: member?.live ?? false,
-        best: feed.best,
-        updatedAt: feed.updated_at,
-        version: sharedWorkoutVersion(feed),
-      });
-    }
-  }
-  return [...peers.values()].toSorted(
-    (left, right) =>
-      Number(right.live) - Number(left.live) || right.updatedAt.localeCompare(left.updatedAt),
-  );
 }

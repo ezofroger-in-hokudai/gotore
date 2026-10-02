@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
 for (const owner of [true, false]) {
@@ -82,3 +82,59 @@ for (const owner of [true, false]) {
     );
   });
 }
+
+test("展開したメンバーの三点メニューをタッチして操作を開ける", async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  try {
+    const page = await context.newPage();
+    const { user, group } = await mockTraining(page);
+    const members = Array.from({ length: 5 }, (_, index) => ({
+      id: index === 0 ? user.id : `00000000-0000-0000-0000-00000000000${index + 2}`,
+      display_name: index === 0 ? "画面テスト" : `仲間${index}`,
+      joined_at: "2026-01-01T00:00:00Z",
+      last_activity_at: `2026-09-${String(29 - index).padStart(2, "0")}T01:00:00Z`,
+    }));
+    await page.route(`**/api/groups/${group.id}`, (route) =>
+      route.fulfill({ json: { ...group, members } }),
+    );
+    await navigate(page, "グループ");
+    await page.locator(".group-card-list .community-card").first().click();
+    await page
+      .getByRole("navigation", { name: "グループの表示" })
+      .getByRole("button", { name: "設定" })
+      .click();
+    await page.getByRole("button", { name: "メンバー一覧を展開" }).tap();
+    await expect(page.locator(".group-members-card")).toHaveClass(/expanded/);
+    await page.getByRole("button", { name: "仲間4の設定" }).tap();
+    await expect(page.getByRole("dialog", { name: "仲間4" })).toBeVisible();
+    await expect(page.locator(".group-members-card")).toHaveClass(/expanded/);
+    await page.getByRole("dialog", { name: "仲間4" }).getByRole("button", { name: "閉じる" }).tap();
+    await expect(page.getByRole("dialog", { name: "仲間4" })).toHaveCount(0);
+    for (const verticalPosition of ["top", "middle", "bottom"] as const) {
+      const card = page.locator(".group-members-card");
+      const collapse = page.getByRole("button", { name: "メンバー一覧を閉じる" });
+      const cardBounds = await card.boundingBox();
+      const collapseBounds = await collapse.boundingBox();
+      if (!cardBounds || !collapseBounds) throw new Error("メンバー一覧の位置を確認できません");
+      expect(collapseBounds.height).toBeGreaterThanOrEqual(cardBounds.height - 2);
+      const y =
+        verticalPosition === "top"
+          ? 20
+          : verticalPosition === "middle"
+            ? collapseBounds.height / 2
+            : collapseBounds.height - 20;
+      await collapse.tap({ position: { x: 20, y } });
+      await expect(page.locator(".group-members-card")).toHaveClass(/collapsed/);
+      if (verticalPosition !== "bottom") {
+        await page.getByRole("button", { name: "メンバー一覧を展開" }).tap();
+        await expect(page.locator(".group-members-card")).toHaveClass(/expanded/);
+      }
+    }
+  } finally {
+    await context.close();
+  }
+});

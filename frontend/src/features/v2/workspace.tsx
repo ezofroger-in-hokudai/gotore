@@ -5,17 +5,32 @@ import type { Session } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { LoadingState } from "../loading/loading-state";
+import { ActivityNotifications } from "../notifications/activity-notifications";
+import { disablePush } from "../notifications/browser-notifications";
+import { useNotifications } from "../notifications/use-notifications";
 import { OnboardingGuide } from "../onboarding/onboarding-guide";
+import {
+  RecordSnapshotProvider,
+  useRecordSnapshot,
+} from "../record-cache/record-snapshot-provider";
+import { useElapsedTime } from "../session/elapsed-time";
 import { SessionScreen } from "../session/session-screen";
 import { useSession } from "../session/use-session";
 import { WorkoutResult } from "../session/workout-result";
+import { useSettingsProfile } from "../settings/use-settings-profile";
 import { StampProvider } from "../stamps/stamp-provider";
+import {
+  MemoDeliveryNotice,
+  MemoDeliveryProvider,
+  useMemoDelivery,
+} from "../training/memo-delivery-provider";
 import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { WorkoutForm } from "../training/workout-form";
 import { AvatarProvider } from "./avatar";
 import { CommunityHome } from "./community";
 import { FloatingTraining } from "./floating-training";
+import { GroupHistoryCache } from "./group-history-cache";
 import { type CommunityMode, CommunityScreen } from "./group-screen";
 import { History } from "./history";
 import { runNavigationMotion } from "./navigation-motion";
@@ -31,27 +46,40 @@ function scrollPageToTop() {
   window.scrollTo({ top: 0 });
   document.querySelector<HTMLElement>(".main-content")?.scrollTo({ top: 0 });
 }
-
 export function Workspace({ session }: { session: Session }) {
   return (
     <AvatarProvider key={session.user.id}>
       <StampProvider userId={session.user.id}>
-        <WorkspaceContent session={session} />
+        <RecordSnapshotProvider userId={session.user.id}>
+          <MemoDeliveryProvider userId={session.user.id}>
+            <WorkspaceContent session={session} />
+          </MemoDeliveryProvider>
+        </RecordSnapshotProvider>
       </StampProvider>
     </AvatarProvider>
   );
 }
 
 function WorkspaceContent({ session }: { session: Session }) {
+  const recordCache = useRecordSnapshot();
+  const memoDelivery = useMemoDelivery().store;
   useEdgeBack();
+  const [historyCache] = useState(() => new GroupHistoryCache());
   const [sharedCache] = useState(() => new SharedWorkoutCache());
   const [view, setView] = useState<View>("home");
+  const [finishRequest, setFinishRequest] = useState(0);
   const viewRef = useRef(view);
   const historyPosition = useRef(0);
   const [groupId, setGroupId] = useState("");
   const [groupMode, setGroupMode] = useState<CommunityMode>("list");
+  const [groupActivityVisible, setGroupActivityVisible] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [historyResetKey, setHistoryResetKey] = useState(0);
+  useEffect(() => {
+    if (!refreshKey) return;
+    const timer = window.setTimeout(() => void recordCache?.refresh(), 1000);
+    return () => window.clearTimeout(timer);
+  }, [refreshKey, recordCache?.refresh]);
   const [groupRefreshKey, setGroupRefreshKey] = useState(0);
   const [editing, setEditing] = useState<Workout | null>(null);
   const [copy, setCopy] = useState<Workout | null>(null);
@@ -62,35 +90,56 @@ function WorkspaceContent({ session }: { session: Session }) {
   const changed = () => setRefreshKey((key) => key + 1);
   const [finished, setFinished] = useState<Workout | null>(null);
   const [finishConflictOpen, setFinishConflictOpen] = useState(false);
-  const training = useSession(session.user.id, changed);
+  const training = useSession(session.user.id, changed, view === "record");
+  useEffect(() => {
+    if (training.saved?.auto_ended) {
+      setNotice(
+        "操作が1時間なかったため、トレーニングを自動終了しました。休止時間は記録に含めていません。",
+      );
+      if (viewRef.current === "record") navigate("home");
+    }
+  }, [training.saved]);
+  useEffect(() => {
+    if (!training.locallyExpired || training.saved?.auto_ended) return;
+    setNotice(
+      "操作が1時間なかったため、トレーニングを終了しています。通信でき次第、記録に反映します。",
+    );
+    if (viewRef.current === "record") navigate("home");
+  }, [training.locallyExpired, training.saved]);
   const resultConfirmed =
     !!finished && training.saved?.id === finished.id && !!training.saved.ended_at;
   const preferences = usePreferences(session.user.id);
+  const settingsProfile = useSettingsProfile(view === "settings");
   const catalog = useExerciseCatalog(changed);
   const groupList = useResource<Group[]>("/groups", groupRefreshKey, GROUP_REFRESH_MS, true, {
     enabled: view === "home" || view === "groups",
     retainOnRefresh: true,
   });
   useEffect(() => {
-    if (groupList.data) sharedCache.retainGroups(new Set(groupList.data.map((group) => group.id)));
-  }, [groupList.data, sharedCache]);
+    if (groupList.data) {
+      const ids = new Set(groupList.data.map((group) => group.id));
+      sharedCache.retainGroups(ids);
+      historyCache.retainGroups(ids);
+    }
+  }, [groupList.data, sharedCache, historyCache]);
   const groupOrder = useGroupOrder(session.user.id, groupList.data);
   const groups = groupOrder.groups;
-  const [recordSelecting, setRecordSelecting] = useState(true);
-  const todayActivity = useResource<TodayActivity>(
-    "/groups/today-activity",
-    refreshKey,
-    todayActivityRefreshMs,
-    true,
-    {
-      enabled: groups.length > 0 && (view === "home" || (view === "record" && recordSelecting)),
-      retainOnRefresh: true,
-    },
-  );
   const currentGroupIds = groups
     .map((group) => group.id)
     .toSorted()
     .join(",");
+  const todayActivity = useResource<TodayActivity>(
+    "/groups/today-activity",
+    refreshKey,
+    view === "groups" ? GROUP_REFRESH_MS : todayActivityRefreshMs,
+    true,
+    {
+      enabled:
+        groups.length > 0 && (view === "home" || (view === "groups" && groupActivityVisible)),
+      scopeKey: currentGroupIds,
+      retainOnRefresh: true,
+    },
+  );
   const activityGroupIds = todayActivity.data?.groups
     .map((group) => group.group_id)
     .toSorted()
@@ -149,6 +198,19 @@ function WorkspaceContent({ session }: { session: Session }) {
     const timer = window.setTimeout(() => setOpened(true), 15_000);
     return () => window.clearTimeout(timer);
   }, []);
+  const notifications = useNotifications(
+    session.user.id,
+    view,
+    opened,
+    training.session?.revision || 0,
+  );
+  useEffect(() => {
+    const home = (event: MessageEvent) => {
+      if (event.data?.type === "notification-home") navigate("home");
+    };
+    navigator.serviceWorker?.addEventListener("message", home);
+    return () => navigator.serviceWorker?.removeEventListener("message", home);
+  });
   const previousView = useRef(view);
   // biome-ignore lint/correctness/useExhaustiveDependencies: ホームと履歴は同じ取得を有効にするため、履歴への再訪時だけ明示的に再確認する。
   useEffect(() => {
@@ -192,14 +254,6 @@ function WorkspaceContent({ session }: { session: Session }) {
         viewRef.current = target;
         setView(target);
         if (typeof event.state?.groupId === "string") setGroupId(event.state.groupId);
-        if (
-          target === "groups" &&
-          ["list", "detail", "create", "join", "invite", "members"].includes(
-            event.state?.communityMode,
-          )
-        ) {
-          setGroupMode(event.state.communityMode as CommunityMode);
-        }
       };
       if (target === viewRef.current) update();
       else {
@@ -237,7 +291,7 @@ function WorkspaceContent({ session }: { session: Session }) {
       setView(next);
       setNotice("");
       setEditing(null);
-      scrollPageToTop();
+      window.scrollTo({ top: 0 });
     };
     if (next === current) update();
     else {
@@ -257,6 +311,10 @@ function WorkspaceContent({ session }: { session: Session }) {
   const resumable = !!training.session || !!training.startingId;
   const canStart = training.ready && !training.finishPending && (!training.busy || resumable);
   const primaryView = ["home", "groups", "history", "settings"].includes(view);
+  const elapsed = useElapsedTime(
+    training.session?.started_at,
+    opened && !training.finishPending && (primaryView || view === "record"),
+  );
   function startOrResume() {
     if (!canStart) return;
     navigate("record");
@@ -265,10 +323,16 @@ function WorkspaceContent({ session }: { session: Session }) {
   async function logout() {
     setSigningOut(true);
     sharedCache.clear();
+    historyCache.clear();
     try {
+      await disablePush();
+      memoDelivery.stop();
+      await recordCache?.clear();
       const result = await getSupabase()?.auth.signOut({ scope: "local" });
       if (result?.error) throw result.error;
     } catch {
+      recordCache?.resume();
+      memoDelivery.start();
       setNotice("ログアウトできません。再試行してください。");
     } finally {
       setSigningOut(false);
@@ -288,30 +352,35 @@ function WorkspaceContent({ session }: { session: Session }) {
           E-GO<span>TORE</span>
         </button>
       </header>
+      {opened && !inviteLanding && (
+        <OnboardingGuide
+          userId={session.user.id}
+          replay={guideReplay}
+          paused={view === "record" || view === "edit" || view === "result"}
+          onVisit={(next, target) => {
+            setGuideTarget({ target });
+            setGroupMode("list");
+            viewRef.current = next;
+            setView(next);
+            window.history.replaceState(
+              {
+                gotoreView: next,
+                groupId: selected,
+                communityMode: "list",
+                gotoreMotionIndex: historyPosition.current,
+              },
+              "",
+            );
+            window.scrollTo({ top: 0 });
+          }}
+        />
+      )}
       <main className="main-content">
-        {opened && !inviteLanding && (
-          <OnboardingGuide
-            userId={session.user.id}
-            replay={guideReplay}
-            onVisit={(next, target) => {
-              setGuideTarget({ target });
-              setGroupMode("list");
-              viewRef.current = next;
-              setView(next);
-              window.history.replaceState(
-                {
-                  gotoreView: next,
-                  groupId: selected,
-                  communityMode: "list",
-                  gotoreMotionIndex: historyPosition.current,
-                },
-                "",
-              );
-              window.scrollTo({ top: 0 });
-            }}
-          />
-        )}
+        <MemoDeliveryNotice />
         {notice && <output className="notice">{notice}</output>}
+        {recordCache?.storageError && (
+          <output className="notice">端末への記録保存を利用できません。通信で読み込みます。</output>
+        )}
         {training.finishPending && training.status === "conflict" && (
           <div className="error" role="alert">
             トレーニング記録の確認が必要です。
@@ -324,7 +393,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             </button>
           </div>
         )}
-        {training.error && (
+        {training.error && !training.locallyExpired && (
           <div className="error" role="alert">
             {training.error}
             <button
@@ -365,9 +434,7 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         <div hidden={view !== "record"}>
           <SessionScreen
-            todayActivity={visibleTodayActivity}
-            onSelectingChange={setRecordSelecting}
-            sharedCache={sharedCache}
+            finishRequest={finishRequest}
             active={view === "record"}
             controller={training}
             userId={session.user.id}
@@ -461,8 +528,12 @@ function WorkspaceContent({ session }: { session: Session }) {
         )}
         <div hidden={view !== "groups"}>
           <CommunityScreen
+            sharedCache={sharedCache}
+            historyCache={historyCache}
             guideTarget={guideTarget}
             groups={groups}
+            today={visibleTodayActivity}
+            onActivityVisibleChange={setGroupActivityVisible}
             selected={selected}
             initialDetail={groupMode === "detail"}
             active={opened && view === "groups"}
@@ -482,6 +553,8 @@ function WorkspaceContent({ session }: { session: Session }) {
         </div>
         {view === "settings" && (
           <Preferences
+            notifications={notifications}
+            resources={settingsProfile}
             catalog={catalog}
             preferences={preferences}
             onChanged={changed}
@@ -570,13 +643,21 @@ function WorkspaceContent({ session }: { session: Session }) {
           </Sheet>
         )}
       </main>
-      {primaryView && (
+      {opened && (primaryView || (view === "record" && resumable && !training.finishPending)) && (
         <FloatingTraining
+          elapsed={elapsed}
+          startedAt={training.session?.started_at}
+          recording={view === "record"}
           userId={session.user.id}
           resumable={resumable}
-          disabled={!canStart}
-          onActivate={startOrResume}
+          disabled={view === "record" ? !training.session || training.busy : !canStart}
+          onActivate={
+            view === "record" ? () => setFinishRequest((value) => value + 1) : startOrResume
+          }
         />
+      )}
+      {opened && (
+        <ActivityNotifications notifications={notifications} recording={view === "record"} />
       )}
       <nav className="bottom-nav" aria-label="メインナビゲーション">
         {(
@@ -620,6 +701,7 @@ function WorkspaceContent({ session }: { session: Session }) {
                   setHistoryResetKey((key) => key + 1);
                 }
                 navigate(next);
+                if (view === next || (next === "history" && view === "edit")) scrollPageToTop();
               }
             }}
           >

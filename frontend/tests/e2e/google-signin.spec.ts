@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 async function googleUser(page: Page, savedName = "") {
@@ -126,6 +126,10 @@ test("初回は本名を使わず表示名を保存し、再ログインでは�
   await expect(page.getByRole("navigation")).toBeVisible();
   await navigate(page, "設定");
   await page.getByRole("button", { name: "ログアウト", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "ログアウト", exact: true })
+    .getByRole("button", { name: "ログアウト", exact: true })
+    .click();
   await page.getByLabel("メールアドレス", { exact: true }).fill("ui@example.test");
   await page.getByLabel("パスワード", { exact: true }).fill("ui-test-password");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();

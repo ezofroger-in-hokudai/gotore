@@ -1,7 +1,6 @@
-import { type Page, expect, test } from "@playwright/test";
 import type { Analytics, Point } from "../../src/features/analytics/types";
+import { type Page, expect, test } from "./fixtures";
 import { mockTraining, navigate, openGroup } from "./mock-training";
-import { backendUrl } from "./test-server";
 
 function fixture(url: URL, group = false): Analytics {
   const exercise = url.searchParams.get("exercise");
@@ -81,8 +80,13 @@ async function routes(page: Page) {
   let slow = false;
   let forbidden = false;
   await page.route(/\/api\/(groups\/[^/]+\/)?analytics\?/, async (route) => {
-    requests++;
     const url = new URL(route.request().url());
+    if (
+      url.searchParams.get("period") === "all" &&
+      url.searchParams.get("offset") === "0" &&
+      !url.searchParams.get("exercise")
+    )
+      requests++;
     if (
       url.searchParams.get("period") === "month" &&
       url.searchParams.get("exercise") === "ベンチプレス"
@@ -112,175 +116,98 @@ async function routes(page: Page) {
   };
 }
 
-for (const view of ["履歴グラフ", "グループグラフ", "グループランキング"] as const) {
-  test(`${view}の初回取得失敗では期間の読み込み表示を残さず再試行できる`, async ({ page }) => {
-    await mockTraining(page);
-    let status = 503;
+for (const view of ["履歴グラフ", "グループグラフ", "部位別グループグラフ"] as const) {
+  test(`${view}の初回取得失敗から再試行できる`, async ({ page }) => {
+    await mockTraining(page, true, false, false);
+    let failed = true;
     await page.route(/\/api\/(groups\/[^/]+\/)?analytics\?/, (route) =>
       route.fulfill(
-        status === 503
-          ? { status, json: { detail: "集計を取得できません" } }
-          : {
-              json: fixture(
-                new URL(route.request().url()),
-                route.request().url().includes("/groups/"),
-              ),
-            },
+        failed
+          ? { status: 503, json: { detail: "集計を取得できません" } }
+          : { json: fixture(new URL(route.request().url()), view !== "履歴グラフ") },
       ),
     );
-    if (view === "履歴グラフ") await navigate(page, "履歴");
-    else await openGroup(page);
-    await page
-      .getByRole("button", {
-        name: view === "グループランキング" ? "ランキング" : "グラフ",
-        exact: true,
-      })
-      .click();
-    const panel = page.getByRole("region", {
-      name: view === "履歴グラフ" ? "履歴グラフ" : "グループ集計",
-    });
-    await expect(panel.getByRole("alert")).toContainText("集計を取得できません");
-    await expect(
-      panel.locator('.analytics-period output[aria-label="期間を読み込み中"]'),
-    ).toHaveCount(0);
-    status = 200;
+    if (view === "履歴グラフ") {
+      await navigate(page, "履歴");
+      await page.getByRole("tab", { name: "グラフ" }).click();
+    } else {
+      await openGroup(page);
+      await page
+        .getByRole("navigation", { name: "グループの表示" })
+        .getByRole("button", { name: "グラフ" })
+        .click();
+    }
+    const panel = page.locator(
+      view === "履歴グラフ" ? ".personal-history-panel" : ".group-history-graph",
+    );
+    if (view === "部位別グループグラフ")
+      await panel.getByRole("button", { name: "胸", exact: true }).click();
+    await expect(panel.getByRole("button", { name: "再試行", exact: true })).toBeVisible();
+    await expect(panel.getByRole("img")).toHaveCount(0);
+    failed = false;
     await panel.getByRole("button", { name: "再試行", exact: true }).click();
-    await expect(panel.locator(".analytics-period")).toContainText("2026/09");
-    await expect(panel.getByRole("alert")).toHaveCount(0);
+    await expect(panel.getByRole("img", { name: "総負荷の推移" })).toBeVisible();
+    await expect(panel.locator(".personal-history-graph-value")).toContainText("23,500");
   });
 }
 
-test("先読みした履歴グラフを表示し、指標・粒度・期間再訪を待たずに切り替える", async ({ page }) => {
-  await mockTraining(page);
+test("取得した個人グラフの指標と期間を追加通信なしで切り替える", async ({ page }) => {
+  await mockTraining(page, true, false, false);
   const state = await routes(page);
-  await expect.poll(state.count).toBeGreaterThan(0);
   await navigate(page, "履歴");
-  await page.getByRole("button", { name: "グラフ", exact: true }).click();
-  const panel = page.getByRole("region", { name: "履歴グラフ" });
-  await expect(panel.locator(".analytics-summary")).toContainText("23,500");
-  await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
-  await expect(panel.locator(".analytics-summary")).toContainText("23,500");
+  await page.getByRole("tab", { name: "グラフ" }).click();
+  const panel = page.locator(".personal-history-panel");
+  await expect(panel.getByRole("img", { name: "総負荷の推移" })).toBeVisible();
+  await expect(panel.locator(".personal-history-graph-value")).toContainText("23,500");
+  const before = state.count();
   state.slow();
-  const before = state.selectedCount();
-  const help = panel.locator(".analytics-help");
-  await expect(help.locator("p")).toBeHidden();
-  await help.getByText("指標について", { exact: true }).click();
-  await expect(help.locator("p")).toContainText("重量 × 回数");
-  await page.screenshot({ path: "test-results/analytics-help-open.png", fullPage: true });
-  await help.getByText("指標について", { exact: true }).click();
-  await expect(help.locator("p")).toBeHidden();
-  expect(state.selectedCount()).toBe(before);
-  await panel.getByRole("button", { name: "最高重量", exact: true }).click();
-  await expect(panel.locator(".analytics-summary")).toContainText("85", { timeout: 500 });
-  await panel.getByRole("button", { name: "週別", exact: true }).click();
-  await expect(panel.getByRole("slider")).toHaveCount(0);
-  await expect(panel.locator(".chart-dot")).toHaveCount(1);
-  expect(state.selectedCount()).toBe(before);
-  await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("year");
-  await expect(panel.locator(".analytics-summary")).toBeVisible();
-  await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("month");
-  await expect(panel.locator(".analytics-summary")).toContainText("85", { timeout: 500 });
-  await panel.getByRole("button", { name: "週別", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "2026/09/01 〜 2026/09/07", exact: true }),
-  ).toBeVisible();
-  await expect(page.locator(".history-period-records")).toBeVisible();
+  await panel.getByRole("button", { name: "最大重量", exact: true }).click();
+  await expect(panel.getByRole("img", { name: "最大重量の推移" })).toBeVisible();
+  await panel.getByRole("button", { name: "総負荷", exact: true }).click();
+  await panel.getByRole("button", { name: "週", exact: true }).click();
+  await expect(panel.locator(".personal-history-graph-value")).toContainText("14,000");
+  await panel.getByRole("button", { name: "月", exact: true }).click();
+  await panel.getByRole("button", { name: "総負荷", exact: true }).click();
+  await expect(panel.locator(".personal-history-graph-value")).toContainText("23,500");
+  expect(state.count()).toBe(before);
 });
 
-test("グループのグラフとランキングを共有し、権限喪失後はキャッシュも消す", async ({ page }) => {
+test("グループ集計の権限喪失後は以前のグラフを消し、再訪でも復元しない", async ({ page }) => {
   await mockTraining(page);
   const state = await routes(page);
   await openGroup(page);
-  await page.getByRole("button", { name: "ランキング", exact: true }).click();
-  const panel = page.getByRole("region", { name: "グループ集計" });
-  await expect(panel.getByRole("list")).toContainText("タクミ");
-  await panel.getByRole("button", { name: "セット数", exact: true }).click();
-  await expect(panel.locator(".rank-position")).toHaveText(["1", "1"]);
-  await page.getByRole("button", { name: "グラフ", exact: true }).click();
-  await expect(panel.getByRole("img")).toBeVisible({ timeout: 500 });
-  await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
-  await expect(panel.locator(".analytics-summary")).toBeVisible();
+  const tabs = page.getByRole("navigation", { name: "グループの表示" });
+  await tabs.getByRole("button", { name: "グラフ" }).click();
+  const panel = page.locator(".group-history-graph");
+  await expect(panel.getByRole("img")).toBeVisible();
   state.forbid();
-  await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("all");
-  await expect(panel.getByRole("alert")).toContainText("参加していません");
-  await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("week");
+  await panel.getByRole("button", { name: "胸", exact: true }).click();
+  await expect(panel.getByRole("button", { name: "再試行", exact: true })).toBeVisible();
   await expect(panel.getByRole("img")).toHaveCount(0);
-  await expect(panel.getByRole("alert")).toContainText("参加していません");
+  await panel.getByRole("button", { name: "すべて", exact: true }).click();
+  await expect(panel.getByRole("img")).toHaveCount(0);
+  await expect(panel.getByRole("button", { name: "再試行", exact: true })).toBeVisible();
 });
 
-test("実DBの個人グラフは非公開も集計し、グループのランキングは共有記録だけを表示する", async ({
-  page,
-}) => {
-  const { localAuth, testPassword } = await import("./local-auth");
-  const { admin, publicAuth } = localAuth();
-  const email = `gotore-analytics-${crypto.randomUUID()}@example.test`;
-  const created = await admin.createUser({
-    email,
-    password: testPassword,
-    email_confirm: true,
-    user_metadata: { display_name: "集計テスト" },
-  });
-  expect(created.error).toBeNull();
-  const signed = await publicAuth.signInWithPassword({ email, password: testPassword });
-  if (!signed.data.session) throw new Error("テスト用ログインに失敗しました");
-  const headers = { Authorization: `Bearer ${signed.data.session.access_token}` };
-  const groupResponse = await page.request.post(`${backendUrl}/api/groups`, {
-    headers,
-    data: { name: "集計確認部" },
-  });
-  expect(groupResponse.status()).toBe(201);
-  const group = await groupResponse.json();
-  const day = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
-  for (const [groupId, weight] of [
-    [group.id, 80],
-    [null, 60],
-  ] as const) {
-    const response = await page.request.post(`${backendUrl}/api/workouts`, {
-      headers,
-      data: {
-        id: crypto.randomUUID(),
-        group_id: groupId,
-        performed_on: day,
-        exercises: [{ name: "ベンチプレス", sets: [{ weight, reps: 10 }] }],
-      },
-    });
-    expect(response.status()).toBe(201);
-  }
-  await page.goto("/");
-  await page.getByLabel("メールアドレス", { exact: true }).fill(email);
-  await page.getByLabel("パスワード", { exact: true }).fill(testPassword);
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await page.getByRole("button", { name: "スキップ", exact: true }).click();
-  await navigate(page, "履歴");
-  await page.getByRole("button", { name: "グラフ", exact: true }).click();
-  await expect(page.locator(".history-screen .analytics-summary")).toContainText("1,400");
-  await openGroup(page);
-  await page.getByRole("button", { name: "ランキング", exact: true }).click();
-  await expect(page.locator(".analytics-ranks")).toContainText("集計テスト");
-  await expect(page.locator(".analytics-ranks")).toContainText("800");
-  await page.getByRole("button", { name: "グラフ", exact: true }).click();
-  await expect(page.locator(".community-screen .analytics-summary")).toContainText("800");
-});
-
-test("グループの集計を60秒保持し、グラフとランキングの切替で再取得しない", async ({ page }) => {
+test("グループ集計を保持し、タブ再訪後の再照合でも指標を戻さない", async ({ page }) => {
   await page.clock.install();
   await mockTraining(page);
   const state = await routes(page);
   await openGroup(page);
-  await page.getByRole("button", { name: "グラフ", exact: true }).click();
-  const panel = page.getByRole("region", { name: "グループ集計" });
-  await panel.getByRole("combobox", { name: "期間", exact: true }).selectOption("month");
-  await panel.getByRole("combobox", { name: "種目", exact: true }).selectOption("ベンチプレス");
-  await expect(panel.locator(".analytics-summary")).toContainText("23,500");
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
-  const before = state.selectedCount();
+  const tabs = page.getByRole("navigation", { name: "グループの表示" });
+  await tabs.getByRole("button", { name: "グラフ" }).click();
+  const panel = page.locator(".group-history-graph");
+  await expect(panel.locator(".personal-history-graph-value")).toContainText("23,500");
+  await panel.getByRole("button", { name: "セット数", exact: true }).click();
+  await expect(panel.getByRole("img", { name: "セット数の推移" })).toBeVisible();
+  const before = state.count();
   await page.clock.runFor(5000);
-  expect(state.selectedCount()).toBe(before);
-  await page.getByRole("button", { name: "ランキング", exact: true }).click();
-  await expect(panel.locator(".analytics-ranks")).toContainText("タクミ");
-  await page.getByRole("button", { name: "グラフ", exact: true }).click();
-  await expect(panel.locator(".analytics-summary")).toContainText("23,500");
-  expect(state.selectedCount()).toBe(before);
-  await page.clock.runFor(55_000);
-  await expect.poll(state.selectedCount).toBe(before + 1);
+  expect(state.count()).toBe(before);
+  await tabs.getByRole("button", { name: "最新記録" }).click();
+  await page.clock.runFor(65_000);
+  expect(state.count()).toBe(before);
+  state.slow();
+  await tabs.getByRole("button", { name: "グラフ" }).click();
+  await expect(panel.getByRole("img", { name: "セット数の推移" })).toBeVisible({ timeout: 500 });
+  await expect.poll(state.count).toBeGreaterThan(before);
 });

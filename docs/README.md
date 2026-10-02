@@ -14,6 +14,8 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 ## 開発用の文書
 
+- [スタンプ・トレーニング開始通知](activity-notifications.md): 全画面通知、設定、Web Pushの配信条件と運用。[採用デザイン](design/activity-notifications.md)。
+
 - [スタンプ](stamps.md): グループ内の送信・取消、記録中の受信表示、未読・受信一覧。
 
 - [Googleで登録・ログイン](google-signin.md): 基本権限のみの認証、初回表示名、登録制限、egotore.com向け設定手順。管理者発行限定の初版仕様から変更する。
@@ -32,13 +34,14 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [design-system.md](design-system.md): スマホアプリを見据えた色・文字・余白・操作と共通部品の基準。[画面見本](design-preview.html)。
 
-- [画面設計の判断](design/README.md): 画面ごとの採用判断の一覧。[トレーニング中](design/training-session.md)、[ホーム](design/home-screen.md)、[グループ](design/group-screen.md)、[グループ作成](design/group-create.md)の画面設計を参照する。
+- [画面設計の判断](design/README.md): 画面ごとの採用判断の一覧。[トレーニング中](design/training-session.md)、[ホーム](design/home-screen.md)、[グループ](design/group-screen.md)、[グループ作成](design/group-create.md)、[設定](design/settings-screen.md)の画面設計を参照する。
 - [画面遷移の動き](design/navigation-motion.md): 採用した控えめな横移動、固定プレビューと比較経緯。
 - [履歴画面の設計](design/history-screen.md): 個人の通算・カレンダー・連続グラフ・部位別人体図の採用案と比較経緯。
 
 - [performance-best-history.md](performance-best-history.md): BEST・前回比較の履歴件数別計測と既存集計の利用。
 
 - [loading-performance.md](loading-performance.md): 読み込み速度の比較、認証接続の再利用、自分の記録の再訪、計測。
+- [記録に関する本人データの端末保存](personal-device-storage-plan.md): #185・#231の保存対象、正本、前回値、実装と残る実機確認。
 
 - [ui-copy.md](ui-copy.md): 短いラベルと初回ガイドへの説明集約。
 - [画面文言の再棚卸し](ui-copy-review-2026-09-13.md): 削減候補37件と今回採用する範囲。
@@ -90,3 +93,13 @@ PDF内から参照されているNotionのv1.3仕様などは、このリポジ�
 
 - [スタイル見本と統一基準の検討](styles/README.md): #186の現行デモ・基準の検討案。Draft PRで採用事項を整理する。
 - [testing.md](testing.md): 開発中の対象テスト、レビュー前とCIの全件検証、並列数と計測。
+
+## 未採用の調査記録
+
+- [2026-09-30 公開版の操作・不具合・デザイン調査](audits/2026-09-30/report.md): 最新mainでの再現結果と問題候補。Issue化・仕様変更はユーザー判断待ち。
+
+- [現行仕様のテスト責務と移行先](testing-coverage.md)
+
+- [採用Aの中央カットイン](../frontend/public/previews/activity-notification-center-adopted.html): 本体へ反映する動きの固定参照。
+
+- [履歴カレンダーの月送り採用A](design/history-screen.md#月送りの採用a2026-10-01): [固定プレビュー](../frontend/public/previews/history-calendar-motion-adopted.html)。月名・日付・月の合計を一緒に滑らかに移動する。

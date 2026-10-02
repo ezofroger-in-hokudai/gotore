@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import type { RecordSnapshot } from "@/lib/record-snapshot";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { cachedRecordResource } from "../record-cache/cached-resource";
+import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 import { resourceRequest } from "./resource-request";
 import { canRetainResource } from "./retain-resource";
 
@@ -7,41 +10,78 @@ export function useResource<T>(
   refreshKey = 0,
   poll: boolean | number | ((data: T | undefined) => number) = false,
   remember = false,
-  options: { enabled?: boolean; retainOnRefresh?: boolean; prefetch?: boolean } = {},
+  options: {
+    enabled?: boolean;
+    retainOnRefresh?: boolean;
+    prefetch?: boolean;
+    scopeKey?: string;
+  } = {},
 ) {
-  const { enabled = true, retainOnRefresh = false, prefetch = false } = options;
+  const { enabled = true, retainOnRefresh = false, prefetch = false, scopeKey = "" } = options;
+  const recordSnapshot = useRecordSnapshot()?.snapshot ?? null;
+  const latestSnapshot = useRef(recordSnapshot);
+  latestSnapshot.current = recordSnapshot;
+  const localData = useMemo(
+    () => cachedRecordResource(recordSnapshot, path) as T | null,
+    [recordSnapshot, path],
+  );
   const cache = useRef({
     version: refreshKey,
-    pages: new Map<string, { data: T; savedAt: number }>(),
+    scopeKey,
+    pages: new Map<string, { data: T; savedAt: number; snapshot: RecordSnapshot | null }>(),
   });
   const [result, setResult] = useState<{
     path: string;
+    scopeKey: string;
     data: T;
     version: number;
     stale: boolean;
+    source: "local" | "server";
+    snapshot: RecordSnapshot | null;
   } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const writes = useRef(0);
+  const serverResult = useRef<{
+    path: string;
+    version: number;
+    terminal: boolean;
+    blocked: boolean;
+    snapshot: RecordSnapshot | null;
+  }>({ path: "", version: -1, terminal: false, blocked: false, snapshot: null });
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存後・再試行の操作でも再取得する。
   useEffect(() => {
-    // 非表示中の無効化は再訪時に処理し、同じ種目の比較・メモを更新中も保持する。
+    const scopeChanged = cache.current.scopeKey !== scopeKey;
+    // 退出後に同じグループへ再参加しても、以前の共有範囲の内容を復元しない。
+    if (scopeChanged) {
+      cache.current = { version: refreshKey, scopeKey, pages: new Map() };
+      setResult(null);
+    }
+    // 非表示中の記録更新による無効化は再訪時に処理する。
     if (!enabled && !prefetch) {
       setLoading(false);
       return;
     }
     // 同じ一覧の再取得では選択状態を保持し、別の共有先のデータは返さない。
-    const changed = cache.current.version !== refreshKey;
+    const changed = cache.current.version !== refreshKey || scopeChanged;
     if (changed) {
-      cache.current = { version: refreshKey, pages: new Map() };
+      cache.current = { version: refreshKey, scopeKey, pages: new Map() };
     }
     const previous = path && remember ? cache.current.pages.get(path) : undefined;
     if (path && previous && Date.now() - previous.savedAt < 60_000) {
-      setResult({ path, data: previous.data, version: refreshKey, stale: true });
+      setResult({
+        path,
+        scopeKey,
+        data: previous.data,
+        version: refreshKey,
+        stale: true,
+        source: "server",
+        snapshot: previous.snapshot,
+      });
     } else {
       setResult((current) =>
-        current?.path === path && (!changed || retainOnRefresh) ? current : null,
+        current?.path === path && !scopeChanged && (!changed || retainOnRefresh) ? current : null,
       );
     }
     setError("");
@@ -49,6 +89,13 @@ export function useResource<T>(
       setLoading(false);
       return;
     }
+    serverResult.current = {
+      path,
+      version: refreshKey,
+      terminal: false,
+      blocked: false,
+      snapshot: latestSnapshot.current,
+    };
     const controller = new AbortController();
     let pending = false;
     let latest = previous?.data;
@@ -64,14 +111,34 @@ export function useResource<T>(
       pending = true;
       setLoading(true);
       const startedBeforeWrite = writes.current;
+      const startedSnapshot = latestSnapshot.current;
       try {
         const value = await resourceRequest<T>(path, controller.signal);
         if (!controller.signal.aborted && startedBeforeWrite === writes.current) {
+          if (
+            startedSnapshot !== latestSnapshot.current &&
+            cachedRecordResource(latestSnapshot.current, path) !== null
+          )
+            return;
           latest = value;
-          setResult({ path, data: value, version: refreshKey, stale: false });
+          serverResult.current.terminal = true;
+          serverResult.current.snapshot = startedSnapshot;
+          setResult({
+            path,
+            scopeKey,
+            data: value,
+            version: refreshKey,
+            stale: false,
+            source: "server",
+            snapshot: startedSnapshot,
+          });
           if (remember) {
             cache.current.pages.delete(path);
-            cache.current.pages.set(path, { data: value, savedAt: Date.now() });
+            cache.current.pages.set(path, {
+              data: value,
+              savedAt: Date.now(),
+              snapshot: startedSnapshot,
+            });
             if (cache.current.pages.size > 5) {
               const oldest = cache.current.pages.keys().next().value;
               if (oldest) cache.current.pages.delete(oldest);
@@ -82,6 +149,8 @@ export function useResource<T>(
       } catch (reason) {
         if (!controller.signal.aborted && startedBeforeWrite === writes.current) {
           if (!canRetainResource(reason)) {
+            serverResult.current.terminal = true;
+            serverResult.current.blocked = true;
             cache.current.pages.clear();
             setResult(null);
           } else {
@@ -106,13 +175,44 @@ export function useResource<T>(
       window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [path, refreshKey, retryKey, poll, remember, enabled, retainOnRefresh, prefetch]);
+  }, [path, refreshKey, retryKey, poll, remember, enabled, retainOnRefresh, prefetch, scopeKey]);
+  useEffect(() => {
+    if (
+      !enabled ||
+      localData === null ||
+      !path ||
+      (serverResult.current.path === path &&
+        serverResult.current.version === refreshKey &&
+        (serverResult.current.blocked ||
+          (serverResult.current.terminal && serverResult.current.snapshot === recordSnapshot)))
+    )
+      return;
+    setResult((current) =>
+      current?.path === path &&
+      current.scopeKey === scopeKey &&
+      current.version === refreshKey &&
+      current.source === "server" &&
+      current.snapshot === recordSnapshot
+        ? current
+        : {
+            path,
+            scopeKey,
+            data: localData,
+            version: refreshKey,
+            stale: true,
+            source: "local",
+            snapshot: recordSnapshot,
+          },
+    );
+  }, [enabled, localData, path, refreshKey, recordSnapshot, scopeKey]);
   return {
     data:
-      result?.path === path && (!remember || retainOnRefresh || result.version === refreshKey)
+      result?.path === path &&
+      result.scopeKey === scopeKey &&
+      (!remember || retainOnRefresh || result.version === refreshKey)
         ? result.data
         : null,
-    refreshing: result?.path === path && result.stale,
+    refreshing: result?.path === path && result.scopeKey === scopeKey && result.stale,
     error,
     loading,
     retry: () => setRetryKey((value) => value + 1),
@@ -120,13 +220,23 @@ export function useResource<T>(
       if (!path) return;
       // 成功した更新より前に始めたGETで、確定内容を巻き戻さない。
       writes.current++;
+      serverResult.current = {
+        path,
+        version: refreshKey,
+        terminal: true,
+        blocked: false,
+        snapshot: latestSnapshot.current,
+      };
       cache.current.pages.delete(path);
       setError("");
       setResult((current) => ({
         path,
-        data: update(current?.path === path ? current.data : null),
+        scopeKey,
+        data: update(current?.path === path && current.scopeKey === scopeKey ? current.data : null),
         version: refreshKey,
         stale: false,
+        source: "server",
+        snapshot: latestSnapshot.current,
       }));
     },
   };

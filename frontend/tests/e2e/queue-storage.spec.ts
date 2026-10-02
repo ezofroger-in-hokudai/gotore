@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, openTraining, startTraining } from "./mock-training";
 
 test("旧形式の未送信セットを保持して差分へ移行し、再起動後も順序どおり保存する", async ({

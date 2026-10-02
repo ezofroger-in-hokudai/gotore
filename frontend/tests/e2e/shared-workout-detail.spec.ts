@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, startTraining } from "./mock-training";
 
 const avatarPng = readFileSync(resolve(__dirname, "../fixtures/avatar.png"));
@@ -340,7 +340,6 @@ test("非表示中と画面移動後は共有記録を取得せず本人メモ�
   await startTraining(page);
   await page.getByRole("button", { name: "セットを追加", exact: true }).click();
   await expect.poll(() => state.saves).toBe(1);
-  await navigate(page, "ホーム");
   const record = state.session;
   if (!record) throw new Error("テスト記録が作成されていない");
   let reads = 0;
@@ -348,6 +347,7 @@ test("非表示中と画面移動後は共有記録を取得せず本人メモ�
     reads++;
     return route.fulfill({ json: record });
   });
+  await navigate(page, "ホーム");
   const card = page.locator(".feed-item").filter({ hasText: "画面テスト" });
   await expect(card.locator(".record-set")).toHaveCount(1);
   await expect(card.getByRole("button", { name: /^(編集|削除|コピー|メモ)$/ })).toHaveCount(0);

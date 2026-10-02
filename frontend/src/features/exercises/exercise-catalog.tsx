@@ -178,7 +178,7 @@ export function ExerciseCatalog({
             </button>
             <button
               type="button"
-              className="text-button full"
+              className="secondary full"
               onClick={() => {
                 setEditing(null);
                 setError("");

@@ -1,4 +1,4 @@
-.PHONY: frontend backend install install-frontend install-backend env-local check test-backend test-frontend test-e2e check-fast build-frontend typecheck-frontend lint-backend lint-frontend lint db-start db-stop db-migrations db-migrate db-reset db-lint db-new
+.PHONY: notifications-worker frontend backend install install-frontend install-backend env-local check test-backend test-frontend test-e2e check-fast build-frontend typecheck-frontend lint-backend lint-frontend lint db-start db-stop db-migrations db-migrate db-reset db-lint db-new
 
 SUPABASE_CLI ?= bunx supabase@2.107.0
 
@@ -70,3 +70,7 @@ db-lint:
 db-new:
 	test -n "$(name)" || (echo "usage: make db-new name=your_migration_name" && exit 1)
 	$(SUPABASE_CLI) migration new $(name)
+
+# APIとは別の永続プロセスで、未配信イベントを処理する。
+notifications-worker:
+	cd backend && uv run --locked python -m app.services.notification_dispatch

@@ -2,11 +2,20 @@
 
 画面プレビューとユーザー確認で確定した、現在有効な画面固有の判断を置く。時系列の経緯と検証結果はリポジトリ直下の `progress.md`、横断的なトークン・余白・操作領域は [デザインルール](../design-system.md) を参照する。
 
-- [トレーニング中の画面設計](training-session.md): 種目選択、記録入力、終了、仲間カード、スタンプ詳細。
+- [トレーニング中の画面設計](training-session.md): 種目選択、本人の記録入力、終了。
 - [ホーム画面の設計](home-screen.md): 仲間の状態と記録開始を上部で伝える検討中の3案。
 - [グループ画面の設計](group-screen.md): 採用済みのグループホーム、詳細、設定、表示順、参加・招待。
 - [グループ作成画面の設計](group-create.md): グループ名入力、作成確定、作成後の招待導線。
+- [設定画面の設計](settings-screen.md): 設定項目、ログアウトなどのアカウント操作。
 - [画面遷移の動き](navigation-motion.md): 採用した控えめな横移動と固定プレビュー。
 - [履歴画面の設計](history-screen.md): 採用した3タブ、部位別人体図、グループとの共通表示。
 
 新しい画面を検討するときは、該当資料を作成または更新してからプレビュー・実装へ進む。採用済み・却下済みの判断を、ユーザーの再指定なしに戻さない。
+
+- [スタンプ・トレーニング開始通知](activity-notifications.md): 共通スタンプカードとCグラデーションの実線参戦チケット。
+
+- [採用Aの中央カットイン](../../frontend/public/previews/activity-notification-center-adopted.html): 左から中央へ240ms、右へ200msで退場。
+
+- #202追加合意: [トレーニング設計](training-session.md)のリング付き時計へ、START・中央の時:分・回る点・終了確認を統合。
+
+- [履歴カレンダー採用A](../../frontend/public/previews/history-calendar-motion-adopted.html): 月名・日付・合計が一緒に滑る。指への追従と280msの着地。[設計判断](history-screen.md)。

@@ -1,5 +1,75 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
+
+test("画面を閉じている間の自動終了を復帰時に知らせる", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  const active = state.session;
+  expect(active).not.toBeNull();
+  if (!active) return;
+  const last = new Date(Date.now() - 61 * 60_000).toISOString();
+  state.finished.push({ ...active, last_activity_at: last, ended_at: last, auto_ended: true });
+  state.session = null;
+  await page.reload();
+  await expect(
+    page.getByText("操作が1時間なかったため、トレーニングを自動終了しました。", { exact: false }),
+  ).toBeVisible();
+  await openTraining(page);
+  await expect(page.getByRole("button", { name: "トレーニングを開始", exact: true })).toBeEnabled();
+});
+
+test("自動終了の照合失敗は表示せず端末記録を保持して自動復帰する", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  const active = state.session;
+  expect(active).not.toBeNull();
+  if (!active) return;
+  const last = new Date(Date.now() - 61 * 60_000).toISOString();
+  const key = `gotore:session-queue:v1:${state.user.id}`;
+  await page.evaluate(
+    ({ key, last }) => {
+      const record = JSON.parse(localStorage.getItem(key) || "null");
+      record.base.last_activity_at = last;
+      record.lastActivityAt = undefined;
+      record.activityTrail = undefined;
+      localStorage.setItem(key, JSON.stringify(record));
+    },
+    { key, last },
+  );
+  state.session = null;
+  state.finished.push({ ...active, last_activity_at: last, ended_at: last, auto_ended: true });
+  let fail = true;
+  await page.route("**/api/sessions/active", (route) =>
+    fail ? route.abort() : route.fulfill({ json: state.session }),
+  );
+  await page.reload();
+  await expect(page.getByTestId("floating-training")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "終了状態を確認する" })).toHaveCount(0);
+  await expect(page.getByText("前のトレーニングの終了状態を確認", { exact: false })).toHaveCount(0);
+  expect(await page.evaluate((key) => localStorage.getItem(key), key)).not.toBeNull();
+  fail = false;
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect(page.getByTestId("floating-training")).toBeEnabled();
+  expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();
+});
+
+test("トレーニング終了の確定後は次のSTARTを押せる", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  await page.getByRole("button", { name: "セットを追加", exact: true }).click();
+  await expect.poll(() => state.saves).toBe(1);
+  await page.getByRole("button", { name: "トレーニング終了", exact: true }).click();
+  await page.getByRole("button", { name: "終了する", exact: true }).click();
+  await expect(page.getByRole("region", { name: "トレーニング結果" })).toContainText("保存済み");
+  await page
+    .getByRole("region", { name: "トレーニング結果" })
+    .getByRole("button", { name: "ホーム" })
+    .click();
+  const start = page.getByRole("button", { name: "トレーニングを開始", exact: true });
+  await expect(start).toBeEnabled();
+  await start.click();
+  await expect(page.getByRole("button", { name: "トレーニング終了", exact: true })).toBeVisible();
+});
 
 for (const resume of [false, true]) {
   test(`初回復元失敗からオンラインで${resume ? "同じセッションを再開" : "開始可能に復帰"}し、多重取得しない`, async ({
@@ -42,7 +112,7 @@ for (const resume of [false, true]) {
       expect(loads).toBe(failedLoads + 1);
       release();
       if (resume) {
-        await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
+        await page.getByRole("button", { name: "記録画面へ戻る", exact: true }).click();
         await expect(
           page.getByRole("button", { name: "トレーニング終了", exact: true }),
         ).toBeVisible();

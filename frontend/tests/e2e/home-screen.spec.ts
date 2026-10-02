@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining } from "./mock-training";
 
 test("ホーム画面用のメタ情報と各サイズのPNGを配信する", async ({ page, request }) => {
@@ -61,7 +61,7 @@ test("ログインとホームでE-GOTOREを表示する", async ({ page }) => {
       true,
     );
   }
-  await page.screenshot({ path: "../docs/images/e-gotore/login-430.png", fullPage: true });
+  await page.screenshot({ path: "test-results/login-430.png", fullPage: true });
   await mockTraining(page);
   const logo = page.getByRole("button", { name: "E-GOTORE", exact: true });
   await expect(logo).toBeVisible();
@@ -73,5 +73,5 @@ test("ログインとホームでE-GOTOREを表示する", async ({ page }) => {
       true,
     );
   }
-  await page.screenshot({ path: "../docs/images/e-gotore/home-430.png", fullPage: true });
+  await page.screenshot({ path: "test-results/home-430.png", fullPage: true });
 });

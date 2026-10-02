@@ -1,15 +1,14 @@
 import { api } from "@/lib/api";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { LoadingState } from "../loading/loading-state";
+import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
+import { useMemoDelivery, useVisibleMemo } from "../training/memo-delivery-provider";
+import type { Memo, MemoDraftState } from "../training/memo-draft";
+import { MemoFeedback, memoNeedsReview } from "../training/memo-feedback";
 
-import {
-  type Memo,
-  type MemoDraftState,
-  memoDraftKey,
-  readMemoDraft,
-  removeMemoDraft,
-} from "../training/memo-draft";
 export function InlineMemo({
   title,
+  active = true,
   path,
   initial,
   name,
@@ -20,6 +19,7 @@ export function InlineMemo({
   singleLine = false,
 }: {
   title: string;
+  active?: boolean;
   path: string;
   initial?: Memo;
   name?: string;
@@ -29,93 +29,96 @@ export function InlineMemo({
   omitWhenEmpty?: boolean;
   singleLine?: boolean;
 }) {
-  const key = memoDraftKey(userId, name ?? path);
-  const [draft] = useState(() => readMemoDraft(key));
-  const [draftState, setDraftState] = useState<MemoDraftState>(draft ? "stored" : "saved");
-  useEffect(() => onDraftChange?.(draftState), [onDraftChange, draftState]);
-  const [memo, setMemo] = useState<Memo | null>(draft ?? initial ?? null);
-  const [content, setContent] = useState(draft?.content ?? initial?.content ?? "");
-  const dirty = useRef(!!draft);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [editing, setEditing] = useState(!!draft);
+  const cache = useRecordSnapshot();
+  const target = useMemo(
+    () => ({
+      path,
+      name,
+      label: name
+        ? `${name}の種目メモ`
+        : `${decodeURIComponent(path.split("name=")[1] ?? "")}の${title}`,
+    }),
+    [path, name, title],
+  );
+  const { store } = useMemoDelivery();
+  const entry = useVisibleMemo(target, active);
+  const needsReview = memoNeedsReview(entry);
+  const sessionMemo = path.match(/^\/sessions\/([^/]+)\/exercise-memo\?name=(.+)$/);
+  const cached = sessionMemo
+    ? cache?.snapshot?.session_exercise_memos[sessionMemo[1]]?.[decodeURIComponent(sessionMemo[2])]
+    : undefined;
+  const [editing, setEditing] = useState(entry.dirty);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const field = useRef<HTMLTextAreaElement>(null);
+  const previousPhase = useRef(entry.phase);
   useEffect(() => {
     if (editing) field.current?.focus();
   }, [editing]);
   useEffect(() => {
+    if (entry.phase === "error" && needsReview) setEditing(true);
+    if (previousPhase.current === "sending" && entry.phase === "idle" && !entry.queue.length) {
+      if (!entry.dirty) setEditing(false);
+      onSaved?.();
+    }
+    previousPhase.current = entry.phase;
+  }, [entry.phase, needsReview, entry.queue.length, entry.dirty, onSaved]);
+  const draftState: MemoDraftState = entry.dirty
+    ? entry.storageError
+      ? "memory"
+      : "stored"
+    : "saved";
+  useEffect(() => onDraftChange?.(draftState), [draftState, onDraftChange]);
+  useEffect(() => {
     if (initial) {
-      if (!dirty.current) {
-        setMemo(initial);
-        setContent(initial.content);
-      }
+      store.prime(target, initial);
       return;
     }
-    let stopped = false;
-    void api<Memo>(path)
+    if (cached) store.prime(target, cached);
+    const controller = new AbortController();
+    void api<Memo>(path, { signal: controller.signal }, userId)
       .then((value) => {
-        if (!stopped) {
-          if (!dirty.current) {
-            setMemo(value);
-            setContent(value.content);
-          }
+        if (!controller.signal.aborted) {
+          store.prime(target, value);
+          setLoadError("");
         }
       })
       .catch(() => {
-        if (!stopped) setError("メモを取得できません");
+        if (!controller.signal.aborted) setLoadError("メモを取得できません");
       });
-    return () => {
-      stopped = true;
-    };
-  }, [initial, path]);
+    return () => controller.abort();
+  }, [initial, cached, path, userId, store, target]);
   async function reload() {
-    if (dirty.current && !window.confirm("入力中のメモを破棄して読み直しますか？")) return;
-    setBusy(true);
+    if (entry.phase === "sending") return;
+    if (entry.dirty && !window.confirm("入力中のメモを破棄して読み直しますか？")) return;
+    setLoading(true);
     try {
       const value = name
-        ? (await api<{ memo: Memo }>(`/exercises/context?name=${encodeURIComponent(name)}`)).memo
-        : await api<Memo>(path);
-      setMemo(value);
-      setContent(value.content);
-      dirty.current = false;
-      setDraftState("saved");
-      setError(removeMemoDraft(key) ? "" : "読み直しましたが、端末の下書きを消去できません。");
+        ? (
+            await api<{ memo: Memo }>(
+              `/exercises/context?name=${encodeURIComponent(name)}`,
+              {},
+              userId,
+            )
+          ).memo
+        : await api<Memo>(path, {}, userId);
+      store.discard(target, value);
+      setLoadError("");
     } catch {
-      setError("メモを取得できません");
+      setLoadError("メモを取得できません");
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
   }
-  if (omitWhenEmpty && !content.trim() && !editing && !error && !dirty.current) return null;
+  const error = entry.error || loadError;
+  if (omitWhenEmpty && !entry.content.trim() && !editing && !error && !entry.dirty) return null;
   return (
     <form
       className={`inline-memo${singleLine ? " single-line" : ""}`}
-      onSubmit={async (event) => {
+      onSubmit={(event) => {
         event.preventDefault();
-        if (!memo || busy) return;
-        setBusy(true);
-        setError("");
-        const sent = content;
-        try {
-          const saved = await api<Memo>(path, {
-            method: "PUT",
-            body: JSON.stringify({
-              ...(name ? { name } : {}),
-              content: sent,
-              expected_revision: memo.revision,
-            }),
-          });
-          setMemo(saved);
-          dirty.current = false;
-          setDraftState("saved");
-          if (!removeMemoDraft(key)) setError("保存しましたが、端末の下書きを消去できません。");
-          setEditing(false);
-          onSaved?.();
-        } catch (reason) {
-          setError(reason instanceof Error ? reason.message : "保存できません");
-        } finally {
-          setBusy(false);
-        }
+        if (!entry.memo || loading) return;
+        if (store.enqueue(target)) setEditing(false);
       }}
     >
       {!editing ? (
@@ -123,54 +126,55 @@ export function InlineMemo({
           type="button"
           className="memo-text"
           aria-label={`${title}を編集`}
-          disabled={!memo}
+          disabled={!entry.memo}
           onClick={() => setEditing(true)}
         >
-          {content.trim() ? content : "メモ"}
+          {entry.content.trim() ? entry.content : "メモ"}
         </button>
       ) : (
-        <>
-          <textarea
-            id={key}
-            aria-label={title}
-            maxLength={1000}
-            rows={singleLine ? 1 : 2}
-            wrap={singleLine ? "off" : undefined}
-            disabled={busy || !memo}
-            placeholder="メモ"
-            value={content}
-            ref={field}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
-              event.preventDefault();
-              event.currentTarget.form?.requestSubmit();
-            }}
-            onBlur={(event) => {
-              // 入力欄を離れる操作も、Enter と同じ保存のきっかけにする。
-              if (dirty.current && !busy && memo) event.currentTarget.form?.requestSubmit();
-            }}
-            onChange={(event) => {
-              setContent(event.target.value);
-              dirty.current = true;
-              try {
-                localStorage.setItem(
-                  key,
-                  JSON.stringify({ content: event.target.value, revision: memo?.revision ?? 0 }),
-                );
-                setDraftState("stored");
-              } catch {
-                setDraftState("memory");
-                setError("端末へ保持できません。メモを保存してください。");
-              }
-            }}
-          />
-        </>
+        <textarea
+          id={`memo-${userId}-${name ?? path}`}
+          aria-label={title}
+          maxLength={1000}
+          rows={singleLine ? 1 : 2}
+          wrap={singleLine ? "off" : undefined}
+          disabled={loading || !entry.memo}
+          placeholder="メモ"
+          value={entry.content}
+          ref={field}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            event.currentTarget.form?.requestSubmit();
+          }}
+          onBlur={(event) => {
+            if (
+              event.relatedTarget instanceof HTMLElement &&
+              event.currentTarget.form?.contains(event.relatedTarget)
+            )
+              return;
+            if (entry.dirty && !loading && entry.memo) event.currentTarget.form?.requestSubmit();
+          }}
+          onChange={(event) => store.edit(target, event.target.value)}
+        />
       )}
-      {error && (
+      {entry.phase === "sending" && <LoadingState label="メモを送信中" compact />}
+      <MemoFeedback
+        entry={entry}
+        onRetry={() => store.retry(target)}
+        onReload={() => void reload()}
+        disabled={loading}
+      />
+      {loadError && !entry.error && !entry.storageError && (
         <p className="error" role="alert">
-          {error}
-          <button type="button" className="text-button" onClick={() => void reload()}>
-            読み直す
+          メモを開けません。
+          <button
+            type="button"
+            className="text-button"
+            disabled={loading || entry.phase === "sending"}
+            onClick={() => void reload()}
+          >
+            再試行
           </button>
         </p>
       )}

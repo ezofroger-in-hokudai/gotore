@@ -1,4 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, openGroup } from "./mock-training";
 
 async function openName(page: import("@playwright/test").Page) {
@@ -55,38 +57,152 @@ test("プロフィール取得失敗から再試行できる", async ({ page }) 
   );
 });
 
-test("外観と触覚を端末に保持し、未提供の通知項目を省く", async ({ page }) => {
+test("外観と触覚を端末に保持し、通知設定を表示する", async ({ page }) => {
   await mockTraining(page);
   await navigate(page, "設定");
-  await expect(page.getByText("通知", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("通知", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /^外観/ }).click();
   await page.getByRole("button", { name: "ダーク", exact: true }).click();
   await page.getByRole("button", { name: "閉じる", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.getByRole("button", { name: /^触覚フィードバック/ }).click();
-  await page.getByRole("checkbox").uncheck();
-  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await page.getByRole("switch", { name: "触覚フィードバック", exact: true }).uncheck();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.reload();
   await navigate(page, "設定");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByRole("button", { name: /^触覚フィードバック/ })).toContainText("オフ");
+  await expect(
+    page.getByRole("switch", { name: "触覚フィードバック", exact: true }),
+  ).not.toBeChecked();
   await page.screenshot({ path: "test-results/v2-settings-dark.png", fullPage: true });
 });
 
 test("オーナーは名前変更を再試行でき、メンバーには管理欄を出さない", async ({ page }) => {
   const state = await mockTraining(page);
   await openGroup(page, "manage");
-  const name = page.getByLabel("変更後の名前", { exact: true });
+  await page.getByRole("button", { name: "グループ名を編集", exact: true }).click();
+  const name = page.getByRole("textbox", { name: "グループ名", exact: true });
   await name.fill("新しいグループ");
   state.failRename = true;
-  await page.getByRole("button", { name: "変更する", exact: true }).click();
+  await page.getByRole("button", { name: "決定", exact: true }).click();
   await expect(page.locator(".v2-app").getByRole("alert")).toContainText("通信できません");
   state.failRename = false;
-  await page.getByRole("button", { name: "変更する", exact: true }).click();
+  await page.getByRole("button", { name: "決定", exact: true }).click();
   await expect(page.getByRole("heading", { name: "新しいグループ", exact: true })).toBeVisible();
   expect(state.group.invite_code).toBe("ABCDEF123456");
   state.group.owner_id = "other";
   await page.reload();
-  await openGroup(page);
-  await expect(page.getByLabel("変更後の名前", { exact: true })).toHaveCount(0);
+  await openGroup(page, "manage");
+  await expect(page.getByRole("button", { name: "グループ名を編集", exact: true })).toHaveCount(0);
+});
+
+test("設定往復と名前・画像編集で再取得待ちを増やさない", async ({ page }) => {
+  await mockTraining(page);
+  const reads = { profile: 0, avatar: 0 };
+  let fail = false;
+  for (const [path, key, data] of [
+    ["/api/me", "profile", { display_name: "受信済みの名前" }],
+    ["/api/me/avatar", "avatar", { version: null, data_url: null }],
+  ] as const) {
+    await page.route(`**${path}`, (route) => {
+      reads[key]++;
+      return route.fulfill(fail ? { status: 503, json: { detail: "通信失敗" } } : { json: data });
+    });
+  }
+  await navigate(page, "設定");
+  await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("受信済みの名前");
+  await expect.poll(() => reads.avatar).toBe(1);
+  fail = true;
+  for (let index = 0; index < 3; index++) {
+    await navigate(page, "ホーム");
+    await navigate(page, "設定");
+    await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("受信済みの名前");
+  }
+  await page.getByRole("button", { name: /^表示名/ }).click();
+  await expect(page.getByRole("textbox", { name: "表示名", exact: true })).toHaveValue(
+    "受信済みの名前",
+  );
+  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await page.getByRole("button", { name: /^プロフィール画像/ }).click();
+  await expect(page.getByRole("button", { name: "写真を選ぶ", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("alert")).toHaveCount(0);
+  expect(reads).toEqual({ profile: 1, avatar: 1 });
+});
+
+test("設定の背景更新が失敗・遅延しても既知の名前と新しい保存結果を失わない", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-01T03:00:00Z"));
+  const state = await mockTraining(page);
+  let reads = 0;
+  let mode: "normal" | "fail" | "late" = "normal";
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/me", async (route) => {
+    reads++;
+    if (mode === "normal") return route.fallback();
+    if (mode === "fail") return route.fulfill({ status: 503, json: { detail: "背景更新失敗" } });
+    await gate;
+    return route.fulfill({ json: { display_name: "遅い古い名前" } });
+  });
+  await navigate(page, "設定");
+  await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("画面テスト");
+  mode = "fail";
+  await navigate(page, "ホーム");
+  await page.clock.setFixedTime(new Date("2026-10-01T03:01:01Z"));
+  await navigate(page, "設定");
+  await expect.poll(() => reads).toBe(2);
+  await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("画面テスト");
+  mode = "late";
+  await navigate(page, "ホーム");
+  await page.clock.setFixedTime(new Date("2026-10-01T03:02:02Z"));
+  await navigate(page, "設定");
+  await expect.poll(() => reads).toBe(3);
+  await page.getByRole("button", { name: /^表示名/ }).click();
+  await page.getByRole("textbox", { name: "表示名", exact: true }).fill("保存した新しい名前");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect.poll(() => state.syncs).toBe(1);
+  await expect(page.getByRole("status")).toContainText("保存しました");
+  release();
+  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("保存した新しい名前");
+  await navigate(page, "ホーム");
+  await navigate(page, "設定");
+  await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("保存した新しい名前");
+  expect(reads).toBe(3);
+});
+
+test("ログアウト後の別ユーザーへ設定の名前・画像を持ち越さない", async ({ page }) => {
+  const state = await mockTraining(page);
+  let reads = 0;
+  let userImage = {
+    version: "first-image",
+    data_url: `data:image/png;base64,${readFileSync(resolve(__dirname, "../fixtures/avatar.png")).toString("base64")}`,
+  };
+  await page.route("**/api/me/avatar", (route) => {
+    reads++;
+    return route.fulfill({ json: userImage });
+  });
+  await navigate(page, "設定");
+  await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("画面テスト");
+  await expect(page.locator(".settings-avatar-row img")).toHaveCount(1);
+  await page.getByRole("button", { name: "ログアウト", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "ログアウト", exact: true })
+    .getByRole("button", { name: "ログアウト", exact: true })
+    .click();
+  await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
+  state.user.id = "00000000-0000-0000-0000-000000000099";
+  state.user.user_metadata.display_name = "別のユーザー";
+  userImage = { version: "", data_url: "" };
+  await page.evaluate(
+    (id) => localStorage.setItem(`gotore:onboarding:v2:${id}`, "seen"),
+    state.user.id,
+  );
+  await page.getByLabel("メールアドレス", { exact: true }).fill("other@example.test");
+  await page.getByLabel("パスワード", { exact: true }).fill("ui-test-password");
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await navigate(page, "設定");
+  await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("別のユーザー");
+  await expect(page.locator(".settings-avatar-row img")).toHaveCount(0);
+  expect(reads).toBe(2);
 });

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
 const png = readFileSync(resolve(__dirname, "../fixtures/avatar.png"));
@@ -12,9 +12,15 @@ test("画像をプレビューしてキャンセル・保存失敗・再試行�
     data_url: null as string | null,
   };
   let writes = 0;
+  let reads = 0;
+  let failReads = false;
   let fail = false;
   await page.route("**/api/me/avatar", async (route) => {
     const method = route.request().method();
+    if (method === "GET") {
+      reads++;
+      if (failReads) return route.fulfill({ status: 503, json: { detail: "再取得失敗" } });
+    }
     if (method === "PUT") {
       writes++;
       if (fail)
@@ -58,12 +64,16 @@ test("画像をプレビューしてキャンセル・保存失敗・再試行�
   fail = false;
   await dialog.getByRole("button", { name: "保存", exact: true }).click();
   await expect(dialog.getByRole("status")).toHaveText("保存しました。");
+  failReads = true;
   await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
+  await navigate(page, "ホーム");
+  await navigate(page, "設定");
   await page.getByRole("button", { name: /^プロフィール画像/ }).click();
   await expect(dialog.locator(".avatar-preview img")).toBeVisible();
   await dialog.getByRole("button", { name: "画像を削除", exact: true }).click();
   await expect(dialog.getByRole("status")).toHaveText("画像を削除しました。");
   await expect(dialog.locator(".avatar-preview img")).toHaveCount(0);
+  expect(reads).toBe(1);
 });
 
 test("LIVEは右下の丸とラベルで示し、新着だけ強調して期限・切断で止める", async ({ page }) => {

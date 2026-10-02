@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, openGroup } from "./mock-training";
+import { expect, test } from "./fixtures";
+import { emptyTodayActivity, mockTraining, navigate, openGroup } from "./mock-training";
 
 const avatarPng = readFileSync(resolve(__dirname, "../fixtures/avatar.png"));
 
@@ -340,16 +340,13 @@ test("上段のグループカードと下段のタイムライン絞り込み�
     }),
   ).toBeLessThanOrEqual(1);
 
-  // 上段を動かしても、タイムラインは「すべて」のまま変えない。
-  await page.getByRole("button", { name: "大学トレ部を表示", exact: true }).click();
-  await expect(page.getByRole("button", { name: "大学トレ部を表示", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect(page.getByRole("button", { name: "すべて", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  // カードを横に動かしてもタイムラインの選択は変えない。
+  await page.locator(".group-carousel").evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect(
+    page.locator(".home-feed-tabs").getByRole("button", { name: "すべて", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".feed-item")).toHaveCount(2);
 
   // 絞り込みは見出し直下の選択だけで行い、待ち時間や旧表示を挟まない。
@@ -405,6 +402,9 @@ test("一覧で選んだグループを戻る・進むとメンバー・招待�
   await page.route("**/api/groups", (route) => route.fulfill({ json: [state.group, second] }));
   await page.route("**/api/groups/second", (route) =>
     route.fulfill({ json: { ...second, members: [] } }),
+  );
+  await page.route("**/api/groups/today-activity", (route) =>
+    route.fulfill({ json: emptyTodayActivity([state.group, second]) }),
   );
   await page.reload();
   await page.route("**/api/groups/second/activity", (route) =>

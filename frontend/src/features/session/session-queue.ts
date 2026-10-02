@@ -24,7 +24,13 @@ type Options = {
   write: (value: string | null) => void;
   lock: <T>(name: string, work: () => Promise<T>) => Promise<T>;
   load: () => Promise<TrainingSession | null>;
-  send: (id: string, revision: number, exercises: Exercise[]) => Promise<TrainingSession>;
+  send: (
+    id: string,
+    revision: number,
+    exercises: Exercise[],
+    activityAt?: string,
+  ) => Promise<TrainingSession>;
+  reconcile: (id: string, occurredAt: string) => Promise<TrainingSession>;
   finish: (id: string, revision: number) => Promise<TrainingSession>;
 };
 
@@ -43,6 +49,7 @@ export class SessionQueue {
   };
   private listeners = new Set<() => void>();
   private running: Promise<void> | null = null;
+  private rerunRequested = false;
   private stopped = false;
   constructor(private options: Options) {}
   subscribe = (listener: () => void) => {
@@ -71,10 +78,10 @@ export class SessionQueue {
     };
     this.state = {
       ...this.state,
-      session: draft && !record.finish ? draft : null,
-      finishRecord: draft && record.finish ? draft : null,
+      session: draft && !record.finish && !record.base.ended_at ? draft : null,
+      finishRecord: draft && (record.finish || !!record.base.ended_at) ? draft : null,
       pending: record?.pending.length ?? 0,
-      finishPending: !!record?.finish,
+      finishPending: !!record?.finish || !!record?.base.ended_at,
       confirmedRevision: record?.base.revision ?? 0,
       ...patch,
       ...(record?.conflict ? { status: "conflict" as const } : {}),
@@ -90,11 +97,21 @@ export class SessionQueue {
     }
     this.publish(record, patch);
   }
+  private withActivity(record: SavedQueue, occurredAt: string): SavedQueue {
+    const lastCheckpoint =
+      record.activityTrail?.at(-1) ?? record.base.last_activity_at ?? record.base.started_at;
+    const activityTrail =
+      Date.parse(occurredAt) - Date.parse(lastCheckpoint) >= 30 * 60_000
+        ? [...(record.activityTrail ?? []), occurredAt]
+        : record.activityTrail;
+    return { ...record, lastActivityAt: occurredAt, ...(activityTrail ? { activityTrail } : {}) };
+  }
   async restore() {
     try {
       const record = this.read();
       if (record) this.publish(record, { ready: true });
-      if (!record?.pending.length && !record?.finish) await this.refresh();
+      if (record?.lastActivityAt || record?.activityTrail?.length) await this.sync();
+      else if (!record?.pending.length && !record?.finish) await this.refresh();
     } catch (reason) {
       this.fail(reason);
     }
@@ -109,14 +126,40 @@ export class SessionQueue {
   }
   async refresh() {
     await this.options.lock("send", async () => {
-      if (this.read()?.pending.length || this.read()?.finish) return;
+      if (
+        this.read()?.pending.length ||
+        this.read()?.finish ||
+        this.read()?.lastActivityAt ||
+        this.read()?.activityTrail?.length
+      )
+        return;
       const server = await this.options.load();
+      const previous = this.read();
+      let ended: TrainingSession | null = null;
+      if (!server && previous && !previous.pending.length) {
+        try {
+          ended = await this.options.reconcile(
+            previous.base.id,
+            previous.base.last_activity_at ?? previous.base.started_at,
+          );
+        } catch {
+          // 手動終了や削除済みの記録は通常の再読込へ進む。
+        }
+      }
       await this.options.lock("store", async () => {
-        if (this.read()?.pending.length || this.read()?.finish) return;
+        if (
+          this.read()?.pending.length ||
+          this.read()?.finish ||
+          this.read()?.lastActivityAt ||
+          this.read()?.activityTrail?.length
+        )
+          return;
         this.write(server ? { base: server, pending: [] } : null, {
           ready: true,
           status: "idle",
           error: "",
+          ...(server ? { saved: null } : {}),
+          ...(ended?.auto_ended ? { saved: ended } : {}),
         });
       });
     });
@@ -129,13 +172,21 @@ export class SessionQueue {
         ready: true,
         status: "idle",
         error: "",
+        ...(session && !session.ended_at ? { saved: null } : {}),
       });
+    });
+  }
+  async touch(occurredAt: string) {
+    await this.options.lock("store", async () => {
+      const record = this.read();
+      if (!record || record.finish || record.conflict || record.base.ended_at) return;
+      this.write(this.withActivity(record, occurredAt));
     });
   }
   async enqueue(exercises: Exercise[], revision: number) {
     return this.options.lock("store", async () => {
       const record = this.read();
-      if (!record || record.conflict || record.finish)
+      if (!record || record.conflict || record.finish || record.base.ended_at)
         throw new Error("保存済みとの違いを確認してください。端末の入力は保持しています。");
       const current = {
         ...record.base,
@@ -146,7 +197,7 @@ export class SessionQueue {
         throw new Error("別の保存があります。セットを選び直してください。");
       if (JSON.stringify(exercises) === JSON.stringify(current.exercises)) return current;
       const next = {
-        ...record,
+        ...this.withActivity(record, new Date().toISOString()),
         pending: [
           ...record.pending,
           { id: createSessionId(), change: queueChange(current.exercises, exercises) },
@@ -185,18 +236,75 @@ export class SessionQueue {
     });
   }
   sync() {
-    if (this.running) return this.running;
+    if (this.running) {
+      this.rerunRequested = true;
+      return this.running;
+    }
     this.running = this.options
       .lock("send", async () => {
         while (!this.stopped) {
           const record = this.read();
           const job = record?.pending[0];
-          if (!record || record.conflict || (!job && !record.finish)) {
+          const checkpoint = record?.activityTrail?.[0];
+          if (
+            !record ||
+            record.conflict ||
+            (!job &&
+              !checkpoint &&
+              !record.finish &&
+              !record.lastActivityAt &&
+              !record.base.ended_at)
+          ) {
             this.publish(record);
             return;
           }
           this.publish(record, { status: "syncing", error: "" });
           try {
+            if (checkpoint) {
+              const result = await this.options.reconcile(record.base.id, checkpoint);
+              if (
+                (record.pending.length || record.finish) &&
+                (JSON.stringify(result.exercises) !== JSON.stringify(record.base.exercises) ||
+                  (result.revision !== record.base.revision && !result.auto_ended))
+              )
+                throw Object.assign(new Error("別の更新があります。"), { status: 409 });
+              await this.options.lock("store", async () => {
+                const latest = this.read();
+                if (latest?.base.id !== record.base.id || latest.activityTrail?.[0] !== checkpoint)
+                  return;
+                this.write({
+                  ...latest,
+                  base: result,
+                  activityTrail: latest.activityTrail.slice(1),
+                });
+              });
+              continue;
+            }
+            if (record.lastActivityAt && !job && !record.finish) {
+              const result = await this.options.reconcile(record.base.id, record.lastActivityAt);
+              await this.options.lock("store", async () => {
+                const latest = this.read();
+                if (latest?.base.id !== record.base.id) return;
+                this.write(
+                  {
+                    ...latest,
+                    base: result,
+                    ...(latest.lastActivityAt === record.lastActivityAt
+                      ? { lastActivityAt: undefined }
+                      : {}),
+                  },
+                  { status: "idle", error: "" },
+                );
+              });
+              continue;
+            }
+            if (!job && !record.finish && record.base.ended_at) {
+              await this.options.lock("store", async () => {
+                if (this.read()?.base.id === record.base.id)
+                  this.write(null, { status: "idle", error: "", saved: record.base });
+              });
+              continue;
+            }
             if (!job) {
               const result = await this.options.finish(record.base.id, record.base.revision);
               if (
@@ -220,7 +328,12 @@ export class SessionQueue {
               continue;
             }
             const exercises = applyQueueChange(record.base.exercises, job.change);
-            const result = await this.options.send(record.base.id, record.base.revision, exercises);
+            const result = await this.options.send(
+              record.base.id,
+              record.base.revision,
+              exercises,
+              record.lastActivityAt ?? record.base.last_activity_at ?? record.base.started_at,
+            );
             // 後続差分の基準は送信した全状態。異なるACKへ差分を適用しない。
             if (
               result.id !== record.base.id ||
@@ -236,6 +349,8 @@ export class SessionQueue {
                   base: result,
                   pending: latest.pending.slice(1),
                   ...(latest.finish ? { finish: true } : {}),
+                  ...(latest.lastActivityAt ? { lastActivityAt: latest.lastActivityAt } : {}),
+                  ...(latest.activityTrail?.length ? { activityTrail: latest.activityTrail } : {}),
                 },
                 { status: "idle", error: "", saved: result },
               );
@@ -267,8 +382,11 @@ export class SessionQueue {
         }
       })
       .catch((reason) => this.fail(reason))
-      .finally(() => {
+      .finally(async () => {
         this.running = null;
+        const rerun = this.rerunRequested && !this.stopped;
+        this.rerunRequested = false;
+        if (rerun) await this.sync();
       });
     return this.running;
   }

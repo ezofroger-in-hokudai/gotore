@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { showRecordingMemos } from "./mock-training";
 import { mockTraining, navigate, openTraining, startTraining } from "./mock-training";
 
@@ -40,7 +40,8 @@ test("保存の応答待ちでも連続追加・編集でき、順序通り同�
         { weight: 70, reps: 8 },
         { weight: 77.5, reps: 8 },
       ]);
-    await expect(page.locator(".sync-status")).toContainText("同期済み");
+    expect(state.saves).toBe(3);
+    await expect(page.locator(".sync-status")).toHaveCount(0);
   } finally {
     release();
   }
@@ -71,10 +72,7 @@ test("次の種目以外の入口で選択画面へ移っても入力を端末�
   await startTraining(page);
   const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
   await weight.fill("72.5");
-  await page
-    .getByRole("heading", { name: "ベンチプレス", exact: true })
-    .getByRole("button")
-    .click();
+  await page.locator(".recording-exercise-title").click();
   await expect(page.locator(".session-wordmark")).toHaveText("E-GOTORE");
   const stored = await page.evaluate(
     ({ userId, sessionId }) => {
@@ -155,7 +153,11 @@ test("常時表示の種目メモは再起動しても下書きと競合元revis
   await showRecordingMemos(page);
   await expect(field).toHaveValue("足の位置を確認する");
   await field.press("Enter");
-  await expect(page.locator(".inline-memo").getByRole("alert")).toContainText("変更済み");
+  await expect(page.locator(".inline-memo").getByRole("alert")).toContainText("別の変更");
+  await expect(page.locator(".inline-memo").getByRole("alert")).not.toContainText("変更済み");
+  await expect(
+    page.locator(".inline-memo").getByRole("button", { name: "再送", exact: true }),
+  ).toHaveCount(0);
   expect(memo.content).toBe("別端末で修正");
   page.once("dialog", (dialog) => dialog.accept());
   await page.locator(".inline-memo").getByRole("button", { name: "読み直す", exact: true }).click();
@@ -217,13 +219,9 @@ test("メモは本文だけを表示してタッチで編集し、空の前回�
   await startTraining(page);
   await showRecordingMemos(page);
   const exercise = page.getByRole("button", { name: "種目メモを編集", exact: true });
-  const previous = page.getByRole("button", { name: "前回のメモを編集", exact: true });
   await expect(exercise).toHaveText("胸を張って押す");
-  await expect(previous).toHaveText("前回は余裕があった");
-  const previousBox = await previous.boundingBox();
-  const exerciseBox = await exercise.boundingBox();
-  if (!previousBox || !exerciseBox) throw new Error("メモが表示されていません");
-  expect(previousBox.y).toBeGreaterThan(exerciseBox.y);
+  // 前回メモの編集入口は現在の記録入力には置かない。
+  await expect(page.getByRole("button", { name: "前回のメモを編集", exact: true })).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "種目メモ", exact: true })).toHaveCount(0);
   for (const text of [
     "種目メモ",
@@ -247,5 +245,5 @@ test("メモは本文だけを表示してタッチで編集し、空の前回�
   await openTraining(page);
   await showRecordingMemos(page);
   await expect(exercise).toBeVisible();
-  await expect(previous).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "前回のメモを編集", exact: true })).toHaveCount(0);
 });

@@ -70,6 +70,7 @@ export type ExerciseOption = {
   id: string;
   name: string;
   revision?: number;
+  last_performed_on?: string | null;
   primary_body_part?: BodyPart | "full_body" | null;
   secondary_body_parts?: (BodyPart | "full_body")[];
 };
@@ -97,12 +98,14 @@ export type Workout = {
   revision: number;
   started_at?: string | null;
   ended_at?: string | null;
+  auto_ended?: boolean;
   shared_group_ids?: string[];
 };
 
 export type TrainingSession = Workout & {
   started_at: string;
   ended_at: string | null;
+  last_activity_at?: string;
   best_updated?: boolean;
 };
 export type ExerciseContext = {
@@ -192,11 +195,17 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function api<T>(
+  path: string,
+  options: RequestInit = {},
+  expectedUserId?: string,
+): Promise<T> {
   const client = getSupabase();
   if (!client) throw new Error("ログインを利用できません。");
   const { data, error } = await client.auth.getSession();
   if (error || !data.session) throw new Error("ログインし直してください。");
+  if (expectedUserId && data.session.user.id !== expectedUserId)
+    throw new Error("ログイン中のユーザーが変わりました。");
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {

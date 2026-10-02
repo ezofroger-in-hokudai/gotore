@@ -1,11 +1,12 @@
-import type { AvatarImage } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { CatalogPanel } from "../exercises/catalog-panel";
 import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
+import { NotificationSettingsPanel } from "../notifications/notification-settings";
+import type { useNotifications } from "../notifications/use-notifications";
 import { AvatarPanel } from "../settings/avatar-panel";
 import { SettingsPanel } from "../settings/settings-panel";
 import { SuggestionBox, useSuggestionBox } from "../settings/suggestion-box";
-import { useResource } from "../training/use-resource";
+import type { SettingsProfile } from "../settings/use-settings-profile";
 import { Sheet } from "./sheet";
 
 type Theme = "system" | "light" | "dark";
@@ -41,6 +42,8 @@ export function usePreferences(userId: string) {
 }
 
 export function Preferences({
+  notifications,
+  resources,
   catalog,
   preferences,
   onChanged,
@@ -48,6 +51,8 @@ export function Preferences({
   onLogout,
   signingOut,
 }: {
+  notifications: ReturnType<typeof useNotifications>;
+  resources: SettingsProfile;
   catalog: ReturnType<typeof useExerciseCatalog>;
   preferences: ReturnType<typeof usePreferences>;
   onChanged: () => void;
@@ -56,11 +61,10 @@ export function Preferences({
   signingOut: boolean;
 }) {
   const [sheet, setSheet] = useState<
-    "name" | "avatar" | "theme" | "haptic" | "exercises" | "suggestion" | null
+    "name" | "avatar" | "theme" | "exercises" | "suggestion" | "notifications" | "logout" | null
   >(null);
   const suggestion = useSuggestionBox();
-  const profile = useResource<{ display_name: string }>("/me");
-  const avatar = useResource<AvatarImage>("/me/avatar");
+  const { profile, avatar } = resources;
   return (
     <section className="preferences">
       <h1>設定</h1>
@@ -107,9 +111,29 @@ export function Preferences({
             {{ system: "端末に合わせる", light: "ライト", dark: "ダーク" }[preferences.theme]} ›
           </span>
         </button>
-        <button className="v2-row" type="button" onClick={() => setSheet("haptic")}>
+        <label className="v2-row haptic-setting">
           <span>触覚フィードバック</span>
-          <span>{preferences.haptic ? "オン" : "オフ"} ›</span>
+          <span className="haptic-value">
+            <span aria-hidden="true">{preferences.haptic ? "オン" : "オフ"}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              aria-checked={preferences.haptic}
+              aria-label="触覚フィードバック"
+              aria-describedby="haptic-description"
+              checked={preferences.haptic}
+              onChange={(event) => preferences.setHaptic(event.target.checked)}
+            />
+          </span>
+        </label>
+        <p className="muted haptic-description" id="haptic-description">
+          セット保存時に軽く振動します。対応する端末・ブラウザで利用できます。
+        </p>
+      </div>
+      <div className="v2-rows">
+        <button className="v2-row" type="button" onClick={() => setSheet("notifications")}>
+          <span>通知</span>
+          <span aria-hidden="true">›</span>
         </button>
       </div>
       <h2>サポート</h2>
@@ -126,7 +150,12 @@ export function Preferences({
         <button className="v2-row" type="button" data-tour="replay" onClick={onGuide}>
           使い方 <span>›</span>
         </button>
-        <button className="v2-row" type="button" disabled={signingOut} onClick={onLogout}>
+        <button
+          className="v2-row logout-row"
+          type="button"
+          disabled={signingOut}
+          onClick={() => setSheet("logout")}
+        >
           {signingOut ? "処理中…" : "ログアウト"}
         </button>
       </div>
@@ -135,41 +164,47 @@ export function Preferences({
           {preferences.error}
         </p>
       )}
-      {sheet && (
+      {sheet && sheet !== "logout" && (
         <Sheet
           title={
-            sheet === "suggestion"
-              ? "目安箱"
-              : sheet === "exercises"
-                ? "種目一覧"
-                : sheet === "avatar"
-                  ? "プロフィール画像"
-                  : sheet === "name"
-                    ? "表示名"
-                    : sheet === "theme"
-                      ? "外観"
-                      : "触覚フィードバック"
+            sheet === "notifications"
+              ? "通知"
+              : sheet === "suggestion"
+                ? "目安箱"
+                : sheet === "exercises"
+                  ? "種目一覧"
+                  : sheet === "avatar"
+                    ? "プロフィール画像"
+                    : sheet === "name"
+                      ? "表示名"
+                      : sheet === "theme"
+                        ? "外観"
+                        : "触覚フィードバック"
           }
           onClose={() => setSheet(null)}
           dismissOnBackdrop={sheet !== "exercises" && sheet !== "avatar" && sheet !== "name"}
         >
-          {sheet === "suggestion" ? (
+          {sheet === "notifications" ? (
+            <NotificationSettingsPanel notifications={notifications} />
+          ) : sheet === "suggestion" ? (
             <SuggestionBox state={suggestion} />
           ) : sheet === "exercises" ? (
             <CatalogPanel catalog={catalog} />
           ) : sheet === "avatar" ? (
             <AvatarPanel
+              current={avatar}
               name={profile.data?.display_name || ""}
-              onSaved={() => {
-                avatar.retry();
+              onSaved={(saved) => {
+                avatar.updateData(() => saved);
                 onChanged();
               }}
               onClose={() => setSheet(null)}
             />
           ) : sheet === "name" ? (
             <SettingsPanel
-              onSaved={() => {
-                profile.retry();
+              profile={profile}
+              onSaved={(displayName) => {
+                profile.updateData((current) => ({ ...current, display_name: displayName }));
                 onChanged();
               }}
             />
@@ -196,21 +231,31 @@ export function Preferences({
                 </button>
               ))}
             </div>
-          ) : (
-            <>
-              <p className="muted">
-                セットを保存したときに軽く振動します。対応する端末・ブラウザで利用できます。
-              </p>
-              <label className="haptic-toggle">
-                <input
-                  type="checkbox"
-                  checked={preferences.haptic}
-                  onChange={(e) => preferences.setHaptic(e.target.checked)}
-                />
-                触覚フィードバックを使う
-              </label>
-            </>
-          )}
+          ) : null}
+        </Sheet>
+      )}
+      {sheet === "logout" && (
+        <Sheet
+          title="ログアウト"
+          onClose={() => {
+            if (!signingOut) setSheet(null);
+          }}
+          dismissOnBackdrop={!signingOut}
+        >
+          <p>ログアウトしますか？</p>
+          <div className="settings-confirm-actions">
+            <button
+              className="secondary"
+              type="button"
+              disabled={signingOut}
+              onClick={() => setSheet(null)}
+            >
+              キャンセル
+            </button>
+            <button className="danger" type="button" disabled={signingOut} onClick={onLogout}>
+              {signingOut ? "処理中…" : "ログアウト"}
+            </button>
+          </div>
         </Sheet>
       )}
     </section>

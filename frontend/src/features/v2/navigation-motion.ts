@@ -35,6 +35,8 @@ export function runNavigationMotion(update: () => void, direction: Direction) {
     if (currentOperation === operationId) flushSync(update);
   });
   activeTransition = transition;
+  // 連続した画面切替で中断された描画準備の拒否を処理する。
+  void transition.ready.catch(() => {});
   const cleanup = () => {
     if (activeTransition !== transition) return;
     activeTransition = null;

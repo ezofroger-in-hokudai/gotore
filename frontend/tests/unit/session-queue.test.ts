@@ -27,13 +27,25 @@ function fixture() {
   let finishes = 0;
   let failFinish = false;
   let loseFinishResponse = false;
+  const reconciled: string[] = [];
   const options = {
     read: () => stored,
     write: (value: string | null) => {
       stored = value;
     },
     lock: async <T>(_name: string, work: () => Promise<T>) => work(),
-    load: async () => structuredClone(server),
+    load: async () => (server.ended_at ? null : structuredClone(server)),
+    reconcile: async (_id: string, occurredAt: string) => {
+      if (fail) throw new Error("offline");
+      reconciled.push(occurredAt);
+      if (
+        server.auto_ended &&
+        Date.parse(occurredAt) > Date.parse(server.last_activity_at ?? server.started_at)
+      )
+        server = { ...server, ended_at: occurredAt, last_activity_at: occurredAt };
+      else if (!server.ended_at) server = { ...server, last_activity_at: occurredAt };
+      return structuredClone(server);
+    },
     send: async (_id: string, revision: number, values: TrainingSession["exercises"]) => {
       if (fail) throw new Error("offline");
       if (
@@ -78,6 +90,9 @@ function fixture() {
     get finishes() {
       return finishes;
     },
+    get reconciled() {
+      return reconciled;
+    },
     failFinish: (value: boolean) => {
       failFinish = value;
     },
@@ -93,8 +108,67 @@ function fixture() {
     remoteEdit: () => {
       server = { ...server, revision: server.revision + 1, exercises: exercises(5) };
     },
+    autoExpire: () => {
+      server = {
+        ...server,
+        ended_at: server.last_activity_at ?? server.started_at,
+        auto_ended: true,
+      };
+    },
   };
 }
+test("端末に操作だけを保存した後に切断しても再接続時に操作時刻を送る", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  f.offline(true);
+  await f.queue.touch("2026-09-09T00:30:00Z");
+  await f.queue.sync();
+  expect(JSON.parse(f.stored as string).lastActivityAt).toBe("2026-09-09T00:30:00Z");
+  f.offline(false);
+  await f.queue.sync();
+  expect(f.server.last_activity_at).toBe("2026-09-09T00:30:00Z");
+  expect(JSON.parse(f.stored as string).lastActivityAt).toBeUndefined();
+});
+
+test("サーバーで自動終了した記録を復元時に通知する", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  f.autoExpire();
+  await f.queue.restore();
+  expect(f.queue.state.session).toBeNull();
+  expect(f.queue.state.saved?.auto_ended).toBe(true);
+});
+
+test("自動終了後も端末に残ったセットを送信してから終了を通知する", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  f.offline(true);
+  await f.queue.enqueue(exercises(1), 1);
+  await f.queue.sync();
+  f.autoExpire();
+  f.offline(false);
+  await f.queue.sync();
+  expect(f.server.exercises).toEqual(exercises(1));
+  expect(f.queue.state.saved?.auto_ended).toBe(true);
+  expect(f.stored).toBeNull();
+});
+
+test("長い通信断でも途中の操作時刻を順に送る", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  f.offline(true);
+  for (const minute of [30, 60, 90])
+    await f.queue.touch(new Date(Date.parse(initial.started_at) + minute * 60_000).toISOString());
+  expect(JSON.parse(f.stored as string).activityTrail).toHaveLength(3);
+  f.offline(false);
+  await f.queue.sync();
+  expect(f.reconciled).toEqual([
+    "2026-09-09T00:30:00.000Z",
+    "2026-09-09T01:00:00.000Z",
+    "2026-09-09T01:30:00.000Z",
+    "2026-09-09T01:30:00.000Z",
+  ]);
+});
 test("終了は端末に先に記録し、未送信セットの後に送る", async () => {
   const f = fixture();
   await f.queue.restore();
@@ -110,6 +184,21 @@ test("終了は端末に先に記録し、未送信セットの後に送る", as
   expect(f.writes).toBe(1);
   expect(f.finishes).toBe(1);
   expect(f.stored).toBeNull();
+});
+test("同期の終了直前に終了操作が入っても送信を続ける", async () => {
+  const f = fixture();
+  await f.queue.restore();
+  let requested = false;
+  let finish: Promise<unknown> | null = null;
+  f.queue.subscribe(() => {
+    if (requested || f.queue.state.status !== "idle") return;
+    requested = true;
+    finish = f.queue.requestFinish().then(() => f.queue.sync());
+  });
+  await f.queue.sync();
+  await finish;
+  expect(f.stored).toBeNull();
+  expect(f.finishes).toBe(1);
 });
 test("終了通信失敗と応答喪失の後も再起動して同じ終了を再送する", async () => {
   const f = fixture();

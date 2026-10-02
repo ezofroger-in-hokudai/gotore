@@ -1,9 +1,14 @@
 import { gunzipSync } from "node:zlib";
 import { type Page, expect } from "@playwright/test";
-import type { ExerciseOption, TrainingSession } from "../../src/lib/api";
+import type { ExerciseOption, TodayActivity, TrainingSession } from "../../src/lib/api";
 
 // UI単独の検証用。実際の認証・DB・共有検証はsharing.spec.tsで行う。
-export async function mockTraining(page: Page, owner = true, showGuide = false) {
+export async function mockTraining(
+  page: Page,
+  owner = true,
+  showGuide = false,
+  withSnapshot = true,
+) {
   const user = {
     id: "00000000-0000-0000-0000-000000000001",
     aud: "authenticated",
@@ -26,8 +31,8 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     failSync: false,
     failRename: false,
     options: [
-      { id: "option-bench", name: "ベンチプレス" },
-      { id: "option-squat", name: "スクワット" },
+      { id: "option-bench", name: "ベンチプレス", revision: 1 },
+      { id: "option-squat", name: "スクワット", revision: 1 },
     ] as ExerciseOption[],
     failOptions: false,
     failOptionWrite: false,
@@ -37,6 +42,8 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     finished: [] as TrainingSession[],
     failSave: false,
     saves: 0,
+    exerciseMemos: new Map<string, { content: string; revision: number }>(),
+    sessionMemos: new Map<string, { content: string; revision: number }>(),
   };
   await page.route("**/auth/v1/**", async (route) => {
     if (route.request().method() === "PUT") {
@@ -60,7 +67,61 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     });
   });
   await page.route("**/api/**", (route) => {
-    const path = new URL(route.request().url()).pathname;
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    if (path === "/api/notifications/settings")
+      return route.fulfill({
+        json:
+          route.request().method() === "PUT"
+            ? route.request().postDataJSON()
+            : {
+                stamp_enabled: true,
+                start_enabled: true,
+                start_timing: "home",
+                vibration: true,
+                sound: false,
+                push_stamp: true,
+                push_start: true,
+              },
+      });
+    if (path === "/api/notifications/inbox")
+      return route.fulfill({ json: { items: [], live_start_ids: [] } });
+    if (path === "/api/notifications/seen") return route.fulfill({ status: 204 });
+
+    if (!withSnapshot && path.startsWith("/api/me/record-snapshot"))
+      return route.fulfill({
+        status: 503,
+        json: { detail: "端末キャッシュを使わない通信経路の検証" },
+      });
+    if (path === "/api/me/record-snapshot")
+      return route.fulfill({
+        json: {
+          version: 1,
+          user_id: user.id,
+          workouts: [...(state.session ? [state.session] : []), ...state.finished],
+          options: state.options,
+          contexts: {},
+          workout_memos: {},
+          session_exercise_memos: {},
+        },
+      });
+    if (path === "/api/me/record-snapshot/changes")
+      return route.fulfill({
+        json: {
+          version: 1,
+          user_id: user.id,
+          workouts: [...(state.session ? [state.session] : []), ...state.finished],
+          deleted_workout_ids: [],
+          options: state.options,
+          deleted_option_ids: [],
+          contexts: {},
+          deleted_context_names: [],
+          workout_memos: {},
+          deleted_workout_memo_ids: [],
+          session_exercise_memos: {},
+          deleted_session_exercise_memos: {},
+        },
+      });
     if (path.endsWith("/stamps/summary"))
       return route.fulfill({
         json: Object.fromEntries(
@@ -97,6 +158,7 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
         ),
         created_at: new Date().toISOString(),
         started_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString(),
         ended_at: null,
       };
       return route.fulfill({ status: 201, json: state.session });
@@ -104,15 +166,29 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
     if (path.endsWith("/bests"))
       return route.fulfill({ json: { revision: state.session?.revision, sets: [] } });
     if (path.endsWith("/exercise-memo")) {
-      if (route.request().method() === "GET")
-        return route.fulfill({ json: { content: "", revision: 0 } });
-      return route.fulfill({
-        json: { content: route.request().postDataJSON().content, revision: 1 },
-      });
+      const key = `${path}:${url.searchParams.get("name")}`;
+      const memo = state.sessionMemos.get(key) ?? { content: "", revision: 0 };
+      if (route.request().method() === "GET") return route.fulfill({ json: memo });
+      const saved = {
+        content: route.request().postDataJSON().content,
+        revision: memo.revision + 1,
+      };
+      state.sessionMemos.set(key, saved);
+      return route.fulfill({ json: saved });
     }
     if (path.startsWith("/api/sessions/")) {
       if (path.endsWith("/heartbeat")) return route.fulfill({ status: 204 });
+      if (path.endsWith("/activity") && !state.session) {
+        const finished = state.finished.find((record) => path.includes(record.id));
+        return finished
+          ? route.fulfill({ json: finished })
+          : route.fulfill({ status: 409, json: { detail: "終了済み" } });
+      }
       if (!state.session) return route.fulfill({ status: 409, json: { detail: "終了済み" } });
+      if (path.endsWith("/activity")) {
+        state.session.last_activity_at = route.request().postDataJSON().occurred_at;
+        return route.fulfill({ json: state.session });
+      }
       const body =
         route.request().headers()["content-encoding"] === "gzip"
           ? JSON.parse(gunzipSync(route.request().postDataBuffer() ?? Buffer.alloc(0)).toString())
@@ -169,13 +245,19 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
               { weight: 75, reps: 10 },
             ],
           },
-          memo: { content: "", revision: 0 },
+          memo: state.exerciseMemos.get(url.searchParams.get("name") ?? "") ?? {
+            content: "",
+            revision: 0,
+          },
         },
       });
-    if (path === "/api/exercises/memo")
-      return route.fulfill({
-        json: { content: route.request().postDataJSON().content, revision: 1 },
-      });
+    if (path === "/api/exercises/memo") {
+      const body = route.request().postDataJSON();
+      const current = state.exerciseMemos.get(body.name) ?? { content: "", revision: 0 };
+      const saved = { content: body.content, revision: current.revision + 1 };
+      state.exerciseMemos.set(body.name, saved);
+      return route.fulfill({ json: saved });
+    }
     if (path.endsWith("/memo")) return route.fulfill({ json: { content: "", revision: 0 } });
     if (path === `/api/groups/${group.id}/activity`) {
       const latest = state.session?.exercises.length ? state.session : state.finished.at(-1);
@@ -251,8 +333,18 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
               },
             ]
           : [];
+      const totals = {
+        set_count: latest?.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0) ?? 0,
+        total_volume:
+          latest?.exercises.reduce(
+            (sum, exercise) =>
+              sum + exercise.sets.reduce((subtotal, set) => subtotal + set.weight * set.reps, 0),
+            0,
+          ) ?? 0,
+      };
       return route.fulfill({
         json: {
+          totals,
           groups: [
             {
               group_id: group.id,
@@ -271,6 +363,7 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
                   ]
                 : [],
               feed,
+              totals,
             },
           ],
         },
@@ -404,11 +497,15 @@ export async function mockTraining(page: Page, owner = true, showGuide = false) 
 }
 
 export async function navigate(page: Page, name: string) {
-  await page.getByRole("navigation").getByRole("button", { name, exact: true }).click();
+  const button = page
+    .getByRole("navigation", { name: "メインナビゲーション", exact: true })
+    .getByRole("button", { name, exact: true });
+  await button.click();
+  await expect(button).toHaveAttribute("aria-current", "page");
 }
 export async function openTraining(page: Page) {
   await navigate(page, "ホーム");
-  const resume = page.getByRole("button", { name: "トレーニングを再開", exact: true });
+  const resume = page.getByRole("button", { name: "記録画面へ戻る", exact: true });
   if (await resume.count()) await resume.click();
 }
 export async function startTraining(page: Page, name = "ベンチプレス") {
@@ -455,4 +552,20 @@ export async function openRecordingCatalog(page: Page) {
   if (!(await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).isVisible()))
     await page.locator(".exercise-information").click();
   await page.getByRole("button", { name: "＋ 種目を追加", exact: true }).click();
+}
+
+export function emptyTodayActivity(groups: { id: string; name: string }[]): TodayActivity {
+  return {
+    groups: groups.map((group) => ({
+      group_id: group.id,
+      name: group.name,
+      member_count: 1,
+      live_count: 0,
+      today_count: 0,
+      members: [],
+      feed: [],
+      totals: { set_count: 0, total_volume: 0 },
+    })),
+    totals: { set_count: 0, total_volume: 0 },
+  };
 }

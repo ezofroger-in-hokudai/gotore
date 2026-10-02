@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining } from "./mock-training";
 
 test("スタンプは集計待ち・取得失敗でも6種類を表示し、権限確認後に送信する", async ({ page }) => {

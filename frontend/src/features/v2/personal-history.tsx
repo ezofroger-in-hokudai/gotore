@@ -7,14 +7,14 @@ import {
   type Workout,
   api,
 } from "@/lib/api";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { activityForPart } from "../activity/body-parts";
 import { dateLabel, shiftMonth } from "../activity/calendar";
 import { number } from "../analytics/chart";
-import type { Metric, Point } from "../analytics/types";
-import { useAnalytics } from "../analytics/use-analytics";
+import { type Analytics, type Metric, type Point, analyticsPath } from "../analytics/types";
 import { BODY_PART_LABELS, PART_FILTERS } from "../exercises/body-parts";
 import { LoadingState } from "../loading/loading-state";
+import { useRecordSnapshot } from "../record-cache/record-snapshot-provider";
 import { today } from "../training/draft";
 import { RecordList } from "../training/record-list";
 import { ResourceError } from "../training/resource-error";
@@ -84,6 +84,7 @@ export function PersonalHistory({
   const [extraDayRecords, setExtraDayRecords] = useState<Workout[]>([]);
   const [extraDayError, setExtraDayError] = useState("");
   const [extraDayRetry, setExtraDayRetry] = useState(0);
+  const recordSnapshot = useRecordSnapshot()?.snapshot;
   useEffect(() => {
     if (guideTarget?.target === "graph") setTab("graph");
     if (guideTarget?.target === "calendar") setTab("calendar");
@@ -128,17 +129,20 @@ export function PersonalHistory({
       retainOnRefresh: true,
     },
   );
-  const graph = useAnalytics(
-    "",
-    "all",
-    0,
-    scope.exercise,
-    active && tab === "graph",
-    false,
+  const graph = useResource<Analytics>(
+    analyticsPath(
+      "",
+      "all",
+      0,
+      scope.exercise,
+      "",
+      "",
+      scope.exercise || scope.part === "all" ? "" : scope.part,
+    ),
     refreshKey,
-    "",
-    "",
-    scope.exercise ? "" : scope.part === "all" ? "" : scope.part,
+    false,
+    true,
+    { enabled: active && tab === "graph", retainOnRefresh: true },
   );
   const dayRecords = useResource<Workout[]>(
     selectedDay ? `/workouts?performed_on=${selectedDay}&limit=50` : null,
@@ -147,11 +151,18 @@ export function PersonalHistory({
     true,
     { enabled: active && !!selectedDay, retainOnRefresh: true },
   );
+  const savedDayRecords = useMemo(
+    () =>
+      recordSnapshot?.workouts.filter(
+        (record) => record.performed_on === selectedDay && record.exercises.length > 0,
+      ),
+    [recordSnapshot, selectedDay],
+  );
   // biome-ignore lint/correctness/useExhaustiveDependencies: 残りのページの再試行時にも同じ日付から取得し直す。
   useEffect(() => {
     setExtraDayRecords([]);
     setExtraDayError("");
-    if (!selectedDay || dayRecords.data?.length !== 50) return;
+    if (!selectedDay || savedDayRecords?.length || dayRecords.data?.length !== 50) return;
     const controller = new AbortController();
     const load = async () => {
       try {
@@ -172,15 +183,26 @@ export function PersonalHistory({
     };
     void load();
     return () => controller.abort();
-  }, [selectedDay, dayRecords.data, extraDayRetry]);
+  }, [selectedDay, dayRecords.data, extraDayRetry, savedDayRecords]);
+  const displayedDayRecords =
+    dayRecords.data === null
+      ? null
+      : savedDayRecords?.length
+        ? savedDayRecords
+        : [...dayRecords.data, ...extraDayRecords];
   const monthlyActivity = activity.data?.month === month ? activity.data : null;
+  const hasParts = !monthlyActivity?.days.some(
+    (day) =>
+      !day.body_parts ||
+      day.body_parts.some((entry) => !entry.body_part || entry.body_part === "full_body"),
+  );
   const filteredActivity =
-    monthlyActivity && scope.part !== "all" && !scope.exercise
+    monthlyActivity && scope.part !== "all" && !scope.exercise && hasParts
       ? activityForPart(monthlyActivity, scope.part)
       : monthlyActivity;
   const exercises = recentExercises(summary.data ?? undefined, scope.part);
   const oldest = summary.data?.first_performed_on;
-  const graphData = graphPoints(graph.data, grain, oldest);
+  const graphData = graphPoints(graph.data ?? undefined, grain, oldest);
   const exerciseRail = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -201,6 +223,18 @@ export function PersonalHistory({
     setPicker(false);
   }
 
+  const bodyResources =
+    Number(current.slice(-2)) <= 3 ? [currentActivity, previousActivity] : [currentActivity];
+  const bodyReady = bodyResources.every((resource) => resource.data !== null);
+  const bodyPending = bodyResources.some((resource) => !resource.data && !resource.error);
+  const bodyError = [
+    ...new Set(bodyResources.map((resource) => resource.error).filter(Boolean)),
+  ].join(" ");
+  const retryBody = () => {
+    for (const resource of bodyResources) {
+      if (resource.error || !resource.data) resource.retry();
+    }
+  };
   const bodyAges = recentPartAges(
     [...(previousActivity.data?.days ?? []), ...(currentActivity.data?.days ?? [])],
     current,
@@ -236,6 +270,7 @@ export function PersonalHistory({
             key={item.value}
             type="button"
             aria-pressed={scope.part === item.value}
+            disabled={tab === "calendar" && item.value !== "all" && !hasParts}
             onClick={() => choosePart(item.value)}
           >
             {item.label}
@@ -298,7 +333,7 @@ export function PersonalHistory({
             activity={filteredActivity}
             current={current}
             oldestMonth={oldest?.slice(0, 7) ?? current.slice(0, 7)}
-            scopeLabel={scopeLabel}
+            scopeLabel={!hasParts && !scope.exercise ? "全種目" : scopeLabel}
             onMonthChange={setMonth}
             onSelectDay={setSelectedDay}
           >
@@ -320,7 +355,13 @@ export function PersonalHistory({
           />
         )}
         {tab === "body" && (
-          <HistoryBody ages={bodyAges} loading={!currentActivity.data && currentActivity.loading} />
+          <HistoryBody
+            ages={bodyAges}
+            loading={bodyPending}
+            ready={bodyReady}
+            error={bodyError}
+            retry={retryBody}
+          />
         )}
       </div>
       {picker && (
@@ -378,13 +419,14 @@ export function PersonalHistory({
               {extraDayError}
             </button>
           )}
-          {dayRecords.loading && !dayRecords.data && (
+          {dayRecords.loading && !displayedDayRecords && (
             <LoadingState label="記録を読み込み中" compact />
           )}
-          {dayRecords.data?.length === 0 && <p className="muted">この日の記録はありません</p>}
-          {dayRecords.data && (
+          {displayedDayRecords?.length === 0 && <p className="muted">この日の記録はありません</p>}
+          {displayedDayRecords && (
             <RecordList
-              records={[...dayRecords.data, ...extraDayRecords]}
+              active={active}
+              records={displayedDayRecords}
               userId={userId}
               personal
               compact
@@ -534,11 +576,8 @@ export function HistoryGraph({
           ))}
         </div>
       </div>
-      {error && !data.length ? (
-        <button type="button" className="personal-history-retry" onClick={retry}>
-          グラフを取得できません。再試行
-        </button>
-      ) : loading ? (
+      <ResourceError resource={{ data: data.length ? data : undefined, error, retry }} />
+      {error && !data.length ? null : loading ? (
         <div className="personal-history-chart-empty" aria-hidden="true" />
       ) : !data.length ? (
         <p className="personal-history-chart-empty">まだ記録がありません</p>
@@ -700,9 +739,15 @@ const bodyRegions: { part: BodyPart; mask: string }[] = [
 function HistoryBody({
   ages,
   loading,
+  ready,
+  error,
+  retry,
 }: {
   ages: Partial<Record<BodyPart, number>>;
   loading: boolean;
+  ready: boolean;
+  error: string;
+  retry: () => void;
 }) {
   const source = "/previews/history-body-realistic-heatmap.png";
   const used = PART_FILTERS.slice(1)
@@ -710,6 +755,7 @@ function HistoryBody({
     .filter((part) => ages[part] !== undefined);
   return (
     <div className="personal-history-card personal-history-body">
+      <ResourceError resource={{ data: ready ? ages : null, error, retry }} />
       <span className="personal-history-body-period">直近3日</span>
       <div className="personal-history-body-art">
         <div className="personal-history-body-image">
@@ -746,7 +792,7 @@ function HistoryBody({
             <small>{ages[part] === 0 ? "今日" : `${ages[part]}日前`}</small>
           </span>
         ))}
-        {!used.length && !loading && <span>最近の記録はありません</span>}
+        {!used.length && !loading && ready && <span>最近の記録はありません</span>}
       </div>
     </div>
   );

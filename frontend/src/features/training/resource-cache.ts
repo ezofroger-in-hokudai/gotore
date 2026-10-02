@@ -8,12 +8,14 @@ export class ResourceCache<T> {
   private jobs = new Map<string, Job>();
   private listeners = new Set<() => void>();
   private revision = 0;
+  private version: number | undefined;
   constructor(
     private load: (path: string, signal: AbortSignal) => Promise<T>,
     private now = () => Date.now(),
     private ttl = 60_000,
     private capacity = 8,
     private invalidateTogether = true,
+    private onDenied?: (path: string) => void,
   ) {}
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -28,6 +30,28 @@ export class ResourceCache<T> {
   }
   read(path: string) {
     return this.entries.get(path);
+  }
+  setVersion(version: number) {
+    if (this.version === version) return;
+    this.version = version;
+    this.stop();
+    for (const [path, entry] of this.entries)
+      this.entries.set(path, { ...entry, savedAt: Number.NEGATIVE_INFINITY });
+    this.emit();
+  }
+  retainPaths(keep: (path: string) => boolean) {
+    for (const job of [...this.jobs.values()]) if (!keep(job.path)) this.cancel(job);
+    for (const path of this.entries.keys()) if (!keep(path)) this.entries.delete(path);
+    this.emit();
+  }
+  preview(path: string, data: T, signal: AbortSignal) {
+    if (signal.aborted || this.jobs.get(path)?.controller.signal !== signal) return;
+    const entry = this.entries.get(path);
+    // 初回は先頭ページを表示し、再確認中は取得済みの全ページを残す。
+    if (entry && entry.data === undefined) {
+      this.entries.set(path, { ...entry, data });
+      this.emit();
+    }
   }
   request(path: string, selected = false, force = false) {
     const existing = this.jobs.get(path);
@@ -68,11 +92,12 @@ export class ResourceCache<T> {
       .catch((error: unknown) => {
         if (job.controller.signal.aborted) return;
         const retain = canRetainResource(error);
+        if (!retain) this.onDenied?.(path);
         if (!retain && this.invalidateTogether) {
           this.clear();
         }
         this.entries.set(path, {
-          data: retain ? entry?.data : undefined,
+          data: retain ? this.entries.get(path)?.data : undefined,
           error: error instanceof Error ? error.message : "取得できませんでした。",
           savedAt: retain ? (entry?.savedAt ?? 0) : 0,
           loading: false,

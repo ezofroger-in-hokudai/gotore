@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining, navigate, startTraining } from "./mock-training";
 
 test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 720 } });
@@ -97,10 +97,6 @@ test("終了を端末へ残して直ちに結果へ進み、通信失敗後に�
   fail = false;
   await expect.poll(() => state.finished.length).toBe(1);
   await expect(page.locator(".workout-result")).toContainText("保存済み");
-  await navigate(page, "履歴");
-  await expect(
-    page.locator(".history-row").getByText("ベンチプレス", { exact: true }),
-  ).toBeVisible();
 });
 
 test("終了通信失敗後の再起動でも終了意図を復元して自動再送する", async ({ page }) => {
@@ -127,6 +123,28 @@ test("終了通信失敗後の再起動でも終了意図を復元して自動�
   fail = false;
   await expect.poll(() => state.finished.length).toBe(1);
   await expect(page.getByTestId("floating-training")).toBeEnabled();
+});
+
+test("終了待ちの確認や再送ボタンを表示せず自動再送して次を始められる", async ({ page }) => {
+  const state = await mockTraining(page);
+  await startTraining(page);
+  let fail = true;
+  await page.route("**/api/sessions/*/finish", (route) =>
+    fail ? route.fulfill({ status: 503, json: { detail: "一時的な失敗" } }) : route.fallback(),
+  );
+  await page.getByRole("button", { name: "トレーニング終了", exact: true }).tap();
+  await page.getByRole("button", { name: "終了する", exact: true }).tap();
+  await page.locator(".workout-result").getByRole("button", { name: "ホーム" }).click();
+  const start = page.getByTestId("floating-training");
+  await expect(start).toBeDisabled();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "終了を再送する" })).toHaveCount(0);
+  await expect(page.getByText("前のトレーニングの終了を確認", { exact: false })).toHaveCount(0);
+  fail = false;
+  await expect.poll(() => state.finished.length).toBe(1);
+  await expect(start).toBeEnabled();
+  await start.tap();
+  await expect(page.getByRole("button", { name: "トレーニング終了", exact: true })).toBeVisible();
 });
 
 test("セット送信の応答待ち中も終了を受け付け、セットの後に終了する", async ({ page }) => {

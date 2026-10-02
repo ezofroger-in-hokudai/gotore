@@ -17,3 +17,6 @@ coverage/
 test-results/
 playwright-report/
 dist/
+
+# VAPID秘密鍵の生成先
+.env.vapid

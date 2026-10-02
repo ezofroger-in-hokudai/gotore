@@ -27,10 +27,12 @@ import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
 import { Avatar } from "./avatar";
 import { Feed, GroupCard } from "./community";
+import type { GroupHistoryCache } from "./group-history-cache";
 import { GroupHistoryCalendar } from "./group-history-calendar";
 import { GroupHistoryGraph } from "./group-history-graph";
 import { runNavigationMotion } from "./navigation-motion";
 import { GROUP_REFRESH_MS, activityRefreshMs } from "./refresh-interval";
+import type { SharedWorkoutCache } from "./shared-workout-cache";
 import { Sheet } from "./sheet";
 
 export type CommunityMode = "list" | "detail" | "create" | "join" | "invite" | "members";
@@ -46,6 +48,7 @@ type InvitePreview = {
 type InviteResponse = { token: string; expires_at: string };
 type ActionSheet =
   | { type: "leave" }
+  | { type: "transfer-confirm"; member: GroupDetail["members"][number] }
   | { type: "transfer"; member: GroupDetail["members"][number] }
   | { type: "remove"; member: GroupDetail["members"][number] }
   | { type: "delete" }
@@ -53,7 +56,11 @@ type ActionSheet =
 
 export function CommunityScreen({
   guideTarget,
+  sharedCache,
+  historyCache,
   groups,
+  today,
+  onActivityVisibleChange,
   selected,
   initialDetail,
   active,
@@ -64,8 +71,12 @@ export function CommunityScreen({
   onChanged,
   onOrder,
 }: {
+  sharedCache: SharedWorkoutCache;
+  historyCache: GroupHistoryCache;
   guideTarget?: { target: string } | null;
   groups: Group[];
+  today: ReturnType<typeof useResource<TodayActivity>>;
+  onActivityVisibleChange: (visible: boolean) => void;
   selected: string;
   initialDetail: boolean;
   active: boolean;
@@ -77,6 +88,9 @@ export function CommunityScreen({
   onOrder: (ids: string[]) => void;
 }) {
   const [mode, setMode] = useState<Mode>(initialDetail ? "detail" : "list");
+  useEffect(() => {
+    onActivityVisibleChange(active && (mode === "list" || mode === "detail"));
+  }, [active, mode, onActivityVisibleChange]);
   const modeRef = useRef(mode);
   const activeRef = useRef(active);
   activeRef.current = active;
@@ -92,6 +106,7 @@ export function CommunityScreen({
   const [groupName, setGroupName] = useState("");
   const [createdGroup, setCreatedGroup] = useState<Group | null>(null);
   const [busy, setBusy] = useState(false);
+  const actionSending = useRef(false);
   const [error, setError] = useState("");
   const [actionSheet, setActionSheet] = useState<ActionSheet>(null);
   const [inviteToken, setInviteToken] = useState("");
@@ -107,16 +122,6 @@ export function CommunityScreen({
     onModeChange(mode);
   }, [mode, onModeChange]);
 
-  const today = useResource<TodayActivity>(
-    "/groups/today-activity",
-    refreshKey,
-    GROUP_REFRESH_MS,
-    true,
-    {
-      enabled: active && (mode === "list" || mode === "detail") && groups.length > 0,
-      retainOnRefresh: true,
-    },
-  );
   const detail = useResource<GroupDetail>(
     selected ? `/groups/${selected}` : null,
     refreshKey,
@@ -192,7 +197,7 @@ export function CommunityScreen({
 
   useEffect(() => {
     const back = (event: PopStateEvent) => {
-      if (event.state?.gotoreView !== "groups") return;
+      if (actionSending.current || event.state?.gotoreView !== "groups") return;
       const restored = event.state.communityMode;
       const next: Mode = ["list", "detail", "create", "join", "invite", "members"].includes(
         restored,
@@ -404,11 +409,14 @@ export function CommunityScreen({
   }, [group]);
 
   async function executeOwnerTransfer(member: GroupDetail["members"][number]) {
+    if (busy || actionSending.current) return;
+    actionSending.current = true;
     setBusy(true);
     setError("");
     try {
       await api(`/groups/${selected}/owner`, {
         method: "PATCH",
+        signal: AbortSignal.timeout(15_000),
         body: JSON.stringify({ member_id: member.id, expected_joined_at: member.joined_at }),
       });
       setActionSheet(null);
@@ -416,37 +424,42 @@ export function CommunityScreen({
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "オーナーを変更できませんでした。");
     } finally {
+      actionSending.current = false;
       setBusy(false);
     }
   }
 
   async function executeRemoveMember(member: GroupDetail["members"][number]) {
+    if (busy || actionSending.current) return;
+    actionSending.current = true;
     setBusy(true);
     setError("");
     try {
       await api(
         `/groups/${selected}/members/${member.id}?${new URLSearchParams({ expected_joined_at: member.joined_at })}`,
-        { method: "DELETE" },
+        { method: "DELETE", signal: AbortSignal.timeout(15_000) },
       );
       setActionSheet(null);
       onChanged();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "メンバーを退出させられませんでした。");
     } finally {
+      actionSending.current = false;
       setBusy(false);
     }
   }
 
   async function leaveGroup() {
-    if (!group) return;
+    if (!group || busy || actionSending.current) return;
     const self = group.members.find((member) => member.id === userId);
     if (!self) return;
+    actionSending.current = true;
     setBusy(true);
     setError("");
     try {
       await api(
         `/groups/${group.id}/membership?${new URLSearchParams({ expected_joined_at: self.joined_at })}`,
-        { method: "DELETE" },
+        { method: "DELETE", signal: AbortSignal.timeout(15_000) },
       );
       setActionSheet(null);
       onChanged();
@@ -454,21 +467,25 @@ export function CommunityScreen({
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "グループから抜けられませんでした。");
     } finally {
+      actionSending.current = false;
       setBusy(false);
     }
   }
 
   async function deleteGroup() {
+    if (busy || actionSending.current) return;
+    actionSending.current = true;
     setBusy(true);
     setError("");
     try {
-      await api(`/groups/${selected}`, { method: "DELETE" });
+      await api(`/groups/${selected}`, { method: "DELETE", signal: AbortSignal.timeout(15_000) });
       setActionSheet(null);
       onChanged();
       change("list");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "グループを削除できませんでした。");
     } finally {
+      actionSending.current = false;
       setBusy(false);
     }
   }
@@ -477,7 +494,7 @@ export function CommunityScreen({
     <section className="community-screen group-screen">
       {mode === "list" && (
         <>
-          <div className="section-heading group-screen-heading">
+          <div className="section-heading group-screen-heading" data-tour="groups">
             <h1>グループ</h1>
             <div className="group-management-actions">
               <button
@@ -543,14 +560,8 @@ export function CommunityScreen({
           <button type="button" className="text-button back-button" onClick={detailBack}>
             ‹ グループ一覧
           </button>
-          {detail.error && !group ? (
-            <p className="error" role="alert">
-              {detail.error}
-              <button type="button" className="text-button" onClick={detail.retry}>
-                再試行
-              </button>
-            </p>
-          ) : group ? (
+          <ResourceError resource={detail} />
+          {group ? (
             <>
               <GroupCard
                 group={group}
@@ -590,56 +601,61 @@ export function CommunityScreen({
                   </button>
                 ))}
               </nav>
-              {detailTab === "latest" && (
-                <>
-                  <div className="group-detail-members-summary">
-                    <button
-                      type="button"
-                      className="member-avatars-strip"
-                      onClick={() => setDetailTab("settings")}
-                      aria-label="メンバー管理を開く"
-                    >
-                      {group.members.slice(0, 5).map((member) => (
-                        <Avatar
-                          key={member.id}
-                          userId={member.id}
-                          name={member.display_name}
-                          version={member.avatar_version}
-                          small
-                        />
-                      ))}
-                      <span>{group.members.length}人</span>
-                    </button>
-                  </div>
-                  <ResourceError resource={activity} />
-                  {activity.data && (
-                    <Feed data={activity.data} active={active} trusted={!activity.refreshing} />
-                  )}
-                  {!activity.data && !activity.error && (
-                    <LoadingState label="グループの記録を読み込み中" />
-                  )}
-                </>
-              )}
-              {detailTab === "calendar" && (
+              <div hidden={detailTab !== "latest"}>
+                <div className="group-detail-members-summary">
+                  <button
+                    type="button"
+                    className="member-avatars-strip"
+                    onClick={() => setDetailTab("settings")}
+                    aria-label="メンバー管理を開く"
+                  >
+                    {group.members.slice(0, 5).map((member) => (
+                      <Avatar
+                        key={member.id}
+                        userId={member.id}
+                        name={member.display_name}
+                        version={member.avatar_version}
+                        small
+                      />
+                    ))}
+                    <span>{group.members.length}人</span>
+                  </button>
+                </div>
+                <ResourceError resource={activity} />
+                {activity.data && (
+                  <Feed
+                    data={activity.data}
+                    active={active && detailTab === "latest"}
+                    trusted={!activity.refreshing}
+                    sharedCache={sharedCache}
+                  />
+                )}
+                {!activity.data && !activity.error && (
+                  <LoadingState label="グループの記録を読み込み中" />
+                )}
+              </div>
+              <div key={`calendar:${userId}:${selected}`} hidden={detailTab !== "calendar"}>
                 <GroupHistoryCalendar
+                  cache={historyCache}
                   key={selected}
                   groupId={selected}
                   userId={userId}
-                  active={active}
+                  active={active && detailTab === "calendar"}
                   refreshKey={refreshKey}
                   part={historyPart}
                   onPartChange={setHistoryPart}
                 />
-              )}
-              {detailTab === "graph" && (
+              </div>
+              <div key={`graph:${userId}:${selected}`} hidden={detailTab !== "graph"}>
                 <GroupHistoryGraph
+                  cache={historyCache}
                   groupId={selected}
-                  active={active}
+                  active={active && detailTab === "graph"}
                   refreshKey={refreshKey}
                   part={historyPart}
                   onPartChange={setHistoryPart}
                 />
-              )}
+              </div>
               {detailTab === "settings" && (
                 <div className="group-settings">
                   <section>
@@ -748,9 +764,9 @@ export function CommunityScreen({
                 </div>
               )}
             </>
-          ) : (
+          ) : !detail.error ? (
             <LoadingState label="グループ情報を読み込み中" />
-          )}
+          ) : null}
         </>
       )}
 
@@ -901,14 +917,19 @@ export function CommunityScreen({
         </>
       )}
 
-      {error && (
+      {error && !actionSheet && (
         <p className="error" role="alert">
           {error}
         </p>
       )}
 
       {actionSheet?.type === "leave" && group && (
-        <Sheet title="グループから抜ける" onClose={() => setActionSheet(null)}>
+        <Sheet title="グループから抜ける" closeDisabled={busy} onClose={() => setActionSheet(null)}>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
           {isOwner ? (
             group.members.length > 1 ? (
               <>
@@ -948,7 +969,12 @@ export function CommunityScreen({
             <>
               <p>「{group.name}」から抜けますか？</p>
               <div className="group-confirm-actions">
-                <button type="button" className="secondary" onClick={() => setActionSheet(null)}>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => setActionSheet(null)}
+                >
                   キャンセル
                 </button>
                 <button
@@ -971,7 +997,10 @@ export function CommunityScreen({
               type="button"
               className="secondary full"
               disabled={busy}
-              onClick={() => void executeOwnerTransfer(actionSheet.member)}
+              onClick={() => {
+                setError("");
+                setActionSheet({ type: "transfer-confirm", member: actionSheet.member });
+              }}
             >
               オーナーにする
             </button>
@@ -986,13 +1015,58 @@ export function CommunityScreen({
           </div>
         </Sheet>
       )}
+      {actionSheet?.type === "transfer-confirm" && group && (
+        <Sheet title="オーナーを変更" closeDisabled={busy} onClose={() => setActionSheet(null)}>
+          <p>
+            「{group.name}」のオーナーを「{actionSheet.member.display_name}
+            」に変更しますか？あなたはメンバーになります。
+          </p>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="group-confirm-actions">
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              onClick={() => setActionSheet(null)}
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              className="danger"
+              disabled={busy}
+              onClick={() => void executeOwnerTransfer(actionSheet.member)}
+            >
+              {busy ? "変更中…" : "変更する"}
+            </button>
+          </div>
+        </Sheet>
+      )}
       {actionSheet?.type === "remove" && group && (
-        <Sheet title="メンバーを退出させる" onClose={() => setActionSheet(null)}>
+        <Sheet
+          title="メンバーを退出させる"
+          closeDisabled={busy}
+          onClose={() => setActionSheet(null)}
+        >
           <p>
             「{actionSheet.member.display_name}」を「{group.name}」から退出させますか？
           </p>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
           <div className="group-confirm-actions">
-            <button type="button" className="secondary" onClick={() => setActionSheet(null)}>
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              onClick={() => setActionSheet(null)}
+            >
               キャンセル
             </button>
             <button
@@ -1007,10 +1081,20 @@ export function CommunityScreen({
         </Sheet>
       )}
       {actionSheet?.type === "delete" && group && (
-        <Sheet title="グループを削除" onClose={() => setActionSheet(null)}>
+        <Sheet title="グループを削除" closeDisabled={busy} onClose={() => setActionSheet(null)}>
           <p>「{group.name}」を削除しますか？</p>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
           <div className="group-confirm-actions">
-            <button type="button" className="secondary" onClick={() => setActionSheet(null)}>
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              onClick={() => setActionSheet(null)}
+            >
               キャンセル
             </button>
             <button
@@ -1019,7 +1103,7 @@ export function CommunityScreen({
               disabled={busy}
               onClick={() => void deleteGroup()}
             >
-              削除する
+              {busy ? "削除中…" : "削除する"}
             </button>
           </div>
         </Sheet>

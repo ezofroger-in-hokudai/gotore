@@ -104,3 +104,39 @@ test("一時的な再取得失敗では同じ期間の集計を保持し、再�
   expect(cache.read("month")?.error).toBeUndefined();
   cache.clear();
 });
+
+test("共有キャッシュの再マウントは保持し、更新版だけ期限を無効化する", async () => {
+  let calls = 0;
+  const cache = new AnalyticsCache(async () => ++calls);
+  cache.setVersion(0);
+  cache.request("group");
+  await tick();
+  cache.setVersion(0);
+  cache.request("group");
+  expect(calls).toBe(1);
+  cache.setVersion(1);
+  expect(cache.read("group")?.data).toBe(1);
+  cache.request("group");
+  await tick();
+  expect(calls).toBe(2);
+  cache.retainPaths(() => false);
+  expect(cache.read("group")).toBeUndefined();
+});
+
+test("更新版の切り替え後は古い通信を中止し、その応答を採用しない", async () => {
+  const pending: ((value: number) => void)[] = [];
+  const signals: AbortSignal[] = [];
+  const cache = new AnalyticsCache<number>((_, signal) => {
+    signals.push(signal);
+    return new Promise((resolve) => pending.push(resolve));
+  });
+  cache.setVersion(0);
+  cache.request("group");
+  cache.setVersion(1);
+  cache.request("group");
+  expect(signals[0].aborted).toBe(true);
+  pending[1](2);
+  pending[0](1);
+  await tick();
+  expect(cache.read("group")?.data).toBe(2);
+});

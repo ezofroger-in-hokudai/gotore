@@ -9,6 +9,8 @@ export type SavedQueue = {
   pending: { id: string; change: Change }[];
   finish?: boolean;
   conflict?: boolean;
+  lastActivityAt?: string;
+  activityTrail?: string[];
 };
 
 const invalid = () =>
@@ -120,6 +122,15 @@ export function readQueue(raw: string): SavedQueue {
     !validExercises(value.base.exercises) ||
     !Array.isArray(value.pending) ||
     (value.conflict !== undefined && typeof value.conflict !== "boolean") ||
+    (value.lastActivityAt !== undefined &&
+      (typeof value.lastActivityAt !== "string" ||
+        !Number.isFinite(Date.parse(value.lastActivityAt)))) ||
+    (value.activityTrail !== undefined &&
+      (!Array.isArray(value.activityTrail) ||
+        value.activityTrail.length > 1000 ||
+        value.activityTrail.some(
+          (item: unknown) => typeof item !== "string" || !Number.isFinite(Date.parse(item)),
+        ))) ||
     (value.version === 3 ? value.finish !== true : value.finish !== undefined)
   )
     throw invalid();
@@ -150,6 +161,8 @@ export function readQueue(raw: string): SavedQueue {
     pending,
     ...(value.conflict ? { conflict: true } : {}),
     ...(value.finish ? { finish: true } : {}),
+    ...(value.lastActivityAt ? { lastActivityAt: value.lastActivityAt } : {}),
+    ...(value.activityTrail?.length ? { activityTrail: value.activityTrail } : {}),
   };
 }
 

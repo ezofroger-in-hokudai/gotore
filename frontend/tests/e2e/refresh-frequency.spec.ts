@@ -1,34 +1,33 @@
-import { expect, test } from "@playwright/test";
-import { mockTraining, navigate, startTraining } from "./mock-training";
+import { expect, test } from "./fixtures";
+import { emptyTodayActivity, mockTraining, navigate, startTraining } from "./mock-training";
 
 for (const live of [false, true]) {
   test(`ホーム1分の要求数を計測する（LIVE ${live ? "あり" : "なし"}）`, async ({ page }) => {
     await page.clock.install();
     const state = await mockTraining(page);
     const groups = [state.group, { ...state.group, id: "another-group", name: "別グループ" }];
-    const counts = { groups: 0, activity: 0, summary: 0 };
-    const summary = (id: string) => ({
-      group_id: id,
-      member_count: 1,
-      live_count: live ? 1 : 0,
-      today_count: 0,
-      members: [],
-    });
+    const counts = { groups: 0, activity: 0, summary: 0, aggregate: 0 };
     await page.route("**/api/groups", (route) => {
       counts.groups++;
       return route.fulfill({ json: groups });
     });
     await page.route("**/api/groups/activity/summary", (route) => {
       counts.summary++;
-      return route.fulfill({ json: groups.map((group) => summary(group.id)) });
+      return route.fulfill({ json: [] });
     });
     await page.route("**/api/groups/*/activity", (route) => {
       counts.activity++;
-      return route.fulfill({ json: { ...summary(state.group.id), feed: [] } });
+      return route.fulfill({ json: {} });
+    });
+    await page.route("**/api/groups/today-activity", (route) => {
+      counts.aggregate++;
+      const activity = emptyTodayActivity(groups);
+      activity.groups[0].live_count = live ? 1 : 0;
+      return route.fulfill({ json: activity });
     });
     await page.reload();
     await expect(page.locator(".group-carousel .community-card")).toHaveCount(2);
-    await expect.poll(() => counts.summary).toBeGreaterThan(0);
+    await expect.poll(() => counts.aggregate).toBeGreaterThan(0);
     await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
     const initial = { ...counts };
     for (let tick = 0; tick < 12; tick++) {
@@ -40,16 +39,17 @@ for (const live of [false, true]) {
       groups: counts.groups - initial.groups,
       activity: counts.activity - initial.activity,
       summary: counts.summary - initial.summary,
+      aggregate: counts.aggregate - initial.aggregate,
     };
     await test.info().attach("requests-per-minute", {
       body: JSON.stringify({ live, measured }),
       contentType: "application/json",
     });
-    const baseline = process.env.REFRESH_BASELINE === "1";
     expect(measured).toEqual({
-      groups: baseline ? 12 : 1,
-      activity: baseline || live ? 12 : 4,
-      summary: baseline || live ? 12 : 4,
+      groups: 1,
+      activity: 0,
+      summary: 0,
+      aggregate: live ? 12 : 4,
     });
   });
 }
@@ -62,11 +62,11 @@ test("ホームの通常更新を15秒に分け、所属一覧を毎回読み直
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
     if (path === "/api/groups") counts.groups++;
-    if (/\/groups\/[^/]+\/activity$/.test(path)) counts.activity++;
+    if (path === "/api/groups/today-activity") counts.activity++;
   });
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect.poll(() => counts.activity).toBeGreaterThan(0);
-  await expect(page.locator(".community-card")).toContainText("画面テスト部");
+  await expect(page.locator(".group-carousel .community-card")).toContainText("画面テスト部");
   const initial = { ...counts };
   await page.clock.runFor(5_000);
   expect(counts).toEqual(initial);
@@ -80,18 +80,11 @@ test("仲間のLIVEを見つけた後は5秒、終了を確認した後は15秒�
   const state = await mockTraining(page);
   let live = false;
   let reads = 0;
-  await page.route(`**/api/groups/${state.group.id}/activity`, (route) => {
+  await page.route("**/api/groups/today-activity", (route) => {
     reads++;
-    return route.fulfill({
-      json: {
-        group_id: state.group.id,
-        member_count: 1,
-        live_count: live ? 1 : 0,
-        today_count: 0,
-        members: [],
-        feed: [],
-      },
-    });
+    const activity = emptyTodayActivity([state.group]);
+    activity.groups[0].live_count = live ? 1 : 0;
+    return route.fulfill({ json: activity });
   });
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect.poll(() => reads).toBeGreaterThan(0);
@@ -113,14 +106,14 @@ test("仲間のLIVEを見つけた後は5秒、終了を確認した後は15秒�
 
 test("LIVEは5秒で更新し、画面非表示と記録画面ではホームの通信を止める", async ({ page }) => {
   await page.clock.install();
-  const state = await mockTraining(page);
+  await mockTraining(page);
   await startTraining(page);
   await navigate(page, "ホーム");
-  await expect(page.locator(".community-stats")).toContainText("LIVE");
+  await expect(page.locator(".home-summary")).toContainText("LIVE");
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   let requests = 0;
   page.on("request", (request) => {
-    if (new URL(request.url()).pathname === `/api/groups/${state.group.id}/activity`) requests++;
+    if (new URL(request.url()).pathname === "/api/groups/today-activity") requests++;
   });
   await page.clock.runFor(5_000);
   await expect.poll(() => requests).toBe(1);
@@ -135,7 +128,7 @@ test("LIVEは5秒で更新し、画面非表示と記録画面ではホームの
     document.dispatchEvent(new Event("visibilitychange"));
   });
   await expect.poll(() => requests).toBe(2);
-  await page.getByRole("button", { name: "トレーニングを再開", exact: true }).click();
+  await page.getByRole("button", { name: "記録画面へ戻る", exact: true }).click();
   const stopped = requests;
   await page.clock.runFor(60_000);
   expect(requests).toBe(stopped);

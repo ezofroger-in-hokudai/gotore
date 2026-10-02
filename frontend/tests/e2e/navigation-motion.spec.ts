@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mockTraining } from "./mock-training";
 
 test("画面を切り替えた直後に元画面のスナップショットを重ねない", async ({ page }) => {
@@ -151,9 +151,13 @@ test("選択中の各タブを再タップすると入口の先頭へ戻る", as
   await mockTraining(page);
   const nav = page.getByRole("navigation", { name: "メインナビゲーション" });
   await page.evaluate(() => {
+    const main = document.querySelector<HTMLElement>(".main-content");
+    if (!main) throw new Error("main-content not found");
+    main.style.height = "300px";
+    main.style.overflowY = "auto";
     const spacer = document.createElement("div");
     spacer.style.height = "2400px";
-    document.querySelector(".main-content")?.append(spacer);
+    main.append(spacer);
   });
 
   for (const name of ["ホーム", "グループ", "履歴", "設定"]) {
