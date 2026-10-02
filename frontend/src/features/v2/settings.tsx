@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { NotificationSettingsPanel } from "../notifications/notification-settings";
 import type { useNotifications } from "../notifications/use-notifications";
-import { NumberWheel } from "../session/number-wheel";
 import { AvatarPanel } from "../settings/avatar-panel";
 import { SettingsPanel } from "../settings/settings-panel";
 import { SuggestionBox, useSuggestionBox } from "../settings/suggestion-box";
@@ -71,8 +70,6 @@ export function Preferences({
     null,
   );
   const [editingName, setEditingName] = useState(false);
-  const [editingWeightStep, setEditingWeightStep] = useState(false);
-  const [weightStepDraft, setWeightStepDraft] = useState(preferences.weightStep);
   const suggestion = useSuggestionBox();
   const { profile, avatar } = resources;
   return (
@@ -131,66 +128,20 @@ export function Preferences({
           <span>種目</span>
           <span aria-hidden="true">›</span>
         </button>
-        <div className={`record-step-setting${editingWeightStep ? " is-editing" : ""}`}>
+        <label className="record-step-setting">
           <span className="settings-item-label">重量の刻み</span>
-          {editingWeightStep ? (
-            <div className="record-step-editor">
-              <div className="record-step-wheel">
-                <NumberWheel
-                  label="重量の刻み"
-                  unit="kg"
-                  value={String(weightStepDraft)}
-                  step={0.5}
-                  arrowStep={0.5}
-                  min={0.5}
-                  max={5}
-                  showLabel={false}
-                  onChange={(value) => {
-                    const next = Number(value);
-                    if (next >= 0.5 && next <= 5 && next * 2 === Math.round(next * 2))
-                      setWeightStepDraft(next);
-                  }}
-                />
-                <span aria-hidden="true">kg</span>
-              </div>
-              <p className="muted">重量ホイールを一目盛り動かしたときの増減量です。</p>
-              <div className="group-name-inline-actions">
-                <button
-                  className="text-button"
-                  type="button"
-                  onClick={() => {
-                    setWeightStepDraft(preferences.weightStep);
-                    setEditingWeightStep(false);
-                  }}
-                >
-                  キャンセル
-                </button>
-                <button
-                  className="group-name-commit"
-                  type="button"
-                  onClick={() => {
-                    preferences.setWeightStep(weightStepDraft);
-                    setEditingWeightStep(false);
-                  }}
-                >
-                  決定
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              className="text-button record-step-edit-trigger"
-              type="button"
-              aria-label="重量の刻みを編集"
-              onClick={() => {
-                setWeightStepDraft(preferences.weightStep);
-                setEditingWeightStep(true);
-              }}
-            >
-              {preferences.weightStep} kg
-            </button>
-          )}
-        </div>
+          <select
+            aria-label="重量の刻み"
+            value={String(preferences.weightStep)}
+            onChange={(event) => preferences.setWeightStep(Number(event.target.value))}
+          >
+            {Array.from({ length: 10 }, (_, index) => (index + 1) / 2).map((step) => (
+              <option key={step} value={step}>
+                {step.toFixed(1)} kg
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       <h2>アプリ</h2>
       <div className="v2-rows">

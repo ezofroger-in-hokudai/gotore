@@ -1,11 +1,20 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { Locator } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { mockTraining, navigate, openGroup, startTraining } from "./mock-training";
 
 async function openName(page: import("@playwright/test").Page) {
   await navigate(page, "設定");
   await page.getByRole("button", { name: "表示名を編集", exact: true }).click();
+}
+
+async function textDocumentY(locator: Locator) {
+  return locator.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return range.getBoundingClientRect().top + window.scrollY;
+  });
 }
 test("表示名はAPIの値を使い、失敗・部分成功・同期再試行を区別する", async ({ page }) => {
   const state = await mockTraining(page);
@@ -36,7 +45,12 @@ test("表示名はAPIの値を使い、失敗・部分成功・同期再試行�
 
 test("表示名はカード内で編集し、キャンセルすると元の値へ戻す", async ({ page }) => {
   await mockTraining(page);
+  await navigate(page, "設定");
+  const label = page.locator(".settings-name-row > span");
+  const labelBefore = await textDocumentY(label);
   await openName(page);
+  const labelAfter = await textDocumentY(label);
+  expect(Math.abs(labelAfter - labelBefore)).toBeLessThanOrEqual(1);
   await expect(page.getByRole("dialog", { name: "表示名" })).toHaveCount(0);
   await expect(page.locator(".settings-name-row .group-name-inline-form")).toBeVisible();
   const name = page.getByRole("textbox", { name: "表示名", exact: true });
@@ -118,15 +132,12 @@ test("狭い画面でも設定とインライン編集を横にはみ出さず�
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
       .toBe(true);
     await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-    const weightStep = page.getByRole("button", { name: "重量の刻みを編集", exact: true });
-    await expect(weightStep).toContainText("0.5 kg");
-    await weightStep.click();
-    await expect(page.getByRole("spinbutton", { name: "重量の刻み", exact: true })).toBeVisible();
-    await expect(page.locator(".floating-training")).toBeHidden();
+    const weightStep = page.getByRole("combobox", { name: "重量の刻み", exact: true });
+    await expect(weightStep).toHaveValue("0.5");
+    await expect(weightStep.locator("option")).toHaveCount(10);
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
       .toBe(true);
-    await page.getByRole("button", { name: "キャンセル", exact: true }).click();
   }
 });
 
@@ -141,24 +152,25 @@ test("種目は独立ページで管理し、重量の刻みを記録ホイー�
   await page.goBack();
   await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
 
-  const stepTrigger = page.getByRole("button", { name: "重量の刻みを編集", exact: true });
-  await expect(stepTrigger).toContainText("0.5 kg");
-  await stepTrigger.click();
-  const step = page.getByRole("spinbutton", { name: "重量の刻み", exact: true });
+  const step = page.getByRole("combobox", { name: "重量の刻み", exact: true });
   await expect(step).toHaveValue("0.5");
-  const increase = page.getByRole("button", { name: "重量の刻みを0.5kg増やす" });
-  await increase.click();
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(stepTrigger).toContainText("0.5 kg");
-  await stepTrigger.click();
-  await increase.click();
-  await increase.click();
+  await expect(step.locator("option")).toHaveText([
+    "0.5 kg",
+    "1.0 kg",
+    "1.5 kg",
+    "2.0 kg",
+    "2.5 kg",
+    "3.0 kg",
+    "3.5 kg",
+    "4.0 kg",
+    "4.5 kg",
+    "5.0 kg",
+  ]);
+  await step.selectOption("1.5");
   await expect(step).toHaveValue("1.5");
-  await page.getByRole("button", { name: "決定", exact: true }).click();
-  await expect(stepTrigger).toContainText("1.5 kg");
   await page.reload();
   await navigate(page, "設定");
-  await expect(stepTrigger).toContainText("1.5 kg");
+  await expect(step).toHaveValue("1.5");
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await startTraining(page);
@@ -179,7 +191,11 @@ test("種目は独立ページで管理し、重量の刻みを記録ホイー�
 test("オーナーは名前変更を再試行でき、メンバーには管理欄を出さない", async ({ page }) => {
   const state = await mockTraining(page);
   await openGroup(page, "manage");
+  const label = page.locator(".group-setting-row > b");
+  const labelBefore = await textDocumentY(label);
   await page.getByRole("button", { name: "グループ名を編集", exact: true }).click();
+  const labelAfter = await textDocumentY(label);
+  expect(Math.abs(labelAfter - labelBefore)).toBeLessThanOrEqual(1);
   const name = page.getByRole("textbox", { name: "グループ名", exact: true });
   await name.fill("新しいグループ");
   state.failRename = true;
