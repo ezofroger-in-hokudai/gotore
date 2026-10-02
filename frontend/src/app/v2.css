@@ -1097,14 +1097,87 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .preferences h2 {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 600;
   margin: 28px 0 10px;
+}
+.preferences > h1 {
+  color: var(--text);
+  font-size: 30px;
+  font-weight: 700;
 }
 .preferences .v2-rows {
   margin-top: 0;
 }
+.preferences .v2-row {
+  min-height: 56px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.preferences .v2-row > span:last-child {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+}
 .preferences .logout-row {
   color: #bd3038;
+}
+.settings-inline-trigger[aria-expanded="true"] {
+  border-bottom-color: var(--line);
+}
+.display-name-editor {
+  padding: 14px 16px 16px;
+}
+.display-name-editor fieldset {
+  display: grid;
+  gap: 12px;
+}
+.display-name-editor input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+}
+.display-name-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.display-name-actions button {
+  width: 100%;
+}
+.appearance-setting {
+  padding: 14px 16px 16px;
+}
+.settings-item-label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+}
+.appearance-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--track);
+}
+.appearance-options button {
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 8px 4px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.appearance-options button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: var(--panel);
+  color: var(--accent);
 }
 .settings-confirm-actions {
   display: grid;
@@ -1144,6 +1217,10 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .v2-sheet .section-heading {
   margin-bottom: 20px;
+}
+.v2-sheet .sheet-drag-region {
+  touch-action: none;
+  cursor: grab;
 }
 .v2-sheet .section-heading h2 {
   font-size: 18px;
@@ -6157,7 +6234,6 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 .haptic-setting {
   cursor: pointer;
   flex-direction: row;
-  font-weight: 400;
 }
 .haptic-value {
   display: flex;
@@ -6194,7 +6270,9 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .haptic-description {
   padding: 0 16px 12px;
-  font-size: 11px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
   margin: 0;
 }
 .record-exercise-memo {

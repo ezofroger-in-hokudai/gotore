@@ -27,12 +27,26 @@ test("表示名はAPIの値を使い、失敗・部分成功・同期再試行�
   const updates = state.authUpdates;
   state.failSync = false;
   await page.getByRole("button", { name: "再試行", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "反映しました" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "表示名", exact: true })).toHaveCount(0);
   expect(state.authUpdates).toBe(updates);
-  await page.getByRole("button", { name: "閉じる", exact: true }).click();
   await navigate(page, "ホーム");
   await openName(page);
   await expect(name).toHaveValue("変更した名前");
+});
+
+test("表示名はカード内で編集し、キャンセルすると元の値へ戻す", async ({ page }) => {
+  await mockTraining(page);
+  await openName(page);
+  await expect(page.getByRole("dialog", { name: "表示名" })).toHaveCount(0);
+  const name = page.getByRole("textbox", { name: "表示名", exact: true });
+  await name.fill("保存しない名前");
+  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(name).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("画面テスト");
+  await openName(page);
+  await expect(page.getByRole("textbox", { name: "表示名", exact: true })).toHaveValue(
+    "画面テスト",
+  );
 });
 
 test("プロフィール取得失敗から再試行できる", async ({ page }) => {
@@ -61,9 +75,12 @@ test("外観と触覚を端末に保持し、通知設定を表示する", async
   await mockTraining(page);
   await navigate(page, "設定");
   await expect(page.getByText("通知", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: /^外観/ }).click();
+  await expect(page.getByRole("dialog", { name: "外観" })).toHaveCount(0);
   await page.getByRole("button", { name: "ダーク", exact: true }).click();
-  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(page.getByRole("button", { name: "ダーク", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.getByRole("switch", { name: "触覚フィードバック", exact: true }).uncheck();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -74,6 +91,30 @@ test("外観と触覚を端末に保持し、通知設定を表示する", async
     page.getByRole("switch", { name: "触覚フィードバック", exact: true }),
   ).not.toBeChecked();
   await page.screenshot({ path: "test-results/v2-settings-dark.png", fullPage: true });
+});
+
+test("狭い画面でも設定とインライン編集を横にはみ出さず操作できる", async ({ page }) => {
+  await mockTraining(page);
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await navigate(page, "設定");
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
+    for (const label of ["ライト", "ダーク", "自動"]) {
+      const size = await page.getByRole("button", { name: label, exact: true }).boundingBox();
+      expect(size?.height).toBeGreaterThanOrEqual(44);
+    }
+    const displayName = page.getByRole("button", { name: /^表示名/ });
+    await expect(displayName).not.toContainText("›");
+    await displayName.click();
+    await expect(page.getByRole("button", { name: "保存", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "キャンセル", exact: true })).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
+    await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+  }
 });
 
 test("オーナーは名前変更を再試行でき、メンバーには管理欄を出さない", async ({ page }) => {
@@ -121,7 +162,7 @@ test("設定往復と名前・画像編集で再取得待ちを増やさない",
   await expect(page.getByRole("textbox", { name: "表示名", exact: true })).toHaveValue(
     "受信済みの名前",
   );
-  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
   await page.getByRole("button", { name: /^プロフィール画像/ }).click();
   await expect(page.getByRole("button", { name: "写真を選ぶ", exact: true })).toBeVisible();
   await expect(page.getByRole("dialog").getByRole("alert")).toHaveCount(0);
@@ -161,9 +202,8 @@ test("設定の背景更新が失敗・遅延しても既知の名前と新し�
   await page.getByRole("textbox", { name: "表示名", exact: true }).fill("保存した新しい名前");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect.poll(() => state.syncs).toBe(1);
-  await expect(page.getByRole("status")).toContainText("保存しました");
+  await expect(page.getByRole("textbox", { name: "表示名", exact: true })).toHaveCount(0);
   release();
-  await page.getByRole("button", { name: "閉じる", exact: true }).click();
   await expect(page.getByRole("button", { name: /^表示名/ })).toContainText("保存した新しい名前");
   await navigate(page, "ホーム");
   await navigate(page, "設定");

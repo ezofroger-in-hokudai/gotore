@@ -8,13 +8,23 @@ import type { SettingsProfile } from "./use-settings-profile";
 export function SettingsPanel({
   profile,
   onSaved,
-}: { profile: SettingsProfile["profile"]; onSaved: (name: string) => void }) {
+  onCancel,
+}: {
+  profile: SettingsProfile["profile"];
+  onSaved: (name: string) => void;
+  onCancel: () => void;
+}) {
   if (profile.data) {
-    return <DisplayNameForm displayName={profile.data.display_name} onSaved={onSaved} />;
+    return (
+      <DisplayNameForm
+        displayName={profile.data.display_name}
+        onSaved={onSaved}
+        onCancel={onCancel}
+      />
+    );
   }
   return (
-    <section>
-      <h1>設定</h1>
+    <section className="display-name-editor">
       {profile.error ? (
         <div className="error" role="alert">
           {profile.error}
@@ -32,7 +42,8 @@ export function SettingsPanel({
 function DisplayNameForm({
   displayName,
   onSaved,
-}: { displayName: string; onSaved: (name: string) => void }) {
+  onCancel,
+}: { displayName: string; onSaved: (name: string) => void; onCancel: () => void }) {
   const [name, setName] = useState(displayName);
   const [busy, setBusy] = useState(false);
   const [needsSync, setNeedsSync] = useState(false);
@@ -73,12 +84,11 @@ function DisplayNameForm({
   }
 
   return (
-    <section>
-      <h1>設定</h1>
-      <form className="panel" onSubmit={submit}>
+    <section className="display-name-editor">
+      <form onSubmit={submit}>
         <fieldset disabled={busy}>
           <label>
-            表示名
+            <span className="sr-only">表示名</span>
             <input
               required
               maxLength={20}
@@ -91,9 +101,14 @@ function DisplayNameForm({
             />
           </label>
 
-          <button className="primary" type="submit">
-            {busy ? "変更中…" : "保存"}
-          </button>
+          <div className="display-name-actions">
+            <button className="secondary" type="button" onClick={onCancel}>
+              キャンセル
+            </button>
+            <button className="primary" type="submit">
+              {busy ? "変更中…" : "保存"}
+            </button>
+          </div>
         </fieldset>
         {error && (
           <p className="error" role="alert">

@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures";
 import { mockTraining, navigate } from "./mock-training";
 
-test("シートの取っ手を下へスワイプすると閉じ、本文の操作では閉じない", async ({ browser }) => {
+test("シート上部と取っ手を下へスワイプすると閉じる", async ({ browser }) => {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     hasTouch: true,
@@ -11,8 +11,8 @@ test("シートの取っ手を下へスワイプすると閉じ、本文の操�
     const page = await context.newPage();
     await mockTraining(page);
     await navigate(page, "設定");
-    await page.getByRole("button", { name: /^外観/ }).click();
-    const sheet = page.getByRole("dialog", { name: "外観" });
+    await page.getByRole("button", { name: /^プロフィール画像/ }).click();
+    const sheet = page.getByRole("dialog", { name: "プロフィール画像" });
     await expect(sheet).toBeVisible();
     const cdp = await context.newCDPSession(page);
     const swipe = async (x: number, y: number) => {
@@ -28,9 +28,11 @@ test("シートの取っ手を下へスワイプすると閉じ、本文の操�
       }
       await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     };
-    const heading = await sheet.getByRole("heading", { name: "外観" }).boundingBox();
+    const heading = await sheet.getByRole("heading", { name: "プロフィール画像" }).boundingBox();
     if (!heading) throw new Error("シート見出しの位置を確認できません");
     await swipe(heading.x + heading.width / 2, heading.y + heading.height / 2);
+    await expect(sheet).toHaveCount(0);
+    await page.getByRole("button", { name: /^プロフィール画像/ }).click();
     await expect(sheet).toBeVisible();
     const handle = await sheet.locator(".sheet-handle").boundingBox();
     if (!handle) throw new Error("シートの取っ手の位置を確認できません");
