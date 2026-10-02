@@ -37,6 +37,7 @@ export function SessionScreen({
   onHistory,
   onFinished,
   haptic,
+  weightStep,
   catalog,
   finishRequest,
 }: {
@@ -47,6 +48,7 @@ export function SessionScreen({
   onHistory: () => void;
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
+  weightStep: number;
   catalog: ReturnType<typeof useExerciseCatalog>;
   finishRequest: number;
 }) {
@@ -82,6 +84,7 @@ export function SessionScreen({
         onFinished(record);
       }}
       haptic={haptic}
+      weightStep={weightStep}
       initialInput={draft}
       onPreparingInput={setDraft}
       catalog={catalog}
@@ -97,6 +100,7 @@ function ActiveTraining({
   userId,
   onFinished,
   haptic,
+  weightStep,
   initialInput,
   onPreparingInput,
   catalog,
@@ -112,6 +116,7 @@ function ActiveTraining({
   userId: string;
   onFinished: (record: TrainingSession) => void;
   haptic: boolean;
+  weightStep: number;
 }) {
   const sessionId = session?.id ?? null;
   const revision = session?.revision;
@@ -768,7 +773,7 @@ function ActiveTraining({
                     }}
                     unit="kg"
                     value={input.weight}
-                    step={0.5}
+                    step={weightStep}
                     arrowStep={5}
                     min={0}
                     showLabel={false}

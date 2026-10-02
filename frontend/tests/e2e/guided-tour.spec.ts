@@ -53,10 +53,10 @@ test("文字拡大・スクロールに追従し、対象の操作中は隠し�
   const guide = page.getByRole("region", { name: "使い方ガイド" });
   await guide.getByRole("button", { name: "次へ", exact: true }).click();
   await page.getByRole("button", { name: "種目を管理", exact: true }).click();
-  const sheet = page.getByRole("dialog", { name: "種目一覧", exact: true });
+  const sheet = page.locator(".settings-subpage");
   await expect(sheet).toBeVisible();
   await expect(guide).toBeHidden();
-  await sheet.getByRole("button", { name: "閉じる", exact: true }).click();
+  await sheet.locator(".back-button").click();
   await expect(guide).toBeVisible();
   for (let index = 0; index < 4; index++)
     await guide.getByRole("button", { name: "次へ", exact: true }).click();

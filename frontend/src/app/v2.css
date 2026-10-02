@@ -1141,6 +1141,55 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.record-step-setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 0 16px;
+  min-height: 49px;
+}
+.record-step-setting .settings-item-label {
+  margin: 0;
+}
+.record-step-setting.is-editing {
+  grid-template-columns: 1fr;
+  padding-top: 12px;
+  padding-bottom: 14px;
+}
+.record-step-edit-trigger {
+  color: var(--text) !important;
+  font-size: 14px !important;
+  font-weight: 400;
+  text-align: right;
+}
+.record-step-editor {
+  min-width: 0;
+}
+.record-step-wheel {
+  display: grid;
+  grid-template-columns: 88px auto;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.record-step-setting .number-wheel input {
+  height: 44px;
+  font-size: 24px;
+  line-height: 44px;
+}
+.record-step-setting .wheel-neighbor {
+  height: 24px;
+  padding: 0;
+}
+.record-step-editor > p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
 .appearance-setting {
   padding: 12px 16px 13px;
   border-bottom: 1px solid var(--line);
@@ -2860,6 +2909,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .v2-app:has(dialog[open]) .floating-training,
 .v2-app:has(.group-setting-row.is-editing) .floating-training,
+.v2-app:has(.record-step-setting.is-editing) .floating-training,
 .v2-app:not(.recording-view):has(input:focus, textarea:focus, [contenteditable="true"]:focus)
   .floating-training {
   display: none;

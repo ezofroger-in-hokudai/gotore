@@ -26,6 +26,7 @@ export function NumberWheel({
   step,
   arrowStep,
   min,
+  max = 1000,
   onChange,
   inputRef,
   onEnter,
@@ -37,6 +38,7 @@ export function NumberWheel({
   step: number;
   arrowStep: number;
   min: number;
+  max?: number;
   onChange: (value: string) => void;
   inputRef?: RefObject<HTMLInputElement | null>;
   onEnter?: () => void;
@@ -59,7 +61,7 @@ export function NumberWheel({
   const host = useRef<HTMLDivElement>(null);
   const ownField = useRef<HTMLInputElement>(null);
   const field = inputRef ?? ownField;
-  const clamp = (n: number) => Math.round(Math.min(1000, Math.max(min, n)) * 10) / 10;
+  const clamp = (n: number) => Math.round(Math.min(max, Math.max(min, n)) * 10) / 10;
   const change = (n: number) => {
     const next = clamp(n);
     if (next !== current.current) {
@@ -154,7 +156,7 @@ export function NumberWheel({
         type="button"
         className="wheel-neighbor"
         aria-label={`${label}を${arrowStep}${unit}増やす`}
-        disabled={Number(value) >= 1000}
+        disabled={Number(value) >= max}
         onClick={() => {
           cancelAnimationFrame(frame.current);
           shift(arrowStep);
@@ -169,7 +171,7 @@ export function NumberWheel({
         type="number"
         inputMode={unit === "kg" ? "decimal" : "numeric"}
         min={min}
-        max={1000}
+        max={max}
         step={unit === "kg" ? 0.1 : 1}
         required
         value={value}

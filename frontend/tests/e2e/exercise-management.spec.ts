@@ -22,7 +22,7 @@ test("開始せず種目を整理し、検索・分類を保って成功結果�
   await page.reload();
   await navigate(page, "設定");
   await page.getByRole("button", { name: "種目を管理", exact: true }).click();
-  const sheet = page.getByRole("dialog", { name: "種目一覧", exact: true });
+  const sheet = page.locator(".settings-subpage");
   await expect(sheet.getByLabel("新しい種目", { exact: true })).toHaveCount(0);
   expect(state.session).toBeNull();
   let reads = 0;
@@ -54,7 +54,7 @@ test("開始せず種目を整理し、検索・分類を保って成功結果�
   await sheet.getByRole("button", { name: "追加", exact: true }).click();
   await sheet.getByRole("button", { name: "すべて", exact: true }).click();
   await expect(sheet.locator(".exercise-options")).toContainText("ロウ追加");
-  await sheet.getByRole("button", { name: "閉じる", exact: true }).click();
+  await sheet.locator(".back-button").click();
   expect(state.session).toBeNull();
   await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
@@ -68,7 +68,7 @@ test("管理の取得失敗を再試行でき、長い名前でも削除対象�
   await page.reload();
   await navigate(page, "設定");
   await page.getByRole("button", { name: "種目を管理", exact: true }).click();
-  const sheet = page.getByRole("dialog", { name: "種目一覧", exact: true });
+  const sheet = page.locator(".settings-subpage");
   await expect(sheet.getByRole("alert")).toBeVisible();
   await expect(sheet.getByRole("button", { name: "種目を追加", exact: true })).toHaveCount(0);
   state.failOptions = false;
@@ -122,7 +122,7 @@ test("再取得中に保存した部位を遅い旧応答で戻さず、権限�
   await page.reload();
   await navigate(page, "設定");
   await page.getByRole("button", { name: "種目を管理", exact: true }).click();
-  const sheet = page.getByRole("dialog", { name: "種目一覧", exact: true });
+  const sheet = page.locator(".settings-subpage");
   await sheet.getByRole("button", { name: "ベンチプレスの部位を編集", exact: true }).click();
   await sheet.getByLabel("主な部位", { exact: true }).selectOption("back");
   state.failOptions = true;

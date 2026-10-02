@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "./fixtures";
-import { mockTraining, navigate, openGroup } from "./mock-training";
+import { mockTraining, navigate, openGroup, startTraining } from "./mock-training";
 
 async function openName(page: import("@playwright/test").Page) {
   await navigate(page, "設定");
@@ -118,7 +118,62 @@ test("狭い画面でも設定とインライン編集を横にはみ出さず�
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
       .toBe(true);
     await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+    const weightStep = page.getByRole("button", { name: "重量の刻みを編集", exact: true });
+    await expect(weightStep).toContainText("0.5 kg");
+    await weightStep.click();
+    await expect(page.getByRole("spinbutton", { name: "重量の刻み", exact: true })).toBeVisible();
+    await expect(page.locator(".floating-training")).toBeHidden();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
+    await page.getByRole("button", { name: "キャンセル", exact: true }).click();
   }
+});
+
+test("種目は独立ページで管理し、重量の刻みを記録ホイールへ反映する", async ({ page }) => {
+  await mockTraining(page);
+  await navigate(page, "設定");
+  await expect(page.getByRole("heading", { name: "記録", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "種目を管理", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "種目一覧", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "種目一覧", exact: true })).toHaveCount(0);
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
+
+  const stepTrigger = page.getByRole("button", { name: "重量の刻みを編集", exact: true });
+  await expect(stepTrigger).toContainText("0.5 kg");
+  await stepTrigger.click();
+  const step = page.getByRole("spinbutton", { name: "重量の刻み", exact: true });
+  await expect(step).toHaveValue("0.5");
+  const increase = page.getByRole("button", { name: "重量の刻みを0.5kg増やす" });
+  await increase.click();
+  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(stepTrigger).toContainText("0.5 kg");
+  await stepTrigger.click();
+  await increase.click();
+  await increase.click();
+  await expect(step).toHaveValue("1.5");
+  await page.getByRole("button", { name: "決定", exact: true }).click();
+  await expect(stepTrigger).toContainText("1.5 kg");
+  await page.reload();
+  await navigate(page, "設定");
+  await expect(stepTrigger).toContainText("1.5 kg");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await startTraining(page);
+  const weight = page.getByRole("spinbutton", { name: "重量", exact: true });
+  const before = Number(await weight.inputValue());
+  const wheel = page.locator(".wheels .number-wheel").first();
+  const box = await wheel.boundingBox();
+  if (!box) throw new Error("重量ホイールの位置を確認できません");
+  const x = box.x + 4;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 18, { steps: 3 });
+  await page.mouse.up();
+  await expect(weight).toHaveValue(String(before + 1.5));
 });
 
 test("オーナーは名前変更を再試行でき、メンバーには管理欄を出さない", async ({ page }) => {

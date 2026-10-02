@@ -80,6 +80,7 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
   const state = await prepare(page);
   await navigate(page, "設定");
   await page.getByRole("button", { name: "種目を管理", exact: true }).click();
+  const settingsPage = page.locator(".settings-subpage");
   await page.getByRole("button", { name: "種目を追加", exact: true }).click();
   await page.getByLabel("新しい種目", { exact: true }).fill("ケーブルロウ");
   await page.getByLabel("主な部位", { exact: true }).selectOption("back");
@@ -90,7 +91,7 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
     .click();
   state.failOptionWrite = true;
   await page.getByRole("button", { name: "追加", exact: true }).click();
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText("通信できません");
+  await expect(settingsPage.getByRole("alert")).toContainText("通信できません");
   await expect(page.getByLabel("主な部位", { exact: true })).toHaveValue("back");
   state.failOptionWrite = false;
   await page.getByRole("button", { name: "追加", exact: true }).click();
@@ -102,7 +103,7 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
   await page.screenshot({ path: "test-results/body-parts-edit-390.png", fullPage: true });
   state.failOptionWrite = true;
   await page.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText("通信できません");
+  await expect(settingsPage.getByRole("alert")).toContainText("通信できません");
   await expect(page.getByLabel("主な部位", { exact: true })).toHaveValue("shoulders");
   state.failOptionWrite = false;
   if (!created) throw new Error("追加した種目がありません");
@@ -112,7 +113,7 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
     revision: 2,
   });
   await page.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText("別の更新");
+  await expect(settingsPage.getByRole("alert")).toContainText("別の更新");
   await expect(page.getByLabel("主な部位", { exact: true })).toHaveValue("shoulders");
   await expect(page.getByRole("button", { name: "保存", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "最新の部位を読み直す", exact: true }).click();
@@ -120,7 +121,7 @@ test("部位を付けて追加し、保存失敗と競合では入力を保持�
   await page.getByLabel("主な部位", { exact: true }).selectOption("back");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("部位を保存しました");
-  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await settingsPage.locator(".back-button").click();
   await page.reload();
   await openTraining(page);
   await page.getByRole("button", { name: "トレーニングを開始", exact: true }).click();
