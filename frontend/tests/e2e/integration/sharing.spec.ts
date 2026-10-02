@@ -142,6 +142,8 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await expect(pageB.getByRole("heading", { name: "SET 2" })).toBeVisible();
     await navigate(pageB, "ホーム");
     await navigate(pageB, "グループ");
+    // 別タブからは詳細を保持するため、選択中タブの再タップで一覧へ戻す。
+    await navigate(pageB, "グループ");
     await pageB.getByRole("button", { name: "朝の合トレ部の詳細", exact: true }).click();
     await pageB
       .getByRole("navigation", { name: "グループの表示" })
@@ -150,6 +152,8 @@ test("2人・2グループで全共有、再開、LIVE終了、本人メモ、�
     await pageB.getByRole("button", { name: "グループから抜ける", exact: true }).click();
     await pageB.getByRole("button", { name: "抜ける", exact: true }).click();
     await expect(pageB.getByRole("heading", { name: "グループ", exact: true })).toBeVisible();
+    await navigate(pageA, "グループ");
+    // 作成後に保持された詳細から一覧へ戻し、退出対象を選び直す。
     await navigate(pageA, "グループ");
     await pageA.getByRole("button", { name: "朝の合トレ部の詳細", exact: true }).click();
     const refreshedInvite = pageA.waitForResponse(

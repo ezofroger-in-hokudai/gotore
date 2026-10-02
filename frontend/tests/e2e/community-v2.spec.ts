@@ -9,7 +9,7 @@ async function openGroupList(page: import("@playwright/test").Page) {
   await navigate(page, "グループ");
 }
 
-test("グループナビは選択中の詳細ではなくグループホームを開く", async ({ page }) => {
+test("別タブからグループへ戻ると詳細を保持し、再タップでグループホームへ戻る", async ({ page }) => {
   const state = await mockTraining(page);
   await navigate(page, "グループ");
   await expect(page.getByRole("heading", { name: "グループ", exact: true })).toBeVisible();
@@ -22,6 +22,22 @@ test("グループナビは選択中の詳細ではなくグループホーム�
   await expect(
     page.getByRole("heading", { name: state.group.name, level: 2, exact: true }),
   ).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "グループの表示" })
+    .getByRole("button", { name: "カレンダー", exact: true })
+    .click();
+  await navigate(page, "履歴");
+  await navigate(page, "グループ");
+  await expect(
+    page.getByRole("heading", { name: state.group.name, level: 2, exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "グループの表示" })
+      .getByRole("button", { name: "カレンダー", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => history.state.communityMode)).toBe("detail");
+
   await navigate(page, "グループ");
   await expect(page.getByRole("heading", { name: "グループ", exact: true })).toBeVisible();
   expect(await page.evaluate(() => history.state.communityMode)).toBe("list");
