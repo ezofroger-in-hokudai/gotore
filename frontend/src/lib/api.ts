@@ -1,3 +1,5 @@
+import { isDemoMode } from "@/features/demo/mode";
+import { getDemoEnvironment } from "./demo-environment";
 import { getSupabase } from "./supabase";
 
 export type ActivityBodyPart = {
@@ -200,6 +202,12 @@ export async function api<T>(
   options: RequestInit = {},
   expectedUserId?: string,
 ): Promise<T> {
+  if (isDemoMode()) {
+    const demo = getDemoEnvironment();
+    if (expectedUserId && demo.session.user.id !== expectedUserId)
+      throw new Error("利用者が変わりました。");
+    return demo.request<T>(path, options);
+  }
   const client = getSupabase();
   if (!client) throw new Error("ログインを利用できません。");
   const { data, error } = await client.auth.getSession();

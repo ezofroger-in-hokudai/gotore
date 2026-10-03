@@ -143,11 +143,13 @@ export function useNotifications(
     };
     document.addEventListener("visibilitychange", resume);
     window.addEventListener("online", resume);
+    window.addEventListener("demo-notifications", resume);
     navigator.serviceWorker?.addEventListener("message", resume);
     return () => {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", resume);
       window.removeEventListener("online", resume);
+      window.removeEventListener("demo-notifications", resume);
       navigator.serviceWorker?.removeEventListener("message", resume);
     };
   }, [enabled, ready, poll]);
