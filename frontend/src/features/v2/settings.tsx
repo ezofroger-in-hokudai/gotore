@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { CatalogPanel } from "../exercises/catalog-panel";
-import type { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { NotificationSettingsPanel } from "../notifications/notification-settings";
 import type { useNotifications } from "../notifications/use-notifications";
 import { AvatarPanel } from "../settings/avatar-panel";
+import { InlineEditTrigger } from "../settings/inline-edit-trigger";
 import { SettingsPanel } from "../settings/settings-panel";
 import { SuggestionBox, useSuggestionBox } from "../settings/suggestion-box";
 import type { SettingsProfile } from "../settings/use-settings-profile";
@@ -13,6 +12,7 @@ type Theme = "system" | "light" | "dark";
 export function usePreferences(userId: string) {
   const [theme, setTheme] = useState<Theme>("system");
   const [haptic, setHaptic] = useState(true);
+  const [weightStep, setWeightStep] = useState(0.5);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   const key = `gotore:preferences:v2:${userId}`;
@@ -21,6 +21,13 @@ export function usePreferences(userId: string) {
       const saved = JSON.parse(localStorage.getItem(key) || "{}");
       if (["system", "light", "dark"].includes(saved.theme)) setTheme(saved.theme);
       if (typeof saved.haptic === "boolean") setHaptic(saved.haptic);
+      if (
+        typeof saved.weightStep === "number" &&
+        saved.weightStep >= 0.5 &&
+        saved.weightStep <= 5 &&
+        saved.weightStep * 2 === Math.round(saved.weightStep * 2)
+      )
+        setWeightStep(saved.weightStep);
     } catch {
       setError("端末の設定を読み込めませんでした。");
     }
@@ -30,39 +37,40 @@ export function usePreferences(userId: string) {
     if (!ready) return;
     document.documentElement.dataset.theme = theme;
     try {
-      localStorage.setItem(key, JSON.stringify({ theme, haptic }));
+      localStorage.setItem(key, JSON.stringify({ theme, haptic, weightStep }));
     } catch {
       setError("設定を端末に保存できませんでした。");
     }
     return () => {
       delete document.documentElement.dataset.theme;
     };
-  }, [theme, haptic, ready, key]);
-  return { theme, setTheme, haptic, setHaptic, error };
+  }, [theme, haptic, weightStep, ready, key]);
+  return { theme, setTheme, haptic, setHaptic, weightStep, setWeightStep, error };
 }
 
 export function Preferences({
   notifications,
   resources,
-  catalog,
   preferences,
   onChanged,
+  onExercises,
   onGuide,
   onLogout,
   signingOut,
 }: {
   notifications: ReturnType<typeof useNotifications>;
   resources: SettingsProfile;
-  catalog: ReturnType<typeof useExerciseCatalog>;
   preferences: ReturnType<typeof usePreferences>;
   onChanged: () => void;
+  onExercises: () => void;
   onGuide: () => void;
   onLogout: () => void;
   signingOut: boolean;
 }) {
-  const [sheet, setSheet] = useState<
-    "name" | "avatar" | "theme" | "exercises" | "suggestion" | "notifications" | "logout" | null
-  >(null);
+  const [sheet, setSheet] = useState<"avatar" | "suggestion" | "notifications" | "logout" | null>(
+    null,
+  );
+  const [editingName, setEditingName] = useState(false);
   const suggestion = useSuggestionBox();
   const { profile, avatar } = resources;
   return (
@@ -85,32 +93,72 @@ export function Preferences({
             ›
           </span>
         </button>
-        <button className="v2-row" type="button" onClick={() => setSheet("name")}>
+        <div className={`group-setting-row settings-name-row${editingName ? " is-editing" : ""}`}>
           <span>表示名</span>
-          <span>{profile.data?.display_name} ›</span>
-        </button>
+          {editingName ? (
+            <SettingsPanel
+              profile={profile}
+              onCancel={() => setEditingName(false)}
+              onSaved={(displayName) => {
+                profile.updateData((current) => ({ ...current, display_name: displayName }));
+                onChanged();
+                setEditingName(false);
+              }}
+            />
+          ) : (
+            <InlineEditTrigger
+              className="settings-name-edit-trigger"
+              label="表示名を編集"
+              value={profile.data?.display_name}
+              onClick={() => setEditingName(true)}
+            />
+          )}
+        </div>
       </div>
-      <h2>トレーニング</h2>
+      <h2>記録</h2>
       <div className="v2-rows">
         <button
           className="v2-row"
           type="button"
           aria-label="種目を管理"
           data-tour="exercises"
-          onClick={() => setSheet("exercises")}
+          onClick={onExercises}
         >
           <span>種目</span>
           <span aria-hidden="true">›</span>
         </button>
+        <label className="record-step-setting">
+          <span className="settings-item-label">重量の刻み</span>
+          <select
+            aria-label="重量の刻み"
+            value={String(preferences.weightStep)}
+            onChange={(event) => preferences.setWeightStep(Number(event.target.value))}
+          >
+            {Array.from({ length: 10 }, (_, index) => (index + 1) / 2).map((step) => (
+              <option key={step} value={step}>
+                {step.toFixed(1)} kg
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       <h2>アプリ</h2>
       <div className="v2-rows">
-        <button className="v2-row" type="button" onClick={() => setSheet("theme")}>
-          <span>外観</span>
-          <span>
-            {{ system: "端末に合わせる", light: "ライト", dark: "ダーク" }[preferences.theme]} ›
-          </span>
-        </button>
+        <div className="appearance-setting">
+          <span className="settings-item-label">外観</span>
+          <div className="appearance-options" aria-label="外観">
+            {(["light", "dark", "system"] as const).map((theme) => (
+              <button
+                type="button"
+                key={theme}
+                aria-pressed={preferences.theme === theme}
+                onClick={() => preferences.setTheme(theme)}
+              >
+                {{ light: "ライト", dark: "ダーク", system: "自動" }[theme]}
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="v2-row haptic-setting">
           <span>触覚フィードバック</span>
           <span className="haptic-value">
@@ -171,25 +219,16 @@ export function Preferences({
               ? "通知"
               : sheet === "suggestion"
                 ? "目安箱"
-                : sheet === "exercises"
-                  ? "種目一覧"
-                  : sheet === "avatar"
-                    ? "プロフィール画像"
-                    : sheet === "name"
-                      ? "表示名"
-                      : sheet === "theme"
-                        ? "外観"
-                        : "触覚フィードバック"
+                : sheet === "avatar"
+                  ? "プロフィール画像"
+                  : "プロフィール画像"
           }
           onClose={() => setSheet(null)}
-          dismissOnBackdrop={sheet !== "exercises" && sheet !== "avatar" && sheet !== "name"}
         >
           {sheet === "notifications" ? (
             <NotificationSettingsPanel notifications={notifications} />
           ) : sheet === "suggestion" ? (
             <SuggestionBox state={suggestion} />
-          ) : sheet === "exercises" ? (
-            <CatalogPanel catalog={catalog} />
           ) : sheet === "avatar" ? (
             <AvatarPanel
               current={avatar}
@@ -200,37 +239,6 @@ export function Preferences({
               }}
               onClose={() => setSheet(null)}
             />
-          ) : sheet === "name" ? (
-            <SettingsPanel
-              profile={profile}
-              onSaved={(displayName) => {
-                profile.updateData((current) => ({ ...current, display_name: displayName }));
-                onChanged();
-              }}
-            />
-          ) : sheet === "theme" ? (
-            <div className="v2-rows">
-              {(["system", "light", "dark"] as const).map((theme) => (
-                <button
-                  className="v2-row"
-                  type="button"
-                  key={theme}
-                  aria-pressed={preferences.theme === theme}
-                  onClick={() => preferences.setTheme(theme)}
-                >
-                  <span>
-                    {
-                      {
-                        system: "端末に合わせる",
-                        light: "ライト",
-                        dark: "ダーク",
-                      }[theme]
-                    }
-                  </span>
-                  {preferences.theme === theme && <span>✓</span>}
-                </button>
-              ))}
-            </div>
           ) : null}
         </Sheet>
       )}

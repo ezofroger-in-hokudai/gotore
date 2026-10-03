@@ -1,20 +1,31 @@
 import { api } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { LoadingState } from "../loading/loading-state";
 import { saveDisplayName } from "./profile";
+import { useInlineInputFocus } from "./use-inline-input-focus";
 import type { SettingsProfile } from "./use-settings-profile";
 
 export function SettingsPanel({
   profile,
   onSaved,
-}: { profile: SettingsProfile["profile"]; onSaved: (name: string) => void }) {
+  onCancel,
+}: {
+  profile: SettingsProfile["profile"];
+  onSaved: (name: string) => void;
+  onCancel: () => void;
+}) {
   if (profile.data) {
-    return <DisplayNameForm displayName={profile.data.display_name} onSaved={onSaved} />;
+    return (
+      <DisplayNameForm
+        displayName={profile.data.display_name}
+        onSaved={onSaved}
+        onCancel={onCancel}
+      />
+    );
   }
   return (
-    <section>
-      <h1>設定</h1>
+    <section className="group-name-inline-form">
       {profile.error ? (
         <div className="error" role="alert">
           {profile.error}
@@ -32,12 +43,16 @@ export function SettingsPanel({
 function DisplayNameForm({
   displayName,
   onSaved,
-}: { displayName: string; onSaved: (name: string) => void }) {
+  onCancel,
+}: { displayName: string; onSaved: (name: string) => void; onCancel: () => void }) {
   const [name, setName] = useState(displayName);
   const [busy, setBusy] = useState(false);
   const [needsSync, setNeedsSync] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useInlineInputFocus(inputRef);
 
   async function syncProfile() {
     await api("/me/profile", { method: "POST" });
@@ -74,12 +89,12 @@ function DisplayNameForm({
 
   return (
     <section>
-      <h1>設定</h1>
-      <form className="panel" onSubmit={submit}>
+      <form className="group-name-inline-form" onSubmit={submit}>
         <fieldset disabled={busy}>
           <label>
-            表示名
+            <span className="sr-only">表示名</span>
             <input
+              ref={inputRef}
               required
               maxLength={20}
               value={name}
@@ -91,9 +106,14 @@ function DisplayNameForm({
             />
           </label>
 
-          <button className="primary" type="submit">
-            {busy ? "変更中…" : "保存"}
-          </button>
+          <div className="group-name-inline-actions">
+            <button className="text-button" type="button" onClick={onCancel}>
+              キャンセル
+            </button>
+            <button className="group-name-commit" type="submit">
+              {busy ? "変更中…" : "決定"}
+            </button>
+          </div>
         </fieldset>
         {error && (
           <p className="error" role="alert">

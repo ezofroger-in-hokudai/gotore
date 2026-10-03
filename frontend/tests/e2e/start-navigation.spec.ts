@@ -87,9 +87,9 @@ test("ホームは仲間の記録に絞り、入力フォーカスとSheet表示
   await page.getByRole("button", { name: /^表示名/ }).click();
   await page.getByRole("textbox", { name: "表示名", exact: true }).focus();
   await expect(floating).toBeHidden();
-  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
   await expect(floating).toBeVisible();
-  await page.getByRole("button", { name: /^外観/ }).click();
+  await page.getByRole("button", { name: /^プロフィール画像/ }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(floating).toBeHidden();
   await page.getByRole("button", { name: "閉じる", exact: true }).click();

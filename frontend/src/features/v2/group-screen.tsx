@@ -22,6 +22,7 @@ import {
 } from "react";
 import { WombatBarbell } from "../branding/wombat";
 import { LoadingState } from "../loading/loading-state";
+import { InlineEditTrigger } from "../settings/inline-edit-trigger";
 import { GroupNameForm } from "../training/group-name-form";
 import { ResourceError } from "../training/resource-error";
 import { useResource } from "../training/use-resource";
@@ -675,14 +676,12 @@ export function CommunityScreen({
                             }}
                           />
                         ) : isOwner ? (
-                          <button
-                            type="button"
-                            className="text-button group-name-edit-trigger"
-                            aria-label="グループ名を編集"
+                          <InlineEditTrigger
+                            className="group-name-edit-trigger"
+                            label="グループ名を編集"
+                            value={group.name}
                             onClick={() => setEditingName(true)}
-                          >
-                            {group.name}
-                          </button>
+                          />
                         ) : (
                           <span>{group.name}</span>
                         )}

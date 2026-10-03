@@ -42,6 +42,32 @@ export function Sheet({
     swipe.current = null;
     if (dialog.current) dialog.current.style.transform = "";
   };
+  const startSwipe = (event: PointerEvent<HTMLElement>) => {
+    if (closeDisabled || !dismissOnBackdrop || !event.isPrimary || event.button !== 0) return;
+    swipe.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      distance: 0,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const moveSwipe = (event: PointerEvent<HTMLElement>) => {
+    const current = swipe.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    const dx = event.clientX - current.x;
+    const dy = event.clientY - current.y;
+    current.distance = dy > Math.abs(dx) ? Math.max(0, dy) : 0;
+    if (dialog.current)
+      dialog.current.style.transform = `translateY(${Math.min(current.distance, 220)}px)`;
+  };
+  const endSwipe = (event: PointerEvent<HTMLElement>) => {
+    const current = swipe.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    const dismiss = current.distance >= 80;
+    resetSwipe();
+    if (dismiss) close.current();
+  };
   useEffect(() => {
     mounted.current = true;
     const element = dialog.current;
@@ -103,48 +129,35 @@ export function Sheet({
         <div
           className="sheet-handle"
           aria-hidden="true"
-          onPointerDown={(event) => {
-            if (closeDisabled || !dismissOnBackdrop || !event.isPrimary || event.button !== 0)
-              return;
-            swipe.current = {
-              pointerId: event.pointerId,
-              x: event.clientX,
-              y: event.clientY,
-              distance: 0,
-            };
-            event.currentTarget.setPointerCapture(event.pointerId);
-          }}
-          onPointerMove={(event) => {
-            const current = swipe.current;
-            if (!current || current.pointerId !== event.pointerId) return;
-            const dx = event.clientX - current.x;
-            const dy = event.clientY - current.y;
-            current.distance = dy > Math.abs(dx) ? Math.max(0, dy) : 0;
-            if (dialog.current)
-              dialog.current.style.transform = `translateY(${Math.min(current.distance, 220)}px)`;
-          }}
-          onPointerUp={(event) => {
-            const current = swipe.current;
-            if (!current || current.pointerId !== event.pointerId) return;
-            const dismiss = current.distance >= 80;
-            resetSwipe();
-            if (dismiss) close.current();
-          }}
+          onPointerDown={startSwipe}
+          onPointerMove={moveSwipe}
+          onPointerUp={endSwipe}
           onPointerCancel={resetSwipe}
           onLostPointerCapture={resetSwipe}
         />
       )}
       {variant === "bottom" && (
-        <div className="section-heading">
+        <div
+          className="section-heading sheet-drag-region"
+          onPointerDown={(event) => {
+            if ((event.target as HTMLElement).closest("button")) return;
+            startSwipe(event);
+          }}
+          onPointerMove={moveSwipe}
+          onPointerUp={endSwipe}
+          onPointerCancel={resetSwipe}
+          onLostPointerCapture={resetSwipe}
+        >
           <h2>{title}</h2>
           {showCloseButton && (
             <button
-              className="text-button"
+              className="sheet-close-button"
               type="button"
               disabled={closeDisabled}
+              aria-label="閉じる"
               onClick={() => close.current()}
             >
-              閉じる
+              <span aria-hidden="true">×</span>
             </button>
           )}
         </div>

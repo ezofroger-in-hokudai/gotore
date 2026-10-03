@@ -377,7 +377,7 @@ test("ホームの空状態はみんなのトレーニングを待つ文言に�
 test("ブラウザの戻るでシート・グループ詳細を閉じ、記録入力は維持する", async ({ page }) => {
   const state = await mockTraining(page);
   await navigate(page, "設定");
-  await page.getByRole("button", { name: /^外観/ }).click();
+  await page.getByRole("button", { name: /^プロフィール画像/ }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);

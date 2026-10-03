@@ -3,6 +3,7 @@ import type { Group, TodayActivity, Workout } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
+import { CatalogPanel } from "../exercises/catalog-panel";
 import { useExerciseCatalog } from "../exercises/use-exercise-catalog";
 import { LoadingState } from "../loading/loading-state";
 import { ActivityNotifications } from "../notifications/activity-notifications";
@@ -41,7 +42,15 @@ import { Sheet } from "./sheet";
 import { useEdgeBack } from "./use-edge-back";
 import { useGroupOrder } from "./use-group-order";
 
-type View = "home" | "record" | "history" | "settings" | "groups" | "edit" | "result";
+type View =
+  | "home"
+  | "record"
+  | "history"
+  | "settings"
+  | "settings-exercises"
+  | "groups"
+  | "edit"
+  | "result";
 function scrollPageToTop() {
   window.scrollTo({ top: 0 });
   document.querySelector<HTMLElement>(".main-content")?.scrollTo({ top: 0 });
@@ -239,9 +248,15 @@ function WorkspaceContent({ session }: { session: Session }) {
     }
     const back = (event: PopStateEvent) => {
       const next = event.state?.gotoreView;
-      const target: View = ["home", "record", "history", "settings", "groups", "result"].includes(
-        next,
-      )
+      const target: View = [
+        "home",
+        "record",
+        "history",
+        "settings",
+        "settings-exercises",
+        "groups",
+        "result",
+      ].includes(next)
         ? next
         : "home";
       const nextPosition = Number(event.state?.gotoreMotionIndex);
@@ -356,7 +371,12 @@ function WorkspaceContent({ session }: { session: Session }) {
         <OnboardingGuide
           userId={session.user.id}
           replay={guideReplay}
-          paused={view === "record" || view === "edit" || view === "result"}
+          paused={
+            view === "record" ||
+            view === "edit" ||
+            view === "result" ||
+            view === "settings-exercises"
+          }
           onVisit={(next, target) => {
             setGuideTarget({ target });
             setGroupMode("list");
@@ -441,6 +461,7 @@ function WorkspaceContent({ session }: { session: Session }) {
             recent={recentRecords}
             onHistory={() => navigate("history")}
             haptic={preferences.haptic}
+            weightStep={preferences.weightStep}
             catalog={catalog}
             onFinished={(record) => {
               setFinished(record);
@@ -555,13 +576,22 @@ function WorkspaceContent({ session }: { session: Session }) {
           <Preferences
             notifications={notifications}
             resources={settingsProfile}
-            catalog={catalog}
             preferences={preferences}
             onChanged={changed}
+            onExercises={() => navigate("settings-exercises")}
             onGuide={() => setGuideReplay((value) => value + 1)}
             onLogout={() => void logout()}
             signingOut={signingOut}
           />
+        )}
+        {view === "settings-exercises" && (
+          <section className="settings-subpage">
+            <button className="back-button" type="button" onClick={() => navigate("settings")}>
+              ← 設定
+            </button>
+            <h1>種目一覧</h1>
+            <CatalogPanel catalog={catalog} />
+          </section>
         )}
         {copy && (
           <Sheet
@@ -672,7 +702,11 @@ function WorkspaceContent({ session }: { session: Session }) {
             key={next}
             type="button"
             aria-current={
-              view === next || (next === "history" && view === "edit") ? "page" : undefined
+              view === next ||
+              (next === "history" && view === "edit") ||
+              (next === "settings" && view === "settings-exercises")
+                ? "page"
+                : undefined
             }
             onClick={() => {
               if (next === "groups") {

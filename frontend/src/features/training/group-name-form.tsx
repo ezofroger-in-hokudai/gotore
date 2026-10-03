@@ -1,5 +1,6 @@
 import { type Group, api } from "@/lib/api";
-import { type FormEvent, useEffect, useId, useRef, useState } from "react";
+import { type FormEvent, useId, useRef, useState } from "react";
+import { useInlineInputFocus } from "../settings/use-inline-input-focus";
 
 export function GroupNameForm({
   group,
@@ -14,9 +15,7 @@ export function GroupNameForm({
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (inline) inputRef.current?.focus();
-  }, [inline]);
+  useInlineInputFocus(inputRef, inline);
 
   async function submit(event: FormEvent) {
     event.preventDefault();

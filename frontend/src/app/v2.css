@@ -1097,14 +1097,122 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .preferences h2 {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
   margin: 28px 0 10px;
+}
+.preferences > h1 {
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 700;
 }
 .preferences .v2-rows {
   margin-top: 0;
 }
+.preferences .v2-row {
+  min-height: 56px;
+  font-size: 15px;
+  font-weight: 400;
+}
+.preferences .v2-row > span:last-child {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 400;
+}
 .preferences .logout-row {
   color: #bd3038;
+}
+.settings-name-row {
+  min-height: 56px;
+  padding: 7px 16px;
+  font-size: 14px;
+  font-weight: 400;
+}
+.settings-name-row > span {
+  font-size: 15px;
+}
+.settings-name-edit-trigger {
+  max-width: min(220px, 62vw);
+  font-size: 14px !important;
+  font-weight: 400;
+}
+.inline-edit-trigger {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  color: var(--accent) !important;
+  text-align: right;
+}
+.inline-edit-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-edit-pencil {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  fill: currentColor;
+}
+.record-step-setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 0 16px;
+  min-height: 56px;
+}
+.record-step-setting .settings-item-label {
+  margin: 0;
+}
+.record-step-setting select {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+.appearance-setting {
+  padding: 12px 16px 13px;
+  border-bottom: 1px solid var(--line);
+}
+.settings-item-label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 400;
+}
+.appearance-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--track);
+}
+.appearance-options button {
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 8px 4px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.appearance-options button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: var(--panel);
+  color: var(--accent);
 }
 .settings-confirm-actions {
   display: grid;
@@ -1144,6 +1252,23 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .v2-sheet .section-heading {
   margin-bottom: 20px;
+}
+.v2-sheet .sheet-drag-region {
+  touch-action: none;
+  cursor: grab;
+}
+.sheet-close-button {
+  display: grid;
+  flex: 0 0 44px;
+  width: 44px;
+  min-height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 24px;
+  line-height: 1;
 }
 .v2-sheet .section-heading h2 {
   font-size: 18px;
@@ -5534,7 +5659,13 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
   grid-template-columns: 1fr;
   gap: 6px;
 }
+.group-setting-row.is-editing > :first-child {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+}
 .group-name-edit-trigger {
+  max-width: min(240px, 64vw);
   text-align: right;
 }
 .group-name-inline-form,
@@ -6157,7 +6288,7 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 .haptic-setting {
   cursor: pointer;
   flex-direction: row;
-  font-weight: 400;
+  border-bottom: 0;
 }
 .haptic-value {
   display: flex;
@@ -6194,7 +6325,9 @@ html[data-gotore-navigation-direction="back"]::view-transition-new(gotore-conten
 }
 .haptic-description {
   padding: 0 16px 12px;
-  font-size: 11px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
   margin: 0;
 }
 .record-exercise-memo {

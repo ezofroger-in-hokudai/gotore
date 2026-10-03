@@ -39,6 +39,14 @@ test("ホーム画面に追加したアプリでは左端スワイプで直前�
       await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     };
 
+    await navigate(page, "設定");
+    await page.getByRole("button", { name: "種目を管理", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "種目一覧", exact: true })).toBeVisible();
+    await swipeBack();
+    await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
+    await swipeBack();
+    await expect(page.getByRole("region", { name: "今日の活動", exact: true })).toBeVisible();
+
     await navigate(page, "グループ");
     await page.getByRole("button", { name: `${state.group.name}の詳細`, exact: true }).click();
     await expect(page.getByRole("heading", { name: state.group.name, level: 2 })).toBeVisible();
